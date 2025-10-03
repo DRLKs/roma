@@ -1,0 +1,27 @@
+
+# -------------------------------------------------------------
+# VISUAL PARADIGM
+# -------------------------------------------------------------
+
+#Visual Paradigm preference data
+.vpprefdata/
+
+# Visual Paradigm temporary files
+*.vpp~*
+*.vpp.working
+*.vpp.working-journal
+
+# Visual Paradigm lock files
+*.lock
+*.lck
+.*.lck
+
+# Visual Paradigm backup files
+*.vpp.bak_*
+*.vpd.bak_*
+*.bak_*
+*.vbak
+
+# Visual Paradigm data files (usually generated)
+*.vpd
+
