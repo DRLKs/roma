@@ -1,9 +1,10 @@
+use crate::quality_indicator::decimal_quality_indicator::DecimalQualityIndicator;
+use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
 use crate::solutions::solution_trait::{Solution, SolutionInfo, SolutionBuilder};
 
-#[derive(Clone, Debug)]
 pub struct PermutationSolution<T: Clone> {
     solution_info: SolutionInfo<T>,
-    fitness: Option<f64>,
+    quality: DecimalQualityIndicator,
     length: usize,
 }
 
@@ -20,19 +21,19 @@ impl<T: Clone> PermutationSolution<T> {
         
         let variables = self.solution_info.get_variables_mut();
         variables.swap(i, j);
-        self.fitness = None; // Invalidar fitness después de la mutación
+        self.quality.invalidate(); // Invalidar fitness después de la mutación
         Ok(())
     }
 }
 
 impl<T: Clone + std::cmp::PartialEq> Solution<T> for PermutationSolution<T> {
-    type Fitness = f64;
-    
+    type Quality = DecimalQualityIndicator;
+
     fn new(solution_info: SolutionInfo<T>) -> Self {
         let length = solution_info.get_variables().len();
         PermutationSolution {
             solution_info,
-            fitness: None,
+            quality: DecimalQualityIndicator::new(),
             length,
         }
     }
@@ -44,14 +45,7 @@ impl<T: Clone + std::cmp::PartialEq> Solution<T> for PermutationSolution<T> {
     fn get_solution_info_mut(&mut self) -> &mut SolutionInfo<T> {
         &mut self.solution_info
     }
-    
-    fn get_fitness(&self) -> Option<&Self::Fitness> {
-        self.fitness.as_ref()
-    }
 
-    fn set_fitness(&mut self, fitness: Self::Fitness) {
-        self.fitness = Some(fitness);
-    }
 
     fn is_valid(&self) -> bool {
         let variables = self.solution_info.get_variables();
@@ -71,6 +65,14 @@ impl<T: Clone + std::cmp::PartialEq> Solution<T> for PermutationSolution<T> {
         }
         
         true
+    }
+
+    fn get_quality(&self) -> Option<&DecimalQualityIndicator> {
+        Some(&self.quality)
+    }
+
+    fn set_quality(&mut self, quality: DecimalQualityIndicator) {
+        self.quality = quality
     }
 }
 

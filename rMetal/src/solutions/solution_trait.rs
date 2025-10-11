@@ -1,4 +1,5 @@
-use std::fmt::{Display, Debug};
+use std::cmp::Ordering;
+use std::fmt::{Debug};
 use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
 
 pub trait Solution<T: Clone> {
@@ -44,11 +45,21 @@ pub trait Solution<T: Clone> {
     where 
         <Self::Quality as QualityIndicator>::Fitness: PartialOrd 
     {
-        if let (Some(self_quality), Some(other_quality)) = (self.get_quality(), other.get_quality()) {
-            // Aquí deberías implementar la lógica de dominancia según tu QualityIndicator
-            true // Placeholder
-        } else {
+        let result: Option<Ordering>  = self.compare(other);
+        
+        if result.is_some() && result.unwrap() == Ordering::Greater {
+            true
+        }else{
             false
+        }
+        
+    }
+
+    fn compare(&self, other: &Self) -> Option<Ordering> {
+        if let (Some(q1), Some(q2)) = (self.get_quality(), other.get_quality()) {
+            q1.compare(q2)
+        } else {
+            None
         }
     }
 }

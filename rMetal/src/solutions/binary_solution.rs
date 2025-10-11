@@ -2,7 +2,6 @@ use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
 use crate::quality_indicator::decimal_quality_indicator::DecimalQualityIndicator;
 use crate::solutions::solution_trait::{Solution, SolutionInfo, SolutionBuilder};
 
-#[derive(Clone, Debug)]
 pub struct BinarySolution {
     solution_info: SolutionInfo<bool>,
     quality: DecimalQualityIndicator,
@@ -32,12 +31,12 @@ impl BinarySolution {
 }
 
 impl Solution<bool> for BinarySolution {
-    quality: DecimalQualityIndicator,
-    
+    type Quality = DecimalQualityIndicator;
+
     fn new(solution_info: SolutionInfo<bool>) -> Self {
         BinarySolution {
             solution_info,
-            quality: None,
+            quality: DecimalQualityIndicator::new(),
         }
     }
     
@@ -49,8 +48,8 @@ impl Solution<bool> for BinarySolution {
         &mut self.solution_info
     }
 
-    fn get_quality(&self) -> Option<&Self::Quality> {
-        self.quality
+    fn get_quality(&self) -> Option<&DecimalQualityIndicator> {
+        Some(&self.quality)
     }
 
     fn set_quality(&mut self, quality: DecimalQualityIndicator) {
@@ -94,5 +93,31 @@ impl BinarySolution {
     pub fn ones(size: usize) -> Self {
         let variables = vec![true; size];
         Self::new(SolutionInfo::new(variables))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cmp::Ordering;
+    use super::*;
+    use crate::solutions::solution_trait::{Solution};
+
+    #[test]
+    fn test_compare_binary_solutions() {
+        let mut binarySolution1: BinarySolution = BinarySolution::random(10);
+        let mut binarySolution2: BinarySolution = BinarySolution::random(10);
+
+        let mut quality1 = DecimalQualityIndicator::new();
+        let mut quality2 = DecimalQualityIndicator::new();
+
+        quality1.set_fitness_indicator(Some(19.0));
+        binarySolution1.set_quality(quality1);
+
+        quality2.set_fitness_indicator(Some(18.0));
+        binarySolution2.set_quality(quality2);
+
+        let result: bool = binarySolution1.dominates(&binarySolution2);
+
+        assert!(result);
     }
 }
