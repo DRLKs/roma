@@ -1,8 +1,9 @@
 use std::fmt::{Display, Debug};
+use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
 
 pub trait Solution<T: Clone> {
-    /// Tipo para representar la calidad/fitness de la solución. Añadimos reestricciones
-    type Fitness: PartialOrd + Clone + Display + Debug;
+    /// Tipo para representar la calidad de la solución
+    type Quality: QualityIndicator;
     
     fn new(solution_info: SolutionInfo<T>) -> Self;
     
@@ -31,17 +32,21 @@ pub trait Solution<T: Clone> {
         Self::new(self.get_solution_info().clone())
     }
 
-    fn get_fitness(&self) -> Option<&Self::Fitness>;
+    fn get_quality(&self) -> Option<&Self::Quality>;
 
-    fn set_fitness(&mut self, fitness: Self::Fitness);
+    fn set_quality(&mut self, quality: Self::Quality);
 
     fn is_valid(&self) -> bool {
         true // Por defecto, todas las soluciones son válidas
     }
     
-    fn dominates(&self, other: &Self) -> bool where Self::Fitness: PartialOrd {
-        if let (Some(self_fitness), Some(other_fitness)) = (self.get_fitness(), other.get_fitness()) {
-            self_fitness > other_fitness
+    fn dominates(&self, other: &Self) -> bool 
+    where 
+        <Self::Quality as QualityIndicator>::Fitness: PartialOrd 
+    {
+        if let (Some(self_quality), Some(other_quality)) = (self.get_quality(), other.get_quality()) {
+            // Aquí deberías implementar la lógica de dominancia según tu QualityIndicator
+            true // Placeholder
         } else {
             false
         }

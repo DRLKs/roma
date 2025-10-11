@@ -1,9 +1,11 @@
+use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
+use crate::quality_indicator::decimal_quality_indicator::DecimalQualityIndicator;
 use crate::solutions::solution_trait::{Solution, SolutionInfo, SolutionBuilder};
 
 #[derive(Clone, Debug)]
 pub struct BinarySolution {
     solution_info: SolutionInfo<bool>,
-    fitness: Option<f64>,
+    quality: DecimalQualityIndicator,
 }
 
 impl BinarySolution {
@@ -11,7 +13,7 @@ impl BinarySolution {
     pub fn flip_bit(&mut self, index: usize) -> Result<(), String> {
         if let Some(bit) = self.solution_info.get_variables_mut().get_mut(index) {
             *bit = !*bit;
-            self.fitness = None; // Invalidar fitness después de la mutación
+            self.quality.invalidate();
             Ok(())
         } else {
             Err(format!("Index {} out of bounds", index))
@@ -30,12 +32,12 @@ impl BinarySolution {
 }
 
 impl Solution<bool> for BinarySolution {
-    type Fitness = f64;
+    quality: DecimalQualityIndicator,
     
     fn new(solution_info: SolutionInfo<bool>) -> Self {
         BinarySolution {
             solution_info,
-            fitness: None,
+            quality: None,
         }
     }
     
@@ -46,13 +48,13 @@ impl Solution<bool> for BinarySolution {
     fn get_solution_info_mut(&mut self) -> &mut SolutionInfo<bool> {
         &mut self.solution_info
     }
-    
-    fn get_fitness(&self) -> Option<&Self::Fitness> {
-        self.fitness.as_ref()
+
+    fn get_quality(&self) -> Option<&Self::Quality> {
+        self.quality
     }
 
-    fn set_fitness(&mut self, fitness: Self::Fitness) {
-        self.fitness = Some(fitness);
+    fn set_quality(&mut self, quality: DecimalQualityIndicator) {
+        self.quality = quality;
     }
 
     fn is_valid(&self) -> bool {
