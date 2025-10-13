@@ -3,6 +3,7 @@
 %% Preamble
 \usepackage{umatfgenglish}
 \usepackage{blindtext}
+\usepackage{hyperref}
 \graphicspath{ {./images/} }
 
 \begin{document}
@@ -15,7 +16,7 @@
 %% Abstract
 \begin{abstract}
     Resumen corto del trabajo y palabras clave.
-	\bfseries{\large{Keywords:}}
+	\bfseries{\large{Keywords: Rust, Metaheurísticas, Optimización}}
 \end{abstract}
 
 \tableofcontents
@@ -51,12 +52,31 @@
     Idealmente, esta librería debería ser fácil de usar, eficiente y extensible, permitiendo a los usuarios adaptar los algoritmos a sus necesidades específicas.
 
 \subsection{Tecnologías a utilizar}
-    Como lenguaje de programación, se ha elegido Rust, debido a su enfoque en el rendimiento, por su capacidad de manejo eficiente de la concurrencia 
+    Como lenguaje de programación, se ha elegido \textbf{Rust}, debido a su enfoque en el rendimiento, por su capacidad de manejo eficiente de la concurrencia 
     y diferentes hilos, lo que lo hace ideal para la implementación de algoritmos heurísticos complejos que a menudo requieren un procesamiento paralelo intensivo.
     Además, su creciente ecosistema y su tipo de sistema robusto nos permiten construir soluciones de optimización escalables y de alto rendimiento.
     También, como se ha comentado anteriormente, Rust no es un lenguaje muy usado en este tipo de proyectos, por lo que se pretende ser pionero en este campo.
+    \\
+    Uno de los principales motivos por el que Rust es tan buena elección es por su gestor de paquetes y compilación, \textbf{Cargo}, que facilita la gestión de dependencias
+    y la construcción de proyectos, permitiendo a los desarrolladores centrarse en la implementación de algoritmos en lugar de en la configuración del entorno.
+    \\
+    Este gestor de paquetes se encuentra entre los más populares y admirados por los desarrolladores, como se puede observar en la estadística de la encuesta anual 
+    de Stack Overflow, donde Cargo destaca como uno de los gestores de paquetes más valorados en 2025~\cite{stackoverflow2025}.
+    
+    \begin{figure}[h]
+      \centering
+        \includegraphics[width=0.5\textwidth]{cargo_admirated.png}
+      \caption{Resultados de una de las encuestas a desarrolladores de Stack Overflow 2025~\cite{stackoverflow2025}.}
+    \end{figure}
 
-\section{Metodología de trabajo \\}
+    
+    En cuanto a las herramientas de desarrollo, se utilizó \textbf{Visual Studio Code} como entorno de desarrollo integrado (IDE) debido a su flexibilidad, amplia 
+    gama de extensiones y soporte para Rust a través de la extensión \textit{rust-analyzer}. Durante el desarrollo más tempreano, también se usó \textbf{Rust Rover}, de \textbf{JetBrains},
+    que es un IDE específico para Rust. Esto fue debido a que en ese momento los conocimientos sobre Rust eran muy limitados y se necesitaba un entorno más guiado e invasivo para poder progresar.
+    \\
+    Para la documentación y redacción del proyecto, se ha utilizado \LaTeX, para el control de versiones \textbf{Git} junto con \textbf{GitHub} como plataforma de alojamiento remoto.
+
+    \section{Metodología de trabajo}
     \blindmathpaper
 
 \section{Desarrollo}
@@ -75,6 +95,12 @@
     \textit{Zur Elektrodynamik bewegter K{\"o}rper}. (German) 
     [\textit{On the electrodynamics of moving bodies}]. 
     Annalen der Physik, 322(10):891–921, 1905.
+
+    \bibitem{stackoverflow2025}
+    Stack Overflow. 
+    \textit{Stack Overflow Developer Survey 2025}. 
+    Disponible en: \url{https://survey.stackoverflow.co/2025/} [Accedido: 12-oct-2025].
+    
 \end{thebibliography}
 
 \newpage
