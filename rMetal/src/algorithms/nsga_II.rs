@@ -8,4 +8,8 @@ impl Algorithm for NsgaII {
         // Implementación del algoritmo NSGA-II
         println!("Running NSGA-II algorithm");
     }
+
+    fn validate_parameters(&self) -> bool {
+        todo!()
+    }
 }
