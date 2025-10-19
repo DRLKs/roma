@@ -26,14 +26,22 @@ impl<T: Clone> PermutationSolution<T> {
     }
 }
 
-impl<T: Clone + std::cmp::PartialEq> Solution<T> for PermutationSolution<T> {
+impl<T: Clone + PartialEq> Eq for PermutationSolution<T> {}
+
+impl<T: Clone + PartialEq> PartialEq<Self> for PermutationSolution<T> {
+    fn eq(&self, other: &Self) -> bool {
+        todo!()
+    }
+}
+
+impl<T: Clone + PartialEq> Solution<T> for PermutationSolution<T> {
     type Quality = DecimalQualityIndicator;
 
     fn new(solution_info: SolutionInfo<T>) -> Self {
         let length = solution_info.get_variables().len();
         PermutationSolution {
             solution_info,
-            quality: DecimalQualityIndicator::new(),
+            quality: DecimalQualityIndicator::new(None),
             length,
         }
     }
@@ -79,7 +87,7 @@ impl<T: Clone + std::cmp::PartialEq> Solution<T> for PermutationSolution<T> {
 // Implementación del builder pattern
 pub struct PermutationSolutionBuilder;
 
-impl<T: Clone + std::cmp::PartialEq> SolutionBuilder<T> for PermutationSolutionBuilder {
+impl<T: Clone + PartialEq> SolutionBuilder<T> for PermutationSolutionBuilder {
     type Solution = PermutationSolution<T>;
     
     fn build(solution_info: SolutionInfo<T>) -> Self::Solution {

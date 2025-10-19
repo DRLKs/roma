@@ -1,17 +1,18 @@
 use crate::quality_indicator::quality_indicator_trait::{QualityIndicator};
 
+#[derive(Clone)]
 pub struct DecimalQualityIndicator {
     fitness: Option<f64>
 }
 
+impl DecimalQualityIndicator {
+    pub fn new(fitness: Option<f64>) -> Self {
+        Self { fitness }
+    }
+}
+
 impl QualityIndicator for DecimalQualityIndicator {
     type Fitness = Option<f64>;
-
-    fn new() -> Self {
-        Self {
-            fitness: None,
-        }
-    }
 
     fn invalidate(&mut self) {
         self.fitness = None;

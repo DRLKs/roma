@@ -2,9 +2,7 @@ use std::cmp::Ordering;
 
 pub trait QualityIndicator {
     type Fitness : PartialOrd;
-    
-    fn new() -> Self;
-    
+
     fn invalidate(&mut self);
     
     fn get_fitness_indicator(&self) -> &Self::Fitness;

@@ -30,13 +30,42 @@ impl BinarySolution {
     }
 }
 
+impl Eq for BinarySolution {}
+
+impl PartialEq<Self> for BinarySolution {
+    fn eq(&self, other: &Self) -> bool {
+        if self.solution_info.get_variables().len() != other.solution_info.get_variables().len() {
+            false
+        }else if self.count_ones() != other.count_ones() {
+            false
+        }else if self.count_zeros() != other.count_zeros() {
+            false
+        }else{
+            
+            for value1 in self.solution_info.get_variables() {
+                
+                for value2 in other.solution_info.get_variables() {
+                    
+                    if value1 != value2 {
+                        return false;
+                    }
+                        
+                }
+            }
+            
+            return true;            
+        }
+        
+    }
+}
+
 impl Solution<bool> for BinarySolution {
     type Quality = DecimalQualityIndicator;
 
     fn new(solution_info: SolutionInfo<bool>) -> Self {
         BinarySolution {
             solution_info,
-            quality: DecimalQualityIndicator::new(),
+            quality: DecimalQualityIndicator::new(None),
         }
     }
     
@@ -96,27 +125,32 @@ impl BinarySolution {
     }
 }
 
+impl Clone for BinarySolution {
+    fn clone(&self) -> Self {
+        Self {
+            solution_info: self.solution_info.clone(),
+            quality: self.quality.clone(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use std::cmp::Ordering;
     use super::*;
     use crate::solutions::solution_trait::{Solution};
 
     #[test]
     fn test_compare_binary_solutions() {
-        let mut binarySolution1: BinarySolution = BinarySolution::random(10);
-        let mut binarySolution2: BinarySolution = BinarySolution::random(10);
+        let mut binary_solution1: BinarySolution = BinarySolution::random(10);
+        let mut binary_solution2: BinarySolution = BinarySolution::random(10);
 
-        let mut quality1 = DecimalQualityIndicator::new();
-        let mut quality2 = DecimalQualityIndicator::new();
+        let quality1 = DecimalQualityIndicator::new(Option::from(19.0));
+        let quality2 = DecimalQualityIndicator::new(Option::from(18.0));
+        
+        binary_solution1.set_quality(quality1);
+        binary_solution2.set_quality(quality2);
 
-        quality1.set_fitness_indicator(Some(19.0));
-        binarySolution1.set_quality(quality1);
-
-        quality2.set_fitness_indicator(Some(18.0));
-        binarySolution2.set_quality(quality2);
-
-        let result: bool = binarySolution1.dominates(&binarySolution2);
+        let result: bool = binary_solution1.dominates(&binary_solution2);
 
         assert!(result);
     }

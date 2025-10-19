@@ -1,6 +1,10 @@
+use crate::solutions::solution_trait;
+use crate::solutions::solution_trait::Solution;
+
 /// Trait that defines the basic interface for all optimization algorithms.
 pub trait Algorithm {
 
+    type SolutionSet: Solution<i32>;
 
     type Parameters;
 
@@ -16,6 +20,7 @@ pub trait Algorithm {
     /// 
     fn run(&self, verbose: u8){
 
+
         match verbose {
             0 => {}, // No output
             1 => println!("Algorithm started..."),
@@ -27,9 +32,13 @@ pub trait Algorithm {
         }
 
 
+
+
     }
 
     fn validate_parameters(&self) -> bool;
+
+    fn get_solution_set(&self) -> &Self::SolutionSet;
 
     fn get_parameters(&self) -> &Self::Parameters;
 

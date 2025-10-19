@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::fmt::{Debug};
 use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
 
-pub trait Solution<T: Clone> {
+pub trait Solution<T: Clone> : Eq {
     /// Tipo para representar la calidad de la solución
     type Quality: QualityIndicator;
     
