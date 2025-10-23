@@ -1,6 +1,6 @@
 use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
 use crate::quality_indicator::decimal_quality_indicator::DecimalQualityIndicator;
-use crate::solutions::solution_trait::{Solution, SolutionInfo, SolutionBuilder};
+use crate::solutions::solution_trait::{Solution, SolutionInfo};
 
 pub struct BinarySolution {
     solution_info: SolutionInfo<bool>,
@@ -88,17 +88,6 @@ impl Solution<bool> for BinarySolution {
     fn is_valid(&self) -> bool {
         // Las soluciones binarias siempre son válidas
         true
-    }
-}
-
-// Builder para soluciones binarias
-pub struct BinarySolutionBuilder;
-
-impl SolutionBuilder<bool> for BinarySolutionBuilder {
-    type Solution = BinarySolution;
-    
-    fn build(solution_info: SolutionInfo<bool>) -> Self::Solution {
-        BinarySolution::new(solution_info)
     }
 }
 

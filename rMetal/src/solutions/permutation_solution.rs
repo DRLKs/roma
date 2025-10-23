@@ -1,6 +1,6 @@
 use crate::quality_indicator::decimal_quality_indicator::DecimalQualityIndicator;
 use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
-use crate::solutions::solution_trait::{Solution, SolutionInfo, SolutionBuilder};
+use crate::solutions::solution_trait::{Solution, SolutionInfo};
 
 pub struct PermutationSolution<T: Clone> {
     solution_info: SolutionInfo<T>,
@@ -30,7 +30,15 @@ impl<T: Clone + PartialEq> Eq for PermutationSolution<T> {}
 
 impl<T: Clone + PartialEq> PartialEq<Self> for PermutationSolution<T> {
     fn eq(&self, other: &Self) -> bool {
-        todo!()
+        if self.length != other.length {
+            return false
+        }
+        for i in 0..self.length {
+            if self.solution_info.get_variables()[i] != other.solution_info.get_variables()[i] {
+                return false
+            }
+        }
+        return true
     }
 }
 
@@ -81,17 +89,6 @@ impl<T: Clone + PartialEq> Solution<T> for PermutationSolution<T> {
 
     fn set_quality(&mut self, quality: DecimalQualityIndicator) {
         self.quality = quality
-    }
-}
-
-// Implementación del builder pattern
-pub struct PermutationSolutionBuilder;
-
-impl<T: Clone + PartialEq> SolutionBuilder<T> for PermutationSolutionBuilder {
-    type Solution = PermutationSolution<T>;
-    
-    fn build(solution_info: SolutionInfo<T>) -> Self::Solution {
-        PermutationSolution::new(solution_info)
     }
 }
 

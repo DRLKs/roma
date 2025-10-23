@@ -4,7 +4,7 @@ use crate::solutions::solution_trait::Solution;
 pub struct VectorSolutionSet<T, S>
 where
     S: Solution<T>,
-    T: Clone  // ✅ Añadir esto
+    T: Clone
 {
     solutions: Vec<S>,
     _phantom: std::marker::PhantomData<T>,

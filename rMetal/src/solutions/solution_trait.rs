@@ -2,8 +2,8 @@ use std::cmp::Ordering;
 use std::fmt::{Debug};
 use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
 
+/// Trait that defines the basic interface for all the solutions.
 pub trait Solution<T: Clone> : Eq {
-    /// Tipo para representar la calidad de la solución
     type Quality: QualityIndicator;
     
     fn new(solution_info: SolutionInfo<T>) -> Self;
@@ -38,7 +38,7 @@ pub trait Solution<T: Clone> : Eq {
     fn set_quality(&mut self, quality: Self::Quality);
 
     fn is_valid(&self) -> bool {
-        true // Por defecto, todas las soluciones son válidas
+        true // By default, all the solutions are valid
     }
     
     fn dominates(&self, other: &Self) -> bool 
@@ -61,16 +61,6 @@ pub trait Solution<T: Clone> : Eq {
         } else {
             None
         }
-    }
-}
-
-pub trait SolutionBuilder<T: Clone> {
-    type Solution: Solution<T>;
-    
-    fn build(solution_info: SolutionInfo<T>) -> Self::Solution;
-    
-    fn build_from_variables(variables: Vec<T>) -> Self::Solution {
-        Self::build(SolutionInfo::new(variables))
     }
 }
 

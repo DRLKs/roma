@@ -1,4 +1,3 @@
-use crate::solutions::solution_trait;
 use crate::solutions::solution_trait::Solution;
 
 /// Trait that defines the basic interface for all optimization algorithms.

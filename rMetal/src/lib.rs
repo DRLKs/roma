@@ -3,6 +3,7 @@ mod solutions;
 mod problem;
 mod quality_indicator;
 mod solution_set;
+mod operator;
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
