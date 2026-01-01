@@ -69,7 +69,6 @@ target
 *.idx
 
 # Archivos generados (PDFs, DVI, PS)
-*.pdf
 *.dvi
 *.ps
 
