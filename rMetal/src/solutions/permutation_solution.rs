@@ -1,4 +1,4 @@
-use crate::quality_indicator::decimal_quality_indicator::DecimalQualityIndicator;
+use crate::quality_indicator::implementations::decimal_quality_indicator::DecimalQualityIndicator;
 use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
 use crate::solutions::solution_trait::{Solution, SolutionInfo};
 
