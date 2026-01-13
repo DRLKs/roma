@@ -85,6 +85,10 @@ impl Solution<bool> for BinarySolution {
         self.quality = quality;
     }
 
+    fn value(&self) -> f64 {
+        self.quality.get_fitness().unwrap_or(f64::INFINITY)
+    }
+
     fn is_valid(&self) -> bool {
         // Las soluciones binarias siempre son válidas
         true

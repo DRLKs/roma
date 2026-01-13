@@ -2,6 +2,12 @@
 name = "rMetal"
 version = "0.1.0"
 edition = "2024"
+authors = ["David Muñoz del Valle <tu@email.com>"]
+license = "MIT OR Apache-2.0"
+description = "Framework de metaheurísticas inspirado en jMetal"
+repository = "https://github.com/DRLKs/rMetal"
+readme = "README.md"
+keywords = ["optimization", "metaheuristics", "evolutionary"]
 
 [dependencies]
 rand = "0.8"

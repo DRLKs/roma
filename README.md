@@ -8,7 +8,7 @@ Librería de Optimización Metaheurística en Rust
 
 ## Descripción
 
-Este proyecto consiste en una **librería extensible de optimización metaheurística** desarrollada en Rust. Su objetivo es facilitar la implementación y experimentación con distintos algoritmos de optimización, proporcionando una arquitectura modular que permite añadir nuevos algoritmos, operadores y problemas sin modificar el núcleo del sistema.
+Este proyecto consiste en una **biblioteca extensible de optimización metaheurística** desarrollada en Rust. Su objetivo es facilitar la implementación y experimentación con distintos algoritmos de optimización, proporcionando una arquitectura modular que permite añadir nuevos algoritmos, operadores y problemas sin modificar el núcleo del sistema.
 
 Actualmente existen pocas librerías de este tipo en Rust y muchas presentan limitaciones en madurez o extensibilidad. Esta librería pretende ofrecer una alternativa flexible y de fácil uso para desarrolladores e investigadores.
 

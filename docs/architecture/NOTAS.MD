@@ -26,5 +26,37 @@ pub trait Algorithm: HasProblem {
 Al generarse muchísimas soluciones en un mismo algoritmo quizás no es muy útil que la solución contenga información sobre el problema. La idea es que la solución contenga un Quality indicator el cual indique lo correcta que es esa solución. 
 Este indicador se pondrá automaticamente mediante una función `evaluate` en la estructura `Problema`.
 
-##### SolutionInfo
+##### SolutionInfo - quizás eliminarlos
 Actualmente los traits Solution dependen de SolutionInfo, pero realmente no soy consciente de si este atributo tiene sentido y si es sobreingeniería (se podría usar un vector y ya). Por ahora vamos a dejar solutionInfo por si queremos añadir más atributos a solution
+
+### Operator
+Quizás deberiamos añadir varios operadores por algoritmo o por lo menos dar esa opción.
+También quizás deberiamos cambiar la estructura del operador, está mal planteada
+
+
+
+# Ideas
+
+```Rust
+pub struct AlgorithmBase {
+    pub max_iterations: usize,
+}
+
+impl AlgorithmBase {
+    pub fn log(&self) {
+        println!("Running...");
+    }
+}
+
+pub struct NSGA2 {
+    base: AlgorithmBase,
+}
+
+impl Algorithm for NSGA2 {
+    fn run(&mut self) {
+        self.base.log();
+        // lógica del algoritmo
+    }
+}
+
+```

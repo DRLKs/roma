@@ -9,6 +9,10 @@ impl DecimalQualityIndicator {
     pub fn new(fitness: Option<f64>) -> Self {
         Self { fitness }
     }
+
+    pub fn get_fitness(&self) -> Option<f64> {
+        self.fitness
+    }
 }
 
 impl QualityIndicator for DecimalQualityIndicator {

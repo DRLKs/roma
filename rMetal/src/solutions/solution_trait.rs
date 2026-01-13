@@ -37,6 +37,8 @@ pub trait Solution<T: Clone> : Eq {
 
     fn set_quality(&mut self, quality: Self::Quality);
 
+    fn value(&self) -> f64;
+
     fn is_valid(&self) -> bool {
         true
     }

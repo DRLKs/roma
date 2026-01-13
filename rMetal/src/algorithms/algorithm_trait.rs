@@ -1,9 +1,14 @@
 use crate::solutions::solution_trait::Solution;
+use crate::solution_set::solution_set_trait::SolutionSet;
 
 /// Trait that defines the basic interface for all optimization algorithms.
-pub trait Algorithm {
+pub trait Algorithm<T, S>
+where
+    S: Solution<T>,
+    T: Clone,
+{
 
-    type SolutionSet: Solution<i32>;
+    type SolutionSet: SolutionSet<T, S>;
 
     type Parameters;
 
@@ -17,23 +22,7 @@ pub trait Algorithm {
     ///   * `1` - Basic information (start, end)
     ///   * `>1` - Full debug information
     /// 
-    fn run(&self, verbose: u8){
-
-
-        match verbose {
-            0 => {}, // No output
-            1 => println!("Algorithm started..."),
-            _ => println!("Algorithm running with detailed output..."),
-        }
-        
-        if !self.validate_parameters(){
-            panic!("Invalid parameters for the algorithm.");
-        }
-
-
-
-
-    }
+    fn run(&self, verbose: u8) -> impl SolutionSet<T,S>;
 
     fn validate_parameters(&self) -> bool;
 

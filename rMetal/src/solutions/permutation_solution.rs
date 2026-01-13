@@ -90,6 +90,10 @@ impl<T: Clone + PartialEq> Solution<T> for PermutationSolution<T> {
     fn set_quality(&mut self, quality: DecimalQualityIndicator) {
         self.quality = quality
     }
+
+    fn value(&self) -> f64 {
+        self.quality.get_fitness().unwrap_or(f64::INFINITY)
+    }
 }
 
 #[cfg(test)]
