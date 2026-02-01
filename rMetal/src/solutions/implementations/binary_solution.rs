@@ -1,6 +1,7 @@
 use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
 use crate::quality_indicator::implementations::decimal_quality_indicator::DecimalQualityIndicator;
 use crate::solutions::solution_trait::{Solution, SolutionInfo};
+use crate::utils::random::{Random, seed_from_time };
 
 pub struct BinarySolution {
     solution_info: SolutionInfo<bool>,
@@ -90,28 +91,39 @@ impl Solution<bool> for BinarySolution {
     }
 
     fn is_valid(&self) -> bool {
-        // Las soluciones binarias siempre son válidas
+        // Quizás esta función no tiene sentido
         true
     }
 }
 
-// Implementación específica de operaciones para soluciones binarias
 impl BinarySolution {
-    /// Crear una solución binaria aleatoria
-    pub fn random(size: usize) -> Self {
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
-        let variables: Vec<bool> = (0..size).map(|_| rng.gen_bool(0.5)).collect();
+
+    /// Create one random binary solution
+    /// # Arguments
+    ///
+    /// * `size` - Size of the solution vector
+    /// * `seed` - Seed of the random struct.
+    ///  [`None`] will give a pseudorandom seed
+    ///
+    pub fn random(size: usize, seed: Option<u64> ) -> Self {
+
+        let mut rng: Random;
+        if seed.is_some() {
+            rng = Random::new(seed.unwrap());
+        }else {
+            rng = Random::new(seed_from_time());
+        }
+        let variables: Vec<bool> = (0..size).map(|_| rng.coin_flip()).collect();
         Self::new(SolutionInfo::new(variables))
     }
-    
-    /// Crear una solución binaria con todos los bits en false
+
+    /// Create a binary solution with all values set to zero
     pub fn zeros(size: usize) -> Self {
         let variables = vec![false; size];
         Self::new(SolutionInfo::new(variables))
     }
-    
-    /// Crear una solución binaria con todos los bits en true
+
+    /// Create a binary solution with all values set to true
     pub fn ones(size: usize) -> Self {
         let variables = vec![true; size];
         Self::new(SolutionInfo::new(variables))
@@ -134,8 +146,8 @@ mod tests {
 
     #[test]
     fn test_compare_binary_solutions() {
-        let mut binary_solution1: BinarySolution = BinarySolution::random(10);
-        let mut binary_solution2: BinarySolution = BinarySolution::random(10);
+        let mut binary_solution1: BinarySolution = BinarySolution::random(10, None);
+        let mut binary_solution2: BinarySolution = BinarySolution::random(10, None);
 
         let quality1 = DecimalQualityIndicator::new(Option::from(19.0));
         let quality2 = DecimalQualityIndicator::new(Option::from(18.0));
@@ -146,5 +158,33 @@ mod tests {
         let result: bool = binary_solution1.dominates(&binary_solution2);
 
         assert!(result);
+    }
+
+    #[test]
+    fn test_ones_binary_solutions() {
+        let size: usize = 10;
+        let ones_binary_solution: BinarySolution = BinarySolution::ones(size);
+
+        let mut ok = true;
+        let mut ctt = 0;
+        while ok && ctt < size {
+            ok = *ones_binary_solution.get_variable(ctt).unwrap();
+            ctt += 1;
+        }
+        assert!(ok);
+    }
+
+    #[test]
+    fn test_zeros_binary_solutions() {
+        let size: usize = 10;
+        let zeros_binary_solution: BinarySolution = BinarySolution::zeros(size);
+
+        let mut ok = true;
+        let mut ctt = 0;
+        while ok && ctt < size {
+            ok = !*zeros_binary_solution.get_variable(ctt).unwrap();
+            ctt += 1;
+        }
+        assert!(ok);
     }
 }

@@ -1,5 +1,6 @@
 use crate::solutions::solution_trait::Solution;
 
+/// Trait
 pub trait ProblemTrait<S, T>
 where
     S: Solution<T>,

@@ -1,3 +1,4 @@
 pub mod solution_trait;
-pub mod permutation_solution;
-pub mod binary_solution;
+
+pub mod simple_solution_trait;
+pub mod implementations;

@@ -1,9 +1,8 @@
 use std::cmp::Ordering;
-use std::fmt::{Debug};
 use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
 
 /// Trait that defines the basic interface for all the solutions.
-pub trait Solution<T: Clone> : Eq {
+pub trait SimpleSolution<T: Clone> : Eq {
     type Quality: QualityIndicator;
     
     fn new(variables: Vec<T>) -> Self;

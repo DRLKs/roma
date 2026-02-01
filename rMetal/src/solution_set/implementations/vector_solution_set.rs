@@ -82,8 +82,8 @@ mod test {
     use crate::quality_indicator::implementations::decimal_quality_indicator::DecimalQualityIndicator;
     use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
     use crate::solution_set::solution_set_trait::SolutionSet;
-    use crate::solution_set::vector_solution_set::VectorSolutionSet;
-    use crate::solutions::binary_solution::BinarySolution;
+    use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
+    use crate::solutions::implementations::binary_solution::BinarySolution;
     use crate::solutions::solution_trait::Solution;
 
     #[test]
