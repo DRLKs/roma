@@ -35,45 +35,12 @@ where
     S: Solution<T>,
     T: Clone 
 {
-    fn add_solution(&mut self, solution: S) {
-        self.solutions.push(solution);
+    fn solutions(&self) -> &Vec<S> {
+        &self.solutions
     }
-
-    fn remove_solution(&mut self) -> Option<S> {
-        self.solutions.pop()
-    }
-
-    fn clear(&mut self) {
-        self.solutions.clear();
-    }
-
-    fn length(&self) -> usize {
-        self.solutions.len()
-    }
-
-    fn get_best_solution(&self) -> Option<&S> {
-        if self.is_empty() {
-            return None;
-        }
-
-        let mut best_index = 0;
-
-        for i in 0..self.length() - 1 {
-
-            if !self.get(i).unwrap().dominates(self.get(i+1).unwrap()) {
-                best_index = i + 1;
-            }
-        }
-        
-        self.get(best_index)
-    }
-
-    fn get(&self, index: usize) -> Option<&S> {
-        self.solutions.get(index)
-    }
-
-    fn get_mut(&mut self, index: usize) -> Option<&mut S> {
-        self.solutions.get_mut(index)
+    
+    fn solutions_mut(&mut self) -> &mut Vec<S> {
+        &mut self.solutions
     }
 }
 

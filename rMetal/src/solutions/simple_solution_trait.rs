@@ -40,6 +40,7 @@ pub trait SimpleSolution<T: Clone> : Eq {
         true 
     }
     
+    /// Shows if the solution has a better quality indicator than the other    
     fn dominates(&self, other: &Self) -> bool 
     where 
         <Self::Quality as QualityIndicator>::Fitness: PartialOrd 
@@ -54,6 +55,7 @@ pub trait SimpleSolution<T: Clone> : Eq {
         
     }
 
+    /// Comapares de quality of the solution
     fn compare(&self, other: &Self) -> Option<Ordering> {
         if let (Some(q1), Some(q2)) = (self.get_quality(), other.get_quality()) {
             q1.compare(q2)
