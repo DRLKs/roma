@@ -1,2 +1,2 @@
 pub mod algorithm_trait;
-mod implementations;
+pub mod implementations;

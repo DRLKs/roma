@@ -1,2 +1,2 @@
 pub mod solution_set_trait;
-mod implementations;
+pub mod implementations;

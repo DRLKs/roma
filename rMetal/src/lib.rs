@@ -1,7 +1,7 @@
-mod algorithms;
-mod problem;
-mod quality_indicator;
-mod solution_set;
-mod solutions;
-mod operator;
-mod utils;
+pub mod algorithms;
+pub mod problem;
+pub mod quality_indicator;
+pub mod solution_set;
+pub mod solutions;
+pub mod operator;
+pub mod utils;

@@ -1,9 +1,10 @@
 use crate::solution_set::solution_set_trait::SolutionSet;
 use crate::solutions::solution_trait::Solution;
 
+#[derive(Clone)]
 pub struct VectorSolutionSet<T, S>
 where
-    S: Solution<T>,
+    S: Solution<T> + Clone,
     T: Clone
 {
     solutions: Vec<S>,
@@ -12,7 +13,7 @@ where
 
 impl<T, S> VectorSolutionSet<T, S>
 where
-    S: Solution<T>,
+    S: Solution<T> + Clone,
     T: Clone
 {
     pub fn new() -> Self {
@@ -32,7 +33,7 @@ where
 
 impl<T, S> SolutionSet<T, S> for VectorSolutionSet<T, S>
 where
-    S: Solution<T>,
+    S: Solution<T> + Clone,
     T: Clone 
 {
     fn solutions(&self) -> &Vec<S> {

@@ -1,22 +1,25 @@
 use crate::solutions::solution_trait::Solution;
 
-/// Trait
-/// * `S` - Solution
-/// * `T` - Type of the solution value
-pub trait ProblemTrait<S, T>
+/// Trait that defines the basic interface for optimization problems.
+/// * `S` - Solution type
+/// * `T` - Type of the solution variables
+pub trait Problem<S, T>
 where
     S: Solution<T>,
     T: Clone,
 {
     fn new() -> Self;
 
+    /// Evaluates a solution and updates its quality/fitness
     fn evaluate(&self, solution: &mut S);
 
-    fn set_problem_description(&self, description :String);
+    fn set_problem_description(&mut self, description: String);
 
     fn get_problem_description(&self) -> String;
 
+    /// Creates a new random solution for this problem
     fn create_solution(&self) -> S;
 
+    /// Generates a neighbor solution (for local search algorithms)
     fn neighbor(&self, solution: &S) -> S;
 }

@@ -31,6 +31,10 @@ where
         self.solutions().len()
     }
 
+    fn size(&self) -> usize {
+        self.length()
+    }
+
     fn get_best_solution(&self) -> Option<&S> {
         if self.is_empty() {
             return None;
