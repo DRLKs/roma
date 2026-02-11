@@ -1,5 +1,6 @@
 use rMetal::algorithms::algorithm_trait::Algorithm;
 use rMetal::algorithms::implementations::hill_climbing::{HillClimbing, HillClimbingParameters};
+use rMetal::operator::implementations::bit_flip_mutation::BitFlipMutation;
 use rMetal::problem::implementations::knapsack_problem::KnapsackProblem;
 use rMetal::problem::problem_trait::Problem;
 use rMetal::solution_set::solution_set_trait::SolutionSet;
@@ -17,12 +18,17 @@ fn main() {
     println!("{}", problem.get_problem_description());
     println!();
     
-    // Configura el algoritmo Hill Climbing
-    let parameters = HillClimbingParameters {
-        max_iterations: 1000,
-    };
+    // Configura el operador de mutación
+    let mutation = BitFlipMutation::new();
     
-    let mut algorithm = HillClimbing::new(parameters,true);
+    // Configura el algoritmo Hill Climbing con el operador
+    let parameters = HillClimbingParameters::new(
+        1000,       // max_iterations
+        mutation,   // operador de mutación intercambiable
+        0.1,        // mutation_probability (probabilidad de mutar cada bit)
+    );
+    
+    let mut algorithm = HillClimbing::new(parameters, true); // true = maximization
     
     println!("=== Ejecutando Hill Climbing ===");
     let solution_set = algorithm.run(&problem, 1); // verbose = 1

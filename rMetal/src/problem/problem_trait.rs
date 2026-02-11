@@ -19,7 +19,4 @@ where
 
     /// Creates a new random solution for this problem
     fn create_solution(&self) -> S;
-
-    /// Generates a neighbor solution (for local search algorithms)
-    fn neighbor(&self, solution: &S) -> S;
 }

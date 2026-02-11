@@ -1,7 +1,7 @@
 use crate::problem::problem_trait::Problem;
+use crate::quality_indicator::implementations::decimal_quality_indicator::DecimalQualityIndicator;
 use crate::solutions::implementations::binary_solution::BinarySolution;
 use crate::solutions::solution_trait::Solution;
-use crate::utils::random::Random;
 
 /// Knapsack Problem: maximize the value of items in a knapsack without exceeding capacity
 pub struct KnapsackProblem {
@@ -78,9 +78,10 @@ impl Problem<BinarySolution, bool> for KnapsackProblem {
             value // Maximize value
         };
         
-        // Set the quality indicator (you'll need to implement this based on your Quality type)
-        // For now, this is a placeholder - adjust based on your BinarySolution quality implementation
-        // solution.set_quality(...);
+        //////// ESTO SE TIENE QUE MIRAR, NO ME GUSTA
+        let quality = DecimalQualityIndicator::new(Some(_fitness));
+        solution.set_quality(quality);
+        
     }
 
     fn set_problem_description(&mut self, description: String) {
@@ -92,19 +93,6 @@ impl Problem<BinarySolution, bool> for KnapsackProblem {
     }
 
     fn create_solution(&self) -> BinarySolution {
-        BinarySolution::random(self.number_of_items, None)
-    }
-
-    fn neighbor(&self, solution: &BinarySolution) -> BinarySolution {
-        let mut neighbor = solution.copy();
-        let mut rng = Random::new(crate::utils::random::seed_from_time());
-        
-        // Flip one random bit
-        let index = rng.range(self.number_of_items as u64) as usize;
-        if let Some(value) = neighbor.get_variable(index) {
-            let _ = neighbor.set_variable(index, !value);
-        }
-        
-        neighbor
+        BinarySolution::zeros(self.number_of_items)
     }
 }
