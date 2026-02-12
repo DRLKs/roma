@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
+use crate::quality_indicator::traits::QualityIndicator;
 
 /// Trait that defines the basic interface for all the solutions.
 pub trait SimpleSolution<T: Clone> : Eq {

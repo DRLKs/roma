@@ -1,14 +1,14 @@
-use rMetal::algorithms::algorithm_trait::Algorithm;
 use rMetal::algorithms::implementations::genetic_algorithm::{GeneticAlgorithm, GeneticAlgorithmParameters};
 use rMetal::algorithms::implementations::hill_climbing::{HillClimbing, HillClimbingParameters};
-use rMetal::operator::implementations::binary_tournament_selection::BinaryTournamentSelection;
-use rMetal::operator::implementations::bit_flip_mutation::BitFlipMutation;
-use rMetal::operator::implementations::single_point_crossover::SinglePointCrossover;
+use rMetal::algorithms::traits::Algorithm;
+use rMetal::operator::crossover_operator_implementations::single_point_crossover::SinglePointCrossover;
+use rMetal::operator::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
+use rMetal::operator::selection_operator_implementations::binary_tournament_selection::BinaryTournamentSelection;
 use rMetal::problem::implementations::knapsack_problem::KnapsackProblem;
-use rMetal::problem::problem_trait::Problem;
-use rMetal::solution_set::solution_set_trait::SolutionSet;
+use rMetal::problem::traits::Problem;
+use rMetal::solution_set::traits::SolutionSet;
 use rMetal::solutions::implementations::binary_solution::BinarySolution;
-use rMetal::solutions::solution_trait::Solution;
+use rMetal::solutions::traits::Solution;
 
 /// Función genérica que puede ejecutar cualquier algoritmo sobre cualquier problema
 pub fn solve_with_algorithm<A>(

@@ -1,5 +1,5 @@
-use crate::operator::operator_trait::{Operator, SelectionOperator};
-use crate::solutions::solution_trait::Solution;
+use crate::operator::traits::{Operator, SelectionOperator};
+use crate::solutions::traits::Solution;
 use crate::utils::random::Random;
 
 /// Binary Tournament Selection operator.

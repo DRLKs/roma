@@ -1,9 +1,9 @@
-use crate::algorithms::algorithm_trait::Algorithm;
-use crate::operator::operator_trait::{CrossoverOperator, MutationOperator, SelectionOperator};
-use crate::problem::problem_trait::Problem;
+use crate::algorithms::traits::Algorithm;
+use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
+use crate::problem::traits::Problem;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
-use crate::solution_set::solution_set_trait::SolutionSet;
-use crate::solutions::solution_trait::Solution;
+use crate::solution_set::traits::SolutionSet;
+use crate::solutions::traits::Solution;
 
 /// Parameters for the Genetic Algorithm.
 /// Uses generics to allow any combination of operators.

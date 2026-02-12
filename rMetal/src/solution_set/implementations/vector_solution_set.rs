@@ -1,5 +1,5 @@
-use crate::solution_set::solution_set_trait::SolutionSet;
-use crate::solutions::solution_trait::Solution;
+use crate::solution_set::traits::SolutionSet;
+use crate::solutions::traits::Solution;
 
 #[derive(Clone)]
 pub struct VectorSolutionSet<T, S>
@@ -48,11 +48,11 @@ where
 #[cfg(test)]
 mod test {
     use crate::quality_indicator::implementations::decimal_quality_indicator::DecimalQualityIndicator;
-    use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
-    use crate::solution_set::solution_set_trait::SolutionSet;
+    use crate::quality_indicator::traits::QualityIndicator;
+    use crate::solution_set::traits::SolutionSet;
     use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
     use crate::solutions::implementations::binary_solution::BinarySolution;
-    use crate::solutions::solution_trait::Solution;
+    use crate::solutions::traits::Solution;
 
     #[test]
     fn get_best_solution_test() {

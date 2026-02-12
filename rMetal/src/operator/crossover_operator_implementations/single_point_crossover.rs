@@ -1,6 +1,6 @@
-use crate::operator::operator_trait::{CrossoverOperator, Operator};
+use crate::operator::traits::{CrossoverOperator, Operator};
 use crate::solutions::implementations::binary_solution::BinarySolution;
-use crate::solutions::solution_trait::Solution;
+use crate::solutions::traits::Solution;
 use crate::utils::random::Random;
 
 /// Single Point Crossover operator for binary solutions.

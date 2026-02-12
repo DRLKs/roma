@@ -1,7 +1,7 @@
-use crate::problem::problem_trait::Problem;
+use crate::problem::traits::Problem;
 use crate::quality_indicator::implementations::decimal_quality_indicator::DecimalQualityIndicator;
 use crate::solutions::implementations::binary_solution::BinarySolution;
-use crate::solutions::solution_trait::Solution;
+use crate::solutions::traits::Solution;
 
 /// Knapsack Problem: maximize the value of items in a knapsack without exceeding capacity
 pub struct KnapsackProblem {

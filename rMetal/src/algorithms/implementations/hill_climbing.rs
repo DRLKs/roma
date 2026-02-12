@@ -1,9 +1,9 @@
-use crate::solutions::solution_trait::Solution;
-use crate::problem::problem_trait::Problem;
-use crate::algorithms::algorithm_trait::Algorithm;
-use crate::solution_set::solution_set_trait::SolutionSet;
+use crate::solutions::traits::Solution;
+use crate::problem::traits::Problem;
+use crate::algorithms::traits::Algorithm;
+use crate::solution_set::traits::SolutionSet;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
-use crate::operator::operator_trait::MutationOperator;
+use crate::operator::traits::MutationOperator;
 
 /// Parameters for Hill Climbing algorithm.
 /// Uses generics to allow any mutation operator.

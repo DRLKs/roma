@@ -1,6 +1,6 @@
 use crate::quality_indicator::implementations::decimal_quality_indicator::DecimalQualityIndicator;
-use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
-use crate::solutions::solution_trait::{Solution, SolutionInfo};
+use crate::quality_indicator::traits::QualityIndicator;
+use crate::solutions::traits::{Solution, SolutionInfo};
 
 pub struct PermutationSolution<T: Clone> {
     solution_info: SolutionInfo<T>,
@@ -99,7 +99,7 @@ impl<T: Clone + PartialEq> Solution<T> for PermutationSolution<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::solutions::solution_trait::{Solution, SolutionInfo};
+    use crate::solutions::traits::{Solution, SolutionInfo};
 
     #[test]
     fn test_is_valid_with_valid_permutation() {

@@ -1,2 +1,2 @@
-pub mod solution_set_trait;
+pub mod traits;
 pub mod implementations;

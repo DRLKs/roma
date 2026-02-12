@@ -1,4 +1,4 @@
-use crate::quality_indicator::quality_indicator_trait::{QualityIndicator};
+use crate::quality_indicator::traits::{QualityIndicator};
 
 #[derive(Clone)]
 pub struct DecimalQualityIndicator {

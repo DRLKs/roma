@@ -1,10 +1,10 @@
-use rMetal::algorithms::algorithm_trait::Algorithm;
+use rMetal::algorithms::traits::Algorithm;
 use rMetal::algorithms::implementations::hill_climbing::{HillClimbing, HillClimbingParameters};
-use rMetal::operator::implementations::bit_flip_mutation::BitFlipMutation;
+use rMetal::operator::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
 use rMetal::problem::implementations::knapsack_problem::KnapsackProblem;
-use rMetal::problem::problem_trait::Problem;
-use rMetal::solution_set::solution_set_trait::SolutionSet;
-use rMetal::solutions::solution_trait::Solution;
+use rMetal::problem::traits::Problem;
+use rMetal::solution_set::traits::SolutionSet;
+use rMetal::solutions::traits::Solution;
 
 fn main() {
     // Define el problema de la mochila

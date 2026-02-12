@@ -1,6 +1,6 @@
-use crate::quality_indicator::quality_indicator_trait::QualityIndicator;
+use crate::quality_indicator::traits::QualityIndicator;
 use crate::quality_indicator::implementations::decimal_quality_indicator::DecimalQualityIndicator;
-use crate::solutions::solution_trait::{Solution, SolutionInfo};
+use crate::solutions::traits::{Solution, SolutionInfo};
 use crate::utils::random::{Random, seed_from_time };
 
 pub struct BinarySolution {
@@ -87,7 +87,7 @@ impl Solution<bool> for BinarySolution {
     }
 
     fn value(&self) -> f64 {
-        self.quality.get_fitness().unwrap_or(f64::INFINITY)
+        self.quality.get_fitness().unwrap_or(0.0)
     }
 
     fn is_valid(&self) -> bool {
@@ -142,7 +142,7 @@ impl Clone for BinarySolution {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::solutions::solution_trait::{Solution};
+    use crate::solutions::traits::{Solution};
 
     #[test]
     fn test_compare_binary_solutions() {

@@ -1,4 +1,4 @@
-use crate::solutions::solution_trait::Solution;
+use crate::solutions::traits::Solution;
 
 pub trait SolutionSet<T, S>
 where 

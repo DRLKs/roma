@@ -1,6 +1,6 @@
-use crate::solutions::solution_trait::Solution;
-use crate::solution_set::solution_set_trait::SolutionSet;
-use crate::problem::problem_trait::Problem;
+use crate::problem::traits::Problem;
+use crate::solutions::traits::Solution;
+use crate::solution_set::traits::SolutionSet;
 
 /// Trait that defines the basic interface for all optimization algorithms.
 /// 

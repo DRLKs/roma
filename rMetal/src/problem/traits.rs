@@ -1,4 +1,4 @@
-use crate::solutions::solution_trait::Solution;
+use crate::solutions::traits::Solution;
 
 /// Trait that defines the basic interface for optimization problems.
 /// * `S` - Solution type
