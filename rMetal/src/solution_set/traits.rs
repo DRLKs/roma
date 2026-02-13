@@ -1,5 +1,8 @@
 use crate::solutions::traits::Solution;
 
+/// Trait that defines the basic interface for sets of solutions.
+/// * `T` - Type of the solution variables
+/// * `S` - Solution type
 pub trait SolutionSet<T, S>
 where 
     S: Solution<T>, T: std::clone::Clone

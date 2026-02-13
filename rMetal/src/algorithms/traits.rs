@@ -12,7 +12,7 @@ pub trait Algorithm<T, S, P>
 where
     S: Solution<T>,
     T: Clone,
-    P: Problem<S, T>,
+    P: Problem<T, S>,
 {
     type SolutionSet: SolutionSet<T, S>;
 

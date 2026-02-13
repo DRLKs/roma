@@ -1,9 +1,9 @@
 use crate::solutions::traits::Solution;
 
 /// Trait that defines the basic interface for optimization problems.
-/// * `S` - Solution type
 /// * `T` - Type of the solution variables
-pub trait Problem<S, T>
+/// * `S` - Solution type
+pub trait Problem<T, S>
 where
     S: Solution<T>,
     T: Clone,

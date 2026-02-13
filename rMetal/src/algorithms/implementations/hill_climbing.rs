@@ -67,7 +67,7 @@ impl<T, S, P, M> Algorithm<T, S, P> for HillClimbing<T, S, M>
 where
     S: Solution<T> + Clone,
     T: Clone,
-    P: Problem<S, T>,
+    P: Problem<T, S>,
     M: MutationOperator<T, S>,
 {
     type SolutionSet = VectorSolutionSet<T, S>;

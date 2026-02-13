@@ -97,7 +97,7 @@ impl<T, S, P, C, M, Sel> Algorithm<T, S, P> for GeneticAlgorithm<T, S, C, M, Sel
 where
     S: Solution<T> + Clone,
     T: Clone,
-    P: Problem<S, T>,
+    P: Problem<T, S>,
     C: CrossoverOperator<T, S>,
     M: MutationOperator<T, S>,
     Sel: SelectionOperator<T, S>,
