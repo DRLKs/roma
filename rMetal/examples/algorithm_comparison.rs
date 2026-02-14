@@ -22,7 +22,7 @@ pub fn solve_with_algorithm<A>(
     
     let solution_set = algorithm.run(problem, 1);
     
-    if let Some(best) = solution_set.get_best_solution() {
+    if let Some(best) = solution_set.best_solution() {
         println!("Mejor solución:");
         println!("  Fitness: {}", best.value());
         print!("  Items seleccionados: [");

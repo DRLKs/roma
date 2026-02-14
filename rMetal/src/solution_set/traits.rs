@@ -38,7 +38,7 @@ where
         self.length()
     }
 
-    fn get_best_solution(&self) -> Option<&S> {
+    fn best_solution(&self) -> Option<&S> {
         if self.is_empty() {
             return None;
         }

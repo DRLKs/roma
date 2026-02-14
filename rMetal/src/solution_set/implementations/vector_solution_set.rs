@@ -69,7 +69,7 @@ mod test {
         solution_set.add_solution(worst_solution);
         solution_set.add_solution(best_solution);
 
-        let best = solution_set.get_best_solution().unwrap();
+        let best = solution_set.best_solution().unwrap();
         assert_eq!(
             best.get_quality().unwrap().get_fitness_indicator(),
             &Some(10.0)
