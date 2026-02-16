@@ -1,5 +1,6 @@
 use crate::algorithms::traits::Algorithm;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
+use crate::observer::traits::{AlgorithmEvent, AlgorithmObserver};
 use crate::problem::traits::Problem;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
@@ -75,6 +76,7 @@ where
 {
     parameters: GeneticAlgorithmParameters<T, S, C, M, Sel>,
     solution_set: Option<VectorSolutionSet<T, S>>,
+    observers: Vec<Box<dyn AlgorithmObserver<T, S>>>,
 }
 
 impl<T, S, C, M, Sel> GeneticAlgorithm<T, S, C, M, Sel>
@@ -89,7 +91,42 @@ where
         GeneticAlgorithm {
             parameters,
             solution_set: None,
+            observers: Vec::new(),
         }
+    }
+
+    /// Adds an observer to monitor algorithm execution
+    pub fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<T, S>>) {
+        self.observers.push(observer);
+    }
+
+    /// Notifies all observers of an event
+    fn notify_observers(&mut self, event: &AlgorithmEvent<T, S>) {
+        for observer in &mut self.observers {
+            observer.update(event);
+        }
+    }
+
+    /// Calculates statistics from population
+    fn calculate_statistics(&self, population: &[S]) -> (f64, f64, f64) {
+        if population.is_empty() {
+            return (0.0, 0.0, 0.0);
+        }
+
+        let mut best_fitness = f64::MIN;
+        let mut worst_fitness = f64::MAX;
+        let mut sum_fitness = 0.0;
+
+        for solution in population {
+            let fitness = solution.value();
+            best_fitness = best_fitness.max(fitness);
+            worst_fitness = worst_fitness.min(fitness);
+            sum_fitness += fitness;
+        }
+
+        let average_fitness = sum_fitness / population.len() as f64;
+
+        (best_fitness, average_fitness, worst_fitness)
     }
 }
 
@@ -106,6 +143,11 @@ where
     type Parameters = GeneticAlgorithmParameters<T, S, C, M, Sel>;
 
     fn run(&mut self, problem: &P, verbose: u8) -> Self::SolutionSet {
+        // Notify start
+        self.notify_observers(&AlgorithmEvent::Start {
+            algorithm_name: "GeneticAlgorithm".to_string(),
+        });
+
         if verbose > 0 {
             println!("Starting Genetic Algorithm");
             println!("  Population size: {}", self.parameters.population_size);
@@ -124,6 +166,8 @@ where
             })
             .collect();
 
+        let mut evaluations = self.parameters.population_size;
+
         let mut best_fitness = population
             .iter()
             .map(|s| s.value())
@@ -134,8 +178,18 @@ where
             println!("Initial best fitness: {}", best_fitness);
         }
 
+        // Initial statistics
+        let (best_fit, avg_fit, worst_fit) = self.calculate_statistics(&population);
+        self.notify_observers(&AlgorithmEvent::GenerationCompleted {
+            generation: 0,
+            evaluations,
+            best_fitness: best_fit,
+            average_fitness: avg_fit,
+            worst_fitness: worst_fit,
+        });
+
         // Evolution loop
-        for generation in 0..self.parameters.max_generations {
+        for generation in 1..=self.parameters.max_generations {
             let mut offspring_population = Vec::new();
 
             // Generate offspring
@@ -164,6 +218,7 @@ where
                         .mutation_operator
                         .execute(child, self.parameters.mutation_probability);
                     problem.evaluate(child);
+                    evaluations += 1;
                 }
 
                 offspring_population.extend(offspring);
@@ -174,23 +229,52 @@ where
 
             population = offspring_population;
 
-            // Track best fitness
+            // Track best fitness and notify observers
             let current_best = population
                 .iter()
-                .map(|s| s.value())
-                .max_by(|a, b| a.partial_cmp(b).unwrap())
-                .unwrap_or(0.0);
+                .max_by(|a, b| a.value().partial_cmp(&b.value()).unwrap())
+                .unwrap();
 
-            if current_best > best_fitness {
-                best_fitness = current_best;
+            let current_best_value = current_best.value();
+
+            if current_best_value > best_fitness {
+                best_fitness = current_best_value;
+                let best_solution = current_best.copy();
+                
+                self.notify_observers(&AlgorithmEvent::BestSolutionUpdate {
+                    generation,
+                    solution: best_solution.copy(),
+                });
+
                 if verbose > 1 {
                     println!("Generation {}: New best fitness = {}", generation, best_fitness);
                 }
             }
+
+            // Notify generation completed
+            let (best_fit, avg_fit, worst_fit) = self.calculate_statistics(&population);
+            self.notify_observers(&AlgorithmEvent::GenerationCompleted {
+                generation,
+                evaluations,
+                best_fitness: best_fit,
+                average_fitness: avg_fit,
+                worst_fitness: worst_fit,
+            });
         }
+
+        // Notify end
+        self.notify_observers(&AlgorithmEvent::End {
+            total_generations: self.parameters.max_generations,
+            total_evaluations: evaluations,
+        });
 
         if verbose > 0 {
             println!("Genetic Algorithm finished. Best fitness: {}", best_fitness);
+        }
+
+        // Finalize observers
+        for observer in &mut self.observers {
+            observer.finalize();
         }
 
         // Find and return the best solution

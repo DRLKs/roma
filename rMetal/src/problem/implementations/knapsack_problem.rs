@@ -94,7 +94,7 @@ impl Problem<bool, BinarySolution> for KnapsackProblem {
 
     /// Solution that serves as a starting point for the algorithm
     fn create_solution(&self) -> BinarySolution {
-        BinarySolution::zeros(self.number_of_items)
+        BinarySolution::random(self.number_of_items, None)
     }
 }
 
@@ -212,7 +212,7 @@ mod tests {
         // Seleccionar todos los items
         let mut solution = BinarySolution::zeros(3);
         for i in 0..3 {
-            solution.set_variable(i, true);
+            solution.set_variable(i, true).unwrap();
         }
 
         problem.evaluate(&mut solution);

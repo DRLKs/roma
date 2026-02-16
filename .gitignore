@@ -88,3 +88,5 @@ build/
 # MiKTeX / texmf local state
 /texmf-var/
 
+# Archivos generados por los observadores 
+output/

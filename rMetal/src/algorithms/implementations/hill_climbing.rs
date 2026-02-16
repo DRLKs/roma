@@ -4,6 +4,7 @@ use crate::algorithms::traits::Algorithm;
 use crate::solution_set::traits::SolutionSet;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::operator::traits::MutationOperator;
+use crate::observer::traits::{AlgorithmEvent, AlgorithmObserver};
 
 /// Parameters for Hill Climbing algorithm.
 /// Uses generics to allow any mutation operator.
@@ -46,6 +47,7 @@ where
     parameters: HillClimbingParameters<T, S, M>,
     solution_set: Option<VectorSolutionSet<T, S>>,
     is_maximization: bool,
+    observers: Vec<Box<dyn AlgorithmObserver<T, S>>>,
 }
 
 impl<T, S, M> HillClimbing<T, S, M>
@@ -59,6 +61,19 @@ where
             parameters,
             solution_set: None,
             is_maximization: maximization,
+            observers: Vec::new(),
+        }
+    }
+
+    /// Adds an observer to monitor algorithm execution
+    pub fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<T, S>>) {
+        self.observers.push(observer);
+    }
+
+    /// Notifies all observers of an event
+    fn notify_observers(&mut self, event: &AlgorithmEvent<T, S>) {
+        for observer in &mut self.observers {
+            observer.update(event);
         }
     }
 }
@@ -74,6 +89,11 @@ where
     type Parameters = HillClimbingParameters<T, S, M>;
 
     fn run(&mut self, problem: &P, verbose: u8) -> Self::SolutionSet {
+        // Notify start
+        self.notify_observers(&AlgorithmEvent::Start {
+            algorithm_name: "HillClimbing".to_string(),
+        });
+
         if verbose > 0 {
             println!("Starting Hill Climbing with {} iterations", self.parameters.max_iterations);
             println!("  Mutation operator: {}", self.parameters.mutation_operator.name());
@@ -83,27 +103,74 @@ where
         problem.evaluate(&mut current);
 
         let mut best_value = current.value();
+        let mut evaluations = 1;
 
-        for iteration in 0..self.parameters.max_iterations {
+        // Initial event
+        let fitness = current.value();
+        self.notify_observers(&AlgorithmEvent::GenerationCompleted {
+            generation: 0,
+            evaluations,
+            best_fitness: fitness,
+            average_fitness: fitness,
+            worst_fitness: fitness,
+        });
+
+        for iteration in 1..=self.parameters.max_iterations {
             // Generate neighbor using mutation operator
             let mut neighbor = current.copy();
             self.parameters.mutation_operator.execute(&mut neighbor, self.parameters.mutation_probability);
             problem.evaluate(&mut neighbor);
+            evaluations += 1;
 
             // For minimization: neighbor < current
             // For maximization: neighbor > current
-            if self.is_maximization && neighbor.value() > current.value() || !self.is_maximization && neighbor.value() < current.value() {
+            let improved = if self.is_maximization {
+                neighbor.value() > current.value()
+            } else {
+                neighbor.value() < current.value()
+            };
+
+            if improved {
                 current = neighbor;
                 best_value = current.value();
+                
+                // Notify improvement
+                self.notify_observers(&AlgorithmEvent::BestSolutionUpdate {
+                    generation: iteration,
+                    solution: current.copy(),
+                });
                 
                 if verbose > 1 {
                     println!("Iteration {}: Improved to {}", iteration, best_value);
                 }
             }
+
+            // Notify iteration completed (every 10 iterations or when improved)
+            if iteration % 10 == 0 || improved {
+                let fitness = current.value();
+                self.notify_observers(&AlgorithmEvent::GenerationCompleted {
+                    generation: iteration,
+                    evaluations,
+                    best_fitness: fitness,
+                    average_fitness: fitness,
+                    worst_fitness: fitness,
+                });
+            }
         }
+
+        // Notify end
+        self.notify_observers(&AlgorithmEvent::End {
+            total_generations: self.parameters.max_iterations,
+            total_evaluations: evaluations,
+        });
 
         if verbose > 0 {
             println!("Hill Climbing finished. Best value: {}", best_value);
+        }
+
+        // Finalize observers
+        for observer in &mut self.observers {
+            observer.finalize();
         }
 
         let mut result = VectorSolutionSet::new();
