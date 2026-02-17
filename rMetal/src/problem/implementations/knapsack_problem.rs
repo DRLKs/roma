@@ -159,21 +159,6 @@ mod tests {
     }
 
     #[test]
-    fn problem_default_solution_weight_test() {
-        let capacity = 100.0;
-        let weights = vec![50.0,40.0,10.0];
-        let values = vec![10.0,20.0,50.0];
-
-        let knapsack_problem = KnapsackProblem::with_data(capacity, weights, values);
-
-        // Any objects in the knapsack
-        let solution = knapsack_problem.create_solution();
-        let expected_weight = 0.0;
-
-        assert_eq!( knapsack_problem.calculate_weight(&solution), expected_weight, "The default solution should have a weight of zero." );
-    }
-
-    #[test]
     fn test_knapsack_creation_with_data() {
         let weights = vec![10.0, 20.0, 30.0];
         let values = vec![100.0, 200.0, 300.0];

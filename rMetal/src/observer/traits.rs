@@ -35,8 +35,7 @@ where
 /// Trait for observing algorithm execution
 /// 
 /// Observers can monitor the algorithm's progress and perform actions
-/// such as logging, visualization, or early stopping.
-pub trait AlgorithmObserver<T, S>: Send
+pub trait AlgorithmObserver<T, S>
 where
     S: Solution<T>,
     T: Clone,
