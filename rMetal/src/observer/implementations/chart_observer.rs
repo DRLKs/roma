@@ -170,6 +170,10 @@ where
                 
                 println!("  Charts saved to: {:?}", self.output_path);
             }
+            AlgorithmEvent::Error { message } => {
+                eprintln!("  ChartObserver: Error detected - {}", message);
+                eprintln!("   No charts will be generated due to early termination.");
+            }
             _ => {}
         }
     }

@@ -29,6 +29,10 @@ where
         total_generations: usize,
         total_evaluations: usize,
     },
+    /// An error occurred during execution
+    Error {
+        message: String,
+    },
     _Phantom(std::marker::PhantomData<T>),
 }
 

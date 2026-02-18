@@ -89,6 +89,20 @@ where
     type Parameters = HillClimbingParameters<T, S, M>;
 
     fn run(&mut self, problem: &P, verbose: u8) -> Self::SolutionSet {
+        // Validate parameters before starting
+        if !<Self as Algorithm<T, S, P>>::validate_parameters(self) {
+            let error_msg = "Invalid parameters: max_iterations must be > 0, mutation_probability must be in [0, 1]".to_string();
+            
+            self.notify_observers(&AlgorithmEvent::Error {
+                message: error_msg.clone(),
+            });
+            
+            if verbose > 0 {
+                eprintln!("Error: {}", error_msg);
+            }
+            
+            panic!("{}", error_msg);
+        }
         // Notify start
         self.notify_observers(&AlgorithmEvent::Start {
             algorithm_name: "HillClimbing".to_string(),
@@ -182,6 +196,8 @@ where
 
     fn validate_parameters(&self) -> bool {
         self.parameters.max_iterations > 0
+            && self.parameters.mutation_probability >= 0.0
+            && self.parameters.mutation_probability <= 1.0
     }
 
     fn get_solution_set(&self) -> Option<&Self::SolutionSet> {

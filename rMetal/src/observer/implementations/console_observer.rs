@@ -58,6 +58,10 @@ where
                     total_generations, total_evaluations
                 );
             }
+            AlgorithmEvent::Error { message } => {
+                eprintln!("  Error: {}", message);
+                eprintln!("   Algorithm execution stopped due to validation error.");
+            }
             _ => {}
         }
     }

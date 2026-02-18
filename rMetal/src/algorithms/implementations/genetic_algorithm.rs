@@ -143,6 +143,21 @@ where
     type Parameters = GeneticAlgorithmParameters<T, S, C, M, Sel>;
 
     fn run(&mut self, problem: &P, verbose: u8) -> Self::SolutionSet {
+        // Validate parameters before starting
+        if !<Self as Algorithm<T, S, P>>::validate_parameters(self) {
+            let error_msg = "Invalid parameters: population_size and max_generations must be > 0, probabilities must be in [0, 1]".to_string();
+            
+            self.notify_observers(&AlgorithmEvent::Error {
+                message: error_msg.clone(),
+            });
+            
+            if verbose > 0 {
+                eprintln!("Error: {}", error_msg);
+            }
+            
+            panic!("{}", error_msg);
+        }
+        
         // Notify start
         self.notify_observers(&AlgorithmEvent::Start {
             algorithm_name: "GeneticAlgorithm".to_string(),
@@ -229,7 +244,7 @@ where
 
             population = offspring_population;
 
-            // Track best fitness and notify observers
+            // Track the best fitness and notify observers
             let current_best = population
                 .iter()
                 .max_by(|a, b| a.value().partial_cmp(&b.value()).unwrap())

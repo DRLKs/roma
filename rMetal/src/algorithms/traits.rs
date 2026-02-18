@@ -30,7 +30,9 @@ where
     /// 
     fn run(&mut self, problem: &P, verbose: u8) -> Self::SolutionSet;
 
-    fn validate_parameters(&self) -> bool;
+    fn validate_parameters(&self) -> bool{
+        true  // default
+    }
 
     fn get_solution_set(&self) -> Option<&Self::SolutionSet>;
 
