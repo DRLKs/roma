@@ -58,7 +58,7 @@ fn main() {
         println!("  Fitness: {}", best_solution.value());
     }
 
-    println!("\n✅ Charts have been generated in the 'output/hill_climbing_charts' directory");
+    println!("\n  Charts have been generated in the 'output/hill_climbing_charts' directory");
     println!("   - convergence.png: Shows fitness evolution over iterations");
     println!("   - evaluations.png: Shows total evaluations over time");
 }

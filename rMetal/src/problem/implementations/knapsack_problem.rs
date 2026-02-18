@@ -4,6 +4,7 @@ use crate::solutions::implementations::binary_solution::BinarySolution;
 use crate::solutions::traits::Solution;
 
 /// Knapsack Problem: maximize the value of items in a knapsack without exceeding capacity
+#[derive(Clone)]
 pub struct KnapsackProblem {
     description: String,
     number_of_items: usize,

@@ -23,6 +23,7 @@ where
     pub crossover_operator: C,
     pub mutation_operator: M,
     pub selection_operator: Sel,
+    pub num_threads: Option<usize>,
     _phantom: std::marker::PhantomData<(T, S)>,
 }
 
@@ -51,8 +52,34 @@ where
             crossover_operator,
             mutation_operator,
             selection_operator,
+            num_threads: None,
             _phantom: std::marker::PhantomData,
         }
+
+    }
+
+    pub fn show_parameters_information(&self){
+        println!("Starting Genetic Algorithm");
+        println!("  Population size: {}", self.population_size);
+        println!("  Max generations: {}", self.max_generations);
+        println!("  Crossover: {}", self.crossover_operator.name());
+        println!("  Mutation: {}", self.mutation_operator.name());
+        println!("  Selection: {}", self.selection_operator.name());
+    }
+
+    pub fn with_threads(mut self, num_threads: usize) -> Self {
+        self.num_threads = Some(num_threads);
+        self
+    }
+
+    pub fn with_parallel(mut self) -> Self {
+        self.num_threads = None;
+        self
+    }
+
+    pub fn sequential(mut self) -> Self {
+        self.num_threads = Some(1);
+        self
     }
 }
 
@@ -132,17 +159,21 @@ where
 
 impl<T, S, P, C, M, Sel> Algorithm<T, S, P> for GeneticAlgorithm<T, S, C, M, Sel>
 where
-    S: Solution<T> + Clone,
-    T: Clone,
-    P: Problem<T, S>,
-    C: CrossoverOperator<T, S>,
-    M: MutationOperator<T, S>,
-    Sel: SelectionOperator<T, S>,
+    S: Solution<T> + Clone + Send,
+    T: Clone + Send,
+    P: Problem<T, S> + Sync,
+    C: CrossoverOperator<T, S> + Sync + Clone + Send,
+    M: MutationOperator<T, S> + Sync + Clone + Send,
+    Sel: SelectionOperator<T, S> + Sync + Clone + Send,
 {
     type SolutionSet = VectorSolutionSet<T, S>;
     type Parameters = GeneticAlgorithmParameters<T, S, C, M, Sel>;
 
     fn run(&mut self, problem: &P, verbose: u8) -> Self::SolutionSet {
+
+        use crate::utils::random::{Random,seed_from_time};
+        use std::sync::{Arc, Mutex};
+
         // Validate parameters before starting
         if !<Self as Algorithm<T, S, P>>::validate_parameters(self) {
             let error_msg = "Invalid parameters: population_size and max_generations must be > 0, probabilities must be in [0, 1]".to_string();
@@ -164,16 +195,11 @@ where
         });
 
         if verbose > 0 {
-            println!("Starting Genetic Algorithm");
-            println!("  Population size: {}", self.parameters.population_size);
-            println!("  Max generations: {}", self.parameters.max_generations);
-            println!("  Crossover: {}", self.parameters.crossover_operator.name());
-            println!("  Mutation: {}", self.parameters.mutation_operator.name());
-            println!("  Selection: {}", self.parameters.selection_operator.name());
+            self.parameters.show_parameters_information();
         }
 
         // Initialize population
-        let mut population: Vec<S> = (0..self.parameters.population_size)
+        let population: Vec<S> = (0..self.parameters.population_size)
             .map(|_| {
                 let mut solution = problem.create_solution();
                 problem.evaluate(&mut solution);
@@ -181,9 +207,9 @@ where
             })
             .collect();
 
-        let mut evaluations = self.parameters.population_size;
+        let evaluations = self.parameters.population_size;
 
-        let mut best_fitness = population
+        let best_fitness = population
             .iter()
             .map(|s| s.value())
             .max_by(|a, b| a.partial_cmp(b).unwrap())
@@ -203,103 +229,159 @@ where
             worst_fitness: worst_fit,
         });
 
-        // Evolution loop
-        for generation in 1..=self.parameters.max_generations {
-            let mut offspring_population = Vec::new();
+        // Determine number of threads to use
+        let num_threads = self.parameters.num_threads.unwrap_or_else(|| {
+            std::thread::available_parallelism()
+                .map(|n| n.get())
+                .unwrap_or(1)
+        });
 
-            // Generate offspring
-            while offspring_population.len() < self.parameters.population_size {
-                // Selection
-                let parent1 = self.parameters.selection_operator.execute(&population).copy();
-                let parent2 = self.parameters.selection_operator.execute(&population).copy();
+        if verbose > 0 && num_threads > 1 {
+            println!("Running {} parallel threads...", num_threads);
+        }
 
-                // Crossover
-                let mut offspring = if crate::utils::random::Random::new(
-                    crate::utils::random::seed_from_time(),
-                )
-                .next_f64()
-                    < self.parameters.crossover_probability
-                {
-                    self.parameters
-                        .crossover_operator
-                        .execute(&parent1, &parent2)
-                } else {
-                    vec![parent1, parent2]
-                };
+        // Pre-allocate slots for solutions from each thread
+        let solution_slots: Arc<Mutex<Vec<Option<S>>>> = Arc::new(Mutex::new(vec![None; num_threads]));
+        
+        // Wrap observers in Arc<Mutex<>> for thread-safe sharing
+        let observers = Arc::new(Mutex::new(&mut self.observers));
 
-                // Mutation
-                for child in &mut offspring {
-                    self.parameters
-                        .mutation_operator
-                        .execute(child, self.parameters.mutation_probability);
-                    problem.evaluate(child);
-                    evaluations += 1;
-                }
+        // Get references to parameters before scope
+        let population_size = self.parameters.population_size;
+        let max_generations = self.parameters.max_generations;
+        let crossover_prob = self.parameters.crossover_probability;
+        let mutation_prob = self.parameters.mutation_probability;
+        let crossover_op = &self.parameters.crossover_operator;
+        let mutation_op = &self.parameters.mutation_operator;
+        let selection_op = &self.parameters.selection_operator;
 
-                offspring_population.extend(offspring);
-            }
+        // Always use scoped threads, even for 1 thread (unified code path)
+        std::thread::scope(|scope| {
+            let mut handles = Vec::new();
 
-            // Truncate to population size if necessary
-            offspring_population.truncate(self.parameters.population_size);
+            for thread_id in 0..num_threads {
+                let solution_slots = Arc::clone(&solution_slots);
+                let observers = Arc::clone(&observers);
 
-            population = offspring_population;
+                let handle = scope.spawn(move || {
+                    // Each thread has its own population
+                    let mut population: Vec<S> = (0..population_size)
+                        .map(|_| {
+                            let mut solution = problem.create_solution();
+                            problem.evaluate(&mut solution);
+                            solution
+                        })
+                        .collect();
 
-            // Track the best fitness and notify observers
-            let current_best = population
-                .iter()
-                .max_by(|a, b| a.value().partial_cmp(&b.value()).unwrap())
-                .unwrap();
+                    // Evolution loop for this thread
+                    for generation in 1..=max_generations {
+                        let mut offspring_population = Vec::new();
 
-            let current_best_value = current_best.value();
+                        // Generate offspring
+                        while offspring_population.len() < population_size {
+                            let parent1 = selection_op.execute(&population).copy();
+                            let parent2 = selection_op.execute(&population).copy();
 
-            if current_best_value > best_fitness {
-                best_fitness = current_best_value;
-                let best_solution = current_best.copy();
-                
-                self.notify_observers(&AlgorithmEvent::BestSolutionUpdate {
-                    generation,
-                    solution: best_solution.copy(),
+                            let mut offspring = if Random::new(seed_from_time())
+                            .next_f64()
+                                < crossover_prob
+                            {
+                                crossover_op.execute(&parent1, &parent2)
+                            } else {
+                                vec![parent1, parent2]
+                            };
+
+                            for child in &mut offspring {
+                                mutation_op.execute(child, mutation_prob);
+                                problem.evaluate(child);
+                            }
+
+                            offspring_population.extend(offspring);
+                        }
+
+                        offspring_population.truncate(population_size);
+                        population = offspring_population;
+                        
+                        // Notify observers after each generation
+                        let current_best = population
+                            .iter()
+                            .max_by(|a, b| a.value().partial_cmp(&b.value()).unwrap())
+                            .unwrap();
+                        
+                        let current_best_value = current_best.value();
+                        let mut sum_fitness = 0.0;
+                        let mut worst_fitness = f64::MAX;
+                        
+                        for sol in &population {
+                            let fit = sol.value();
+                            sum_fitness += fit;
+                            worst_fitness = worst_fitness.min(fit);
+                        }
+                        
+                        let avg_fitness = sum_fitness / population_size as f64;
+                        
+                        // Thread-safe observer notification
+                        if let Ok(mut obs) = observers.lock() {
+                            for observer in obs.iter_mut() {
+                                observer.update(&AlgorithmEvent::GenerationCompleted {
+                                    generation,
+                                    evaluations: population_size * generation,
+                                    best_fitness: current_best_value,
+                                    average_fitness: avg_fitness,
+                                    worst_fitness,
+                                });
+                            }
+                        }
+                    }
+
+                    // Find best solution from this thread
+                    let best_solution = population
+                        .into_iter()
+                        .max_by(|a, b| a.value().partial_cmp(&b.value()).unwrap())
+                        .unwrap();
+
+                    // Write to designated slot
+                    solution_slots.lock().unwrap()[thread_id] = Some(best_solution);
                 });
 
-                if verbose > 1 {
-                    println!("Generation {}: New best fitness = {}", generation, best_fitness);
-                }
+                handles.push(handle);
             }
 
-            // Notify generation completed
-            let (best_fit, avg_fit, worst_fit) = self.calculate_statistics(&population);
-            self.notify_observers(&AlgorithmEvent::GenerationCompleted {
-                generation,
-                evaluations,
-                best_fitness: best_fit,
-                average_fitness: avg_fit,
-                worst_fitness: worst_fit,
-            });
+            // Wait for all threads to complete
+            for handle in handles {
+                handle.join().unwrap();
+            }
+        });
+
+        // Collect all solutions from slots into SolutionSet
+        let solutions = solution_slots.lock().unwrap();
+        let mut result = VectorSolutionSet::new();
+        
+        for solution_opt in solutions.iter() {
+            if let Some(solution) = solution_opt {
+                result.add_solution(solution.clone());
+            }
+        }
+
+        if verbose > 0 {
+            if num_threads > 1 {
+                println!("Parallel execution finished. Collected {} solutions.", result.size());
+            }
+            if let Some(best) = result.solutions().iter().max_by(|a, b| a.value().partial_cmp(&b.value()).unwrap()) {
+                println!("Genetic Algorithm finished. Best fitness: {}", best.value());
+            }
         }
 
         // Notify end
         self.notify_observers(&AlgorithmEvent::End {
             total_generations: self.parameters.max_generations,
-            total_evaluations: evaluations,
+            total_evaluations: evaluations * num_threads,
         });
-
-        if verbose > 0 {
-            println!("Genetic Algorithm finished. Best fitness: {}", best_fitness);
-        }
 
         // Finalize observers
         for observer in &mut self.observers {
             observer.finalize();
         }
-
-        // Find and return the best solution
-        let best_solution = population
-            .into_iter()
-            .max_by(|a, b| a.value().partial_cmp(&b.value()).unwrap())
-            .unwrap();
-
-        let mut result = VectorSolutionSet::new();
-        result.add_solution(best_solution);
 
         self.solution_set = Some(result.clone());
         result
@@ -325,4 +407,41 @@ where
     fn set_parameters(&mut self, params: Self::Parameters) {
         self.parameters = params;
     }
+}
+
+impl<T, S, C, M, Sel> Clone for GeneticAlgorithm<T, S, C, M, Sel>
+where
+    S: Solution<T> + Clone,
+    T: Clone,
+    C: CrossoverOperator<T, S> + Clone,
+    M: MutationOperator<T, S> + Clone,
+    Sel: SelectionOperator<T, S> + Clone,
+{
+    fn clone(&self) -> Self {
+        GeneticAlgorithm {
+            parameters: GeneticAlgorithmParameters {
+                population_size: self.parameters.population_size,
+                max_generations: self.parameters.max_generations,
+                crossover_probability: self.parameters.crossover_probability,
+                mutation_probability: self.parameters.mutation_probability,
+                crossover_operator: self.parameters.crossover_operator.clone(),
+                mutation_operator: self.parameters.mutation_operator.clone(),
+                selection_operator: self.parameters.selection_operator.clone(),
+                num_threads: self.parameters.num_threads,
+                _phantom: std::marker::PhantomData,
+            },
+            solution_set: self.solution_set.clone(),
+            observers: Vec::new(),
+        }
+    }
+}
+
+unsafe impl<T, S, C, M, Sel> Send for GeneticAlgorithm<T, S, C, M, Sel>
+where
+    S: Solution<T> + Clone + Send,
+    T: Clone + Send,
+    C: CrossoverOperator<T, S> + Send,
+    M: MutationOperator<T, S> + Send,
+    Sel: SelectionOperator<T, S> + Send,
+{
 }

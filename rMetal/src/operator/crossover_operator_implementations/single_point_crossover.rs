@@ -5,6 +5,7 @@ use crate::utils::random::Random;
 
 /// Single Point Crossover operator for binary solutions.
 /// Selects a random crossover point and exchanges segments between parents.
+#[derive(Clone)]
 pub struct SinglePointCrossover {
     name: String,
     offspring_count: usize,

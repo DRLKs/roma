@@ -37,7 +37,6 @@ where
 }
 
 /// Hill Climbing algorithm for single-objective optimization.
-/// Now uses a configurable mutation operator to generate neighbors.
 pub struct HillClimbing<T, S, M>
 where
     S: Solution<T> + Clone,
@@ -148,7 +147,6 @@ where
                 current = neighbor;
                 best_value = current.value();
                 
-                // Notify improvement
                 self.notify_observers(&AlgorithmEvent::BestSolutionUpdate {
                     generation: iteration,
                     solution: current.copy(),

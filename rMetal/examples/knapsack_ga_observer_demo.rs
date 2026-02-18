@@ -47,7 +47,7 @@ fn main() {
     ga.add_observer(Box::new(console_observer));
     
     // Chart observer for visualization
-    let output_dir = PathBuf::from("output/charts");
+    let output_dir = PathBuf::from("output/knapsack_ga_observer_demo/charts");
     let chart_observer = ChartObserver::new(output_dir)
         .with_dimensions(1200, 800);
     ga.add_observer(Box::new(chart_observer));

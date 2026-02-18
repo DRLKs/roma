@@ -46,6 +46,47 @@ impl ChartObserver {
         self
     }
 
+    /// Consolidate data from multiple threads by taking the best value for each generation
+    fn consolidate_data(&self) -> (Vec<usize>, Vec<f64>, Vec<f64>, Vec<f64>) {
+        use std::collections::HashMap;
+        
+        let mut gen_map: HashMap<usize, (f64, Vec<f64>, Vec<f64>)> = HashMap::new();
+        
+        for i in 0..self.generations.len() {
+            let generation = self.generations[i];
+            let best = self.best_fitness_history[i];
+            let avg = self.average_fitness_history[i];
+            let worst = self.worst_fitness_history[i];
+            
+            gen_map.entry(generation)
+                .and_modify(|(b, avgs, worsts)| {
+                    *b = b.max(best);
+                    avgs.push(avg);
+                    worsts.push(worst);
+                })
+                .or_insert((best, vec![avg], vec![worst]));
+        }
+        
+        let mut generations: Vec<usize> = gen_map.keys().copied().collect();
+        generations.sort();
+        
+        let mut best_fitness = Vec::new();
+        let mut avg_fitness = Vec::new();
+        let mut worst_fitness = Vec::new();
+        
+        for generation in &generations {
+            if let Some((best, avgs, worsts)) = gen_map.get(generation) {
+                best_fitness.push(*best);
+                // Average of averages from all threads for this generation
+                avg_fitness.push(avgs.iter().sum::<f64>() / avgs.len() as f64);
+                // Worst of worsts
+                worst_fitness.push(*worsts.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0));
+            }
+        }
+        
+        (generations, best_fitness, avg_fitness, worst_fitness)
+    }
+
     /// Generates a convergence chart showing fitness evolution over generations
     fn generate_convergence_chart(&self) -> Result<(), Box<dyn std::error::Error>> {
         if self.generations.is_empty() {
@@ -53,29 +94,28 @@ impl ChartObserver {
         }
 
         let output_file = self.output_path.join("convergence.svg");
+        
+        let (generations, best_fitness, avg_fitness, worst_fitness) = self.consolidate_data();
 
-        // Preparar datos como (f64, f64)
-        let best_data: Vec<(f64, f64)> = self.generations.iter()
-            .zip(self.best_fitness_history.iter())
+        let best_data: Vec<(f64, f64)> = generations.iter()
+            .zip(best_fitness.iter())
             .map(|(generation, fitness)| (*generation as f64, *fitness))
             .collect();
 
-        let avg_data: Vec<(f64, f64)> = self.generations.iter()
-            .zip(self.average_fitness_history.iter())
+        let avg_data: Vec<(f64, f64)> = generations.iter()
+            .zip(avg_fitness.iter())
             .map(|(generation, fitness)| (*generation as f64, *fitness))
             .collect();
 
-        let worst_data: Vec<(f64, f64)> = self.generations.iter()
-            .zip(self.worst_fitness_history.iter())
+        let worst_data: Vec<(f64, f64)> = generations.iter()
+            .zip(worst_fitness.iter())
             .map(|(generation, fitness)| (*generation as f64, *fitness))
             .collect();
 
-        // Crear series
         let best_series = Series::new("Best", best_data).with_color("#2563eb");
         let avg_series = Series::new("Average", avg_data).with_color("#10b981");
         let worst_series = Series::new("Worst", worst_data).with_color("#dc2626");
 
-        // Crear y guardar gráfico
         let chart = ChartBuilder::new()
             .title("Convergence")
             .x_label("Generation")
@@ -99,7 +139,6 @@ impl ChartObserver {
 
         let output_file = self.output_path.join("evaluations.svg");
 
-        // Preparar datos
         let data: Vec<(f64, f64)> = self.generations.iter()
             .zip(self.evaluations.iter())
             .map(|(generation, evals)| (*generation as f64, *evals as f64))
@@ -107,7 +146,6 @@ impl ChartObserver {
 
         let series = Series::new("Evaluations", data).with_color("#2563eb");
 
-        // Crear y guardar gráfico
         let chart = ChartBuilder::new()
             .title("Total Evaluations Over Time")
             .x_label("Generation")
@@ -136,7 +174,6 @@ where
                 // Create output directory if it doesn't exist
                 std::fs::create_dir_all(&self.output_path).ok();
                 
-                // Clear previous data
                 self.generations.clear();
                 self.evaluations.clear();
                 self.best_fitness_history.clear();
@@ -157,7 +194,6 @@ where
                 self.worst_fitness_history.push(*worst_fitness);
             }
             AlgorithmEvent::End { .. } => {
-                // Generate all charts
                 println!("  Generating charts...");
                 
                 if let Err(e) = self.generate_convergence_chart() {
@@ -179,7 +215,6 @@ where
     }
 
     fn finalize(&mut self) {
-        // Final chart generation if not already done
         self.generate_convergence_chart().ok();
         self.generate_evaluations_chart().ok();
     }

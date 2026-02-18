@@ -4,6 +4,7 @@ use crate::utils::random::Random;
 
 /// Binary Tournament Selection operator.
 /// Randomly selects two solutions and returns the better one.
+#[derive(Clone)]
 pub struct BinaryTournamentSelection {
     name: String,
 }

@@ -173,7 +173,7 @@ impl LineChart {
         let mut min_y = f64::INFINITY;
         let mut max_y = f64::NEG_INFINITY;
 
-        for series in &self.series {
+        for series in self.series.iter() {
             for &(x, y) in &series.data {
                 min_x = min_x.min(x);
                 max_x = max_x.max(x);
@@ -182,13 +182,32 @@ impl LineChart {
             }
         }
 
-        // Añadir margen del 5%
         let range_x = max_x - min_x;
         let range_y = max_y - min_y;
-        min_x -= range_x * 0.05;
-        max_x += range_x * 0.05;
-        min_y -= range_y * 0.05;
-        max_y += range_y * 0.05;
+        
+        // Para el eje X (generaciones), no permitir valores negativos si min_x es 0
+        if min_x == 0.0 {
+            max_x += range_x * 0.05;
+        } else {
+            min_x -= range_x * 0.05;
+            max_x += range_x * 0.05;
+        }
+        
+        // Para el eje Y, manejar caso especial cuando todos los valores son iguales
+        if range_y == 0.0 {
+            // Si todos los valores son iguales, crear un rango artificial
+            if min_y == 0.0 {
+                min_y = -0.5;
+                max_y = 0.5;
+            } else {
+                let margin = min_y.abs() * 0.1;
+                min_y -= margin;
+                max_y += margin;
+            }
+        } else {
+            min_y -= range_y * 0.05;
+            max_y += range_y * 0.05;
+        }
 
         Some((min_x, max_x, min_y, max_y))
     }
@@ -332,15 +351,19 @@ impl LineChart {
     }
 
     fn draw_legend(&self, svg: &mut String, plot_width: u32) {
+        let plot_height = self.config.height - self.config.margin_top - self.config.margin_bottom;
         let x = self.config.margin_left + plot_width - 150;
-        let mut y = self.config.margin_top + 20;
-
-        // Fondo de la leyenda
+        
+        // Posicionar la leyenda en la esquina inferior derecha
         let legend_height = 20 + self.series.len() as u32 * 20;
+        let y_start = self.config.margin_top + plot_height - legend_height - 10;
+        let mut y = y_start + 20;
+        
+        // Fondo de la leyenda
         svg.push_str(&format!(
             "  <rect x=\"{}\" y=\"{}\" width=\"140\" height=\"{}\" fill=\"white\" stroke=\"#d1d5db\" stroke-width=\"1\"/>\n",
             x - 5,
-            y - 15,
+            y_start + 5,
             legend_height
         ));
 

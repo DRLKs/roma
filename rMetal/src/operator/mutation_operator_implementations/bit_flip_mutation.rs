@@ -5,6 +5,7 @@ use crate::utils::random::Random;
 
 /// Bit Flip Mutation operator for binary solutions.
 /// Each bit has a probability of being flipped (0->1 or 1->0).
+#[derive(Clone)]
 pub struct BitFlipMutation {
     name: String,
 }
