@@ -38,7 +38,7 @@ where
         if population.is_empty() {
             panic!("Cannot select from empty population");
         }
-        
+
         if population.len() == 1 {
             return &population[0];
         }
@@ -72,6 +72,13 @@ mod tests {
     use crate::quality_indicator::implementations::decimal_quality_indicator::DecimalQualityIndicator;
 
     #[test]
+    fn test_binary_tournament_name() {
+        let selection = BinaryTournamentSelection::new();
+
+        assert_eq!(selection.name(), "BinaryTournamentSelection");
+    }
+    
+    #[test]
     fn test_binary_tournament_selection() {
         let selection = BinaryTournamentSelection::new();
         
@@ -87,5 +94,30 @@ mod tests {
         
         // Should consistently select the better solution
         assert_eq!(selected.value(), 10.0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_binary_tournament_selection_with_empty_population() {
+        let selection = BinaryTournamentSelection::new();
+
+        let population = vec![];
+
+        let _selected:&BinarySolution = selection.execute(&population);
+    }
+
+    #[test]
+    fn test_binary_tournament_selection_with_only_one() {
+        let selection = BinaryTournamentSelection::new();
+
+        let quality = 10.0;
+        let mut solution = BinarySolution::zeros(5);
+        solution.set_quality(DecimalQualityIndicator::new(Some(quality)));
+
+        let population = vec![solution];
+
+        let selected = selection.execute(&population);
+
+        assert_eq!(selected.value(), quality);
     }
 }

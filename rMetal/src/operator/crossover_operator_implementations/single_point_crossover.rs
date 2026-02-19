@@ -80,6 +80,13 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_single_point_crossover_name() {
+        let crossover = SinglePointCrossover::new();
+
+        assert_eq!(crossover.name(), "SinglePointCrossover");
+    }
+
+    #[test]
     fn test_single_point_crossover() {
         let crossover = SinglePointCrossover::new();
         let parent1 = BinarySolution::zeros(10);

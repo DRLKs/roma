@@ -47,7 +47,13 @@ impl MutationOperator<bool, BinarySolution> for BitFlipMutation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::solutions::traits::Solution;
+
+    #[test]
+    fn test_bit_flip_mutation_name() {
+        let mutation = BitFlipMutation::new();
+
+        assert_eq!(mutation.name(), "BitFlipMutation");
+    }
 
     #[test]
     fn test_bit_flip_mutation() {
@@ -57,11 +63,40 @@ mod tests {
         // With probability 1.0, all bits should be flipped
         mutation.execute(&mut solution, 1.0);
 
-        // Check that at least some bits changed (probabilistic test)
-        let ones_count = (0..10)
-            .filter(|&i| *solution.get_variable(i).unwrap())
-            .count();
+        assert!(solution.count_ones() > 0, "At least some bits should be flipped");
+    }
 
-        assert!(ones_count > 0, "At least some bits should be flipped");
+    #[test]
+    fn test_bit_flip_mutation_zero_probability() {
+        let mutation = BitFlipMutation::new();
+        let mut solution = BinarySolution::zeros(10);
+
+        // With probability 0.0, no bits should be flipped
+        mutation.execute(&mut solution, 0.0);
+
+        assert_eq!(solution.count_ones(), 0, "No one should be flipped");
+    }
+
+    #[test]
+    fn test_bit_flip_mutation_zero_probability_negative_case() {
+        let mutation = BitFlipMutation::new();
+        let mut solution = BinarySolution::zeros(15);
+
+        // With probability 0.0, no bits should be flipped
+        mutation.execute(&mut solution, -2.0);
+
+        assert_eq!(solution.count_ones(), 0, "No one should be flipped");
+    }
+
+    #[test]
+    fn test_bit_flip_mutation_zero_probability_greater_one_case() {
+        let mutation = BitFlipMutation::new();
+        let size = 15;
+        let mut solution = BinarySolution::zeros(size);
+
+        // With probability 2.0, all bits should be flipped
+        mutation.execute(&mut solution, 2.0);
+
+        assert_eq!(solution.count_ones(), size, "All bits should be flipped");
     }
 }

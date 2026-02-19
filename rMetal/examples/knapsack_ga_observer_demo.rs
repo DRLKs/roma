@@ -1,3 +1,4 @@
+use rMetal::algorithms::traits::Algorithm;
 use rMetal::algorithms::implementations::genetic_algorithm::{GeneticAlgorithm, GeneticAlgorithmParameters};
 use rMetal::operator::crossover_operator_implementations::single_point_crossover::SinglePointCrossover;
 use rMetal::operator::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
@@ -5,7 +6,6 @@ use rMetal::operator::selection_operator_implementations::binary_tournament_sele
 use rMetal::observer::implementations::chart_observer::ChartObserver;
 use rMetal::observer::implementations::console_observer::ConsoleObserver;
 use rMetal::problem::implementations::knapsack_problem::KnapsackProblem;
-use rMetal::algorithms::traits::Algorithm;
 use rMetal::solution_set::traits::SolutionSet;
 use rMetal::solutions::traits::Solution;
 use std::path::PathBuf;

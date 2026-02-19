@@ -75,26 +75,62 @@ mod test {
     
     #[test]
         fn range_between_test() {
-        let min = 100;
-        let max = 200;
-        let mut rng = Random::new(seed_from_time());
+        let min: u64 = 100;
+        let max: u64 = 200;
+        let mut rng: Random = Random::new(seed_from_time());
 
-        let x = rng.range_between(min, max);
+        let x: u64 = rng.range_between(min, max);
         assert!(x >= min && x < max);
     }
 
     #[test]
     fn coin_flip_test() {
-        let mut rng = Random::new(10);
-        let prob_chance = 0.0;
+        let mut rng_seed_generator = Random::new(seed_from_time());
+        let seed: u64 = rng_seed_generator.next_u64();
 
-        let x = rng.chance(prob_chance);
+        let mut rng: Random = Random::new(seed);
+        let prob_chance: f64 = 0.0;
+
+        let x: bool = rng.chance(prob_chance);
         assert!(!x);
 
         let prob_chance = 1.0;
-        let x = rng.chance(prob_chance);
+        let x: bool = rng.chance(prob_chance);
         assert!(x);
     }
 
+    #[test]
+    fn random_determinism_test(){
+        let mut rng_seed_generator = Random::new(seed_from_time());
+        let seed: u64 = rng_seed_generator.next_u64();
+        
+        let mut rng_1: Random = Random::new(seed);
+        let mut rng_2: Random = Random::new(seed);
 
+        assert_eq!(rng_1.coin_flip(), rng_2.coin_flip(), "Structure Random with the same seed should give the same result");
+        assert_eq!(rng_1.next_f64(), rng_2.next_f64(), "Structure Random with the same seed should give the same result");
+        assert_eq!(rng_1.next_u32(), rng_2.next_u32(), "Structure Random with the same seed should give the same result");
+        assert_eq!(rng_1.next_u64(), rng_2.next_u64(), "Structure Random with the same seed should give the same result");
+    }
+
+    #[test]
+    fn zero_seed_test(){
+        let seed: u64 = 0;
+        let mut rng: Random = Random::new(seed);
+
+        let max: u64 = 200;
+        let x: u64 = rng.range(max);
+        assert!(x < max);
+    }
+
+    #[test]
+    fn highest_seed_test(){
+        let seed = u64::MAX;
+        let mut rng: Random = Random::new(seed);
+
+        let min: u64 = 100;
+        let max: u64 = 200;
+        let x: u64 = rng.range_between(min, max);
+        assert!(x >= min && x < max);
+    }
 }

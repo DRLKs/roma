@@ -195,7 +195,6 @@ mod tests {
         let sol = problem.create_solution();
         assert_eq!(sol.get_number_of_variables(), 3);
 
-        // Seleccionar todos los items
         let mut solution = BinarySolution::zeros(3);
         for i in 0..3 {
             solution.set_variable(i, true).unwrap();
@@ -203,7 +202,6 @@ mod tests {
 
         problem.evaluate(&mut solution);
 
-        // Peso total = 60, Valor total = 300
         assert!(solution.value() > 0.0);
     }
 }

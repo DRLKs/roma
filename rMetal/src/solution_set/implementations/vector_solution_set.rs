@@ -52,7 +52,8 @@ mod test {
     use crate::solution_set::traits::SolutionSet;
     use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
     use crate::solutions::implementations::binary_solution::BinarySolution;
-    use crate::solutions::traits::Solution;
+    use crate::solutions::implementations::permutation_solution::PermutationSolution;
+    use crate::solutions::traits::{Solution, SolutionInfo};
 
     #[test]
     fn get_best_solution_test() {
@@ -74,5 +75,30 @@ mod test {
             best.get_quality().unwrap().get_fitness_indicator(),
             &Some(10.0)
         );
+    }
+
+
+
+    #[test]
+    fn vector_solution_creates_empty_test() {
+        let solution_set: VectorSolutionSet<String, PermutationSolution<String>> = VectorSolutionSet::new();
+
+        assert!(solution_set.is_empty());
+    }
+
+    #[test]
+    fn number_of_solutions_test() {
+        let mut solution_set: VectorSolutionSet<String, PermutationSolution<String>> = VectorSolutionSet::new();
+
+        let solution_info = SolutionInfo::new(vec!["jMetal".to_string(),"jMetalPy".to_string(), "MEALPY".to_string() ]);
+        let mut solution = PermutationSolution::new(solution_info);
+        let best_quality = DecimalQualityIndicator::new(Some(10.0));
+        solution.set_quality(best_quality);
+
+        solution_set.add_solution(solution);
+
+        assert!(!solution_set.is_empty());
+        assert_eq!(solution_set.solutions().len(), 1);
+        assert_eq!(solution_set.best_solution().unwrap().value(), 10.0);
     }
 }

@@ -5,7 +5,7 @@ use crate::solutions::traits::Solution;
 /// * `S` - Solution type
 pub trait SolutionSet<T, S>
 where 
-    S: Solution<T>, T: std::clone::Clone
+    S: Solution<T>, T: Clone
 {
     fn solutions(&self) -> &Vec<S>;
     
@@ -25,19 +25,16 @@ where
         self.solutions_mut().clear();
     }
     
-    /// 
+    /// Contains some solution
     fn is_empty(&self) -> bool {
         self.solutions().is_empty()
     }
 
-    fn length(&self) -> usize {
+    /// Number of solutions
+    fn size(&self) -> usize {
         self.solutions().len()
     }
-
-    fn size(&self) -> usize {
-        self.length()
-    }
-
+    
     fn best_solution(&self) -> Option<&S> {
         if self.is_empty() {
             return None;
@@ -45,7 +42,7 @@ where
 
         let mut best_index = 0;
 
-        for i in 0..self.length() - 1 {
+        for i in 0..self.size() - 1 {
             if !self.get(i).unwrap().dominates(self.get(i+1).unwrap()) {
                 best_index = i + 1;
             }

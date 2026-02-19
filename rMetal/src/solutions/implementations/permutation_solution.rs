@@ -2,6 +2,7 @@ use crate::quality_indicator::implementations::decimal_quality_indicator::Decima
 use crate::quality_indicator::traits::QualityIndicator;
 use crate::solutions::traits::{Solution, SolutionInfo};
 
+#[derive(Clone)]
 pub struct PermutationSolution<T: Clone> {
     solution_info: SolutionInfo<T>,
     quality: DecimalQualityIndicator,
