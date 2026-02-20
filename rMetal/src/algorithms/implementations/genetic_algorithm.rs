@@ -1,6 +1,7 @@
 use crate::algorithms::traits::Algorithm;
+use crate::observer::AlgorithmEvent;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
-use crate::observer::traits::{AlgorithmEvent, AlgorithmObserver};
+use crate::observer::traits::{AlgorithmObserver, ThreadSafeObserverCollection};
 use crate::problem::traits::Problem;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
@@ -133,28 +134,6 @@ where
             observer.update(event);
         }
     }
-
-    /// Calculates statistics from population
-    fn calculate_statistics(&self, population: &[S]) -> (f64, f64, f64) {
-        if population.is_empty() {
-            return (0.0, 0.0, 0.0);
-        }
-
-        let mut best_fitness = f64::MIN;
-        let mut worst_fitness = f64::MAX;
-        let mut sum_fitness = 0.0;
-
-        for solution in population {
-            let fitness = solution.value();
-            best_fitness = best_fitness.max(fitness);
-            worst_fitness = worst_fitness.min(fitness);
-            sum_fitness += fitness;
-        }
-
-        let average_fitness = sum_fitness / population.len() as f64;
-
-        (best_fitness, average_fitness, worst_fitness)
-    }
 }
 
 impl<T, S, P, C, M, Sel> Algorithm<T, S, P> for GeneticAlgorithm<T, S, C, M, Sel>
@@ -171,8 +150,8 @@ where
 
     fn run(&mut self, problem: &P, verbose: u8) -> Self::SolutionSet {
 
-        use crate::utils::random::{Random,seed_from_time};
-        use std::sync::{Arc, Mutex};
+        use crate::utils::random::{Random, seed_from_time};
+        use crate::utils::statistics::calculate_statistics;
 
         // Validate parameters before starting
         if !<Self as Algorithm<T, S, P>>::validate_parameters(self) {
@@ -198,37 +177,6 @@ where
             self.parameters.show_parameters_information();
         }
 
-        // Initialize population
-        let population: Vec<S> = (0..self.parameters.population_size)
-            .map(|_| {
-                let mut solution = problem.create_solution();
-                problem.evaluate(&mut solution);
-                solution
-            })
-            .collect();
-
-        let evaluations = self.parameters.population_size;
-
-        let best_fitness = population
-            .iter()
-            .map(|s| s.value())
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
-            .unwrap_or(0.0);
-
-        if verbose > 0 {
-            println!("Initial best fitness: {}", best_fitness);
-        }
-
-        // Initial statistics
-        let (best_fit, avg_fit, worst_fit) = self.calculate_statistics(&population);
-        self.notify_observers(&AlgorithmEvent::GenerationCompleted {
-            generation: 0,
-            evaluations,
-            best_fitness: best_fit,
-            average_fitness: avg_fit,
-            worst_fitness: worst_fit,
-        });
-
         // Determine number of threads to use
         let num_threads = self.parameters.num_threads.unwrap_or_else(|| {
             std::thread::available_parallelism()
@@ -241,10 +189,11 @@ where
         }
 
         // Pre-allocate slots for solutions from each thread
+        use std::sync::{Arc, Mutex};
         let solution_slots: Arc<Mutex<Vec<Option<S>>>> = Arc::new(Mutex::new(vec![None; num_threads]));
         
-        // Wrap observers in Arc<Mutex<>> for thread-safe sharing
-        let observers = Arc::new(Mutex::new(&mut self.observers));
+        // Create thread-safe observer collection
+        let observers = ThreadSafeObserverCollection::new(std::mem::take(&mut self.observers));
 
         // Get references to parameters before scope
         let population_size = self.parameters.population_size;
@@ -261,7 +210,7 @@ where
 
             for thread_id in 0..num_threads {
                 let solution_slots = Arc::clone(&solution_slots);
-                let observers = Arc::clone(&observers);
+                let thread_observers = observers.clone_handle();
 
                 let handle = scope.spawn(move || {
                     // Each thread has its own population
@@ -272,6 +221,16 @@ where
                             solution
                         })
                         .collect();
+
+                    // Notify initial statistics
+                    let (best_fit, avg_fit, worst_fit) = calculate_statistics(&population);
+                    thread_observers.notify(&AlgorithmEvent::GenerationCompleted {
+                        generation: 0,
+                        evaluations: population_size,
+                        best_fitness: best_fit,
+                        average_fitness: avg_fit,
+                        worst_fitness: worst_fit,
+                    });
 
                     // Evolution loop for this thread
                     for generation in 1..=max_generations {
@@ -302,36 +261,16 @@ where
                         offspring_population.truncate(population_size);
                         population = offspring_population;
                         
-                        // Notify observers after each generation
-                        let current_best = population
-                            .iter()
-                            .max_by(|a, b| a.value().partial_cmp(&b.value()).unwrap())
-                            .unwrap();
+                        // Calculate and notify statistics after each generation
+                        let (best_fitness, avg_fitness, worst_fitness) = calculate_statistics(&population);
                         
-                        let current_best_value = current_best.value();
-                        let mut sum_fitness = 0.0;
-                        let mut worst_fitness = f64::MAX;
-                        
-                        for sol in &population {
-                            let fit = sol.value();
-                            sum_fitness += fit;
-                            worst_fitness = worst_fitness.min(fit);
-                        }
-                        
-                        let avg_fitness = sum_fitness / population_size as f64;
-                        
-                        // Thread-safe observer notification
-                        if let Ok(mut obs) = observers.lock() {
-                            for observer in obs.iter_mut() {
-                                observer.update(&AlgorithmEvent::GenerationCompleted {
-                                    generation,
-                                    evaluations: population_size * generation,
-                                    best_fitness: current_best_value,
-                                    average_fitness: avg_fitness,
-                                    worst_fitness,
-                                });
-                            }
-                        }
+                        thread_observers.notify(&AlgorithmEvent::GenerationCompleted {
+                            generation,
+                            evaluations: population_size * generation,
+                            best_fitness,
+                            average_fitness: avg_fitness,
+                            worst_fitness,
+                        });
                     }
 
                     // Find best solution from this thread
@@ -372,16 +311,12 @@ where
             }
         }
 
-        // Notify end
-        self.notify_observers(&AlgorithmEvent::End {
+        // Notify end and finalize
+        observers.notify(&AlgorithmEvent::End {
             total_generations: self.parameters.max_generations,
-            total_evaluations: evaluations * num_threads,
+            total_evaluations: self.parameters.population_size * num_threads * self.parameters.max_generations,
         });
-
-        // Finalize observers
-        for observer in &mut self.observers {
-            observer.finalize();
-        }
+        observers.finalize();
 
         self.solution_set = Some(result.clone());
         result

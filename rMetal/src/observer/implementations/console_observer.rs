@@ -1,4 +1,5 @@
-use crate::observer::traits::{AlgorithmEvent, AlgorithmObserver};
+use crate::observer::AlgorithmEvent;
+use crate::observer::traits::{AlgorithmObserver};
 use crate::solutions::traits::Solution;
 
 /// Simple console observer that prints algorithm progress to stdout
@@ -24,7 +25,7 @@ where
     fn update(&mut self, event: &AlgorithmEvent<T, S>) {
         match event {
             AlgorithmEvent::Start { algorithm_name } => {
-                println!("🚀 Starting algorithm: {}", algorithm_name);
+                println!("  Starting algorithm: {}", algorithm_name);
             }
             AlgorithmEvent::GenerationCompleted {
                 generation,

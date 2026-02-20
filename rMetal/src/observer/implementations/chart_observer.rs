@@ -1,7 +1,8 @@
-use crate::observer::traits::{AlgorithmEvent, AlgorithmObserver};
+use crate::observer::traits::{AlgorithmObserver};
 use crate::solutions::traits::Solution;
 use crate::utils::chart::{ChartBuilder, Series};
 use std::path::PathBuf;
+use crate::observer::AlgorithmEvent;
 
 /// Observer that generates charts showing algorithm progress
 pub struct ChartObserver {

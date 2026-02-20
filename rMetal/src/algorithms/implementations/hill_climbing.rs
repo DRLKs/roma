@@ -3,8 +3,9 @@ use crate::problem::traits::Problem;
 use crate::algorithms::traits::Algorithm;
 use crate::solution_set::traits::SolutionSet;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
+use crate::observer::AlgorithmEvent;
 use crate::operator::traits::MutationOperator;
-use crate::observer::traits::{AlgorithmEvent, AlgorithmObserver};
+use crate::observer::traits::{AlgorithmObserver};
 
 /// Parameters for Hill Climbing algorithm.
 /// Uses generics to allow any mutation operator.
