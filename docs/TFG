@@ -1,0 +1,10 @@
+
+- Realizar experimentos, ejecutar un algoritmo muchas veces, con configuraciones distintas, operadores, parámetros, etc
+
+- Criterio de parada, en los parámetros, añadimos número de iteracions, luego se podría añadir algo para que al pulsa CTRL+C, semaneje la señal y cese el algoritmo y recopile la mejor solución obtenida. Que lleve sin encontrar una solución mejor durante mucho tiempo, etc..
+
+- Parámetros de los algoritmos, no se hasta que punto se puede hacer uno genérico, con todo, rollo, Máx iterations, Operadores todos con option. Ahora mismo tenemos uno para cada uno, quizás sí es interesante.
+
+- Parámetros en los operadores, quizás para modificar las probabilidades y eso, me parece un poco rizar el rizo. Pero se puede ver. Un patrón builder, para poder modificarlos de manera más sencilla
+
+- En cuanto a la información de los operadores, podriamos usar Result, que es como una forma de rust de entregar estas cosas, Es una tupla del resultado y de otra cosa. Esta suele ser una cadena de texto explicando la solución, en este caso podría ser otra estructura o lo que sea. Directamente podemos usar directamente una tupla, que en verdad yo creo que es mejor idea (String, Vec<S>)

@@ -32,7 +32,7 @@ where
 /// * `S` - Solution type
 pub trait CrossoverOperator<T, S>: Operator
 where
-    S: Solution<T>,
+    S: Solution<T> + Clone,
     T: Clone,
 {
     /// Applies crossover to two parent solutions and returns offspring.
@@ -44,6 +44,21 @@ where
     /// # Returns
     /// A vector of offspring solutions (typically 1 or 2)
     fn execute(&self, parent1: &S, parent2: &S) -> Vec<S>;
+
+    /// Applies crossover to several parent solutions and returns offspring.
+    ///
+    /// # Arguments
+    /// * `parents` - Vector of parent solutions
+    ///
+    /// # Returns
+    /// A vector of offspring solutions (typically 1 or 2)
+    fn execute_several(&self, parents: Vec<S>) -> Vec<S>{
+        let mut offspring_result= vec![];
+        for i in 1..parents.len() {
+            offspring_result.push(parents[i].clone());
+        }
+        offspring_result
+    }
     
     /// Returns the expected number of offspring produced by this operator
     fn number_of_offspring(&self) -> usize {

@@ -94,6 +94,14 @@ impl CrossoverOperator<f64, RealSolution> for SBXCrossover {
 
         vec![offspring1, offspring2]
     }
+
+    fn execute_several(&self, solutions: Vec<RealSolution>) -> Vec<RealSolution> {
+        let mut offspring_result= vec![];
+        for i in 1..solutions.len() {
+            offspring_result.push(solutions[i].clone());
+        }
+        offspring_result
+    }
 }
 
 #[cfg(test)]

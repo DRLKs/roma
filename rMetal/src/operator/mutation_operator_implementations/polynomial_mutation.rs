@@ -91,7 +91,7 @@ mod tests {
 
     #[test]
     fn test_polynomial_mutation_zero_probability() {
-        let mut mutation = PolynomialMutation::new(20.0);
+        let mutation = PolynomialMutation::new(20.0);
         let original_vars = vec![0.3, 0.5, 0.7];
         let mut solution = RealSolution::new(SolutionInfo::new(original_vars.clone()));
 
@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn test_polynomial_mutation_preserves_length() {
-        let mut mutation = PolynomialMutation::new(20.0);
+        let mutation = PolynomialMutation::new(20.0);
         let mut solution = RealSolution::new(SolutionInfo::new(vec![0.5, 0.5, 0.5, 0.5]));
 
         mutation.execute(&mut solution, 1.0);
@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn test_polynomial_mutation_valid_range() {
-        let mut mutation = PolynomialMutation::new(20.0);
+        let mutation = PolynomialMutation::new(20.0);
         let mut solution = RealSolution::new(SolutionInfo::new(vec![0.0, 0.5, 1.0]));
 
         // Apply mutation multiple times to test boundary conditions
@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn test_polynomial_mutation_high_probability_changes_values() {
-        let mut mutation = PolynomialMutation::new(20.0);
+        let mutation = PolynomialMutation::new(20.0);
         let original_vars = vec![0.5; 10];
         let mut solution = RealSolution::new(SolutionInfo::new(original_vars.clone()));
 

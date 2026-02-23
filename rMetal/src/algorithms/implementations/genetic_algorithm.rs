@@ -11,7 +11,7 @@ use crate::solutions::traits::Solution;
 /// Uses generics to allow any combination of operators.
 pub struct GeneticAlgorithmParameters<T, S, C, M, Sel>
 where
-    S: Solution<T>,
+    S: Solution<T> + Clone,
     T: Clone,
     C: CrossoverOperator<T, S>,
     M: MutationOperator<T, S>,
@@ -30,7 +30,7 @@ where
 
 impl<T, S, C, M, Sel> GeneticAlgorithmParameters<T, S, C, M, Sel>
 where
-    S: Solution<T>,
+    S: Solution<T> + Clone,
     T: Clone,
     C: CrossoverOperator<T, S>,
     M: MutationOperator<T, S>,
@@ -285,7 +285,7 @@ where
                         });
                     }
 
-                    // Find best solution from this thread
+                    // Find the best solution from this thread
                     let best_solution = population
                         .into_iter()
                         .max_by(|a, b| a.value().partial_cmp(&b.value()).unwrap())
