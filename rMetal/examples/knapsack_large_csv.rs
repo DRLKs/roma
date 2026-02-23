@@ -1,6 +1,7 @@
 use rMetal::algorithms::implementations::genetic_algorithm::{GeneticAlgorithm, GeneticAlgorithmParameters};
 use rMetal::algorithms::traits::Algorithm;
 use rMetal::observer::implementations::chart_observer::ChartObserver;
+use rMetal::observer::traits::Observable;
 use rMetal::operator::crossover_operator_implementations::single_point_crossover::SinglePointCrossover;
 use rMetal::operator::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
 use rMetal::operator::selection_operator_implementations::binary_tournament_selection::BinaryTournamentSelection;

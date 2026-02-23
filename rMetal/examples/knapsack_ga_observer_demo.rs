@@ -5,6 +5,7 @@ use rMetal::operator::mutation_operator_implementations::bit_flip_mutation::BitF
 use rMetal::operator::selection_operator_implementations::binary_tournament_selection::BinaryTournamentSelection;
 use rMetal::observer::implementations::chart_observer::ChartObserver;
 use rMetal::observer::implementations::console_observer::ConsoleObserver;
+use rMetal::observer::traits::Observable;
 use rMetal::problem::implementations::knapsack_problem::KnapsackProblem;
 use rMetal::solution_set::traits::SolutionSet;
 use rMetal::solutions::traits::Solution;

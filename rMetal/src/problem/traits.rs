@@ -12,11 +12,13 @@ where
 
     /// Evaluates a solution and updates its quality/fitness
     fn evaluate(&self, solution: &mut S);
+    
+    /// Creates a new random solution for this problem
+    fn create_solution(&self) -> S;
 
     fn set_problem_description(&mut self, description: String);
 
     fn get_problem_description(&self) -> String;
 
-    /// Creates a new random solution for this problem
-    fn create_solution(&self) -> S;
+    
 }

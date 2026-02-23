@@ -1,1 +1,2 @@
 pub mod binary_tournament_selection;
+pub mod multi_objective_tournament_selection;

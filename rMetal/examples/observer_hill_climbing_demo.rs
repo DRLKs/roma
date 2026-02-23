@@ -2,6 +2,7 @@ use rMetal::algorithms::implementations::hill_climbing::{HillClimbing, HillClimb
 use rMetal::operator::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
 use rMetal::observer::implementations::chart_observer::ChartObserver;
 use rMetal::observer::implementations::console_observer::ConsoleObserver;
+use rMetal::observer::traits::Observable;
 use rMetal::problem::implementations::knapsack_problem::KnapsackProblem;
 use rMetal::algorithms::traits::Algorithm;
 use rMetal::solution_set::traits::SolutionSet;

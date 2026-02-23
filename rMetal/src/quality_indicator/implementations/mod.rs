@@ -1,1 +1,2 @@
 pub mod decimal_quality_indicator;
+pub mod multi_objective_quality_indicator;

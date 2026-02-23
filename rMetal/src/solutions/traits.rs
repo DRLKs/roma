@@ -117,7 +117,7 @@ pub trait Solution<T: Clone> : Eq {
 }
 
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SolutionInfo<T>{
     variables: Vec<T>
 }

@@ -1,7 +1,7 @@
 use crate::algorithms::traits::Algorithm;
 use crate::observer::AlgorithmEvent;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
-use crate::observer::traits::{AlgorithmObserver, ThreadSafeObserverCollection};
+use crate::observer::traits::{AlgorithmObserver, Observable, ThreadSafeObserverCollection};
 use crate::problem::traits::Problem;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
@@ -122,13 +122,25 @@ where
             observers: Vec::new(),
         }
     }
+}
 
-    /// Adds an observer to monitor algorithm execution
-    pub fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<T, S>>) {
+/// Implementation of Observable trait for GeneticAlgorithm
+impl<T, S, C, M, Sel> Observable<T, S> for GeneticAlgorithm<T, S, C, M, Sel>
+where
+    S: Solution<T> + Clone,
+    T: Clone,
+    C: CrossoverOperator<T, S>,
+    M: MutationOperator<T, S>,
+    Sel: SelectionOperator<T, S>,
+{
+    fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<T, S>>) {
         self.observers.push(observer);
     }
 
-    /// Notifies all observers of an event
+    fn clear_observers(&mut self) {
+        self.observers.clear();
+    }
+
     fn notify_observers(&mut self, event: &AlgorithmEvent<T, S>) {
         for observer in &mut self.observers {
             observer.update(event);

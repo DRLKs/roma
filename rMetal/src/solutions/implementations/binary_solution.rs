@@ -9,6 +9,38 @@ pub struct BinarySolution {
 }
 
 impl BinarySolution {
+
+    /// Create one random binary solution
+    /// # Arguments
+    ///
+    /// * `size` - Size of the solution vector
+    /// * `seed` - Seed of the random struct.
+    ///  [`None`] will give a pseudorandom seed
+    ///
+    pub fn random(size: usize, seed: Option<u64> ) -> Self {
+
+        let mut rng: Random;
+        if seed.is_some() {
+            rng = Random::new(seed.unwrap());
+        }else {
+            rng = Random::new(seed_from_time());
+        }
+        let variables: Vec<bool> = (0..size).map(|_| rng.coin_flip()).collect();
+        Self::new(SolutionInfo::new(variables))
+    }
+
+    /// Create a binary solution with all values set to zero
+    pub fn zeros(size: usize) -> Self {
+        let variables = vec![false; size];
+        Self::new(SolutionInfo::new(variables))
+    }
+
+    /// Create a binary solution with all values set to true
+    pub fn ones(size: usize) -> Self {
+        let variables = vec![true; size];
+        Self::new(SolutionInfo::new(variables))
+    }
+    
     /// Flip a bit at the given index
     pub fn flip_bit(&mut self, index: usize) -> Result<(), String> {
         if let Some(bit) = self.solution_info.get_variables_mut().get_mut(index) {
@@ -93,40 +125,6 @@ impl Solution<bool> for BinarySolution {
     fn is_valid(&self) -> bool {
         // Quizás esta función no tiene sentido
         true
-    }
-}
-
-impl BinarySolution {
-
-    /// Create one random binary solution
-    /// # Arguments
-    ///
-    /// * `size` - Size of the solution vector
-    /// * `seed` - Seed of the random struct.
-    ///  [`None`] will give a pseudorandom seed
-    ///
-    pub fn random(size: usize, seed: Option<u64> ) -> Self {
-
-        let mut rng: Random;
-        if seed.is_some() {
-            rng = Random::new(seed.unwrap());
-        }else {
-            rng = Random::new(seed_from_time());
-        }
-        let variables: Vec<bool> = (0..size).map(|_| rng.coin_flip()).collect();
-        Self::new(SolutionInfo::new(variables))
-    }
-
-    /// Create a binary solution with all values set to zero
-    pub fn zeros(size: usize) -> Self {
-        let variables = vec![false; size];
-        Self::new(SolutionInfo::new(variables))
-    }
-
-    /// Create a binary solution with all values set to true
-    pub fn ones(size: usize) -> Self {
-        let variables = vec![true; size];
-        Self::new(SolutionInfo::new(variables))
     }
 }
 

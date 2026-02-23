@@ -85,17 +85,17 @@ impl Problem<bool, BinarySolution> for KnapsackProblem {
         
     }
 
+    /// Solution that serves as a starting point for the algorithm
+    fn create_solution(&self) -> BinarySolution {
+        BinarySolution::random(self.number_of_items, None)
+    }
+
     fn set_problem_description(&mut self, description: String) {
         self.description = description;
     }
 
     fn get_problem_description(&self) -> String {
         self.description.clone()
-    }
-
-    /// Solution that serves as a starting point for the algorithm
-    fn create_solution(&self) -> BinarySolution {
-        BinarySolution::random(self.number_of_items, None)
     }
 }
 
