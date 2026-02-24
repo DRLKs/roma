@@ -1,6 +1,5 @@
 use crate::operator::traits::{CrossoverOperator, Operator};
-use crate::solutions::implementations::binary_solution::BinarySolution;
-use crate::solutions::traits::Solution;
+use crate::solution::Solution;
 use crate::utils::random::Random;
 
 /// Single Point Crossover operator for binary solutions.
@@ -40,28 +39,31 @@ impl Operator for SinglePointCrossover {
     }
 }
 
-impl CrossoverOperator<bool, BinarySolution> for SinglePointCrossover {
-    fn execute(&self, parent1: &BinarySolution, parent2: &BinarySolution) -> Vec<BinarySolution> {
-        let length = parent1.get_number_of_variables().min(parent2.get_number_of_variables());
+impl CrossoverOperator<bool> for SinglePointCrossover {
+    fn execute(&self, parent1: &Solution<bool>, parent2: &Solution<bool>) -> Vec<Solution<bool>> {
+        let length = parent1.num_variables().min(parent2.num_variables());
         
         if length <= 1 {
             // Cannot perform crossover, return copies of parents
-            return vec![parent1.copy(), parent2.copy()];
+            return vec![parent1.clone(), parent2.clone()];
         }
         
         let mut rng = Random::new(crate::utils::random::seed_from_time());
         let crossover_point = rng.range(length as u64 - 1) as usize + 1;
         
-        let mut offspring1 = parent1.copy();
-        let mut offspring2 = parent2.copy();
+        let mut offspring1 = parent1.clone();
+        let mut offspring2 = parent2.clone();
         
         // Exchange segments after crossover point
         for i in crossover_point..length {
-            if let (Some(&val1), Some(&val2)) = (parent1.get_variable(i), parent2.get_variable(i)) {
-                let _ = offspring1.set_variable(i, val2);
-                let _ = offspring2.set_variable(i, val1);
-            }
+            let val1 = parent1.variables[i];
+            let val2 = parent2.variables[i];
+            offspring1.variables[i] = val2;
+            offspring2.variables[i] = val1;
         }
+        
+        offspring1.invalidate();
+        offspring2.invalidate();
         
         if self.offspring_count == 1 {
             vec![offspring1]
@@ -75,8 +77,10 @@ impl CrossoverOperator<bool, BinarySolution> for SinglePointCrossover {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
+    use crate::solution::BinarySolutionBuilder;
     use super::*;
 
     #[test]
@@ -89,13 +93,13 @@ mod tests {
     #[test]
     fn test_single_point_crossover() {
         let crossover = SinglePointCrossover::new();
-        let parent1 = BinarySolution::zeros(10);
-        let parent2 = BinarySolution::ones(10);
+        let parent1 = BinarySolutionBuilder::zeros(10).build();
+        let parent2 = BinarySolutionBuilder::ones(10).build();
         
         let offspring = crossover.execute(&parent1, &parent2);
         
         assert_eq!(offspring.len(), 2);
-        assert_eq!(offspring[0].get_number_of_variables(), 10);
-        assert_eq!(offspring[1].get_number_of_variables(), 10);
+        assert_eq!(offspring[0].num_variables(), 10);
+        assert_eq!(offspring[1].num_variables(), 10);
     }
 }

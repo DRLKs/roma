@@ -1,5 +1,4 @@
 use crate::observer::traits::{AlgorithmObserver};
-use crate::solutions::traits::Solution;
 use crate::utils::chart::{ChartBuilder, Series};
 use std::path::PathBuf;
 use crate::observer::AlgorithmEvent;
@@ -161,12 +160,11 @@ impl ChartObserver {
     }
 }
 
-impl<T, S> AlgorithmObserver<T, S> for ChartObserver
+impl<T> AlgorithmObserver<T> for ChartObserver
 where
-    S: Solution<T>,
     T: Clone,
 {
-    fn update(&mut self, event: &AlgorithmEvent<T, S>) {
+    fn update(&mut self, event: &AlgorithmEvent<T>) {
         match event {
             AlgorithmEvent::Start { algorithm_name } => {
                 println!("  ChartObserver: Monitoring algorithm '{}'", algorithm_name);

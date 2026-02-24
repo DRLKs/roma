@@ -2,13 +2,12 @@ pub mod traits;
 pub mod implementations;
 
 
-use crate::solutions::traits::Solution;
+use crate::solution::Solution;
 
 /// Events that can be observed during algorithm execution
 #[derive(Debug, Clone)]
-pub enum AlgorithmEvent<T, S>
+pub enum AlgorithmEvent<T>
 where
-    S: Solution<T>,
     T: Clone,
 {
     /// Algorithm has started
@@ -26,7 +25,7 @@ where
     /// A new best solution has been found
     BestSolutionUpdate {
         generation: usize,
-        solution: S,
+        solution: Solution<T>,
     },
     /// Algorithm has finished
     End {

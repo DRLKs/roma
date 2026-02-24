@@ -1,6 +1,5 @@
 use crate::operator::traits::{MutationOperator, Operator};
-use crate::solutions::implementations::binary_solution::BinarySolution;
-use crate::solutions::traits::Solution;
+use crate::solution::Solution;
 use crate::utils::random::Random;
 
 /// Bit Flip Mutation operator for binary solutions.
@@ -30,22 +29,24 @@ impl Operator for BitFlipMutation {
     }
 }
 
-impl MutationOperator<bool, BinarySolution> for BitFlipMutation {
-    fn execute(&self, solution: &mut BinarySolution, probability: f64) {
+impl MutationOperator<bool> for BitFlipMutation {
+    fn execute(&self, solution: &mut Solution<bool>, probability: f64) {
         let mut rng = Random::new(crate::utils::random::seed_from_time());
 
-        for i in 0..solution.get_number_of_variables() {
+        for i in 0..solution.num_variables() {
             if rng.next_f64() < probability {
-                if let Some(value) = solution.get_variable(i) {
-                    let _ = solution.set_variable(i, !value);
-                }
+                let value = solution.variables[i];
+                solution.variables[i] = !value;
             }
         }
+        solution.invalidate();
     }
 }
 
+
 #[cfg(test)]
 mod tests {
+    use crate::solution::BinarySolutionBuilder;
     use super::*;
 
     #[test]
@@ -58,45 +59,70 @@ mod tests {
     #[test]
     fn test_bit_flip_mutation() {
         let mutation = BitFlipMutation::new();
-        let mut solution = BinarySolution::zeros(10);
+        let mut solution = BinarySolutionBuilder::zeros(10).build();
 
         // With probability 1.0, all bits should be flipped
         mutation.execute(&mut solution, 1.0);
 
-        assert!(solution.count_ones() > 0, "At least some bits should be flipped");
+        let mut number_ones = 0;
+        for x in solution.variables {
+            if x == true {
+                number_ones += 1;
+            }
+        }
+        assert!(number_ones > 0, "At least some bits should be flipped");
     }
 
     #[test]
     fn test_bit_flip_mutation_zero_probability() {
         let mutation = BitFlipMutation::new();
-        let mut solution = BinarySolution::zeros(10);
+        let mut solution = BinarySolutionBuilder::zeros(10).build();
 
         // With probability 0.0, no bits should be flipped
         mutation.execute(&mut solution, 0.0);
 
-        assert_eq!(solution.count_ones(), 0, "No one should be flipped");
+        let mut number_ones = 0;
+        for x in solution.variables {
+            if x == true {
+                number_ones += 1;
+            }
+        }
+        assert_eq!(number_ones, 0, "No one should be flipped");
     }
 
     #[test]
     fn test_bit_flip_mutation_zero_probability_negative_case() {
         let mutation = BitFlipMutation::new();
-        let mut solution = BinarySolution::zeros(15);
+        let mut solution = BinarySolutionBuilder::zeros(15).build();
 
         // With probability 0.0, no bits should be flipped
         mutation.execute(&mut solution, -2.0);
 
-        assert_eq!(solution.count_ones(), 0, "No one should be flipped");
+        let mut number_ones = 0;
+        for x in solution.variables {
+            if x == true {
+                number_ones += 1;
+            }
+        }
+        assert_eq!(number_ones, 0, "No one should be flipped");
     }
 
     #[test]
     fn test_bit_flip_mutation_zero_probability_greater_one_case() {
         let mutation = BitFlipMutation::new();
         let size = 15;
-        let mut solution = BinarySolution::zeros(size);
+        let mut solution = BinarySolutionBuilder::zeros(size).build();
 
         // With probability 2.0, all bits should be flipped
         mutation.execute(&mut solution, 2.0);
 
-        assert_eq!(solution.count_ones(), size, "All bits should be flipped");
+        let mut number_ones = 0;
+        for x in solution.variables {
+            if x == true {
+                number_ones += 1;
+            }
+        }
+        assert_eq!(number_ones, size, "All bits should be flipped");
     }
 }
+

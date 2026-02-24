@@ -1,13 +1,15 @@
 use crate::operator::traits::{Operator, SelectionOperator};
-use crate::solutions::implementations::real_solution::RealSolution;
+use crate::solution::MultiObjectiveInfo;
 use crate::utils::random::{Random, seed_from_time};
 use std::cell::RefCell;
+use crate::solution::Solution;
 
-/// Binary Tournament Selection for Multi-Objective Optimization
+/// Binary Tournament Selection for Multi-Objective Optimization.
 ///
-/// Selects solutions based on Pareto rank and crowding distance:
-/// 1. Prefer solution with better (lower) rank
-/// 2. If ranks are equal, prefer solution with larger crowding distance
+/// Selection priority:
+/// 1) Lower rank is better.
+/// 2) If rank ties, larger crowding distance is better.
+/// 3) If both tie/missing, fallback to Pareto dominance.
 pub struct MultiObjectiveTournamentSelection {
     rng: RefCell<Random>,
 }
@@ -32,8 +34,8 @@ impl Operator for MultiObjectiveTournamentSelection {
     }
 }
 
-impl SelectionOperator<f64, RealSolution> for MultiObjectiveTournamentSelection {
-    fn execute<'a>(&self, population: &'a [RealSolution]) -> &'a RealSolution {
+impl SelectionOperator<f64, MultiObjectiveInfo> for MultiObjectiveTournamentSelection {
+    fn execute<'a>(&self, population: &'a [Solution<f64, MultiObjectiveInfo>]) -> &'a Solution<f64, MultiObjectiveInfo> {
         if population.is_empty() {
             panic!("Cannot select from empty population");
         }
@@ -57,98 +59,110 @@ impl SelectionOperator<f64, RealSolution> for MultiObjectiveTournamentSelection 
         let solution1 = &population[index1];
         let solution2 = &population[index2];
 
-        // Compare based on rank and crowding distance
-        let rank1 = solution1.get_rank().unwrap_or(usize::MAX);
-        let rank2 = solution2.get_rank().unwrap_or(usize::MAX);
+        let rank1 = solution1.rank().unwrap_or(usize::MAX);
+        let rank2 = solution2.rank().unwrap_or(usize::MAX);
 
         if rank1 < rank2 {
-            solution1
-        } else if rank2 < rank1 {
-            solution2
-        } else {
-            // Same rank, compare crowding distance (prefer larger)
-            let crowding1 = solution1.get_crowding_distance().unwrap_or(0.0);
-            let crowding2 = solution2.get_crowding_distance().unwrap_or(0.0);
+            return solution1;
+        }
+        if rank2 < rank1 {
+            return solution2;
+        }
 
-            if crowding1 > crowding2 {
-                solution1
-            } else {
-                solution2
-            }
+        let crowding1 = solution1.crowding_distance().unwrap_or(0.0);
+        let crowding2 = solution2.crowding_distance().unwrap_or(0.0);
+
+        if crowding1 > crowding2 {
+            return solution1;
+        }
+        if crowding2 > crowding1 {
+            return solution2;
+        }
+
+        if solution1.dominates(solution2) {
+            solution1
+        } else {
+            solution2
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::solution::RealSolutionBuilder;
     use super::*;
-    use crate::solutions::traits::{Solution, SolutionInfo};
 
     #[test]
     fn test_selection_from_single_solution() {
-        let mut selection = MultiObjectiveTournamentSelection::new();
-        let solution = RealSolution::new(SolutionInfo::new(vec![0.5]));
+        let selection = MultiObjectiveTournamentSelection::new();
+        let solution = RealSolutionBuilder::new(1)
+            .set_variable(0, 0.5)
+            .into_multi_objective()
+            .with_objectives(vec![0.5, 0.5])
+            .with_rank(0)
+            .build();
         let population = vec![solution];
 
         let selected = selection.execute(&population);
-        assert_eq!(
-            selected.get_solution_info().get_variables(),
-            &[0.5]
-        );
+        assert_eq!(selected.variables(), &[0.5]);
     }
 
     #[test]
     #[should_panic(expected = "Cannot select from empty population")]
     fn test_selection_from_empty_population() {
-        let mut selection = MultiObjectiveTournamentSelection::new();
-        let population: Vec<RealSolution> = vec![];
+        let selection = MultiObjectiveTournamentSelection::new();
+        let population: Vec<Solution<f64, MultiObjectiveInfo>> = vec![];
         selection.execute(&population);
     }
 
     #[test]
     fn test_selection_prefers_better_rank() {
-        let mut selection = MultiObjectiveTournamentSelection::new();
+        let selection = MultiObjectiveTournamentSelection::new();
 
-        let mut solution1 = RealSolution::new(SolutionInfo::new(vec![0.1]));
-        solution1.set_rank(0);
+        let solution1 = RealSolutionBuilder::new(1)
+            .into_multi_objective()
+            .with_objectives(vec![0.1, 0.1])
+            .with_rank(0)
+            .build();
 
-        let mut solution2 = RealSolution::new(SolutionInfo::new(vec![0.9]));
-        solution2.set_rank(1);
+        let solution2 = RealSolutionBuilder::new(1)
+            .into_multi_objective()
+            .with_objectives(vec![0.9, 0.9])
+            .with_rank(1)
+            .build();
 
         let population = vec![solution1, solution2];
 
-        // Run multiple times to ensure rank is preferred
         for _ in 0..10 {
             let selected = selection.execute(&population);
-            assert_eq!(selected.get_rank(), Some(0));
+            assert_eq!(selected.rank(), Some(0));
         }
     }
 
     #[test]
-    fn test_selection_uses_crowding_distance_when_same_rank() {
-        let mut selection = MultiObjectiveTournamentSelection::new();
+    fn test_selection_uses_crowding_distance_when_rank_ties() {
+        let selection = MultiObjectiveTournamentSelection::new();
 
-        let mut solution1 = RealSolution::new(SolutionInfo::new(vec![0.1]));
-        solution1.set_rank(0);
-        solution1.set_crowding_distance(100.0);
+        let solution1 = RealSolutionBuilder::new(1)
+            .into_multi_objective()
+            .with_objectives(vec![0.4, 0.6])
+            .with_rank(0)
+            .with_crowding_distance(2.0)
+            .build();
 
-        let mut solution2 = RealSolution::new(SolutionInfo::new(vec![0.9]));
-        solution2.set_rank(0);
-        solution2.set_crowding_distance(1.0);
+        let solution2 = RealSolutionBuilder::new(1)
+            .into_multi_objective()
+            .with_objectives(vec![0.5, 0.5])
+            .with_rank(0)
+            .with_crowding_distance(1.0)
+            .build();
 
         let population = vec![solution1, solution2];
 
-        // Run multiple times to check crowding distance preference
-        let mut high_crowding_selected = 0;
-        for _ in 0..20 {
+        for _ in 0..10 {
             let selected = selection.execute(&population);
-            if selected.get_crowding_distance() == Some(100.0) {
-                high_crowding_selected += 1;
-            }
+            assert_eq!(selected.crowding_distance(), Some(2.0));
         }
-
-        // With higher crowding distance, should be selected more often
-        assert!(high_crowding_selected > 10);
     }
 
     #[test]

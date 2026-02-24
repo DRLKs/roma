@@ -1,6 +1,5 @@
 use crate::problem::traits::Problem;
-use crate::solutions::implementations::real_solution::RealSolution;
-use crate::solutions::traits::{Solution, SolutionInfo};
+use crate::solution::{MultiObjectiveInfo, RealSolutionBuilder, Solution};
 use crate::utils::random::{Random, seed_from_time};
 
 const DEFAULT_NUMBER_OF_VARIABLES: usize = 30;
@@ -60,24 +59,27 @@ impl ZDT1Problem {
     }
 }
 
-impl Problem<f64, RealSolution> for ZDT1Problem {
+impl Problem<f64, MultiObjectiveInfo> for ZDT1Problem {
     fn new() -> Self {
         Self::new_default()
     }
 
-    fn evaluate(&self, solution: &mut RealSolution) {
-        let variables = solution.get_solution_info().get_variables();
+    fn evaluate(&self, solution: &mut Solution<f64, MultiObjectiveInfo>) {
+        let variables = solution.variables();
         let objectives = self.evaluate_objectives(variables);
         solution.set_objectives(objectives);
     }
 
-    fn create_solution(&self) -> RealSolution {
+    fn create_solution(&self) -> Solution<f64, MultiObjectiveInfo> {
         let mut rng = Random::new(seed_from_time());
         let variables: Vec<f64> = (0..self.number_of_variables)
             .map(|_| rng.next_f64())
             .collect();
 
-        RealSolution::new(SolutionInfo::new(variables))
+        RealSolutionBuilder::from_variables(variables)
+            .with_bounds(0.0, 1.0)
+            .into_multi_objective()
+            .build()
     }
 
     fn set_problem_description(&mut self, description: String) {
@@ -97,7 +99,7 @@ mod tests {
     fn test_zdt1_creation() {
         let problem = ZDT1Problem::new(30);
         let solution = problem.create_solution();
-        assert_eq!(solution.get_number_of_variables(), 30);
+        assert_eq!(solution.num_variables(), 30);
     }
 
     #[test]
@@ -116,19 +118,19 @@ mod tests {
     #[test]
     fn test_zdt1_pareto_front_point() {
         let problem = ZDT1Problem::new(30);
-        
-        // Create a solution on the Pareto front: all variables except first are 0
+
+        // Create one point with known variables and verify deterministic scalar value.
         let mut variables = vec![0.0; 30];
-        variables[0] = 0.5; // f1 = 0.5
-        
-        let mut solution = RealSolution::new(SolutionInfo::new(variables));
+        variables[0] = 0.5;
+
+        let mut solution = RealSolutionBuilder::from_variables(variables)
+            .into_multi_objective()
+            .build();
         problem.evaluate(&mut solution);
 
         let objectives = solution.get_objectives().unwrap();
         let f1 = objectives[0];
         let f2 = objectives[1];
-
-        // On Pareto front: f2 = 1 - sqrt(f1)
         let expected_f2 = 1.0 - f1.sqrt();
         assert!((f2 - expected_f2).abs() < 1e-10);
     }

@@ -1,21 +1,19 @@
 use crate::algorithms::traits::Algorithm;
+use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::observer::AlgorithmEvent;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
-use crate::observer::traits::{AlgorithmObserver, Observable, ThreadSafeObserverCollection};
 use crate::problem::traits::Problem;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::solutions::traits::Solution;
+use crate::utils::random::{seed_from_time, Random};
+use crate::utils::statistics::calculate_statistics;
 
-/// Parameters for the Genetic Algorithm.
-/// Uses generics to allow any combination of operators.
-pub struct GeneticAlgorithmParameters<T, S, C, M, Sel>
+pub struct GeneticAlgorithmParameters<T, C, M, Sel>
 where
-    S: Solution<T> + Clone,
     T: Clone,
-    C: CrossoverOperator<T, S>,
-    M: MutationOperator<T, S>,
-    Sel: SelectionOperator<T, S>,
+    C: CrossoverOperator<T>,
+    M: MutationOperator<T>,
+    Sel: SelectionOperator<T>,
 {
     pub population_size: usize,
     pub max_generations: usize,
@@ -25,16 +23,15 @@ where
     pub mutation_operator: M,
     pub selection_operator: Sel,
     pub num_threads: Option<usize>,
-    _phantom: std::marker::PhantomData<(T, S)>,
+    _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T, S, C, M, Sel> GeneticAlgorithmParameters<T, S, C, M, Sel>
+impl<T, C, M, Sel> GeneticAlgorithmParameters<T, C, M, Sel>
 where
-    S: Solution<T> + Clone,
     T: Clone,
-    C: CrossoverOperator<T, S>,
-    M: MutationOperator<T, S>,
-    Sel: SelectionOperator<T, S>,
+    C: CrossoverOperator<T>,
+    M: MutationOperator<T>,
+    Sel: SelectionOperator<T>,
 {
     pub fn new(
         population_size: usize,
@@ -56,7 +53,6 @@ where
             num_threads: None,
             _phantom: std::marker::PhantomData,
         }
-
     }
 
     pub fn show_parameters_information(&self){
@@ -84,38 +80,26 @@ where
     }
 }
 
-/// Genetic Algorithm implementation with configurable operators.
-/// 
-/// This design allows you to plug in different operators without changing the algorithm code.
-/// 
-/// # Type Parameters
-/// * `T` - Type of solution variables
-/// * `S` - Solution type
-/// * `C` - Crossover operator type
-/// * `M` - Mutation operator type
-/// * `Sel` - Selection operator type
-pub struct GeneticAlgorithm<T, S, C, M, Sel>
+pub struct GeneticAlgorithm<T, C, M, Sel>
 where
-    S: Solution<T> + Clone,
     T: Clone,
-    C: CrossoverOperator<T, S>,
-    M: MutationOperator<T, S>,
-    Sel: SelectionOperator<T, S>,
+    C: CrossoverOperator<T>,
+    M: MutationOperator<T>,
+    Sel: SelectionOperator<T>,
 {
-    parameters: GeneticAlgorithmParameters<T, S, C, M, Sel>,
-    solution_set: Option<VectorSolutionSet<T, S>>,
-    observers: Vec<Box<dyn AlgorithmObserver<T, S>>>,
+    parameters: GeneticAlgorithmParameters<T, C, M, Sel>,
+    solution_set: Option<VectorSolutionSet<T>>,
+    observers: Vec<Box<dyn AlgorithmObserver<T>>>,
 }
 
-impl<T, S, C, M, Sel> GeneticAlgorithm<T, S, C, M, Sel>
+impl<T, C, M, Sel> GeneticAlgorithm<T, C, M, Sel>
 where
-    S: Solution<T> + Clone,
     T: Clone,
-    C: CrossoverOperator<T, S>,
-    M: MutationOperator<T, S>,
-    Sel: SelectionOperator<T, S>,
+    C: CrossoverOperator<T>,
+    M: MutationOperator<T>,
+    Sel: SelectionOperator<T>,
 {
-    pub fn new(parameters: GeneticAlgorithmParameters<T, S, C, M, Sel>) -> Self {
+    pub fn new(parameters: GeneticAlgorithmParameters<T, C, M, Sel>) -> Self {
         GeneticAlgorithm {
             parameters,
             solution_set: None,
@@ -124,16 +108,14 @@ where
     }
 }
 
-/// Implementation of Observable trait for GeneticAlgorithm
-impl<T, S, C, M, Sel> Observable<T, S> for GeneticAlgorithm<T, S, C, M, Sel>
+impl<T, C, M, Sel> Observable<T> for GeneticAlgorithm<T, C, M, Sel>
 where
-    S: Solution<T> + Clone,
     T: Clone,
-    C: CrossoverOperator<T, S>,
-    M: MutationOperator<T, S>,
-    Sel: SelectionOperator<T, S>,
+    C: CrossoverOperator<T>,
+    M: MutationOperator<T>,
+    Sel: SelectionOperator<T>,
 {
-    fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<T, S>>) {
+    fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<T>>) {
         self.observers.push(observer);
     }
 
@@ -141,194 +123,107 @@ where
         self.observers.clear();
     }
 
-    fn notify_observers(&mut self, event: &AlgorithmEvent<T, S>) {
+    fn notify_observers(&mut self, event: &AlgorithmEvent<T>) {
         for observer in &mut self.observers {
             observer.update(event);
         }
     }
 }
 
-impl<T, S, P, C, M, Sel> Algorithm<T, S, P> for GeneticAlgorithm<T, S, C, M, Sel>
+impl<T, C, M, Sel> Algorithm<T> for GeneticAlgorithm<T, C, M, Sel>
 where
-    S: Solution<T> + Clone + Send,
-    T: Clone + Send,
-    P: Problem<T, S> + Sync,
-    C: CrossoverOperator<T, S> + Sync + Clone + Send,
-    M: MutationOperator<T, S> + Sync + Clone + Send,
-    Sel: SelectionOperator<T, S> + Sync + Clone + Send,
+    T: Clone,
+    C: CrossoverOperator<T>,
+    M: MutationOperator<T>,
+    Sel: SelectionOperator<T>,
 {
-    type SolutionSet = VectorSolutionSet<T, S>;
-    type Parameters = GeneticAlgorithmParameters<T, S, C, M, Sel>;
+    type SolutionSet = VectorSolutionSet<T>;
+    type Parameters = GeneticAlgorithmParameters<T, C, M, Sel>;
 
-    fn run(&mut self, problem: &P, verbose: u8) -> Self::SolutionSet {
-
-        use crate::utils::random::{Random, seed_from_time};
-        use crate::utils::statistics::calculate_statistics;
-
-        // Validate parameters before starting
-        if !<Self as Algorithm<T, S, P>>::validate_parameters(self) {
+    fn run(&mut self, problem: &impl Problem<T>) -> Self::SolutionSet {
+        if !self.validate_parameters() {
             let error_msg = "Invalid parameters: population_size and max_generations must be > 0, probabilities must be in [0, 1]".to_string();
-            
             self.notify_observers(&AlgorithmEvent::Error {
                 message: error_msg.clone(),
             });
-            
-            if verbose > 0 {
-                eprintln!("Error: {}", error_msg);
-            }
-            
             panic!("{}", error_msg);
         }
-        
-        // Notify start
+
         self.notify_observers(&AlgorithmEvent::Start {
             algorithm_name: "GeneticAlgorithm".to_string(),
         });
 
-        if verbose > 0 {
-            self.parameters.show_parameters_information();
-        }
+        let mut population: Vec<_> = (0..self.parameters.population_size)
+            .map(|_| {
+                let mut solution = problem.create_solution();
+                problem.evaluate(&mut solution);
+                solution
+            })
+            .collect();
 
-        // Determine number of threads to use
-        let num_threads = self.parameters.num_threads.unwrap_or_else(|| {
-            std::thread::available_parallelism()
-                .map(|n| n.get())
-                .unwrap_or(1)
+        let (best, avg, worst) = calculate_statistics(&population);
+        self.notify_observers(&AlgorithmEvent::GenerationCompleted {
+            generation: 0,
+            evaluations: self.parameters.population_size,
+            best_fitness: best,
+            average_fitness: avg,
+            worst_fitness: worst,
         });
 
-        if verbose > 0 && num_threads > 1 {
-            println!("Running {} parallel threads...", num_threads);
+        let mut rng = Random::new(seed_from_time());
+        let mut evaluations = self.parameters.population_size;
+
+        for generation in 1..=self.parameters.max_generations {
+            let mut offspring_population = Vec::with_capacity(self.parameters.population_size);
+            while offspring_population.len() < self.parameters.population_size {
+                let parent1 = self.parameters.selection_operator.execute(&population).copy();
+                let parent2 = self.parameters.selection_operator.execute(&population).copy();
+
+                let mut offspring = if rng.next_f64() < self.parameters.crossover_probability {
+                    self.parameters.crossover_operator.execute(&parent1, &parent2)
+                } else {
+                    vec![parent1, parent2]
+                };
+
+                for child in &mut offspring {
+                    self.parameters
+                        .mutation_operator
+                        .execute(child, self.parameters.mutation_probability);
+                    problem.evaluate(child);
+                    evaluations += 1;
+                }
+
+                offspring_population.extend(offspring);
+            }
+
+            offspring_population.truncate(self.parameters.population_size);
+            population = offspring_population;
+
+            let (best, avg, worst) = calculate_statistics(&population);
+            self.notify_observers(&AlgorithmEvent::GenerationCompleted {
+                generation,
+                evaluations,
+                best_fitness: best,
+                average_fitness: avg,
+                worst_fitness: worst,
+            });
         }
 
-        // Pre-allocate slots for solutions from each thread
-        use std::sync::{Arc, Mutex};
-        let solution_slots: Arc<Mutex<Vec<Option<S>>>> = Arc::new(Mutex::new(vec![None; num_threads]));
-        
-        // Create thread-safe observer collection
-        let observers = ThreadSafeObserverCollection::new(std::mem::take(&mut self.observers));
-
-        // Get references to parameters before scope
-        let population_size = self.parameters.population_size;
-        let max_generations = self.parameters.max_generations;
-        let crossover_prob = self.parameters.crossover_probability;
-        let mutation_prob = self.parameters.mutation_probability;
-        let crossover_op = &self.parameters.crossover_operator;
-        let mutation_op = &self.parameters.mutation_operator;
-        let selection_op = &self.parameters.selection_operator;
-
-        // Always use scoped threads, even for 1 thread (unified code path)
-        std::thread::scope(|scope| {
-            let mut handles = Vec::new();
-
-            for thread_id in 0..num_threads {
-                let solution_slots = Arc::clone(&solution_slots);
-                let thread_observers = observers.clone_handle();
-
-                let handle = scope.spawn(move || {
-                    // Each thread has its own population
-                    let mut population: Vec<S> = (0..population_size)
-                        .map(|_| {
-                            let mut solution = problem.create_solution();
-                            problem.evaluate(&mut solution);
-                            solution
-                        })
-                        .collect();
-
-                    // Notify initial statistics
-                    let (best_fit, avg_fit, worst_fit) = calculate_statistics(&population);
-                    thread_observers.notify(&AlgorithmEvent::GenerationCompleted {
-                        generation: 0,
-                        evaluations: population_size,
-                        best_fitness: best_fit,
-                        average_fitness: avg_fit,
-                        worst_fitness: worst_fit,
-                    });
-
-                    // Evolution loop for this thread
-                    for generation in 1..=max_generations {
-                        let mut offspring_population = Vec::new();
-
-                        // Generate offspring
-                        while offspring_population.len() < population_size {
-                            let parent1 = selection_op.execute(&population).copy();
-                            let parent2 = selection_op.execute(&population).copy();
-
-                            let mut offspring = if Random::new(seed_from_time())
-                            .next_f64()
-                                < crossover_prob
-                            {
-                                crossover_op.execute(&parent1, &parent2)
-                            } else {
-                                vec![parent1, parent2]
-                            };
-
-                            for child in &mut offspring {
-                                mutation_op.execute(child, mutation_prob);
-                                problem.evaluate(child);
-                            }
-
-                            offspring_population.extend(offspring);
-                        }
-
-                        offspring_population.truncate(population_size);
-                        population = offspring_population;
-                        
-                        // Calculate and notify statistics after each generation
-                        let (best_fitness, avg_fitness, worst_fitness) = calculate_statistics(&population);
-                        
-                        thread_observers.notify(&AlgorithmEvent::GenerationCompleted {
-                            generation,
-                            evaluations: population_size * generation,
-                            best_fitness,
-                            average_fitness: avg_fitness,
-                            worst_fitness,
-                        });
-                    }
-
-                    // Find the best solution from this thread
-                    let best_solution = population
-                        .into_iter()
-                        .max_by(|a, b| a.value().partial_cmp(&b.value()).unwrap())
-                        .unwrap();
-
-                    // Write to designated slot
-                    solution_slots.lock().unwrap()[thread_id] = Some(best_solution);
-                });
-
-                handles.push(handle);
-            }
-
-            // Wait for all threads to complete
-            for handle in handles {
-                handle.join().unwrap();
-            }
+        let mut result = VectorSolutionSet::from_vec(population);
+        result.solutions_mut().sort_by(|a, b| {
+            b.value()
+                .partial_cmp(&a.value())
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        // Collect all solutions from slots into SolutionSet
-        let solutions = solution_slots.lock().unwrap();
-        let mut result = VectorSolutionSet::new();
-        
-        for solution_opt in solutions.iter() {
-            if let Some(solution) = solution_opt {
-                result.add_solution(solution.clone());
-            }
-        }
-
-        if verbose > 0 {
-            if num_threads > 1 {
-                println!("Parallel execution finished. Collected {} solutions.", result.size());
-            }
-            if let Some(best) = result.solutions().iter().max_by(|a, b| a.value().partial_cmp(&b.value()).unwrap()) {
-                println!("Genetic Algorithm finished. Best fitness: {}", best.value());
-            }
-        }
-
-        // Notify end and finalize
-        observers.notify(&AlgorithmEvent::End {
+        self.notify_observers(&AlgorithmEvent::End {
             total_generations: self.parameters.max_generations,
-            total_evaluations: self.parameters.population_size * num_threads * self.parameters.max_generations,
+            total_evaluations: evaluations,
         });
-        observers.finalize();
+
+        for observer in &mut self.observers {
+            observer.finalize();
+        }
 
         self.solution_set = Some(result.clone());
         result
@@ -354,41 +249,4 @@ where
     fn set_parameters(&mut self, params: Self::Parameters) {
         self.parameters = params;
     }
-}
-
-impl<T, S, C, M, Sel> Clone for GeneticAlgorithm<T, S, C, M, Sel>
-where
-    S: Solution<T> + Clone,
-    T: Clone,
-    C: CrossoverOperator<T, S> + Clone,
-    M: MutationOperator<T, S> + Clone,
-    Sel: SelectionOperator<T, S> + Clone,
-{
-    fn clone(&self) -> Self {
-        GeneticAlgorithm {
-            parameters: GeneticAlgorithmParameters {
-                population_size: self.parameters.population_size,
-                max_generations: self.parameters.max_generations,
-                crossover_probability: self.parameters.crossover_probability,
-                mutation_probability: self.parameters.mutation_probability,
-                crossover_operator: self.parameters.crossover_operator.clone(),
-                mutation_operator: self.parameters.mutation_operator.clone(),
-                selection_operator: self.parameters.selection_operator.clone(),
-                num_threads: self.parameters.num_threads,
-                _phantom: std::marker::PhantomData,
-            },
-            solution_set: self.solution_set.clone(),
-            observers: Vec::new(),
-        }
-    }
-}
-
-unsafe impl<T, S, C, M, Sel> Send for GeneticAlgorithm<T, S, C, M, Sel>
-where
-    S: Solution<T> + Clone + Send,
-    T: Clone + Send,
-    C: CrossoverOperator<T, S> + Send,
-    M: MutationOperator<T, S> + Send,
-    Sel: SelectionOperator<T, S> + Send,
-{
 }

@@ -8,3 +8,24 @@
 - Parámetros en los operadores, quizás para modificar las probabilidades y eso, me parece un poco rizar el rizo. Pero se puede ver. Un patrón builder, para poder modificarlos de manera más sencilla
 
 - En cuanto a la información de los operadores, podriamos usar Result, que es como una forma de rust de entregar estas cosas, Es una tupla del resultado y de otra cosa. Esta suele ser una cadena de texto explicando la solución, en este caso podría ser otra estructura o lo que sea. Directamente podemos usar directamente una tupla, que en verdad yo creo que es mejor idea (String, Vec<S>)
+
+
+### Memoria 
+
+- En la introducción hablé sobre el survey (encuesta) de Stack Overflow. Y añadí una imagen hablando de que Cargo es de los coopiladores favoritos de la comundidad. No se si esto está a la altura de un TFG o debería quitarlo.
+
+- Cargo crea su propia documentación teniendo en cuenta los comentarios que añades, algo parecido a java doc, esta documentación es interesante que se entregue junto al TFG entiendo. Estoy trabajando con los comentarios, estos contienen ejemplos de como deben utilizarse y todo.
+
+### Arquitectura, posibles cambios
+
+- En vez de usar muchos parámetros juntos, usar tipos asociados en los traits.
+- Patrón Observer en Rust es complicada debido al BorrowChecker, provocará el uso excesivo de Arc, Mutex, ReffCell, que es lo que ocurre ahora.
+
+
+
+- Mi algoritmo no devolverá nada en formato de texto. Luego los observables tomarán los datos y enseñará lo que quiera.
+
+
+
+-Documento requisitos Mi algoritmo no devolverá nada en formato de texto. Luego los observables tomarán los datos y enseñará lo que quiera.
+- Actores y usuarios en el documento de requisitos

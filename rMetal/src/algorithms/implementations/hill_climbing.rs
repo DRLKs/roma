@@ -1,34 +1,29 @@
-use crate::solutions::traits::Solution;
-use crate::problem::traits::Problem;
 use crate::algorithms::traits::Algorithm;
-use crate::solution_set::traits::SolutionSet;
-use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
+use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::observer::AlgorithmEvent;
 use crate::operator::traits::MutationOperator;
-use crate::observer::traits::{AlgorithmObserver, Observable};
+use crate::problem::traits::Problem;
+use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
+use crate::solution_set::traits::SolutionSet;
 
-/// Parameters for Hill Climbing algorithm.
-/// Uses generics to allow any mutation operator.
-pub struct HillClimbingParameters<T, S, M>
+pub struct HillClimbingParameters<T, M>
 where
-    S: Solution<T> + Clone,
     T: Clone,
-    M: MutationOperator<T, S>,
+    M: MutationOperator<T>,
 {
     pub max_iterations: usize,
     pub mutation_operator: M,
     pub mutation_probability: f64,
-    _phantom: std::marker::PhantomData<(T, S)>,
+    _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T, S, M> HillClimbingParameters<T, S, M>
+impl<T, M> HillClimbingParameters<T, M>
 where
-    S: Solution<T> + Clone,
     T: Clone,
-    M: MutationOperator<T, S>,
+    M: MutationOperator<T>,
 {
     pub fn new(max_iterations: usize, mutation_operator: M, mutation_probability: f64) -> Self {
-        HillClimbingParameters {
+        Self {
             max_iterations,
             mutation_operator,
             mutation_probability,
@@ -37,27 +32,24 @@ where
     }
 }
 
-/// Hill Climbing algorithm for single-objective optimization.
-pub struct HillClimbing<T, S, M>
+pub struct HillClimbing<T, M>
 where
-    S: Solution<T> + Clone,
     T: Clone,
-    M: MutationOperator<T, S>,
+    M: MutationOperator<T>,
 {
-    parameters: HillClimbingParameters<T, S, M>,
-    solution_set: Option<VectorSolutionSet<T, S>>,
+    parameters: HillClimbingParameters<T, M>,
+    solution_set: Option<VectorSolutionSet<T>>,
     is_maximization: bool,
-    observers: Vec<Box<dyn AlgorithmObserver<T, S>>>,
+    observers: Vec<Box<dyn AlgorithmObserver<T>>>,
 }
 
-impl<T, S, M> HillClimbing<T, S, M>
+impl<T, M> HillClimbing<T, M>
 where
-    S: Solution<T> + Clone,
     T: Clone,
-    M: MutationOperator<T, S>,
+    M: MutationOperator<T>,
 {
-    pub fn new(parameters: HillClimbingParameters<T, S, M>, maximization: bool) -> Self {
-        HillClimbing {
+    pub fn new(parameters: HillClimbingParameters<T, M>, maximization: bool) -> Self {
+        Self {
             parameters,
             solution_set: None,
             is_maximization: maximization,
@@ -66,14 +58,12 @@ where
     }
 }
 
-/// Implementation of Observable trait for HillClimbing
-impl<T, S, M> Observable<T, S> for HillClimbing<T, S, M>
+impl<T, M> Observable<T> for HillClimbing<T, M>
 where
-    S: Solution<T> + Clone,
     T: Clone,
-    M: MutationOperator<T, S>,
+    M: MutationOperator<T>,
 {
-    fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<T, S>>) {
+    fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<T>>) {
         self.observers.push(observer);
     }
 
@@ -81,73 +71,55 @@ where
         self.observers.clear();
     }
 
-    fn notify_observers(&mut self, event: &AlgorithmEvent<T, S>) {
+    fn notify_observers(&mut self, event: &AlgorithmEvent<T>) {
         for observer in &mut self.observers {
             observer.update(event);
         }
     }
 }
 
-impl<T, S, P, M> Algorithm<T, S, P> for HillClimbing<T, S, M>
+impl<T, M> Algorithm<T> for HillClimbing<T, M>
 where
-    S: Solution<T> + Clone,
     T: Clone,
-    P: Problem<T, S>,
-    M: MutationOperator<T, S>,
+    M: MutationOperator<T>,
 {
-    type SolutionSet = VectorSolutionSet<T, S>;
-    type Parameters = HillClimbingParameters<T, S, M>;
+    type SolutionSet = VectorSolutionSet<T>;
+    type Parameters = HillClimbingParameters<T, M>;
 
-    fn run(&mut self, problem: &P, verbose: u8) -> Self::SolutionSet {
-        // Validate parameters before starting
-        if !<Self as Algorithm<T, S, P>>::validate_parameters(self) {
-            let error_msg = "Invalid parameters: max_iterations must be > 0, mutation_probability must be in [0, 1]".to_string();
-            
+    fn run(&mut self, problem: &impl Problem<T>) -> Self::SolutionSet {
+        if !self.validate_parameters() {
+            let message = "Invalid parameters: max_iterations must be > 0, mutation_probability must be in [0,1]".to_string();
             self.notify_observers(&AlgorithmEvent::Error {
-                message: error_msg.clone(),
+                message: message.clone(),
             });
-            
-            if verbose > 0 {
-                eprintln!("Error: {}", error_msg);
-            }
-            
-            panic!("{}", error_msg);
+            panic!("{}", message);
         }
-        // Notify start
+
         self.notify_observers(&AlgorithmEvent::Start {
             algorithm_name: "HillClimbing".to_string(),
         });
 
-        if verbose > 0 {
-            println!("Starting Hill Climbing with {} iterations", self.parameters.max_iterations);
-            println!("  Mutation operator: {}", self.parameters.mutation_operator.name());
-        }
-
         let mut current = problem.create_solution();
         problem.evaluate(&mut current);
-
-        let mut best_value = current.value();
         let mut evaluations = 1;
 
-        // Initial event
-        let fitness = current.value();
+        let initial = current.value();
         self.notify_observers(&AlgorithmEvent::GenerationCompleted {
             generation: 0,
             evaluations,
-            best_fitness: fitness,
-            average_fitness: fitness,
-            worst_fitness: fitness,
+            best_fitness: initial,
+            average_fitness: initial,
+            worst_fitness: initial,
         });
 
         for iteration in 1..=self.parameters.max_iterations {
-            // Generate neighbor using mutation operator
             let mut neighbor = current.copy();
-            self.parameters.mutation_operator.execute(&mut neighbor, self.parameters.mutation_probability);
+            self.parameters
+                .mutation_operator
+                .execute(&mut neighbor, self.parameters.mutation_probability);
             problem.evaluate(&mut neighbor);
             evaluations += 1;
 
-            // For minimization: neighbor < current
-            // For maximization: neighbor > current
             let improved = if self.is_maximization {
                 neighbor.value() > current.value()
             } else {
@@ -156,49 +128,35 @@ where
 
             if improved {
                 current = neighbor;
-                best_value = current.value();
-                
                 self.notify_observers(&AlgorithmEvent::BestSolutionUpdate {
                     generation: iteration,
                     solution: current.copy(),
                 });
-                
-                if verbose > 1 {
-                    println!("Iteration {}: Improved to {}", iteration, best_value);
-                }
             }
 
-            // Notify iteration completed (every 10 iterations or when improved)
             if iteration % 10 == 0 || improved {
-                let fitness = current.value();
+                let fit = current.value();
                 self.notify_observers(&AlgorithmEvent::GenerationCompleted {
                     generation: iteration,
                     evaluations,
-                    best_fitness: fitness,
-                    average_fitness: fitness,
-                    worst_fitness: fitness,
+                    best_fitness: fit,
+                    average_fitness: fit,
+                    worst_fitness: fit,
                 });
             }
         }
 
-        // Notify end
         self.notify_observers(&AlgorithmEvent::End {
             total_generations: self.parameters.max_iterations,
             total_evaluations: evaluations,
         });
 
-        if verbose > 0 {
-            println!("Hill Climbing finished. Best value: {}", best_value);
-        }
-
-        // Finalize observers
         for observer in &mut self.observers {
             observer.finalize();
         }
 
         let mut result = VectorSolutionSet::new();
         result.add_solution(current);
-        
         self.solution_set = Some(result.clone());
         result
     }

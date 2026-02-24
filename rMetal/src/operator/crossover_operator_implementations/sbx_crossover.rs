@@ -1,6 +1,5 @@
 use crate::operator::traits::{CrossoverOperator, Operator};
-use crate::solutions::implementations::real_solution::RealSolution;
-use crate::solutions::traits::{Solution, SolutionInfo};
+use crate::solution::{QualityState, Solution};
 use crate::utils::random::{Random, seed_from_time};
 use std::cell::RefCell;
 
@@ -51,14 +50,17 @@ impl Operator for SBXCrossover {
     }
 }
 
-impl CrossoverOperator<f64, RealSolution> for SBXCrossover {
-    fn execute(&self, parent1: &RealSolution, parent2: &RealSolution) -> Vec<RealSolution> {
-        let variables1 = parent1.get_solution_info().get_variables();
-        let variables2 = parent2.get_solution_info().get_variables();
+impl<Q> CrossoverOperator<f64, Q> for SBXCrossover
+where
+    Q: Clone + Default + QualityState,
+{
+    fn execute(&self, parent1: &Solution<f64, Q>, parent2: &Solution<f64, Q>) -> Vec<Solution<f64, Q>> {
+        let variables1 = &parent1.variables;
+        let variables2 = &parent2.variables;
 
         if variables1.len() != variables2.len() {
             // If parents have different lengths, return copies
-            return vec![parent1.copy(), parent2.copy()];
+            return vec![parent1.clone(), parent2.clone()];
         }
 
         let mut offspring1_vars = Vec::with_capacity(variables1.len());
@@ -89,40 +91,55 @@ impl CrossoverOperator<f64, RealSolution> for SBXCrossover {
             }
         }
 
-        let offspring1 = RealSolution::new(SolutionInfo::new(offspring1_vars));
-        let offspring2 = RealSolution::new(SolutionInfo::new(offspring2_vars));
+        let offspring1: Solution<f64, Q> = Solution::new(offspring1_vars);
+        let offspring2: Solution<f64, Q> = Solution::new(offspring2_vars);
 
         vec![offspring1, offspring2]
     }
 
-    fn execute_several(&self, solutions: Vec<RealSolution>) -> Vec<RealSolution> {
-        let mut offspring_result= vec![];
-        for i in 1..solutions.len() {
+    fn execute_several(&self, solutions: Vec<Solution<f64, Q>>) -> Vec<Solution<f64, Q>> {
+        if solutions.len() < 2 {
+            return solutions;
+        }
+
+        let mut offspring_result = Vec::new();
+        let mut i = 0;
+
+        while i + 1 < solutions.len() {
+            let offspring = self.execute(&solutions[i], &solutions[i + 1]);
+            offspring_result.extend(offspring);
+            i += 2;
+        }
+
+        // Keep last parent if the number of solutions is odd.
+        if i < solutions.len() {
             offspring_result.push(solutions[i].clone());
         }
+
         offspring_result
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::solution::RealSolutionBuilder;
     use super::*;
 
     #[test]
     fn test_sbx_crossover_creates_two_offspring() {
         let crossover = SBXCrossover::new(20.0);
-        let parent1 = RealSolution::new(SolutionInfo::new(vec![0.2, 0.5, 0.8]));
-        let parent2 = RealSolution::new(SolutionInfo::new(vec![0.7, 0.3, 0.1]));
+        let parent1 = RealSolutionBuilder::from_variables(vec![0.2, 0.5, 0.8]).build();
+        let parent2 = RealSolutionBuilder::from_variables(vec![0.7, 0.3, 0.1]).build();
 
         let offspring = crossover.execute(&parent1, &parent2);
 
         assert_eq!(offspring.len(), 2);
         assert_eq!(
-            offspring[0].get_solution_info().get_variables().len(),
+            offspring[0].num_variables(),
             3
         );
         assert_eq!(
-            offspring[1].get_solution_info().get_variables().len(),
+            offspring[1].num_variables(),
             3
         );
     }
@@ -130,13 +147,13 @@ mod tests {
     #[test]
     fn test_sbx_offspring_in_valid_range() {
         let crossover = SBXCrossover::new(20.0);
-        let parent1 = RealSolution::new(SolutionInfo::new(vec![0.0, 0.5, 1.0]));
-        let parent2 = RealSolution::new(SolutionInfo::new(vec![1.0, 0.5, 0.0]));
+        let parent1 = RealSolutionBuilder::from_variables(vec![0.0, 0.5, 1.0]).build();
+        let parent2 = RealSolutionBuilder::from_variables(vec![1.0, 0.5, 0.0]).build();
 
         let offspring = crossover.execute(&parent1, &parent2);
 
         for solution in &offspring {
-            for &var in solution.get_solution_info().get_variables() {
+            for &var in solution.variables() {
                 assert!(var >= 0.0 && var <= 1.0);
             }
         }
@@ -145,20 +162,41 @@ mod tests {
     #[test]
     fn test_sbx_different_parent_lengths() {
         let crossover = SBXCrossover::new(20.0);
-        let parent1 = RealSolution::new(SolutionInfo::new(vec![0.5, 0.5]));
-        let parent2 = RealSolution::new(SolutionInfo::new(vec![0.5, 0.5, 0.5]));
+        let parent1 = RealSolutionBuilder::from_variables(vec![0.5, 0.5]).build();
+        let parent2 = RealSolutionBuilder::from_variables(vec![0.5, 0.5, 0.5]).build();
 
         let offspring = crossover.execute(&parent1, &parent2);
 
         assert_eq!(offspring.len(), 2);
-        assert_eq!(
-            offspring[0].get_solution_info().get_variables().len(),
-            2
-        );
-        assert_eq!(
-            offspring[1].get_solution_info().get_variables().len(),
-            3
-        );
+        assert_eq!(offspring[0].variables().len(), 2);
+        assert_eq!(offspring[1].variables().len(), 3);
+    }
+
+    #[test]
+    fn test_execute_several_even_count() {
+        let crossover = SBXCrossover::new(20.0);
+        let parents = vec![
+            RealSolutionBuilder::from_variables(vec![0.1, 0.2]).build(),
+            RealSolutionBuilder::from_variables(vec![0.8, 0.9]).build(),
+            RealSolutionBuilder::from_variables(vec![0.3, 0.4]).build(),
+            RealSolutionBuilder::from_variables(vec![0.6, 0.7]).build(),
+        ];
+
+        let offspring = crossover.execute_several(parents);
+        assert_eq!(offspring.len(), 4);
+    }
+
+    #[test]
+    fn test_execute_several_odd_count_keeps_last() {
+        let crossover = SBXCrossover::new(20.0);
+        let parents = vec![
+            RealSolutionBuilder::from_variables(vec![0.1, 0.2]).build(),
+            RealSolutionBuilder::from_variables(vec![0.8, 0.9]).build(),
+            RealSolutionBuilder::from_variables(vec![0.3, 0.4]).build(),
+        ];
+
+        let offspring = crossover.execute_several(parents);
+        assert_eq!(offspring.len(), 3);
     }
 
     #[test]

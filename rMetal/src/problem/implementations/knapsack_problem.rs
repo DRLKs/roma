@@ -1,7 +1,5 @@
 use crate::problem::traits::Problem;
-use crate::quality_indicator::implementations::decimal_quality_indicator::DecimalQualityIndicator;
-use crate::solutions::implementations::binary_solution::BinarySolution;
-use crate::solutions::traits::Solution;
+use crate::solution::Solution;
 
 /// Knapsack Problem: maximize the value of items in a knapsack without exceeding capacity
 #[derive(Clone)]
@@ -16,10 +14,10 @@ pub struct KnapsackProblem {
 impl KnapsackProblem   
 {
     /// Creates a new KnapsackProblem with specified items
-    pub fn with_data(capacity: f64, weights: Vec<f64>, values: Vec<f64>) -> Self {
+    pub fn with_data(capacity: f64, weights: Vec<f64>, values: Vec<f64>, random_seed: Option<u64>) -> Self {
         assert_eq!(weights.len(), values.len(), "Weights and values must have the same length");
         let number_of_items = weights.len();
-        
+        let _ = random_seed;
         KnapsackProblem {
             description: format!("Knapsack Problem with {} items and capacity {}", number_of_items, capacity),
             number_of_items,
@@ -30,7 +28,7 @@ impl KnapsackProblem
     }
 
     /// Calculates the total weight of selected items
-    fn calculate_weight(&self, solution: &BinarySolution) -> f64 {
+    fn calculate_weight(&self, solution: &Solution<bool>) -> f64 {
         let mut total_weight = 0.0;
         for i in 0..self.number_of_items {
             if let Some(&selected) = solution.get_variable(i) {
@@ -43,7 +41,7 @@ impl KnapsackProblem
     }
 
     /// Calculates the total value of selected items
-    fn calculate_value(&self, solution: &BinarySolution) -> f64 {
+    fn calculate_value(&self, solution: &Solution<bool>) -> f64 {
         let mut total_value = 0.0;
         for i in 0..self.number_of_items {
             if let Some(&selected) = solution.get_variable(i) {
@@ -56,7 +54,7 @@ impl KnapsackProblem
     }
 }
 
-impl Problem<bool, BinarySolution> for KnapsackProblem {
+impl Problem<bool> for KnapsackProblem {
     fn new() -> Self {
         // Default constructor with empty problem
         KnapsackProblem {
@@ -68,7 +66,7 @@ impl Problem<bool, BinarySolution> for KnapsackProblem {
         }
     }
 
-    fn evaluate(&self, solution: &mut BinarySolution) {
+    fn evaluate(&self, solution: &mut Solution<bool>) {
         let weight = self.calculate_weight(solution);
         let value = self.calculate_value(solution);
         
@@ -76,18 +74,19 @@ impl Problem<bool, BinarySolution> for KnapsackProblem {
         let _fitness = if weight > self.capacity {
             -(weight - self.capacity) * 1000.0 // Heavy penalty for infeasible solutions
         } else {
-            value // Maximize value
+            value // Maximize value_fitness
         };
         
-        //////// ESTO SE TIENE QUE MIRAR, NO ME GUSTA
-        let quality = DecimalQualityIndicator::new(Some(_fitness));
-        solution.set_quality(quality);
-        
+        solution.set_fitness(_fitness);
     }
 
     /// Solution that serves as a starting point for the algorithm
-    fn create_solution(&self) -> BinarySolution {
-        BinarySolution::random(self.number_of_items, None)
+    fn create_solution(&self) -> Solution<bool> {
+        let mut variables: Vec<bool> = vec![];
+        for _ in 0..self.number_of_items {
+            variables.push(false);
+        }
+        Solution::new(variables)
     }
 
     fn set_problem_description(&mut self, description: String) {
@@ -134,7 +133,7 @@ impl KnapsackBuilder {
     }
 
     pub fn build(self) -> KnapsackProblem {
-        KnapsackProblem::with_data(self.capacity, self.weights, self.values)
+        KnapsackProblem::with_data(self.capacity, self.weights, self.values, None)
     }
 }
 
@@ -165,10 +164,10 @@ mod tests {
         let values = vec![100.0, 200.0, 300.0];
         let capacity = 50.0;
 
-        let problem = KnapsackProblem::with_data(capacity, weights, values);
+        let problem = KnapsackProblem::with_data(capacity, weights, values, Some(100));
 
         let solution = problem.create_solution();
-        assert_eq!(solution.get_number_of_variables(), 3);
+        assert_eq!(solution.num_variables(), 3);
     }
 
     #[test]
@@ -180,7 +179,7 @@ mod tests {
             .build();
 
         let solution = problem.create_solution();
-        assert_eq!(solution.get_number_of_variables(), 2);
+        assert_eq!(solution.num_variables(), 2);
     }
 
     #[test]
@@ -193,15 +192,16 @@ mod tests {
             .build();
 
         let sol = problem.create_solution();
-        assert_eq!(sol.get_number_of_variables(), 3);
+        assert_eq!(sol.num_variables(), 3);
 
-        let mut solution = BinarySolution::zeros(3);
-        for i in 0..3 {
-            solution.set_variable(i, true).unwrap();
+        let mut variables: Vec<bool> = vec![];
+        for _ in 0..3 {
+            variables.push(true);
         }
+        let mut solution = Solution::new(variables);
 
         problem.evaluate(&mut solution);
 
-        assert!(solution.value() > 0.0);
+        assert!(solution.fitness().unwrap() > 0.0);
     }
 }

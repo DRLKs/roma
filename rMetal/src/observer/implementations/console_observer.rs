@@ -1,6 +1,5 @@
 use crate::observer::AlgorithmEvent;
 use crate::observer::traits::{AlgorithmObserver};
-use crate::solutions::traits::Solution;
 
 /// Simple console observer that prints algorithm progress to stdout
 pub struct ConsoleObserver {
@@ -17,12 +16,11 @@ impl ConsoleObserver {
     }
 }
 
-impl<T, S> AlgorithmObserver<T, S> for ConsoleObserver
+impl<T> AlgorithmObserver<T> for ConsoleObserver
 where
-    S: Solution<T>,
     T: Clone,
 {
-    fn update(&mut self, event: &AlgorithmEvent<T, S>) {
+    fn update(&mut self, event: &AlgorithmEvent<T>) {
         match event {
             AlgorithmEvent::Start { algorithm_name } => {
                 println!("  Starting algorithm: {}", algorithm_name);
@@ -46,7 +44,7 @@ where
                     println!(
                         "  New best solution found at generation {}: fitness={:.4}",
                         generation,
-                        solution.value()
+                        solution.fitness().unwrap_or(f64::NEG_INFINITY)
                     );
                 }
             }

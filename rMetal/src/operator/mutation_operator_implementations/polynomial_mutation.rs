@@ -1,6 +1,5 @@
 use crate::operator::traits::{MutationOperator, Operator};
-use crate::solutions::implementations::real_solution::RealSolution;
-use crate::solutions::traits::Solution;
+use crate::solution::{QualityState, Solution};
 use crate::utils::random::{Random, seed_from_time};
 use std::cell::RefCell;
 
@@ -51,75 +50,67 @@ impl Operator for PolynomialMutation {
     }
 }
 
-impl MutationOperator<f64, RealSolution> for PolynomialMutation {
-    fn execute(&self, solution: &mut RealSolution, probability: f64) {
-        let variables = solution.get_solution_info().get_variables();
-        let mut new_variables = Vec::with_capacity(variables.len());
-        
-        // Single borrow for efficiency
+impl<Q> MutationOperator<f64, Q> for PolynomialMutation
+where
+    Q: Clone + Default + QualityState,
+{
+    fn execute(&self, solution: &mut Solution<f64, Q>, probability: f64) {
         let mut rng = self.rng.borrow_mut();
 
-        for &x in variables {
+        for i in 0..solution.num_variables() {
             if rng.next_f64() < probability {
                 let u = rng.next_f64();
                 let delta = self.calculate_delta(u);
                 
                 // Apply mutation
+                let x = solution.variables[i];
                 let mutated = x + delta;
                 
                 // Ensure mutated value is in valid range [0, 1]
-                new_variables.push(mutated.clamp(0.0, 1.0));
-            } else {
-                // No mutation
-                new_variables.push(x);
+                solution.variables[i] = mutated.clamp(0.0, 1.0);
             }
         }
         
-        // Drop the borrow before mutating solution
-        drop(rng);
-
-        // Update solution with mutated variables
-        let info = solution.get_solution_info_mut();
-        *info.get_variables_mut() = new_variables;
+        solution.invalidate();
     }
 }
 
+
 #[cfg(test)]
 mod tests {
+    use crate::solution::RealSolutionBuilder;
     use super::*;
-    use crate::solutions::traits::SolutionInfo;
 
     #[test]
     fn test_polynomial_mutation_zero_probability() {
         let mutation = PolynomialMutation::new(20.0);
         let original_vars = vec![0.3, 0.5, 0.7];
-        let mut solution = RealSolution::new(SolutionInfo::new(original_vars.clone()));
+        let mut solution = RealSolutionBuilder::from_variables(original_vars.clone()).build();
 
         mutation.execute(&mut solution, 0.0);
 
-        let mutated_vars = solution.get_solution_info().get_variables();
-        assert_eq!(mutated_vars, &original_vars);
+        assert_eq!(solution.variables, original_vars);
     }
 
     #[test]
     fn test_polynomial_mutation_preserves_length() {
         let mutation = PolynomialMutation::new(20.0);
-        let mut solution = RealSolution::new(SolutionInfo::new(vec![0.5, 0.5, 0.5, 0.5]));
+        let mut solution = RealSolutionBuilder::from_variables(vec![0.5, 0.5, 0.5, 0.5]).build();
 
         mutation.execute(&mut solution, 1.0);
 
-        assert_eq!(solution.get_solution_info().get_variables().len(), 4);
+        assert_eq!(solution.num_variables(), 4);
     }
 
     #[test]
     fn test_polynomial_mutation_valid_range() {
         let mutation = PolynomialMutation::new(20.0);
-        let mut solution = RealSolution::new(SolutionInfo::new(vec![0.0, 0.5, 1.0]));
+        let mut solution = RealSolutionBuilder::from_variables(vec![0.0, 0.5, 1.0]).build();
 
         // Apply mutation multiple times to test boundary conditions
         for _ in 0..10 {
             mutation.execute(&mut solution, 1.0);
-            for &var in solution.get_solution_info().get_variables() {
+            for &var in solution.variables() {
                 assert!(var >= 0.0 && var <= 1.0, "Variable out of bounds: {}", var);
             }
         }
@@ -129,11 +120,11 @@ mod tests {
     fn test_polynomial_mutation_high_probability_changes_values() {
         let mutation = PolynomialMutation::new(20.0);
         let original_vars = vec![0.5; 10];
-        let mut solution = RealSolution::new(SolutionInfo::new(original_vars.clone()));
+        let mut solution = RealSolutionBuilder::from_variables(original_vars.clone()).build();
 
         mutation.execute(&mut solution, 1.0);
 
-        let mutated_vars = solution.get_solution_info().get_variables();
+        let mutated_vars = solution.variables();
         // With probability 1.0 and 10 variables, at least some should change
         let changes = mutated_vars
             .iter()

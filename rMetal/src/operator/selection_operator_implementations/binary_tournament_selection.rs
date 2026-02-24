@@ -1,5 +1,5 @@
 use crate::operator::traits::{Operator, SelectionOperator};
-use crate::solutions::traits::Solution;
+use crate::solution::Solution;
 use crate::utils::random::Random;
 
 /// Binary Tournament Selection operator.
@@ -29,12 +29,11 @@ impl Operator for BinaryTournamentSelection {
     }
 }
 
-impl<T, S> SelectionOperator<T, S> for BinaryTournamentSelection
+impl<T> SelectionOperator<T> for BinaryTournamentSelection
 where
-    S: Solution<T>,
     T: Clone,
 {
-    fn execute<'a>(&self, population: &'a [S]) -> &'a S {
+    fn execute<'a>(&self, population: &'a [Solution<T>]) -> &'a Solution<T> {
         if population.is_empty() {
             panic!("Cannot select from empty population");
         }
@@ -57,7 +56,10 @@ where
         let individual2 = &population[index2];
         
         // Return the better solution (higher fitness value)
-        if individual1.value() >= individual2.value() {
+        let fitness1 = individual1.fitness().unwrap_or(f64::NEG_INFINITY);
+        let fitness2 = individual2.fitness().unwrap_or(f64::NEG_INFINITY);
+        
+        if fitness1 >= fitness2 {
             individual1
         } else {
             individual2
@@ -68,8 +70,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::solutions::implementations::binary_solution::BinarySolution;
-    use crate::quality_indicator::implementations::decimal_quality_indicator::DecimalQualityIndicator;
+    use crate::solution::BinarySolutionBuilder;
 
     #[test]
     fn test_binary_tournament_name() {
@@ -82,12 +83,10 @@ mod tests {
     fn test_binary_tournament_selection() {
         let selection = BinaryTournamentSelection::new();
         
-        let mut solution1 = BinarySolution::zeros(5);
-        solution1.set_quality(DecimalQualityIndicator::new(Some(10.0)));
-        
-        let mut solution2 = BinarySolution::ones(5);
-        solution2.set_quality(DecimalQualityIndicator::new(Some(5.0)));
-        
+        let solution1 = BinarySolutionBuilder::zeros(5).with_fitness(10.0).build();
+
+        let solution2 = BinarySolutionBuilder::ones(5).with_fitness(5.0).build();
+
         let population = vec![solution1, solution2];
         
         let selected = selection.execute(&population);
@@ -101,23 +100,23 @@ mod tests {
     fn test_binary_tournament_selection_with_empty_population() {
         let selection = BinaryTournamentSelection::new();
 
-        let population = vec![];
+        let population: Vec<Solution<bool>> = vec![];
 
-        let _selected:&BinarySolution = selection.execute(&population);
+        let _selected = selection.execute(&population);
     }
 
     #[test]
     fn test_binary_tournament_selection_with_only_one() {
         let selection = BinaryTournamentSelection::new();
 
-        let quality = 10.0;
-        let mut solution = BinarySolution::zeros(5);
-        solution.set_quality(DecimalQualityIndicator::new(Some(quality)));
+        let fitness = 10.0;
+        let solution = BinarySolutionBuilder::zeros(5).with_fitness(fitness).build();
+
 
         let population = vec![solution];
 
         let selected = selection.execute(&population);
 
-        assert_eq!(selected.value(), quality);
+        assert_eq!(selected.value(), fitness);
     }
 }
