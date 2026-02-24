@@ -1,5 +1,14 @@
 use std::cmp::Ordering;
 
+/// Defines a common interface for evaluating and comparing solution quality.
+///
+/// The indicator can be invalidated and updated during the execution of an
+/// algorithm, enabling lazy evaluation or dynamic recalculation strategies.
+///
+/// # Associated Types
+///
+/// * `Fitness` - The type used to represent the fitness value. It must implement
+///   `PartialOrd` to allow comparison between indicators.
 pub trait QualityIndicator {
     type Fitness : PartialOrd;
 

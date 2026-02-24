@@ -1,5 +1,13 @@
 use crate::quality_indicator::traits::{QualityIndicator};
 
+/// Represents a quality indicator based on a single decimal (floating-point) value.
+///
+/// The fitness value is optional to allow the creation of unevaluated solutions
+/// or delayed evaluation strategies.
+///
+/// # Fields
+///
+/// * `fitness` - Optional floating-point value representing the quality of a solution.
 #[derive(Clone)]
 pub struct DecimalQualityIndicator {
     fitness: Option<f64>

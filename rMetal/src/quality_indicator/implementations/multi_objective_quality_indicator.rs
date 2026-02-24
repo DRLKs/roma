@@ -1,7 +1,10 @@
 use crate::quality_indicator::traits::QualityIndicator;
 use std::cmp::Ordering;
 
-/// Multi-objective quality indicator that stores a vector of objective values
+/// Multi-objective quality indicator that stores a vector of objective values. 
+/// To decide who solution is the best uses:
+/// - Pareto Rank 
+/// - Crowding distance 
 #[derive(Clone, Debug)]
 pub struct MultiObjectiveQualityIndicator {
     objectives: Option<Vec<f64>>,
