@@ -1,11 +1,12 @@
-use crate::solution::{QualityState, QualityValue, ScalarQuality, Solution};
+use crate::solution::Solution;
+use crate::solution::traits::{QualityValue, ScalarQuality};
 
 /// Trait that defines the basic interface for optimization problems.
 /// * `T` - Type of the solution variables
 pub trait Problem<T, Q = ScalarQuality>
 where
     T: Clone,
-    Q: Clone + Default + QualityState + QualityValue,
+    Q: Clone + Default + QualityValue,
 {
     fn new() -> Self;
 

@@ -1,5 +1,5 @@
 use crate::operator::traits::{MutationOperator, Operator};
-use crate::solution::{QualityState, Solution};
+use crate::solution::Solution;
 use crate::utils::random::{Random, seed_from_time};
 use std::cell::RefCell;
 
@@ -52,7 +52,7 @@ impl Operator for PolynomialMutation {
 
 impl<Q> MutationOperator<f64, Q> for PolynomialMutation
 where
-    Q: Clone + Default + QualityState,
+    Q: Clone,
 {
     fn execute(&self, solution: &mut Solution<f64, Q>, probability: f64) {
         let mut rng = self.rng.borrow_mut();

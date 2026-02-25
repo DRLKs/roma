@@ -29,7 +29,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::solution::{BinarySolutionBuilder, Solution};
+    use crate::solution::Solution;
+    use crate::solution::implementations::binary_solution::BinarySolutionBuilder;
 
     #[test]
     fn test_calculate_statistics_empty() {

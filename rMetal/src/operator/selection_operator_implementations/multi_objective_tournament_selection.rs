@@ -89,22 +89,20 @@ impl SelectionOperator<f64, MultiObjectiveInfo> for MultiObjectiveTournamentSele
 
 #[cfg(test)]
 mod tests {
-    use crate::solution::RealSolutionBuilder;
+    use crate::solution::{MultiObjectiveRealSolutionBuilder};
     use super::*;
 
     #[test]
     fn test_selection_from_single_solution() {
         let selection = MultiObjectiveTournamentSelection::new();
-        let solution = RealSolutionBuilder::new(1)
-            .set_variable(0, 0.5)
-            .into_multi_objective()
+        let solution = MultiObjectiveRealSolutionBuilder::from_variables(vec![1.0])
             .with_objectives(vec![0.5, 0.5])
             .with_rank(0)
             .build();
         let population = vec![solution];
 
         let selected = selection.execute(&population);
-        assert_eq!(selected.variables(), &[0.5]);
+        assert_eq!(selected.variables(), &[1.0]);
     }
 
     #[test]
@@ -119,14 +117,12 @@ mod tests {
     fn test_selection_prefers_better_rank() {
         let selection = MultiObjectiveTournamentSelection::new();
 
-        let solution1 = RealSolutionBuilder::new(1)
-            .into_multi_objective()
+        let solution1 = MultiObjectiveRealSolutionBuilder::from_variables(vec![1.0])
             .with_objectives(vec![0.1, 0.1])
             .with_rank(0)
             .build();
 
-        let solution2 = RealSolutionBuilder::new(1)
-            .into_multi_objective()
+        let solution2 = MultiObjectiveRealSolutionBuilder::from_variables(vec![1.0])
             .with_objectives(vec![0.9, 0.9])
             .with_rank(1)
             .build();
@@ -143,15 +139,13 @@ mod tests {
     fn test_selection_uses_crowding_distance_when_rank_ties() {
         let selection = MultiObjectiveTournamentSelection::new();
 
-        let solution1 = RealSolutionBuilder::new(1)
-            .into_multi_objective()
+        let solution1 = MultiObjectiveRealSolutionBuilder::from_variables(vec![1.0])
             .with_objectives(vec![0.4, 0.6])
             .with_rank(0)
             .with_crowding_distance(2.0)
             .build();
 
-        let solution2 = RealSolutionBuilder::new(1)
-            .into_multi_objective()
+        let solution2 = MultiObjectiveRealSolutionBuilder::from_variables(vec![1.0])
             .with_objectives(vec![0.5, 0.5])
             .with_rank(0)
             .with_crowding_distance(1.0)

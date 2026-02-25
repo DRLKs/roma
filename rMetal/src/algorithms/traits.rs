@@ -1,6 +1,6 @@
 use crate::problem::traits::Problem;
 use crate::solution_set::traits::SolutionSet;
-use crate::solution::{QualityState, QualityValue, ScalarQuality};
+use crate::solution::traits::{QualityValue, ScalarQuality};
 
 /// Trait that defines the basic interface for all optimization algorithms.
 /// 
@@ -9,7 +9,7 @@ use crate::solution::{QualityState, QualityValue, ScalarQuality};
 pub trait Algorithm<T, Q = ScalarQuality>
 where
     T: Clone,
-    Q: Clone + Default + QualityState + QualityValue,
+    Q: Clone + Default + QualityValue,
 {
     type SolutionSet: SolutionSet<T, Q>;
 
@@ -36,8 +36,4 @@ where
     fn get_parameters(&self) -> &Self::Parameters;
 
     fn set_parameters(&mut self, params: Self::Parameters);
-}
-
-pub trait AlgorithmParameters<T, S>{
-
 }

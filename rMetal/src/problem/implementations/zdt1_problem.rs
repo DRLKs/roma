@@ -1,5 +1,7 @@
 use crate::problem::traits::Problem;
-use crate::solution::{MultiObjectiveInfo, RealSolutionBuilder, Solution};
+use crate::solution::implementations::real_multiple_objective::MultiObjectiveRealSolutionBuilder;
+use crate::solution::Solution;
+use crate::solution::traits::MultiObjectiveInfo;
 use crate::utils::random::{Random, seed_from_time};
 
 const DEFAULT_NUMBER_OF_VARIABLES: usize = 30;
@@ -76,9 +78,8 @@ impl Problem<f64, MultiObjectiveInfo> for ZDT1Problem {
             .map(|_| rng.next_f64())
             .collect();
 
-        RealSolutionBuilder::from_variables(variables)
+        MultiObjectiveRealSolutionBuilder::from_variables(variables)
             .with_bounds(0.0, 1.0)
-            .into_multi_objective()
             .build()
     }
 
@@ -123,8 +124,7 @@ mod tests {
         let mut variables = vec![0.0; 30];
         variables[0] = 0.5;
 
-        let mut solution = RealSolutionBuilder::from_variables(variables)
-            .into_multi_objective()
+        let mut solution = MultiObjectiveRealSolutionBuilder::from_variables(variables)
             .build();
         problem.evaluate(&mut solution);
 

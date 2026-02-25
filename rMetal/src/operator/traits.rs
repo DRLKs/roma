@@ -1,4 +1,5 @@
-use crate::solution::{ScalarQuality, Solution};
+use crate::solution::Solution;
+use crate::solution::traits::ScalarQuality;
 
 /// Base trait for all operators in the framework.
 /// Operators transform solutions in some way (mutation, crossover, selection, etc.)

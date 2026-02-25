@@ -1,5 +1,5 @@
 use crate::operator::traits::{CrossoverOperator, Operator};
-use crate::solution::{QualityState, Solution};
+use crate::solution::Solution;
 use crate::utils::random::{Random, seed_from_time};
 use std::cell::RefCell;
 
@@ -52,7 +52,7 @@ impl Operator for SBXCrossover {
 
 impl<Q> CrossoverOperator<f64, Q> for SBXCrossover
 where
-    Q: Clone + Default + QualityState,
+    Q: Clone,
 {
     fn execute(&self, parent1: &Solution<f64, Q>, parent2: &Solution<f64, Q>) -> Vec<Solution<f64, Q>> {
         let variables1 = &parent1.variables;

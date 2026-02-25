@@ -1,4 +1,5 @@
-use crate::solution::{QualityValue, ScalarQuality, Solution};
+use crate::solution::{Solution};
+use crate::solution::traits::{QualityValue, ScalarQuality};
 
 /// Trait that defines the basic interface for sets of solutions.
 /// * `T` - Type of the solution variables

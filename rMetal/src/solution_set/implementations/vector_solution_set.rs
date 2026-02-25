@@ -1,5 +1,6 @@
+use crate::solution::Solution;
+use crate::solution::traits::{QualityValue, ScalarQuality};
 use crate::solution_set::traits::SolutionSet;
-use crate::solution::{QualityValue, ScalarQuality, Solution};
 
 #[derive(Clone)]
 pub struct VectorSolutionSet<T, Q = ScalarQuality>
@@ -45,7 +46,8 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::solution::{RealSolutionBuilder, StringSolutionBuilder};
+    use crate::solution::implementations::real_solution::RealSolutionBuilder;
+    use crate::solution::implementations::string_solution::StringSolutionBuilder;
     use crate::solution_set::traits::SolutionSet;
     use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 
