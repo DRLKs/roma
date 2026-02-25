@@ -37,3 +37,7 @@ where
 
     fn set_parameters(&mut self, params: Self::Parameters);
 }
+
+pub trait AlgorithmParameters<T, S>{
+
+}

@@ -99,16 +99,6 @@ impl<T, Q: Default> Solution<T, Q> {
         &mut self.variables
     }
 
-    /// Returns an immutable reference to quality metadata.
-    pub fn quality(&self) -> &Q {
-        &self.quality
-    }
-
-    /// Returns a mutable reference to quality metadata.
-    pub fn quality_mut(&mut self) -> &mut Q {
-        &mut self.quality
-    }
-
     /// Returns a variable by index.
     pub fn get_variable(&self, index: usize) -> Option<&T> {
         self.variables.get(index)
