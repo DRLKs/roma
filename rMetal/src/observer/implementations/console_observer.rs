@@ -18,7 +18,7 @@ impl ConsoleObserver {
 
 impl<T> AlgorithmObserver<T> for ConsoleObserver
 where
-    T: Clone,
+    T: Clone + Send + 'static,
 {
     fn update(&mut self, event: &AlgorithmEvent<T>) {
         match event {

@@ -162,7 +162,7 @@ impl ChartObserver {
 
 impl<T> AlgorithmObserver<T> for ChartObserver
 where
-    T: Clone,
+    T: Clone + Send + 'static,
 {
     fn update(&mut self, event: &AlgorithmEvent<T>) {
         match event {

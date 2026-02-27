@@ -1,10 +1,11 @@
 use crate::algorithms::traits::Algorithm;
+use crate::observer::runtime::{run_with_observers_in_worker, ExecutionContext};
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::observer::AlgorithmEvent;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
+use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
-use crate::solution_set::traits::SolutionSet;
 use crate::utils::random::{seed_from_time, Random};
 use crate::utils::statistics::calculate_statistics;
 
@@ -19,6 +20,7 @@ where
     pub max_generations: usize,
     pub crossover_probability: f64,
     pub mutation_probability: f64,
+    pub elite_size: usize,
     pub crossover_operator: C,
     pub mutation_operator: M,
     pub selection_operator: Sel,
@@ -47,6 +49,7 @@ where
             max_generations,
             crossover_probability,
             mutation_probability,
+            elite_size: 0,
             crossover_operator,
             mutation_operator,
             selection_operator,
@@ -62,6 +65,12 @@ where
         println!("  Crossover: {}", self.crossover_operator.name());
         println!("  Mutation: {}", self.mutation_operator.name());
         println!("  Selection: {}", self.selection_operator.name());
+        println!("  Elitism: {}", self.elite_size);
+    }
+
+    pub fn with_elite_size(mut self, elite_size: usize) -> Self {
+        self.elite_size = elite_size;
+        self
     }
 
     pub fn with_threads(mut self, num_threads: usize) -> Self {
@@ -94,10 +103,10 @@ where
 
 impl<T, C, M, Sel> GeneticAlgorithm<T, C, M, Sel>
 where
-    T: Clone,
-    C: CrossoverOperator<T>,
-    M: MutationOperator<T>,
-    Sel: SelectionOperator<T>,
+    T: Clone + Send + Sync + 'static,
+    C: CrossoverOperator<T> + Send + Sync,
+    M: MutationOperator<T> + Send + Sync,
+    Sel: SelectionOperator<T> + Send + Sync,
 {
     pub fn new(parameters: GeneticAlgorithmParameters<T, C, M, Sel>) -> Self {
         GeneticAlgorithm {
@@ -106,11 +115,241 @@ where
             observers: Vec::new(),
         }
     }
+
+    fn run_internal(
+        parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
+        problem: &(impl Problem<T> + Sync),
+        context: &ExecutionContext<T>,
+    ) -> VectorSolutionSet<T> {
+        context.emit(AlgorithmEvent::Start {
+            algorithm_name: "GeneticAlgorithm".to_string(),
+        });
+
+        let mut population = Self::initialize_population(parameters, problem);
+        let mut evaluations = parameters.population_size;
+
+        Self::emit_generation_metrics(context, 0, evaluations, &population);
+
+        for generation in 1..=parameters.max_generations {
+            population = Self::next_generation(parameters, problem, &population, &mut evaluations);
+
+            Self::emit_generation_metrics(context, generation, evaluations, &population);
+        }
+
+        context.emit(AlgorithmEvent::End {
+            total_generations: parameters.max_generations,
+            total_evaluations: evaluations,
+        });
+
+        VectorSolutionSet::from_vec(population)
+    }
+
+    fn initialize_population(
+        parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
+        problem: &(impl Problem<T> + Sync),
+    ) -> Vec<Solution<T>> {
+        (0..parameters.population_size)
+            .map(|_| {
+                let mut solution = problem.create_solution();
+                problem.evaluate(&mut solution);
+                solution
+            })
+            .collect()
+    }
+
+    fn next_generation(
+        parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
+        problem: &(impl Problem<T> + Sync),
+        current_population: &[Solution<T>],
+        evaluations: &mut usize,
+    ) -> Vec<Solution<T>> {
+        let mut offspring = Self::create_offspring(parameters, problem, current_population, evaluations);
+        Self::apply_elitism(parameters, current_population, &mut offspring);
+        Self::sort_population_desc(&mut offspring);
+        offspring.truncate(parameters.population_size);
+        offspring
+    }
+
+    fn create_offspring(
+        parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
+        problem: &(impl Problem<T> + Sync),
+        population: &[Solution<T>],
+        evaluations: &mut usize,
+    ) -> Vec<Solution<T>> {
+        let requested_threads = Self::resolve_num_threads(parameters);
+        let thread_count = requested_threads.min(parameters.population_size.max(1));
+
+        let (mut offspring_population, generation_evaluations) = if thread_count <= 1 {
+            Self::create_offspring_sequential(parameters, problem, population)
+        } else {
+            Self::create_offspring_parallel(parameters, problem, population, thread_count)
+        };
+
+        *evaluations += generation_evaluations;
+        offspring_population.truncate(parameters.population_size);
+        offspring_population
+    }
+
+    fn create_offspring_sequential(
+        parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
+        problem: &(impl Problem<T> + Sync),
+        population: &[Solution<T>],
+    ) -> (Vec<Solution<T>>, usize) {
+        let mut offspring_population = Vec::with_capacity(parameters.population_size);
+        let mut generation_evaluations = 0usize;
+        let mut rng = Random::new(seed_from_time());
+
+        while offspring_population.len() < parameters.population_size {
+            let parent1 = parameters.selection_operator.execute(population).copy();
+            let parent2 = parameters.selection_operator.execute(population).copy();
+
+            let mut offspring = if rng.next_f64() < parameters.crossover_probability {
+                parameters.crossover_operator.execute(&parent1, &parent2)
+            } else {
+                vec![parent1, parent2]
+            };
+
+            for child in &mut offspring {
+                parameters
+                    .mutation_operator
+                    .execute(child, parameters.mutation_probability);
+                problem.evaluate(child);
+                generation_evaluations += 1;
+            }
+
+            offspring_population.extend(offspring);
+        }
+
+        (offspring_population, generation_evaluations)
+    }
+
+    fn create_offspring_parallel(
+        parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
+        problem: &(impl Problem<T> + Sync),
+        population: &[Solution<T>],
+        thread_count: usize,
+    ) -> (Vec<Solution<T>>, usize) {
+        let target_size = parameters.population_size;
+        let mut all_offspring = Vec::with_capacity(target_size);
+        let mut total_evaluations = 0usize;
+
+        std::thread::scope(|scope| {
+            let mut handles = Vec::with_capacity(thread_count);
+
+            for worker_id in 0..thread_count {
+                let start = worker_id * target_size / thread_count;
+                let end = (worker_id + 1) * target_size / thread_count;
+                let worker_target = end.saturating_sub(start);
+
+                handles.push(scope.spawn(move || {
+                    if worker_target == 0 {
+                        return (Vec::new(), 0usize);
+                    }
+
+                    let mut local_rng = Random::new(
+                        seed_from_time() ^ ((worker_id as u64 + 1).wrapping_mul(0x9E37_79B9_7F4A_7C15)),
+                    );
+                    let mut local_offspring = Vec::with_capacity(worker_target);
+                    let mut local_evaluations = 0usize;
+
+                    while local_offspring.len() < worker_target {
+                        let parent1 = parameters.selection_operator.execute(population).copy();
+                        let parent2 = parameters.selection_operator.execute(population).copy();
+
+                        let mut children = if local_rng.next_f64() < parameters.crossover_probability {
+                            parameters.crossover_operator.execute(&parent1, &parent2)
+                        } else {
+                            vec![parent1, parent2]
+                        };
+
+                        for child in &mut children {
+                            parameters
+                                .mutation_operator
+                                .execute(child, parameters.mutation_probability);
+                            problem.evaluate(child);
+                            local_evaluations += 1;
+                        }
+
+                        local_offspring.extend(children);
+                    }
+
+                    local_offspring.truncate(worker_target);
+                    (local_offspring, local_evaluations)
+                }));
+            }
+
+            for handle in handles {
+                let (mut worker_offspring, worker_evaluations) = handle
+                    .join()
+                    .expect("worker thread panicked while creating offspring");
+                total_evaluations += worker_evaluations;
+                all_offspring.append(&mut worker_offspring);
+            }
+        });
+
+        (all_offspring, total_evaluations)
+    }
+
+    fn resolve_num_threads(parameters: &GeneticAlgorithmParameters<T, C, M, Sel>) -> usize {
+        match parameters.num_threads {
+            Some(n) => n.max(1),
+            None => std::thread::available_parallelism()
+                .map(|n| n.get())
+                .unwrap_or(1),
+        }
+    }
+
+    fn apply_elitism(
+        parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
+        current_population: &[Solution<T>],
+        next_population: &mut Vec<Solution<T>>,
+    ) {
+        if parameters.elite_size == 0 || current_population.is_empty() {
+            return;
+        }
+
+        let elite_count = parameters
+            .elite_size
+            .min(parameters.population_size)
+            .min(current_population.len());
+
+        let mut elites = current_population.to_vec();
+        Self::sort_population_desc(&mut elites);
+        elites.truncate(elite_count);
+
+        Self::sort_population_desc(next_population);
+        next_population.truncate(parameters.population_size.saturating_sub(elite_count));
+        next_population.extend(elites);
+    }
+
+    fn emit_generation_metrics(
+        context: &ExecutionContext<T>,
+        generation: usize,
+        evaluations: usize,
+        population: &[Solution<T>],
+    ) {
+        let (best, avg, worst) = calculate_statistics(population);
+        context.emit(AlgorithmEvent::GenerationCompleted {
+            generation,
+            evaluations,
+            best_fitness: best,
+            average_fitness: avg,
+            worst_fitness: worst,
+        });
+    }
+
+    fn sort_population_desc(population: &mut [Solution<T>]) {
+        population.sort_by(|a, b| {
+            b.value()
+                .partial_cmp(&a.value())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+    }
 }
 
 impl<T, C, M, Sel> Observable<T> for GeneticAlgorithm<T, C, M, Sel>
 where
-    T: Clone,
+    T: Clone + Send + 'static,
     C: CrossoverOperator<T>,
     M: MutationOperator<T>,
     Sel: SelectionOperator<T>,
@@ -122,109 +361,36 @@ where
     fn clear_observers(&mut self) {
         self.observers.clear();
     }
-
-    fn notify_observers(&mut self, event: &AlgorithmEvent<T>) {
-        for observer in &mut self.observers {
-            observer.update(event);
-        }
-    }
 }
 
 impl<T, C, M, Sel> Algorithm<T> for GeneticAlgorithm<T, C, M, Sel>
 where
-    T: Clone,
-    C: CrossoverOperator<T>,
-    M: MutationOperator<T>,
-    Sel: SelectionOperator<T>,
+    T: Clone + Send + Sync + 'static,
+    C: CrossoverOperator<T> + Send + Sync,
+    M: MutationOperator<T> + Send + Sync,
+    Sel: SelectionOperator<T> + Send + Sync,
 {
     type SolutionSet = VectorSolutionSet<T>;
     type Parameters = GeneticAlgorithmParameters<T, C, M, Sel>;
 
-    fn run(&mut self, problem: &impl Problem<T>) -> Self::SolutionSet {
-        if !self.validate_parameters() {
-            let error_msg = "Invalid parameters: population_size and max_generations must be > 0, probabilities must be in [0, 1]".to_string();
-            self.notify_observers(&AlgorithmEvent::Error {
-                message: error_msg.clone(),
-            });
-            panic!("{}", error_msg);
-        }
+    fn run(&mut self, problem: &(impl Problem<T> + Sync)) -> Self::SolutionSet {
+        let is_valid = self.validate_parameters();
+        let parameters = &self.parameters;
+        let observers = std::mem::take(&mut self.observers);
 
-        self.notify_observers(&AlgorithmEvent::Start {
-            algorithm_name: "GeneticAlgorithm".to_string(),
-        });
-
-        let mut population: Vec<_> = (0..self.parameters.population_size)
-            .map(|_| {
-                let mut solution = problem.create_solution();
-                problem.evaluate(&mut solution);
-                solution
-            })
-            .collect();
-
-        let (best, avg, worst) = calculate_statistics(&population);
-        self.notify_observers(&AlgorithmEvent::GenerationCompleted {
-            generation: 0,
-            evaluations: self.parameters.population_size,
-            best_fitness: best,
-            average_fitness: avg,
-            worst_fitness: worst,
-        });
-
-        let mut rng = Random::new(seed_from_time());
-        let mut evaluations = self.parameters.population_size;
-
-        for generation in 1..=self.parameters.max_generations {
-            let mut offspring_population = Vec::with_capacity(self.parameters.population_size);
-            while offspring_population.len() < self.parameters.population_size {
-                let parent1 = self.parameters.selection_operator.execute(&population).copy();
-                let parent2 = self.parameters.selection_operator.execute(&population).copy();
-
-                let mut offspring = if rng.next_f64() < self.parameters.crossover_probability {
-                    self.parameters.crossover_operator.execute(&parent1, &parent2)
-                } else {
-                    vec![parent1, parent2]
-                };
-
-                for child in &mut offspring {
-                    self.parameters
-                        .mutation_operator
-                        .execute(child, self.parameters.mutation_probability);
-                    problem.evaluate(child);
-                    evaluations += 1;
-                }
-
-                offspring_population.extend(offspring);
+        let (result, observers) = run_with_observers_in_worker(observers, move |context| {
+            if !is_valid {
+                let error_msg = "Invalid parameters: population_size and max_generations must be > 0, probabilities must be in [0, 1]".to_string();
+                context.emit(AlgorithmEvent::Error {
+                    message: error_msg.clone(),
+                });
+                panic!("{}", error_msg);
             }
 
-            offspring_population.truncate(self.parameters.population_size);
-            population = offspring_population;
-
-            let (best, avg, worst) = calculate_statistics(&population);
-            self.notify_observers(&AlgorithmEvent::GenerationCompleted {
-                generation,
-                evaluations,
-                best_fitness: best,
-                average_fitness: avg,
-                worst_fitness: worst,
-            });
-        }
-
-        let mut result = VectorSolutionSet::from_vec(population);
-        result.solutions_mut().sort_by(|a, b| {
-            b.value()
-                .partial_cmp(&a.value())
-                .unwrap_or(std::cmp::Ordering::Equal)
+            Self::run_internal(parameters, problem, &context)
         });
 
-        self.notify_observers(&AlgorithmEvent::End {
-            total_generations: self.parameters.max_generations,
-            total_evaluations: evaluations,
-        });
-
-        for observer in &mut self.observers {
-            observer.finalize();
-        }
-
+        self.observers = observers;
         self.solution_set = Some(result.clone());
         result
     }
@@ -236,17 +402,10 @@ where
             && self.parameters.crossover_probability <= 1.0
             && self.parameters.mutation_probability >= 0.0
             && self.parameters.mutation_probability <= 1.0
+                && self.parameters.elite_size <= self.parameters.population_size
     }
 
     fn get_solution_set(&self) -> Option<&Self::SolutionSet> {
         self.solution_set.as_ref()
-    }
-
-    fn get_parameters(&self) -> &Self::Parameters {
-        &self.parameters
-    }
-
-    fn set_parameters(&mut self, params: Self::Parameters) {
-        self.parameters = params;
     }
 }

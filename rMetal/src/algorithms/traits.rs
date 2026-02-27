@@ -25,15 +25,11 @@ where
     ///   * `1` - Basic information (start, end)
     ///   * `>1` - Full debug information
     /// 
-    fn run(&mut self, problem: &impl Problem<T, Q>) -> Self::SolutionSet;
+    fn run(&mut self, problem: &(impl Problem<T, Q> + Sync)) -> Self::SolutionSet;
 
     fn validate_parameters(&self) -> bool{
         true  // default
     }
 
     fn get_solution_set(&self) -> Option<&Self::SolutionSet>;
-
-    fn get_parameters(&self) -> &Self::Parameters;
-
-    fn set_parameters(&mut self, params: Self::Parameters);
 }

@@ -1,4 +1,5 @@
 use crate::algorithms::traits::Algorithm;
+use crate::observer::runtime::run_with_observers_in_worker;
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::observer::AlgorithmEvent;
 use crate::operator::traits::MutationOperator;
@@ -60,7 +61,7 @@ where
 
 impl<T, M> Observable<T> for HillClimbing<T, M>
 where
-    T: Clone,
+    T: Clone + Send + 'static,
     M: MutationOperator<T>,
 {
     fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<T>>) {
@@ -70,93 +71,93 @@ where
     fn clear_observers(&mut self) {
         self.observers.clear();
     }
-
-    fn notify_observers(&mut self, event: &AlgorithmEvent<T>) {
-        for observer in &mut self.observers {
-            observer.update(event);
-        }
-    }
 }
 
 impl<T, M> Algorithm<T> for HillClimbing<T, M>
 where
-    T: Clone,
-    M: MutationOperator<T>,
+    T: Clone + Send + Sync + 'static,
+    M: MutationOperator<T> + Send + Sync,
 {
     type SolutionSet = VectorSolutionSet<T>;
     type Parameters = HillClimbingParameters<T, M>;
 
-    fn run(&mut self, problem: &impl Problem<T>) -> Self::SolutionSet {
-        if !self.validate_parameters() {
-            let message = "Invalid parameters: max_iterations must be > 0, mutation_probability must be in [0,1]".to_string();
-            self.notify_observers(&AlgorithmEvent::Error {
-                message: message.clone(),
+    fn run(&mut self, problem: &(impl Problem<T> + Sync)) -> Self::SolutionSet {
+        let is_valid = self.validate_parameters();
+        let parameters = &self.parameters;
+        let is_maximization = self.is_maximization;
+        let observers = std::mem::take(&mut self.observers);
+
+        let (result, observers) = run_with_observers_in_worker(observers, move |context| {
+            if !is_valid {
+                let message = "Invalid parameters: max_iterations must be > 0, mutation_probability must be in [0,1]".to_string();
+                context.emit(AlgorithmEvent::Error {
+                    message: message.clone(),
+                });
+                panic!("{}", message);
+            }
+
+            context.emit(AlgorithmEvent::Start {
+                algorithm_name: "HillClimbing".to_string(),
             });
-            panic!("{}", message);
-        }
 
-        self.notify_observers(&AlgorithmEvent::Start {
-            algorithm_name: "HillClimbing".to_string(),
-        });
+            let mut current = problem.create_solution();
+            problem.evaluate(&mut current);
+            let mut evaluations = 1;
 
-        let mut current = problem.create_solution();
-        problem.evaluate(&mut current);
-        let mut evaluations = 1;
+            let initial = current.value();
+            context.emit(AlgorithmEvent::GenerationCompleted {
+                generation: 0,
+                evaluations,
+                best_fitness: initial,
+                average_fitness: initial,
+                worst_fitness: initial,
+            });
 
-        let initial = current.value();
-        self.notify_observers(&AlgorithmEvent::GenerationCompleted {
-            generation: 0,
-            evaluations,
-            best_fitness: initial,
-            average_fitness: initial,
-            worst_fitness: initial,
-        });
+            for iteration in 1..=parameters.max_iterations {
+                let mut neighbor = current.copy();
+                parameters
+                    .mutation_operator
+                    .execute(&mut neighbor, parameters.mutation_probability);
+                problem.evaluate(&mut neighbor);
+                evaluations += 1;
 
-        for iteration in 1..=self.parameters.max_iterations {
-            let mut neighbor = current.copy();
-            self.parameters
-                .mutation_operator
-                .execute(&mut neighbor, self.parameters.mutation_probability);
-            problem.evaluate(&mut neighbor);
-            evaluations += 1;
+                let improved = if is_maximization {
+                    neighbor.value() > current.value()
+                } else {
+                    neighbor.value() < current.value()
+                };
 
-            let improved = if self.is_maximization {
-                neighbor.value() > current.value()
-            } else {
-                neighbor.value() < current.value()
-            };
+                if improved {
+                    current = neighbor;
+                    context.emit(AlgorithmEvent::BestSolutionUpdate {
+                        generation: iteration,
+                        solution: current.copy(),
+                    });
+                }
 
-            if improved {
-                current = neighbor;
-                self.notify_observers(&AlgorithmEvent::BestSolutionUpdate {
-                    generation: iteration,
-                    solution: current.copy(),
-                });
+                if iteration % 10 == 0 || improved {
+                    let fit = current.value();
+                    context.emit(AlgorithmEvent::GenerationCompleted {
+                        generation: iteration,
+                        evaluations,
+                        best_fitness: fit,
+                        average_fitness: fit,
+                        worst_fitness: fit,
+                    });
+                }
             }
 
-            if iteration % 10 == 0 || improved {
-                let fit = current.value();
-                self.notify_observers(&AlgorithmEvent::GenerationCompleted {
-                    generation: iteration,
-                    evaluations,
-                    best_fitness: fit,
-                    average_fitness: fit,
-                    worst_fitness: fit,
-                });
-            }
-        }
+            context.emit(AlgorithmEvent::End {
+                total_generations: parameters.max_iterations,
+                total_evaluations: evaluations,
+            });
 
-        self.notify_observers(&AlgorithmEvent::End {
-            total_generations: self.parameters.max_iterations,
-            total_evaluations: evaluations,
+            let mut result = VectorSolutionSet::new();
+            result.add_solution(current);
+            result
         });
 
-        for observer in &mut self.observers {
-            observer.finalize();
-        }
-
-        let mut result = VectorSolutionSet::new();
-        result.add_solution(current);
+        self.observers = observers;
         self.solution_set = Some(result.clone());
         result
     }
@@ -169,13 +170,5 @@ where
 
     fn get_solution_set(&self) -> Option<&Self::SolutionSet> {
         self.solution_set.as_ref()
-    }
-
-    fn get_parameters(&self) -> &Self::Parameters {
-        &self.parameters
-    }
-
-    fn set_parameters(&mut self, params: Self::Parameters) {
-        self.parameters = params;
     }
 }

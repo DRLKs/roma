@@ -1,4 +1,5 @@
 use crate::algorithms::traits::Algorithm;
+use crate::observer::runtime::run_with_observers_in_worker;
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::observer::AlgorithmEvent;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
@@ -88,12 +89,6 @@ where
     fn clear_observers(&mut self) {
         self.observers.clear();
     }
-
-    fn notify_observers(&mut self, event: &AlgorithmEvent<f64>) {
-        for observer in &mut self.observers {
-            observer.update(event);
-        }
-    }
 }
 
 impl<C, M, Sel> Algorithm<f64, MultiObjectiveInfo> for NSGAII<C, M, Sel>
@@ -105,99 +100,111 @@ where
     type SolutionSet = VectorSolutionSet<f64, MultiObjectiveInfo>;
     type Parameters = NSGAIIParameters<C, M, Sel>;
 
-    fn run(&mut self, problem: &impl Problem<f64, MultiObjectiveInfo>) -> Self::SolutionSet {
-        self.notify_observers(&AlgorithmEvent::Start {
-            algorithm_name: "NSGA-II".to_string(),
-        });
+    fn run(&mut self, problem: &(impl Problem<f64, MultiObjectiveInfo> + Sync)) -> Self::SolutionSet {
+        let is_valid = self.validate_parameters();
+        let parameters = &self.parameters;
+        let observers = std::mem::take(&mut self.observers);
 
-        let mut population: Vec<_> = (0..self.parameters.population_size)
-            .map(|_| {
-                let mut solution = problem.create_solution();
-                problem.evaluate(&mut solution);
-                solution
-            })
-            .collect();
-
-        let mut rng = Random::new(seed_from_time());
-        let mut evaluations = self.parameters.population_size;
-
-        for generation in 1..=self.parameters.max_generations {
-            let mut offspring = Vec::with_capacity(self.parameters.population_size);
-
-            while offspring.len() < self.parameters.population_size {
-                let parent1 = self.parameters.selection_operator.execute(&population).copy();
-                let parent2 = self.parameters.selection_operator.execute(&population).copy();
-
-                let mut children = if rng.next_f64() < self.parameters.crossover_probability {
-                    self.parameters.crossover_operator.execute(&parent1, &parent2)
-                } else {
-                    vec![parent1, parent2]
-                };
-
-                for child in &mut children {
-                    self.parameters
-                        .mutation_operator
-                        .execute(child, self.parameters.mutation_probability);
-                    problem.evaluate(child);
-                    evaluations += 1;
-                }
-
-                offspring.extend(children);
+        let (result, observers) = run_with_observers_in_worker(observers, move |context| {
+            if !is_valid {
+                let message = "Invalid parameters: population_size and max_generations must be > 0, probabilities must be in [0,1]".to_string();
+                context.emit(AlgorithmEvent::Error {
+                    message: message.clone(),
+                });
+                panic!("{}", message);
             }
 
-            offspring.truncate(self.parameters.population_size);
-            population.extend(offspring);
-
-            // Minimization environmental selection over first objective.
-            population.sort_by(|a, b| {
-                a.get_objective(0)
-                    .unwrap_or(f64::INFINITY)
-                    .partial_cmp(&b.get_objective(0).unwrap_or(f64::INFINITY))
-                    .unwrap_or(std::cmp::Ordering::Equal)
+            context.emit(AlgorithmEvent::Start {
+                algorithm_name: "NSGA-II".to_string(),
             });
-            population.truncate(self.parameters.population_size);
 
-            let best = population
-                .first()
-                .and_then(|s| s.get_objective(0))
-                .unwrap_or(0.0);
-            let worst = population
-                .last()
-                .and_then(|s| s.get_objective(0))
-                .unwrap_or(0.0);
-            let avg = if population.is_empty() {
-                0.0
-            } else {
-                let values: Vec<f64> = population
-                    .iter()
-                    .filter_map(|s| s.get_objective(0))
-                    .collect();
-                if values.is_empty() {
+            let mut population: Vec<_> = (0..parameters.population_size)
+                .map(|_| {
+                    let mut solution = problem.create_solution();
+                    problem.evaluate(&mut solution);
+                    solution
+                })
+                .collect();
+
+            let mut rng = Random::new(seed_from_time());
+            let mut evaluations = parameters.population_size;
+
+            for generation in 1..=parameters.max_generations {
+                let mut offspring = Vec::with_capacity(parameters.population_size);
+
+                while offspring.len() < parameters.population_size {
+                    let parent1 = parameters.selection_operator.execute(&population).copy();
+                    let parent2 = parameters.selection_operator.execute(&population).copy();
+
+                    let mut children = if rng.next_f64() < parameters.crossover_probability {
+                        parameters.crossover_operator.execute(&parent1, &parent2)
+                    } else {
+                        vec![parent1, parent2]
+                    };
+
+                    for child in &mut children {
+                        parameters
+                            .mutation_operator
+                            .execute(child, parameters.mutation_probability);
+                        problem.evaluate(child);
+                        evaluations += 1;
+                    }
+
+                    offspring.extend(children);
+                }
+
+                offspring.truncate(parameters.population_size);
+                population.extend(offspring);
+
+                // Minimization environmental selection over first objective.
+                population.sort_by(|a, b| {
+                    a.get_objective(0)
+                        .unwrap_or(f64::INFINITY)
+                        .partial_cmp(&b.get_objective(0).unwrap_or(f64::INFINITY))
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                });
+                population.truncate(parameters.population_size);
+
+                let best = population
+                    .first()
+                    .and_then(|s| s.get_objective(0))
+                    .unwrap_or(0.0);
+                let worst = population
+                    .last()
+                    .and_then(|s| s.get_objective(0))
+                    .unwrap_or(0.0);
+                let avg = if population.is_empty() {
                     0.0
                 } else {
-                    values.iter().sum::<f64>() / values.len() as f64
-                }
-            };
+                    let values: Vec<f64> = population
+                        .iter()
+                        .filter_map(|s| s.get_objective(0))
+                        .collect();
+                    if values.is_empty() {
+                        0.0
+                    } else {
+                        values.iter().sum::<f64>() / values.len() as f64
+                    }
+                };
 
-            self.notify_observers(&AlgorithmEvent::GenerationCompleted {
-                generation,
-                evaluations,
-                best_fitness: best,
-                average_fitness: avg,
-                worst_fitness: worst,
+                context.emit(AlgorithmEvent::GenerationCompleted {
+                    generation,
+                    evaluations,
+                    best_fitness: best,
+                    average_fitness: avg,
+                    worst_fitness: worst,
+                });
+            }
+
+            context.emit(AlgorithmEvent::End {
+                total_generations: parameters.max_generations,
+                total_evaluations: evaluations,
             });
-        }
 
-        self.notify_observers(&AlgorithmEvent::End {
-            total_generations: self.parameters.max_generations,
-            total_evaluations: evaluations,
+            VectorSolutionSet::from_vec(population)
         });
 
-        for observer in &mut self.observers {
-            observer.finalize();
-        }
-
-        let result = VectorSolutionSet::from_vec(population);
+        self.observers = observers;
         self.solution_set = Some(result.clone());
         result
     }
@@ -213,13 +220,5 @@ where
 
     fn get_solution_set(&self) -> Option<&Self::SolutionSet> {
         self.solution_set.as_ref()
-    }
-
-    fn get_parameters(&self) -> &Self::Parameters {
-        &self.parameters
-    }
-
-    fn set_parameters(&mut self, params: Self::Parameters) {
-        self.parameters = params;
     }
 }

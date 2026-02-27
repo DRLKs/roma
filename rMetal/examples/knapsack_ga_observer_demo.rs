@@ -19,6 +19,10 @@ fn main() {
         .add_item(10.0, 20.0)
         .add_item(20.0, 30.0)
         .add_item(30.0, 60.0)
+        .add_item(35.0, 65.0)
+        .add_item(45.0, 70.0)
+        .add_item(55.0, 90.0)
+        .add_item(150.0, 300.0)
         .build();
 
     let parameters = GeneticAlgorithmParameters::new(
@@ -29,7 +33,7 @@ fn main() {
         SinglePointCrossover::new(),
         BitFlipMutation::new(),
         BinaryTournamentSelection::new(),
-    );
+    ).with_elite_size(1);
 
     let mut algorithm = GeneticAlgorithm::new(parameters);
     algorithm.add_observer(Box::new(ConsoleObserver::new(true)));
