@@ -8,6 +8,11 @@ use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::random::{Random, seed_from_time};
 
+/// Configuration parameters for the Hill Climbing algorithm.
+///
+/// # Type Parameters
+/// - `T`: decision variable type of the solution.
+/// - `M`: mutation operator used to generate neighbor solutions.
 pub struct HillClimbingParameters<T, M>
 where
     T: Clone,
@@ -25,6 +30,12 @@ where
     T: Clone,
     M: MutationOperator<T>,
 {
+    /// Creates a new parameter set.
+    ///
+    /// # Arguments
+    /// - `max_iterations`: number of iterations to run.
+    /// - `mutation_operator`: operator used to mutate the current solution.
+    /// - `mutation_probability`: per-variable mutation probability in the range `[0.0, 1.0]`.
     pub fn new(max_iterations: usize, mutation_operator: M, mutation_probability: f64) -> Self {
         Self {
             max_iterations,
@@ -35,12 +46,25 @@ where
         }
     }
 
+    /// Sets a deterministic random seed for reproducible runs.
     pub fn with_seed(mut self, seed: u64) -> Self {
         self.random_seed = Some(seed);
         self
     }
 }
 
+/// Hill Climbing optimization algorithm.
+///
+/// This implementation keeps one current solution, mutates it to generate a
+/// neighbor, and replaces the current solution only when the neighbor is
+/// strictly better according to the optimization direction.
+///
+/// The final result is a `VectorSolutionSet` containing one solution: the best
+/// solution found during the run.
+///
+/// # Type Parameters
+/// - `T`: decision variable type of the solution.
+/// - `M`: mutation operator used to generate neighbor solutions.
 pub struct HillClimbing<T, M>
 where
     T: Clone,
@@ -57,6 +81,11 @@ where
     T: Clone,
     M: MutationOperator<T>,
 {
+    /// Creates a new Hill Climbing instance.
+    ///
+    /// # Arguments
+    /// - `parameters`: algorithm configuration.
+    /// - `maximization`: `true` for maximization, `false` for minimization.
     pub fn new(parameters: HillClimbingParameters<T, M>, maximization: bool) -> Self {
         Self {
             parameters,
@@ -89,6 +118,19 @@ where
     type SolutionSet = VectorSolutionSet<T>;
     type Parameters = HillClimbingParameters<T, M>;
 
+    /// Runs the Hill Climbing search process.
+    ///
+    /// Workflow:
+    /// 1. Validate parameters.
+    /// 2. Create and evaluate an initial random solution.
+    /// 3. Iterate up to `max_iterations`:
+    ///    - mutate current solution to produce a neighbor,
+    ///    - evaluate neighbor,
+    ///    - accept neighbor if it improves current quality.
+    /// 4. Return a solution set with the final best solution.
+    ///
+    /// Observer events are emitted for start, progress updates, best-solution
+    /// improvements, and end-of-run statistics.
     fn run(&mut self, problem: &(impl Problem<T> + Sync)) -> Self::SolutionSet {
         let is_valid = self.validate_parameters();
         let parameters = &self.parameters;
@@ -171,12 +213,18 @@ where
         result
     }
 
+    /// Validates algorithm parameters.
+    ///
+    /// Returns `true` when:
+    /// - `max_iterations > 0`
+    /// - `mutation_probability` is in `[0.0, 1.0]`
     fn validate_parameters(&self) -> bool {
         self.parameters.max_iterations > 0
             && self.parameters.mutation_probability >= 0.0
             && self.parameters.mutation_probability <= 1.0
     }
 
+    /// Returns the last computed solution set, if the algorithm has been run.
     fn get_solution_set(&self) -> Option<&Self::SolutionSet> {
         self.solution_set.as_ref()
     }

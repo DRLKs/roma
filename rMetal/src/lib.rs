@@ -30,7 +30,14 @@ pub use operator::{
 	SinglePointCrossover,
 };
 pub use problem::{KnapsackBuilder, KnapsackProblem, Problem, ZDT1Problem};
-pub use observer::{AlgorithmEvent, AlgorithmObserver, ChartObserver, ConsoleObserver, Observable};
+pub use observer::{
+	AlgorithmEvent,
+	AlgorithmObserver,
+	ChartObserver,
+	ConsoleObserver,
+	HtmlReportObserver,
+	Observable,
+};
 pub use experiment::{Experiment, ExperimentReport, ExperimentRunResult, ExperimentSummary, Objective};
 pub use solution::{
 	BinarySolutionBuilder,
@@ -76,6 +83,7 @@ pub mod prelude {
 		AlgorithmObserver,
 		ChartObserver,
 		ConsoleObserver,
+		HtmlReportObserver,
 		Observable,
 	};
 

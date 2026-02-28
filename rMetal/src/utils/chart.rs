@@ -14,6 +14,14 @@ pub struct ChartConfig {
     pub title: String,
     pub x_label: String,
     pub y_label: String,
+    pub x_min: Option<f64>,
+    pub x_max: Option<f64>,
+    pub y_min: Option<f64>,
+    pub y_max: Option<f64>,
+    pub x_padding_ratio: f64,
+    pub y_padding_ratio: f64,
+    pub x_clamp_non_negative: bool,
+    pub y_clamp_non_negative: bool,
 }
 
 impl Default for ChartConfig {
@@ -28,6 +36,14 @@ impl Default for ChartConfig {
             title: "Chart".to_string(),
             x_label: "X".to_string(),
             y_label: "Y".to_string(),
+            x_min: None,
+            x_max: None,
+            y_min: None,
+            y_max: None,
+            x_padding_ratio: 0.05,
+            y_padding_ratio: 0.05,
+            x_clamp_non_negative: false,
+            y_clamp_non_negative: false,
         }
     }
 }
@@ -139,7 +155,7 @@ impl LineChart {
             self.draw_grid(&mut svg, plot_width, plot_height, min_x, max_x, min_y, max_y);
 
             // Dibujar series
-            for (idx, series) in self.series.iter().enumerate() {
+            for series in self.series.iter() {
                 self.draw_series(
                     &mut svg,
                     series,
@@ -149,7 +165,6 @@ impl LineChart {
                     max_x,
                     min_y,
                     max_y,
-                    idx,
                 );
             }
 
@@ -182,34 +197,65 @@ impl LineChart {
             }
         }
 
-        let range_x = max_x - min_x;
-        let range_y = max_y - min_y;
-        
-        // Para el eje X (generaciones), no permitir valores negativos si min_x es 0
-        if min_x == 0.0 {
-            max_x += range_x * 0.05;
-        } else {
-            min_x -= range_x * 0.05;
-            max_x += range_x * 0.05;
-        }
-        
-        // Para el eje Y, manejar caso especial cuando todos los valores son iguales
-        if range_y == 0.0 {
-            // Si todos los valores son iguales, crear un rango artificial
-            if min_y == 0.0 {
-                min_y = -0.5;
-                max_y = 0.5;
-            } else {
-                let margin = min_y.abs() * 0.1;
-                min_y -= margin;
-                max_y += margin;
-            }
-        } else {
-            min_y -= range_y * 0.05;
-            max_y += range_y * 0.05;
-        }
+        let (min_x, max_x) = Self::resolve_axis_range(
+            min_x,
+            max_x,
+            self.config.x_min,
+            self.config.x_max,
+            self.config.x_padding_ratio,
+            self.config.x_clamp_non_negative,
+        );
+        let (min_y, max_y) = Self::resolve_axis_range(
+            min_y,
+            max_y,
+            self.config.y_min,
+            self.config.y_max,
+            self.config.y_padding_ratio,
+            self.config.y_clamp_non_negative,
+        );
 
         Some((min_x, max_x, min_y, max_y))
+    }
+
+    fn resolve_axis_range(
+        data_min: f64,
+        data_max: f64,
+        forced_min: Option<f64>,
+        forced_max: Option<f64>,
+        padding_ratio: f64,
+        clamp_non_negative: bool,
+    ) -> (f64, f64) {
+        let mut min = forced_min.unwrap_or(data_min);
+        let mut max = forced_max.unwrap_or(data_max);
+
+        if max > min {
+            let span = max - min;
+            if forced_min.is_none() {
+                min -= span * padding_ratio;
+            }
+            if forced_max.is_none() {
+                max += span * padding_ratio;
+            }
+        } else {
+            // Degenerate range (single value): build a visible window.
+            if min == 0.0 {
+                max = 1.0;
+            } else {
+                let margin = min.abs() * 0.1;
+                min -= margin;
+                max += margin;
+            }
+        }
+
+        if clamp_non_negative {
+            min = min.max(0.0);
+        }
+
+        if max <= min {
+            max = min + 1.0;
+        }
+
+        (min, max)
     }
 
     fn draw_axes(&self, svg: &mut String, plot_width: u32, plot_height: u32) {
@@ -304,7 +350,6 @@ impl LineChart {
         max_x: f64,
         min_y: f64,
         max_y: f64,
-        _idx: usize,
     ) {
         if series.data.is_empty() {
             return;
@@ -420,6 +465,36 @@ impl ChartBuilder {
         self
     }
 
+    pub fn x_min(mut self, value: f64) -> Self {
+        self.config.x_min = Some(value);
+        self
+    }
+
+    pub fn x_max(mut self, value: f64) -> Self {
+        self.config.x_max = Some(value);
+        self
+    }
+
+    pub fn y_min(mut self, value: f64) -> Self {
+        self.config.y_min = Some(value);
+        self
+    }
+
+    pub fn y_max(mut self, value: f64) -> Self {
+        self.config.y_max = Some(value);
+        self
+    }
+
+    pub fn x_clamp_non_negative(mut self) -> Self {
+        self.config.x_clamp_non_negative = true;
+        self
+    }
+
+    pub fn y_clamp_non_negative(mut self) -> Self {
+        self.config.y_clamp_non_negative = true;
+        self
+    }
+
     pub fn size(mut self, width: u32, height: u32) -> Self {
         self.config.width = width;
         self.config.height = height;
@@ -449,6 +524,38 @@ impl Default for ChartBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn calculate_ranges_keeps_positive_domains_non_negative() {
+        let chart = ChartBuilder::new()
+            .add_series(Series::new(
+                "Eval",
+                vec![(0.0, 10.0), (10.0, 20.0), (20.0, 30.0)],
+            ))
+            .x_clamp_non_negative()
+            .y_clamp_non_negative()
+            .build();
+
+        let (min_x, _max_x, min_y, _max_y) = chart
+            .calculate_ranges()
+            .expect("Expected valid ranges for non-empty series");
+
+        assert!(min_x >= 0.0);
+        assert!(min_y >= 0.0);
+    }
+
+    #[test]
+    fn calculate_ranges_handles_single_x_value_without_zero_division() {
+        let chart = ChartBuilder::new()
+            .add_series(Series::new("FlatX", vec![(5.0, 1.0), (5.0, 2.0), (5.0, 3.0)]))
+            .build();
+
+        let (min_x, max_x, _min_y, _max_y) = chart
+            .calculate_ranges()
+            .expect("Expected valid ranges for non-empty series");
+
+        assert!(max_x > min_x);
+    }
 
     #[test]
     fn test_simple_chart() {

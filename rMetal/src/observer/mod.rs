@@ -5,6 +5,7 @@ pub(crate) mod implementations;
 pub use traits::{AlgorithmObserver, Observable};
 pub use implementations::chart_observer::ChartObserver;
 pub use implementations::console_observer::ConsoleObserver;
+pub use implementations::html_report_observer::HtmlReportObserver;
 
 
 use crate::solution::Solution;

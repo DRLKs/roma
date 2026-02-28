@@ -138,6 +138,7 @@ where
         let mut evaluations = parameters.population_size;
 
         Self::emit_generation_metrics(context, 0, evaluations, &population);
+        Self::emit_best_solution_update(context, 0, &population);
 
         for generation in 1..=parameters.max_generations {
             population = Self::next_generation(
@@ -150,6 +151,7 @@ where
             );
 
             Self::emit_generation_metrics(context, generation, evaluations, &population);
+            Self::emit_best_solution_update(context, generation, &population);
         }
 
         context.emit(AlgorithmEvent::End {
@@ -391,6 +393,23 @@ where
             average_fitness: avg,
             worst_fitness: worst,
         });
+    }
+
+    fn emit_best_solution_update(
+        context: &ExecutionContext<T>,
+        generation: usize,
+        population: &[Solution<T>],
+    ) {
+        if let Some(best_solution) = population.iter().max_by(|a, b| {
+            a.quality_value()
+                .partial_cmp(&b.quality_value())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        }) {
+            context.emit(AlgorithmEvent::BestSolutionUpdate {
+                generation,
+                solution: best_solution.copy(),
+            });
+        }
     }
 
     fn sort_population_desc(population: &mut [Solution<T>]) {

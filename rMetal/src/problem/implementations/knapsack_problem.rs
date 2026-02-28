@@ -3,6 +3,8 @@ use crate::solution::Solution;
 use crate::solution::traits::ScalarQuality;
 use crate::utils::random::Random;
 
+const PENALTY: f64 = 0.5; // Heavy penalty for infeasible solutions
+
 /// Knapsack Problem: maximize the value of items in a knapsack without exceeding capacity
 #[derive(Clone)]
 pub struct KnapsackProblem {
@@ -74,7 +76,7 @@ impl Problem<bool> for KnapsackProblem {
         
         // If weight exceeds capacity, apply penalty
         let _fitness = if weight > self.capacity {
-            -(weight - self.capacity) * 1000.0 // Heavy penalty for infeasible solutions
+            -(weight - self.capacity) * PENALTY // Penalty for infeasible solutions
         } else {
             value // Maximize value_fitness
         };
