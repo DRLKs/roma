@@ -5,7 +5,7 @@ use crate::solution::traits::MultiObjectiveInfo;
 impl<T> Solution<T, MultiObjectiveInfo> {
     /// Returns the objective vector.
     pub fn objectives(&self) -> &[f64] {
-        if let Some(info) = &self.objectives {
+        if let Some(info) = &self.quality {
             &info.objectives
         } else {
             &[]
@@ -14,10 +14,10 @@ impl<T> Solution<T, MultiObjectiveInfo> {
 
     /// Sets the objective vector.
     pub fn set_objectives(&mut self, objectives: Vec<f64>) {
-        match &mut self.objectives {
+        match &mut self.quality {
             Some(info) => info.objectives = objectives,
             None => {
-                self.objectives = Some(MultiObjectiveInfo {
+                self.quality = Some(MultiObjectiveInfo {
                     objectives,
                     rank: None,
                     crowding_distance: None,
@@ -28,15 +28,15 @@ impl<T> Solution<T, MultiObjectiveInfo> {
 
     /// Returns the Pareto rank.
     pub fn rank(&self) -> Option<usize> {
-        self.objectives.as_ref().and_then(|info| info.rank)
+        self.quality.as_ref().and_then(|info| info.rank)
     }
 
     /// Sets the Pareto rank.
     pub fn set_rank(&mut self, rank: usize) {
-        match &mut self.objectives {
+        match &mut self.quality {
             Some(info) => info.rank = Some(rank),
             None => {
-                self.objectives = Some(MultiObjectiveInfo {
+                self.quality = Some(MultiObjectiveInfo {
                     objectives: vec![],
                     rank: Some(rank),
                     crowding_distance: None,
@@ -47,17 +47,17 @@ impl<T> Solution<T, MultiObjectiveInfo> {
 
     /// Returns the crowding distance.
     pub fn crowding_distance(&self) -> Option<f64> {
-        self.objectives
+        self.quality
             .as_ref()
             .and_then(|info| info.crowding_distance)
     }
 
     /// Sets the crowding distance.
     pub fn set_crowding_distance(&mut self, distance: f64) {
-        match &mut self.objectives {
+        match &mut self.quality {
             Some(info) => info.crowding_distance = Some(distance),
             None => {
-                self.objectives = Some(MultiObjectiveInfo {
+                self.quality = Some(MultiObjectiveInfo {
                     objectives: vec![],
                     rank: None,
                     crowding_distance: Some(distance),
@@ -68,14 +68,14 @@ impl<T> Solution<T, MultiObjectiveInfo> {
 
     /// Returns objective value by index.
     pub fn get_objective(&self, index: usize) -> Option<f64> {
-        self.objectives
+        self.quality
             .as_ref()
             .and_then(|info| info.objectives.get(index).copied())
     }
 
     /// Returns all objectives if present.
     pub fn get_objectives(&self) -> Option<&[f64]> {
-        self.objectives.as_ref().and_then(|info| {
+        self.quality.as_ref().and_then(|info| {
             if info.objectives.is_empty() {
                 None
             } else {
@@ -86,11 +86,11 @@ impl<T> Solution<T, MultiObjectiveInfo> {
 
     /// Returns true if this solution Pareto-dominates `other` (minimization).
     pub fn dominates(&self, other: &Self) -> bool {
-        let my_objectives = match &self.objectives {
+        let my_objectives = match &self.quality {
             Some(info) => &info.objectives,
             None => return false,
         };
-        let other_objectives = match &other.objectives {
+        let other_objectives = match &other.quality {
             Some(info) => &info.objectives,
             None => return false,
         };
@@ -195,6 +195,8 @@ impl MultiObjectiveRealSolutionBuilder {
 #[cfg(test)]
 mod tests {
     use crate::solution::implementations::real_multiple_objective::MultiObjectiveRealSolutionBuilder;
+    use crate::solution::Solution;
+    use crate::solution::MultiObjectiveInfo;
 
     #[test]
     fn test_multiobjective_builder_rank_and_crowding() {
@@ -207,6 +209,49 @@ mod tests {
         assert_eq!(solution.objectives(), &[0.2, 0.8]);
         assert_eq!(solution.rank(), Some(0));
         assert_eq!(solution.crowding_distance(), Some(1.5));
+    }
+
+    #[test]
+    fn dominates_returns_true_for_strictly_better_solution() {
+        let a = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
+            .with_objectives(vec![0.2, 0.3])
+            .build();
+        let b = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
+            .with_objectives(vec![0.3, 0.4])
+            .build();
+
+        assert!(a.dominates(&b));
+        assert!(!b.dominates(&a));
+    }
+
+    #[test]
+    fn dominates_returns_false_for_equal_or_incomparable_solutions() {
+        let equal_1 = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
+            .with_objectives(vec![0.5, 0.5])
+            .build();
+        let equal_2 = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
+            .with_objectives(vec![0.5, 0.5])
+            .build();
+        assert!(!equal_1.dominates(&equal_2));
+
+        let x = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
+            .with_objectives(vec![0.2, 0.8])
+            .build();
+        let y = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
+            .with_objectives(vec![0.3, 0.6])
+            .build();
+        assert!(!x.dominates(&y));
+        assert!(!y.dominates(&x));
+    }
+
+    #[test]
+    fn dominates_returns_false_when_objective_lengths_differ() {
+        let mut a: Solution<f64, MultiObjectiveInfo> = Solution::new(vec![0.0, 0.0]);
+        a.set_objectives(vec![0.1, 0.2]);
+        let mut b: Solution<f64, MultiObjectiveInfo> = Solution::new(vec![0.0, 0.0]);
+        b.set_objectives(vec![0.1]);
+
+        assert!(!a.dominates(&b));
     }
 
 }

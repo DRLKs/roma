@@ -55,15 +55,15 @@ mod test {
     fn get_best_solution_test() {
         let mut solution_set: VectorSolutionSet<f64> = VectorSolutionSet::new();
 
-        let best_solution = RealSolutionBuilder::new(3).with_fitness(10.0).build();
+        let best_solution = RealSolutionBuilder::new(3).with_quality(10.0).build();
 
-        let worst_solution = RealSolutionBuilder::new(3).with_fitness(0.0).build();
+        let worst_solution = RealSolutionBuilder::new(3).with_quality(0.0).build();
 
         solution_set.add_solution(worst_solution);
         solution_set.add_solution(best_solution);
 
         let best = solution_set.best_solution().unwrap();
-        assert_eq!(best.fitness(), Some(10.0));
+        assert_eq!(best.quality().copied(), Some(10.0));
     }
 
 
@@ -80,12 +80,12 @@ mod test {
         let mut solution_set: VectorSolutionSet<String> = VectorSolutionSet::new();
 
         let variables = vec!["jMetal".to_string(),"jMetalPy".to_string(), "MEALPY".to_string() ];
-        let solution = StringSolutionBuilder::from_variables(variables).with_fitness(10.0).build();
+        let solution = StringSolutionBuilder::from_variables(variables).with_quality(10.0).build();
 
         solution_set.add_solution(solution);
 
         assert!(!solution_set.is_empty());
         assert_eq!(solution_set.solutions().len(), 1);
-        assert_eq!(solution_set.best_solution().unwrap().value(), 10.0);
+        assert_eq!(solution_set.best_solution().unwrap().quality_value(), 10.0);
     }
 }

@@ -79,7 +79,7 @@ impl Problem<bool> for KnapsackProblem {
             value // Maximize value_fitness
         };
         
-        solution.set_fitness(_fitness);
+        solution.set_quality(_fitness);
     }
 
     fn create_solution(&self, _rng: &mut Random) -> Solution<bool, ScalarQuality> {
@@ -203,6 +203,6 @@ mod tests {
 
         problem.evaluate(&mut solution);
 
-        assert!(solution.fitness().unwrap() > 0.0);
+        assert!(solution.quality().copied().unwrap() > 0.0);
     }
 }

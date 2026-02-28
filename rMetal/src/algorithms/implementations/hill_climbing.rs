@@ -113,7 +113,7 @@ where
             problem.evaluate(&mut current);
             let mut evaluations = 1;
 
-            let initial = current.value();
+            let initial = current.quality_value();
             context.emit(AlgorithmEvent::GenerationCompleted {
                 generation: 0,
                 evaluations,
@@ -131,9 +131,9 @@ where
                 evaluations += 1;
 
                 let improved = if is_maximization {
-                    neighbor.value() > current.value()
+                    neighbor.quality_value() > current.quality_value()
                 } else {
-                    neighbor.value() < current.value()
+                    neighbor.quality_value() < current.quality_value()
                 };
 
                 if improved {
@@ -145,7 +145,7 @@ where
                 }
 
                 if iteration % 10 == 0 || improved {
-                    let fit = current.value();
+                    let fit = current.quality_value();
                     context.emit(AlgorithmEvent::GenerationCompleted {
                         generation: iteration,
                         evaluations,

@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use rMetal::algorithms::{Algorithm, HillClimbing, HillClimbingParameters};
-use rMetal::observer::{ChartObserver, ConsoleObserver, Observable};
-use rMetal::operator::BitFlipMutation;
-use rMetal::problem::KnapsackBuilder;
-use rMetal::solution_set::SolutionSet;
-use rMetal::utils::cli::seed_from_cli_or;
+use rmetal::algorithms::{Algorithm, HillClimbing, HillClimbingParameters};
+use rmetal::observer::{ChartObserver, ConsoleObserver, Observable};
+use rmetal::operator::BitFlipMutation;
+use rmetal::problem::KnapsackBuilder;
+use rmetal::solution_set::SolutionSet;
+use rmetal::utils::cli::seed_from_cli_or;
 
 fn main() {
     let seed = seed_from_cli_or(42);
@@ -32,7 +32,7 @@ fn main() {
         println!(
             "Hill-Climbing finished (seed={}). Best fitness={:.4}",
             seed,
-            best.value()
+            best.quality_value()
         );
     } else {
         println!("Hill-Climbing finished with no solutions (seed={})", seed);

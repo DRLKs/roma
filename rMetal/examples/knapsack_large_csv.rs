@@ -1,11 +1,11 @@
 use std::path::Path;
 
-use rMetal::algorithms::{Algorithm, GeneticAlgorithm, GeneticAlgorithmParameters};
-use rMetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
-use rMetal::problem::KnapsackBuilder;
-use rMetal::solution_set::SolutionSet;
-use rMetal::utils::cli::seed_from_cli_or;
-use rMetal::utils::csv_adapter::read_csv;
+use rmetal::algorithms::{Algorithm, GeneticAlgorithm, GeneticAlgorithmParameters};
+use rmetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
+use rmetal::problem::KnapsackBuilder;
+use rmetal::solution_set::SolutionSet;
+use rmetal::utils::cli::seed_from_cli_or;
+use rmetal::utils::csv_adapter::read_csv;
 
 
 fn main() {
@@ -43,7 +43,7 @@ fn main() {
             "Large CSV GA demo finished (seed={}). items={}, best fitness={:.4}",
             seed,
             result.get(0).map(|s| s.num_variables()).unwrap_or(0),
-            best.value()
+            best.quality_value()
         );
     } else {
         println!("Large CSV GA demo finished with no solutions (seed={})", seed);

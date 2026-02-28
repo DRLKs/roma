@@ -3,11 +3,11 @@ pub type ScalarQuality = f64;
 
 /// Trait for objective payloads that can expose a scalar proxy value.
 pub trait QualityValue {
-    fn value(&self) -> f64;
+    fn quality_value(&self) -> f64;
 }
 
 impl QualityValue for ScalarQuality {
-    fn value(&self) -> f64 {
+    fn quality_value(&self) -> f64 {
         *self
     }
 }
@@ -22,7 +22,7 @@ pub struct MultiObjectiveInfo {
 
 impl QualityValue for MultiObjectiveInfo {
     /// Returns the first value of the objectives vector
-    fn value(&self) -> f64 {
+    fn quality_value(&self) -> f64 {
         self.objectives.first().copied().unwrap_or(0.0)
     }
 }

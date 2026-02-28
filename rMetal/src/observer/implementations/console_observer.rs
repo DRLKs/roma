@@ -44,7 +44,7 @@ where
                     println!(
                         "  New best solution found at generation {}: fitness={:.4}",
                         generation,
-                        solution.fitness().unwrap_or(f64::NEG_INFINITY)
+                        solution.quality_value()
                     );
                 }
             }

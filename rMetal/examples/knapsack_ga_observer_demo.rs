@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use rMetal::algorithms::{Algorithm, GeneticAlgorithm, GeneticAlgorithmParameters};
-use rMetal::observer::{ChartObserver, ConsoleObserver, Observable};
-use rMetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
-use rMetal::problem::KnapsackBuilder;
-use rMetal::solution_set::SolutionSet;
-use rMetal::utils::cli::seed_from_cli_or;
+use rmetal::algorithms::{Algorithm, GeneticAlgorithm, GeneticAlgorithmParameters};
+use rmetal::observer::{ChartObserver, ConsoleObserver, Observable};
+use rmetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
+use rmetal::problem::KnapsackBuilder;
+use rmetal::solution_set::SolutionSet;
+use rmetal::utils::cli::seed_from_cli_or;
 
 fn main() {
     let seed = seed_from_cli_or(42);
@@ -42,7 +42,11 @@ fn main() {
     let result = algorithm.run(&problem);
 
     if let Some(best) = result.best_solution() {
-        println!("GA finished (seed={}). Best fitness={:.4}", seed, best.value());
+        println!(
+            "GA finished (seed={}). Best fitness={:.4}",
+            seed,
+            best.quality_value()
+        );
     } else {
         println!("GA finished with no solutions (seed={})", seed);
     }

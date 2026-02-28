@@ -1,8 +1,8 @@
-use rMetal::algorithms::{Algorithm, GeneticAlgorithm, GeneticAlgorithmParameters};
-use rMetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
-use rMetal::problem::KnapsackBuilder;
-use rMetal::solution_set::SolutionSet;
-use rMetal::utils::cli::seed_from_cli_or;
+use rmetal::algorithms::{Algorithm, GeneticAlgorithm, GeneticAlgorithmParameters};
+use rmetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
+use rmetal::problem::KnapsackBuilder;
+use rmetal::solution_set::SolutionSet;
+use rmetal::utils::cli::seed_from_cli_or;
 
 fn main() {
     let seed = seed_from_cli_or(42);
@@ -33,7 +33,7 @@ fn main() {
         println!(
             "Parallel GA demo finished (seed={}). Best fitness={:.4}",
             seed,
-            best.value()
+            best.quality_value()
         );
     } else {
         println!("Parallel GA demo finished with no solutions (seed={})", seed);

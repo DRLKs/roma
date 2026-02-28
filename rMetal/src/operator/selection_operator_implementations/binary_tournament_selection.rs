@@ -53,9 +53,9 @@ where
         let individual1 = &population[index1];
         let individual2 = &population[index2];
         
-        // Return the better solution (higher fitness value)
-        let fitness1 = individual1.fitness().unwrap_or(f64::NEG_INFINITY);
-        let fitness2 = individual2.fitness().unwrap_or(f64::NEG_INFINITY);
+        // Return the better solution (higher scalar quality value)
+        let fitness1 = individual1.quality_value();
+        let fitness2 = individual2.quality_value();
         
         if fitness1 >= fitness2 {
             individual1
@@ -82,16 +82,16 @@ mod tests {
         let selection = BinaryTournamentSelection::new();
         let mut rng = Random::new(42);
         
-        let solution1 = BinarySolutionBuilder::zeros(5).with_fitness(10.0).build();
+        let solution1 = BinarySolutionBuilder::zeros(5).with_quality(10.0).build();
 
-        let solution2 = BinarySolutionBuilder::ones(5).with_fitness(5.0).build();
+        let solution2 = BinarySolutionBuilder::ones(5).with_quality(5.0).build();
 
         let population = vec![solution1, solution2];
         
         let selected = selection.execute(&population, &mut rng);
         
         // Should consistently select the better solution
-        assert_eq!(selected.value(), 10.0);
+        assert_eq!(selected.quality_value(), 10.0);
     }
 
     #[test]
@@ -111,13 +111,13 @@ mod tests {
         let mut rng = Random::new(42);
 
         let fitness = 10.0;
-        let solution = BinarySolutionBuilder::zeros(5).with_fitness(fitness).build();
+        let solution = BinarySolutionBuilder::zeros(5).with_quality(fitness).build();
 
 
         let population = vec![solution];
 
         let selected = selection.execute(&population, &mut rng);
 
-        assert_eq!(selected.value(), fitness);
+        assert_eq!(selected.quality_value(), fitness);
     }
 }

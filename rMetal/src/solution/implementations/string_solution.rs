@@ -3,7 +3,7 @@ use crate::solution::{finalize_scalar_solution, Solution};
 /// Builder for string-based solutions (`Solution<String>`).
 pub struct StringSolutionBuilder {
     variables: Vec<String>,
-    fitness: Option<f64>
+    quality: Option<f64>
 }
 
 impl StringSolutionBuilder {
@@ -11,7 +11,7 @@ impl StringSolutionBuilder {
     pub fn new(size: usize) -> Self {
         Self {
             variables: vec!["".to_string(); size],
-            fitness: None
+            quality: None
         }
     }
 
@@ -19,7 +19,7 @@ impl StringSolutionBuilder {
     pub fn from_variables(variables: Vec<String>) -> Self {
         Self {
             variables,
-            fitness: None
+            quality: None
         }
     }
 
@@ -29,9 +29,9 @@ impl StringSolutionBuilder {
         self
     }
 
-    /// Sets an optional initial scalar fitness.
-    pub fn with_fitness(mut self, fitness: f64) -> Self {
-        self.fitness = Some(fitness);
+    /// Sets an optional initial scalar quality value.
+    pub fn with_quality(mut self, quality: f64) -> Self {
+        self.quality = Some(quality);
         self
     }
 
@@ -51,6 +51,34 @@ impl StringSolutionBuilder {
 
     /// Builds the final string solution.
     pub fn build(self) -> Solution<String> {
-        finalize_scalar_solution(self.variables, self.fitness)
+        finalize_scalar_solution(self.variables, self.quality)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::StringSolutionBuilder;
+
+    #[test]
+    fn builder_creates_expected_size() {
+        let s = StringSolutionBuilder::new(3).build();
+        assert_eq!(s.num_variables(), 3);
+        assert_eq!(s.variables(), &["", "", ""]);
+    }
+
+    #[test]
+    fn fill_and_set_variable_work() {
+        let s = StringSolutionBuilder::new(3)
+            .fill("x".to_string())
+            .set_variable(1, "y".to_string())
+            .build();
+
+        assert_eq!(s.variables(), &["x", "y", "x"]);
+    }
+
+    #[test]
+    fn with_quality_sets_scalar_quality() {
+        let s = StringSolutionBuilder::new(2).with_quality(3.5).build();
+        assert_eq!(s.quality().copied(), Some(3.5));
     }
 }

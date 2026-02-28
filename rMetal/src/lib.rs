@@ -5,6 +5,7 @@ pub mod solution;
 pub mod operator;
 pub mod observer;
 pub mod utils;
+pub mod experiment;
 
 // Top-level re-exports for ergonomic imports.
 pub use algorithms::{
@@ -30,6 +31,7 @@ pub use operator::{
 };
 pub use problem::{KnapsackBuilder, KnapsackProblem, Problem, ZDT1Problem};
 pub use observer::{AlgorithmEvent, AlgorithmObserver, ChartObserver, ConsoleObserver, Observable};
+pub use experiment::{Experiment, ExperimentReport, ExperimentRunResult, ExperimentSummary, Objective};
 pub use solution::{
 	BinarySolutionBuilder,
 	MultiObjectiveInfo,
@@ -75,6 +77,14 @@ pub mod prelude {
 		ChartObserver,
 		ConsoleObserver,
 		Observable,
+	};
+
+	pub use crate::experiment::{
+		Experiment,
+		ExperimentReport,
+		ExperimentRunResult,
+		ExperimentSummary,
+		Objective,
 	};
 
 	pub use crate::solution::{

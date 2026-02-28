@@ -1,6 +1,6 @@
 //! Core solution abstractions and builders.
 //!
-//! This module provides a generic `Solution<T, O>` abstraction and
+//! This module provides a generic `Solution<T, Q>` abstraction and
 //! convenience builders for common variable types.
 
 pub(crate) mod traits;
@@ -19,18 +19,22 @@ pub use implementations::string_solution::StringSolutionBuilder;
 ///
 /// # Type Parameters
 /// - `T`: variable type.
-/// - `O`: objective payload type.
+/// - `Q`: quality payload type.
 #[derive(Clone, Debug)]
-pub struct Solution<T, O = ScalarQuality> {
+pub struct Solution<T, Q = ScalarQuality> {
     pub variables: Vec<T>,
-    pub objectives: Option<O>,
+    /// Optional quality payload.
+    ///
+    /// For scalar optimization this stores quality (`f64`).
+    /// For multi-objective optimization this stores `MultiObjectiveInfo`.
+    pub quality: Option<Q>,
 }
 
-impl<T, O> Solution<T, O> {
+impl<T, Q> Solution<T, Q> {
     pub fn new(variables: Vec<T>) -> Self {
         Self {
             variables,
-            objectives: None,
+            quality: None,
         }
     }
 
@@ -47,16 +51,11 @@ impl<T, O> Solution<T, O> {
         self.variables.len()
     }
 
-    /// Compatibility alias used by legacy code.
-    pub fn get_number_of_variables(&self) -> usize {
-        self.num_variables()
-    }
-
     /// Clone helper kept for compatibility with legacy algorithm code.
     pub fn copy(&self) -> Self
     where
         T: Clone,
-        O: Clone,
+        Q: Clone,
     {
         self.clone()
     }
@@ -69,38 +68,55 @@ impl<T, O> Solution<T, O> {
         self.variables.get_mut(index)
     }
 
+    /// Returns quality payload if present.
+    pub fn quality(&self) -> Option<&Q> {
+        self.quality.as_ref()
+    }
+
+    /// Returns mutable quality payload if present.
+    pub fn quality_mut(&mut self) -> Option<&mut Q> {
+        self.quality.as_mut()
+    }
+
+    /// Replaces quality payload.
+    pub fn set_quality(&mut self, quality: Q) {
+        self.quality = Some(quality);
+    }
+
+    /// Returns true when quality payload is present.
+    pub fn has_quality(&self) -> bool {
+        self.quality.is_some()
+    }
+
+    /// Clears quality payload.
+    pub fn clear_quality(&mut self) {
+        self.quality = None;
+    }
+
     pub fn invalidate(&mut self) {
-        self.objectives = None;
+        self.clear_quality();
     }
 }
 
-impl<T, O> Solution<T, O>
+impl<T, Q> Solution<T, Q>
 where
-    O: QualityValue,
+    Q: QualityValue,
 {
     /// Returns a scalar proxy value from the quality state.
-    pub fn value(&self) -> f64 {
-        self.objectives.as_ref().map(|o| o.value()).unwrap_or(0.0)
+    ///
+    /// If the quality payload is `None`, this method returns `0.0`.
+    pub fn quality_value(&self) -> f64 {
+        self.quality
+            .as_ref()
+            .map(|o| o.quality_value())
+            .unwrap_or(0.0)
     }
 }
 
-impl<T> Solution<T, ScalarQuality> {
-    /// Returns the scalar fitness value.
-    pub fn fitness(&self) -> Option<f64> {
-        self.objectives
-    }
-    
-    /// Sets the scalar fitness value.
-    pub fn set_fitness(&mut self, fitness: f64) {
-        self.objectives = Some(fitness);
-    }
-
-}
-
-fn finalize_scalar_solution<T>(variables: Vec<T>, fitness: Option<f64>) -> Solution<T> {
+fn finalize_scalar_solution<T>(variables: Vec<T>, quality: Option<f64>) -> Solution<T> {
     let mut solution = Solution::new(variables);
-    if let Some(fitness) = fitness {
-        solution.set_fitness(fitness);
+    if let Some(quality) = quality {
+        solution.set_quality(quality);
     }
     solution
 }
@@ -120,4 +136,33 @@ fn apply_bounds(
     }
 
     variables
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Solution;
+
+    #[test]
+    fn quality_helpers_work_as_expected() {
+        let mut s: Solution<i32> = Solution::new(vec![1, 2, 3]);
+        assert!(!s.has_quality());
+        assert_eq!(s.quality(), None);
+
+        s.set_quality(4.0);
+        assert!(s.has_quality());
+        assert_eq!(s.quality().copied(), Some(4.0));
+
+        s.clear_quality();
+        assert!(!s.has_quality());
+        assert_eq!(s.quality(), None);
+    }
+
+    #[test]
+    fn invalidate_clears_quality() {
+        let mut s: Solution<bool> = Solution::new(vec![true, false]);
+        s.set_quality(10.0);
+        assert_eq!(s.quality().copied(), Some(10.0));
+        s.invalidate();
+        assert_eq!(s.quality(), None);
+    }
 }

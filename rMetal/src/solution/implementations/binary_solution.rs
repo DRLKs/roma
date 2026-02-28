@@ -4,7 +4,7 @@ use crate::utils::random::{seed_from_time, Random};
 /// Builder for binary solutions (`Solution<bool>`).
 pub struct BinarySolutionBuilder {
     variables: Vec<bool>,
-    fitness: Option<f64>,
+    quality: Option<f64>,
 }
 
 impl BinarySolutionBuilder {
@@ -12,7 +12,7 @@ impl BinarySolutionBuilder {
     pub fn ones(size: usize) -> Self {
         Self {
             variables: vec![true; size],
-            fitness: None,
+            quality: None,
         }
     }
 
@@ -20,7 +20,7 @@ impl BinarySolutionBuilder {
     pub fn zeros(size: usize) -> Self {
         Self {
             variables: vec![false; size],
-            fitness: None,
+            quality: None,
         }
     }
 
@@ -36,7 +36,7 @@ impl BinarySolutionBuilder {
         let variables: Vec<bool> = (0..size).map(|_| rng.coin_flip()).collect();
         Self {
             variables,
-            fitness: None,
+            quality: None,
         }
     }
 
@@ -44,7 +44,7 @@ impl BinarySolutionBuilder {
     pub fn from_variables(variables: Vec<bool>) -> Self {
         Self {
             variables,
-            fitness: None,
+            quality: None,
         }
     }
 
@@ -54,9 +54,9 @@ impl BinarySolutionBuilder {
         self
     }
 
-    /// Sets an optional initial scalar fitness.
-    pub fn with_fitness(mut self, fitness: f64) -> Self {
-        self.fitness = Some(fitness);
+    /// Sets an optional initial scalar quality value.
+    pub fn with_quality(mut self, quality: f64) -> Self {
+        self.quality = Some(quality);
         self
     }
 
@@ -87,7 +87,7 @@ impl BinarySolutionBuilder {
 
     /// Builds the final binary solution.
     pub fn build(self) -> Solution<bool> {
-        finalize_scalar_solution(self.variables, self.fitness)
+        finalize_scalar_solution(self.variables, self.quality)
     }
 }
 
@@ -100,14 +100,14 @@ mod tests {
         let solution = BinarySolutionBuilder::zeros(5).build();
         assert_eq!(solution.num_variables(), 5);
         assert_eq!(solution.variables(), &[false, false, false, false, false]);
-        assert_eq!(solution.fitness(), None);
+        assert_eq!(solution.quality(), None);
     }
 
     #[test]
-    fn test_binary_solution_builder_with_fitness() {
+    fn test_binary_solution_builder_with_quality() {
         let solution = BinarySolutionBuilder::zeros(3)
-            .with_fitness(42.5)
+            .with_quality(42.5)
             .build();
-        assert_eq!(solution.fitness(), Some(42.5));
+        assert_eq!(solution.quality().copied(), Some(42.5));
     }
 }

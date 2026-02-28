@@ -15,7 +15,7 @@ where
     let mut sum_fitness = 0.0;
 
     for solution in population {
-        let fitness = solution.value();
+        let fitness = solution.quality_value();
         best_fitness = best_fitness.max(fitness);
         worst_fitness = worst_fitness.min(fitness);
         sum_fitness += fitness;
@@ -46,7 +46,7 @@ mod tests {
 
         let mut solution: Solution<bool> = Solution::new(vec![]);
         let _fitness = 10.0;
-        solution.set_fitness(_fitness);
+        solution.set_quality(_fitness);
 
         let population = vec![solution];
         let (best, avg, worst) = calculate_statistics(&population);
@@ -63,9 +63,9 @@ mod tests {
         let worst_quality = 10.0;
         let avg_quality = 15.0;
 
-        let s1 = BinarySolutionBuilder::ones(3).with_fitness(best_quality).build();
-        let s2 = BinarySolutionBuilder::zeros(3).with_fitness(worst_quality).build();
-        let s3 = BinarySolutionBuilder::random(3, Some(10)).with_fitness(avg_quality).build();
+        let s1 = BinarySolutionBuilder::ones(3).with_quality(best_quality).build();
+        let s2 = BinarySolutionBuilder::zeros(3).with_quality(worst_quality).build();
+        let s3 = BinarySolutionBuilder::random(3, Some(10)).with_quality(avg_quality).build();
 
         let population = vec![s1, s2, s3];
         let (best, avg, worst) = calculate_statistics(&population);

@@ -1,8 +1,8 @@
-use rMetal::algorithms::{Algorithm, NSGAII, NSGAIIParameters};
-use rMetal::operator::{MultiObjectiveTournamentSelection, PolynomialMutation, SBXCrossover};
-use rMetal::problem::ZDT1Problem;
-use rMetal::solution_set::SolutionSet;
-use rMetal::utils::cli::seed_from_cli_or;
+use rmetal::algorithms::{Algorithm, NSGAII, NSGAIIParameters};
+use rmetal::operator::{MultiObjectiveTournamentSelection, PolynomialMutation, SBXCrossover};
+use rmetal::problem::ZDT1Problem;
+use rmetal::solution_set::SolutionSet;
+use rmetal::utils::cli::seed_from_cli_or;
 
 fn main() {
     let seed = seed_from_cli_or(42);

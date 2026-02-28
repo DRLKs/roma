@@ -3,7 +3,7 @@ use crate::solution::{apply_bounds, finalize_scalar_solution, Solution};
 /// Builder for real-valued single-objective solutions (`Solution<f64>`).
 pub struct RealSolutionBuilder {
     variables: Vec<f64>,
-    fitness: Option<f64>,
+    quality: Option<f64>,
     lower_bounds: Option<Vec<f64>>,
     upper_bounds: Option<Vec<f64>>,
 }
@@ -13,7 +13,7 @@ impl RealSolutionBuilder {
     pub fn new(size: usize) -> Self {
         Self {
             variables: vec![0.0; size],
-            fitness: None,
+            quality: None,
             lower_bounds: None,
             upper_bounds: None,
         }
@@ -23,7 +23,7 @@ impl RealSolutionBuilder {
     pub fn from_variables(variables: Vec<f64>) -> Self {
         Self {
             variables,
-            fitness: None,
+            quality: None,
             lower_bounds: None,
             upper_bounds: None,
         }
@@ -35,9 +35,9 @@ impl RealSolutionBuilder {
         self
     }
 
-    /// Sets an optional initial scalar fitness.
-    pub fn with_fitness(mut self, fitness: f64) -> Self {
-        self.fitness = Some(fitness);
+    /// Sets an optional initial scalar quality value.
+    pub fn with_quality(mut self, quality: f64) -> Self {
+        self.quality = Some(quality);
         self
     }
 
@@ -78,7 +78,7 @@ impl RealSolutionBuilder {
     /// Builds the final single-objective real solution.
     pub fn build(self) -> Solution<f64> {
         let variables = apply_bounds(self.variables, &self.lower_bounds, &self.upper_bounds);
-        finalize_scalar_solution(variables, self.fitness)
+        finalize_scalar_solution(variables, self.quality)
     }
 }
 

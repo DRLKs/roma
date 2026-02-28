@@ -395,8 +395,8 @@ where
 
     fn sort_population_desc(population: &mut [Solution<T>]) {
         population.sort_by(|a, b| {
-            b.value()
-                .partial_cmp(&a.value())
+            b.quality_value()
+                .partial_cmp(&a.quality_value())
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
     }

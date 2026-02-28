@@ -45,7 +45,7 @@ where
         let mut best_fitness = f64::NEG_INFINITY;
         
         for (i, sol) in self.solutions().iter().enumerate() {
-            let value = sol.value();
+            let value = sol.quality_value();
             if value > best_fitness {
                 best_fitness = value;
                 best_index = i;
@@ -53,6 +53,16 @@ where
         }
         
         self.get(best_index)
+    }
+
+    /// Returns the scalar value of the best solution, if any.
+    fn best_solution_value(&self) -> Option<f64> {
+        self.best_solution().map(|s| s.quality_value())
+    }
+
+    /// Returns the scalar value of the best solution, or `default` when empty.
+    fn best_solution_value_or(&self, default: f64) -> f64 {
+        self.best_solution_value().unwrap_or(default)
     }
 
     fn get(&self, index: usize) -> Option<&Solution<T, Q>> {
