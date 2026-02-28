@@ -2,7 +2,7 @@ use crate::problem::traits::Problem;
 use crate::solution::implementations::real_multiple_objective::MultiObjectiveRealSolutionBuilder;
 use crate::solution::Solution;
 use crate::solution::traits::MultiObjectiveInfo;
-use crate::utils::random::{Random, seed_from_time};
+use crate::utils::random::Random;
 
 const DEFAULT_NUMBER_OF_VARIABLES: usize = 30;
 
@@ -72,23 +72,22 @@ impl Problem<f64, MultiObjectiveInfo> for ZDT1Problem {
         solution.set_objectives(objectives);
     }
 
-    fn create_solution(&self) -> Solution<f64, MultiObjectiveInfo> {
-        let mut rng = Random::new(seed_from_time());
-        let variables: Vec<f64> = (0..self.number_of_variables)
-            .map(|_| rng.next_f64())
-            .collect();
-
-        MultiObjectiveRealSolutionBuilder::from_variables(variables)
-            .with_bounds(0.0, 1.0)
-            .build()
-    }
-
     fn set_problem_description(&mut self, description: String) {
         self.description = description;
     }
 
     fn get_problem_description(&self) -> String {
         self.description.clone()
+    }
+
+    fn create_solution(&self, _rng: &mut Random) -> Solution<f64, MultiObjectiveInfo> {
+        let variables: Vec<f64> = (0..self.number_of_variables)
+            .map(|_| _rng.next_f64())
+            .collect();
+
+        MultiObjectiveRealSolutionBuilder::from_variables(variables)
+            .with_bounds(0.0, 1.0)
+            .build()
     }
 }
 
@@ -99,14 +98,14 @@ mod tests {
     #[test]
     fn test_zdt1_creation() {
         let problem = ZDT1Problem::new(30);
-        let solution = problem.create_solution();
+        let solution = problem.create_solution(&mut Random::new(10));
         assert_eq!(solution.num_variables(), 30);
     }
 
     #[test]
     fn test_zdt1_evaluation() {
         let problem = ZDT1Problem::new(30);
-        let mut solution = problem.create_solution();
+        let mut solution = problem.create_solution(&mut Random::new(10));
 
         problem.evaluate(&mut solution);
 

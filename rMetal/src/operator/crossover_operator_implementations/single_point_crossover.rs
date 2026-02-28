@@ -40,7 +40,12 @@ impl Operator for SinglePointCrossover {
 }
 
 impl CrossoverOperator<bool> for SinglePointCrossover {
-    fn execute(&self, parent1: &Solution<bool>, parent2: &Solution<bool>) -> Vec<Solution<bool>> {
+    fn execute(
+        &self,
+        parent1: &Solution<bool>,
+        parent2: &Solution<bool>,
+        rng: &mut Random,
+    ) -> Vec<Solution<bool>> {
         let length = parent1.num_variables().min(parent2.num_variables());
         
         if length <= 1 {
@@ -48,7 +53,6 @@ impl CrossoverOperator<bool> for SinglePointCrossover {
             return vec![parent1.clone(), parent2.clone()];
         }
         
-        let mut rng = Random::new(crate::utils::random::seed_from_time());
         let crossover_point = rng.range(length as u64 - 1) as usize + 1;
         
         let mut offspring1 = parent1.clone();
@@ -95,8 +99,9 @@ mod tests {
         let crossover = SinglePointCrossover::new();
         let parent1 = BinarySolutionBuilder::zeros(10).build();
         let parent2 = BinarySolutionBuilder::ones(10).build();
+        let mut rng = Random::new(42);
         
-        let offspring = crossover.execute(&parent1, &parent2);
+        let offspring = crossover.execute(&parent1, &parent2, &mut rng);
         
         assert_eq!(offspring.len(), 2);
         assert_eq!(offspring[0].num_variables(), 10);

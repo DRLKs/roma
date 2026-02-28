@@ -1,7 +1,6 @@
 use crate::operator::traits::{CrossoverOperator, Operator};
 use crate::solution::Solution;
-use crate::utils::random::{Random, seed_from_time};
-use std::cell::RefCell;
+use crate::utils::random::Random;
 
 const DEFAULT_DISTRIBUTION_INDEX: f64 = 20.0;
 
@@ -12,7 +11,6 @@ const DEFAULT_DISTRIBUTION_INDEX: f64 = 20.0;
 /// Widely used in multi-objective optimization.
 pub struct SBXCrossover {
     distribution_index: f64,
-    rng: RefCell<Random>,
 }
 
 impl SBXCrossover {
@@ -24,7 +22,6 @@ impl SBXCrossover {
     pub fn new(distribution_index: f64) -> Self {
         SBXCrossover {
             distribution_index,
-            rng: RefCell::new(Random::new(seed_from_time())),
         }
     }
 
@@ -54,7 +51,12 @@ impl<Q> CrossoverOperator<f64, Q> for SBXCrossover
 where
     Q: Clone,
 {
-    fn execute(&self, parent1: &Solution<f64, Q>, parent2: &Solution<f64, Q>) -> Vec<Solution<f64, Q>> {
+    fn execute(
+        &self,
+        parent1: &Solution<f64, Q>,
+        parent2: &Solution<f64, Q>,
+        rng: &mut Random,
+    ) -> Vec<Solution<f64, Q>> {
         let variables1 = &parent1.variables;
         let variables2 = &parent2.variables;
 
@@ -66,9 +68,6 @@ where
         let mut offspring1_vars = Vec::with_capacity(variables1.len());
         let mut offspring2_vars = Vec::with_capacity(variables2.len());
         
-        // Single borrow for efficiency
-        let mut rng = self.rng.borrow_mut();
-
         for i in 0..variables1.len() {
             let x1 = variables1[i];
             let x2 = variables2[i];
@@ -97,7 +96,7 @@ where
         vec![offspring1, offspring2]
     }
 
-    fn execute_several(&self, solutions: Vec<Solution<f64, Q>>) -> Vec<Solution<f64, Q>> {
+    fn execute_several(&self, solutions: Vec<Solution<f64, Q>>, rng: &mut Random) -> Vec<Solution<f64, Q>> {
         if solutions.len() < 2 {
             return solutions;
         }
@@ -106,7 +105,7 @@ where
         let mut i = 0;
 
         while i + 1 < solutions.len() {
-            let offspring = self.execute(&solutions[i], &solutions[i + 1]);
+            let offspring = self.execute(&solutions[i], &solutions[i + 1], rng);
             offspring_result.extend(offspring);
             i += 2;
         }
@@ -130,8 +129,9 @@ mod tests {
         let crossover = SBXCrossover::new(20.0);
         let parent1 = RealSolutionBuilder::from_variables(vec![0.2, 0.5, 0.8]).build();
         let parent2 = RealSolutionBuilder::from_variables(vec![0.7, 0.3, 0.1]).build();
+        let mut rng = Random::new(42);
 
-        let offspring = crossover.execute(&parent1, &parent2);
+        let offspring = crossover.execute(&parent1, &parent2, &mut rng);
 
         assert_eq!(offspring.len(), 2);
         assert_eq!(
@@ -149,8 +149,9 @@ mod tests {
         let crossover = SBXCrossover::new(20.0);
         let parent1 = RealSolutionBuilder::from_variables(vec![0.0, 0.5, 1.0]).build();
         let parent2 = RealSolutionBuilder::from_variables(vec![1.0, 0.5, 0.0]).build();
+        let mut rng = Random::new(42);
 
-        let offspring = crossover.execute(&parent1, &parent2);
+        let offspring = crossover.execute(&parent1, &parent2, &mut rng);
 
         for solution in &offspring {
             for &var in solution.variables() {
@@ -164,8 +165,9 @@ mod tests {
         let crossover = SBXCrossover::new(20.0);
         let parent1 = RealSolutionBuilder::from_variables(vec![0.5, 0.5]).build();
         let parent2 = RealSolutionBuilder::from_variables(vec![0.5, 0.5, 0.5]).build();
+        let mut rng = Random::new(42);
 
-        let offspring = crossover.execute(&parent1, &parent2);
+        let offspring = crossover.execute(&parent1, &parent2, &mut rng);
 
         assert_eq!(offspring.len(), 2);
         assert_eq!(offspring[0].variables().len(), 2);
@@ -181,8 +183,9 @@ mod tests {
             RealSolutionBuilder::from_variables(vec![0.3, 0.4]).build(),
             RealSolutionBuilder::from_variables(vec![0.6, 0.7]).build(),
         ];
+        let mut rng = Random::new(42);
 
-        let offspring = crossover.execute_several(parents);
+        let offspring = crossover.execute_several(parents, &mut rng);
         assert_eq!(offspring.len(), 4);
     }
 
@@ -194,8 +197,9 @@ mod tests {
             RealSolutionBuilder::from_variables(vec![0.8, 0.9]).build(),
             RealSolutionBuilder::from_variables(vec![0.3, 0.4]).build(),
         ];
+        let mut rng = Random::new(42);
 
-        let offspring = crossover.execute_several(parents);
+        let offspring = crossover.execute_several(parents, &mut rng);
         assert_eq!(offspring.len(), 3);
     }
 

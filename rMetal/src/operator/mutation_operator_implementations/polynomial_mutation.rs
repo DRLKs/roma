@@ -1,7 +1,6 @@
 use crate::operator::traits::{MutationOperator, Operator};
 use crate::solution::Solution;
-use crate::utils::random::{Random, seed_from_time};
-use std::cell::RefCell;
+use crate::utils::random::Random;
 
 /// Polynomial Mutation
 ///
@@ -10,7 +9,6 @@ use std::cell::RefCell;
 /// evolutionary algorithms like NSGA-II.
 pub struct PolynomialMutation {
     distribution_index: f64,
-    rng: RefCell<Random>,
 }
 
 impl PolynomialMutation {
@@ -22,7 +20,6 @@ impl PolynomialMutation {
     pub fn new(distribution_index: f64) -> Self {
         PolynomialMutation {
             distribution_index,
-            rng: RefCell::new(Random::new(seed_from_time())),
         }
     }
 
@@ -54,9 +51,7 @@ impl<Q> MutationOperator<f64, Q> for PolynomialMutation
 where
     Q: Clone,
 {
-    fn execute(&self, solution: &mut Solution<f64, Q>, probability: f64) {
-        let mut rng = self.rng.borrow_mut();
-
+    fn execute(&self, solution: &mut Solution<f64, Q>, probability: f64, rng: &mut Random) {
         for i in 0..solution.num_variables() {
             if rng.next_f64() < probability {
                 let u = rng.next_f64();
@@ -86,8 +81,9 @@ mod tests {
         let mutation = PolynomialMutation::new(20.0);
         let original_vars = vec![0.3, 0.5, 0.7];
         let mut solution = RealSolutionBuilder::from_variables(original_vars.clone()).build();
+        let mut rng = Random::new(42);
 
-        mutation.execute(&mut solution, 0.0);
+        mutation.execute(&mut solution, 0.0, &mut rng);
 
         assert_eq!(solution.variables, original_vars);
     }
@@ -96,8 +92,9 @@ mod tests {
     fn test_polynomial_mutation_preserves_length() {
         let mutation = PolynomialMutation::new(20.0);
         let mut solution = RealSolutionBuilder::from_variables(vec![0.5, 0.5, 0.5, 0.5]).build();
+        let mut rng = Random::new(42);
 
-        mutation.execute(&mut solution, 1.0);
+        mutation.execute(&mut solution, 1.0, &mut rng);
 
         assert_eq!(solution.num_variables(), 4);
     }
@@ -106,10 +103,11 @@ mod tests {
     fn test_polynomial_mutation_valid_range() {
         let mutation = PolynomialMutation::new(20.0);
         let mut solution = RealSolutionBuilder::from_variables(vec![0.0, 0.5, 1.0]).build();
+        let mut rng = Random::new(42);
 
         // Apply mutation multiple times to test boundary conditions
         for _ in 0..10 {
-            mutation.execute(&mut solution, 1.0);
+            mutation.execute(&mut solution, 1.0, &mut rng);
             for &var in solution.variables() {
                 assert!(var >= 0.0 && var <= 1.0, "Variable out of bounds: {}", var);
             }
@@ -121,8 +119,9 @@ mod tests {
         let mutation = PolynomialMutation::new(20.0);
         let original_vars = vec![0.5; 10];
         let mut solution = RealSolutionBuilder::from_variables(original_vars.clone()).build();
+        let mut rng = Random::new(42);
 
-        mutation.execute(&mut solution, 1.0);
+        mutation.execute(&mut solution, 1.0, &mut rng);
 
         let mutated_vars = solution.variables();
         // With probability 1.0 and 10 variables, at least some should change

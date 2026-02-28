@@ -1,5 +1,7 @@
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
+use crate::solution::traits::ScalarQuality;
+use crate::utils::random::Random;
 
 /// Knapsack Problem: maximize the value of items in a knapsack without exceeding capacity
 #[derive(Clone)]
@@ -80,11 +82,10 @@ impl Problem<bool> for KnapsackProblem {
         solution.set_fitness(_fitness);
     }
 
-    /// Solution that serves as a starting point for the algorithm
-    fn create_solution(&self) -> Solution<bool> {
+    fn create_solution(&self, _rng: &mut Random) -> Solution<bool, ScalarQuality> {
         let mut variables: Vec<bool> = vec![];
         for _ in 0..self.number_of_items {
-            variables.push(false);
+            variables.push(_rng.coin_flip());
         }
         Solution::new(variables)
     }
@@ -166,7 +167,7 @@ mod tests {
 
         let problem = KnapsackProblem::with_data(capacity, weights, values, Some(100));
 
-        let solution = problem.create_solution();
+        let solution = problem.create_solution(&mut Random::new(10));
         assert_eq!(solution.num_variables(), 3);
     }
 
@@ -178,7 +179,7 @@ mod tests {
             .add_item(20.0, 200.0)
             .build();
 
-        let solution = problem.create_solution();
+        let solution = problem.create_solution(&mut Random::new(10));
         assert_eq!(solution.num_variables(), 2);
     }
 
@@ -191,7 +192,7 @@ mod tests {
             .add_item(30.0, 150.0)
             .build();
 
-        let sol = problem.create_solution();
+        let sol = problem.create_solution(&mut Random::new(10));
         assert_eq!(sol.num_variables(), 3);
 
         let mut variables: Vec<bool> = vec![];

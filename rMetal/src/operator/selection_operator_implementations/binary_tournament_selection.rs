@@ -33,7 +33,7 @@ impl<T> SelectionOperator<T> for BinaryTournamentSelection
 where
     T: Clone,
 {
-    fn execute<'a>(&self, population: &'a [Solution<T>]) -> &'a Solution<T> {
+    fn execute<'a>(&self, population: &'a [Solution<T>], rng: &mut Random) -> &'a Solution<T> {
         if population.is_empty() {
             panic!("Cannot select from empty population");
         }
@@ -41,8 +41,6 @@ where
         if population.len() == 1 {
             return &population[0];
         }
-        
-        let mut rng = Random::new(crate::utils::random::seed_from_time());
         
         let index1 = rng.range(population.len() as u64) as usize;
         let mut index2 = rng.range(population.len() as u64) as usize;
@@ -82,6 +80,7 @@ mod tests {
     #[test]
     fn test_binary_tournament_selection() {
         let selection = BinaryTournamentSelection::new();
+        let mut rng = Random::new(42);
         
         let solution1 = BinarySolutionBuilder::zeros(5).with_fitness(10.0).build();
 
@@ -89,7 +88,7 @@ mod tests {
 
         let population = vec![solution1, solution2];
         
-        let selected = selection.execute(&population);
+        let selected = selection.execute(&population, &mut rng);
         
         // Should consistently select the better solution
         assert_eq!(selected.value(), 10.0);
@@ -99,15 +98,17 @@ mod tests {
     #[should_panic]
     fn test_binary_tournament_selection_with_empty_population() {
         let selection = BinaryTournamentSelection::new();
+        let mut rng = Random::new(42);
 
         let population: Vec<Solution<bool>> = vec![];
 
-        let _selected = selection.execute(&population);
+        let _selected = selection.execute(&population, &mut rng);
     }
 
     #[test]
     fn test_binary_tournament_selection_with_only_one() {
         let selection = BinaryTournamentSelection::new();
+        let mut rng = Random::new(42);
 
         let fitness = 10.0;
         let solution = BinarySolutionBuilder::zeros(5).with_fitness(fitness).build();
@@ -115,7 +116,7 @@ mod tests {
 
         let population = vec![solution];
 
-        let selected = selection.execute(&population);
+        let selected = selection.execute(&population, &mut rng);
 
         assert_eq!(selected.value(), fitness);
     }

@@ -1,15 +1,15 @@
 use std::path::PathBuf;
 
-use rMetal::algorithms::implementations::hill_climbing::{HillClimbing, HillClimbingParameters};
-use rMetal::algorithms::traits::Algorithm;
-use rMetal::observer::implementations::chart_observer::ChartObserver;
-use rMetal::observer::implementations::console_observer::ConsoleObserver;
-use rMetal::observer::traits::Observable;
-use rMetal::operator::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
-use rMetal::problem::implementations::knapsack_problem::KnapsackBuilder;
-use rMetal::solution_set::traits::SolutionSet;
+use rMetal::algorithms::{Algorithm, HillClimbing, HillClimbingParameters};
+use rMetal::observer::{ChartObserver, ConsoleObserver, Observable};
+use rMetal::operator::BitFlipMutation;
+use rMetal::problem::KnapsackBuilder;
+use rMetal::solution_set::SolutionSet;
+use rMetal::utils::cli::seed_from_cli_or;
 
 fn main() {
+    let seed = seed_from_cli_or(42);
+
     let problem = KnapsackBuilder::new()
         .with_capacity(90.0)
         .add_item(12.0, 24.0)
@@ -17,7 +17,8 @@ fn main() {
         .add_item(41.0, 80.0)
         .build();
 
-    let parameters = HillClimbingParameters::new(120, BitFlipMutation::new(), 0.10);
+    let parameters = HillClimbingParameters::new(120, BitFlipMutation::new(), 0.10)
+        .with_seed(seed);
     let mut algorithm = HillClimbing::new(parameters, true);
 
     algorithm.add_observer(Box::new(ConsoleObserver::new(true)));
@@ -28,8 +29,12 @@ fn main() {
     let result = algorithm.run(&problem);
 
     if let Some(best) = result.best_solution() {
-        println!("Hill-Climbing finished. Best fitness={:.4}", best.value());
+        println!(
+            "Hill-Climbing finished (seed={}). Best fitness={:.4}",
+            seed,
+            best.value()
+        );
     } else {
-        println!("Hill-Climbing finished with no solutions");
+        println!("Hill-Climbing finished with no solutions (seed={})", seed);
     }
 }

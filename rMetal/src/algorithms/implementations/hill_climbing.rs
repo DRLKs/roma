@@ -6,6 +6,7 @@ use crate::operator::traits::MutationOperator;
 use crate::problem::traits::Problem;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
+use crate::utils::random::{Random, seed_from_time};
 
 pub struct HillClimbingParameters<T, M>
 where
@@ -15,6 +16,7 @@ where
     pub max_iterations: usize,
     pub mutation_operator: M,
     pub mutation_probability: f64,
+    pub random_seed: Option<u64>,
     _phantom: std::marker::PhantomData<T>,
 }
 
@@ -28,8 +30,14 @@ where
             max_iterations,
             mutation_operator,
             mutation_probability,
+            random_seed: None,
             _phantom: std::marker::PhantomData,
         }
+    }
+
+    pub fn with_seed(mut self, seed: u64) -> Self {
+        self.random_seed = Some(seed);
+        self
     }
 }
 
@@ -100,7 +108,8 @@ where
                 algorithm_name: "HillClimbing".to_string(),
             });
 
-            let mut current = problem.create_solution();
+            let mut rng = Random::new(parameters.random_seed.unwrap_or_else(seed_from_time));
+            let mut current = problem.create_solution(&mut rng);
             problem.evaluate(&mut current);
             let mut evaluations = 1;
 
@@ -117,7 +126,7 @@ where
                 let mut neighbor = current.copy();
                 parameters
                     .mutation_operator
-                    .execute(&mut neighbor, parameters.mutation_probability);
+                    .execute(&mut neighbor, parameters.mutation_probability, &mut rng);
                 problem.evaluate(&mut neighbor);
                 evaluations += 1;
 

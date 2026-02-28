@@ -1,19 +1,15 @@
 use std::path::PathBuf;
 
-use rMetal::algorithms::implementations::genetic_algorithm::{
-    GeneticAlgorithm, GeneticAlgorithmParameters,
-};
-use rMetal::algorithms::traits::Algorithm;
-use rMetal::observer::implementations::chart_observer::ChartObserver;
-use rMetal::observer::implementations::console_observer::ConsoleObserver;
-use rMetal::observer::traits::Observable;
-use rMetal::operator::crossover_operator_implementations::single_point_crossover::SinglePointCrossover;
-use rMetal::operator::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
-use rMetal::operator::selection_operator_implementations::binary_tournament_selection::BinaryTournamentSelection;
-use rMetal::problem::implementations::knapsack_problem::KnapsackBuilder;
-use rMetal::solution_set::traits::SolutionSet;
+use rMetal::algorithms::{Algorithm, GeneticAlgorithm, GeneticAlgorithmParameters};
+use rMetal::observer::{ChartObserver, ConsoleObserver, Observable};
+use rMetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
+use rMetal::problem::KnapsackBuilder;
+use rMetal::solution_set::SolutionSet;
+use rMetal::utils::cli::seed_from_cli_or;
 
 fn main() {
+    let seed = seed_from_cli_or(42);
+
     let problem = KnapsackBuilder::new()
         .with_capacity(150.0)
         .add_item(10.0, 20.0)
@@ -33,7 +29,9 @@ fn main() {
         SinglePointCrossover::new(),
         BitFlipMutation::new(),
         BinaryTournamentSelection::new(),
-    ).with_elite_size(1);
+    )
+    .with_elite_size(1)
+    .with_seed(seed);
 
     let mut algorithm = GeneticAlgorithm::new(parameters);
     algorithm.add_observer(Box::new(ConsoleObserver::new(true)));
@@ -44,8 +42,8 @@ fn main() {
     let result = algorithm.run(&problem);
 
     if let Some(best) = result.best_solution() {
-        println!("GA finished. Best fitness={:.4}", best.value());
+        println!("GA finished (seed={}). Best fitness={:.4}", seed, best.value());
     } else {
-        println!("GA finished with no solutions");
+        println!("GA finished with no solutions (seed={})", seed);
     }
 }

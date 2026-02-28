@@ -25,6 +25,7 @@ where
     pub mutation_operator: M,
     pub selection_operator: Sel,
     pub num_threads: Option<usize>,
+    pub random_seed: Option<u64>,
     _phantom: std::marker::PhantomData<T>,
 }
 
@@ -54,6 +55,7 @@ where
             mutation_operator,
             selection_operator,
             num_threads: None,
+            random_seed: None,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -80,6 +82,11 @@ where
 
     pub fn with_parallel(mut self) -> Self {
         self.num_threads = None;
+        self
+    }
+
+    pub fn with_seed(mut self, seed: u64) -> Self {
+        self.random_seed = Some(seed);
         self
     }
 
@@ -125,13 +132,22 @@ where
             algorithm_name: "GeneticAlgorithm".to_string(),
         });
 
-        let mut population = Self::initialize_population(parameters, problem);
+        let run_seed = Self::resolve_seed(parameters);
+        let mut init_rng = Random::new(Self::derive_seed(run_seed, 0));
+        let mut population = Self::initialize_population(parameters, problem, &mut init_rng);
         let mut evaluations = parameters.population_size;
 
         Self::emit_generation_metrics(context, 0, evaluations, &population);
 
         for generation in 1..=parameters.max_generations {
-            population = Self::next_generation(parameters, problem, &population, &mut evaluations);
+            population = Self::next_generation(
+                parameters,
+                problem,
+                &population,
+                generation,
+                run_seed,
+                &mut evaluations,
+            );
 
             Self::emit_generation_metrics(context, generation, evaluations, &population);
         }
@@ -147,10 +163,11 @@ where
     fn initialize_population(
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
         problem: &(impl Problem<T> + Sync),
+        rng: &mut Random,
     ) -> Vec<Solution<T>> {
         (0..parameters.population_size)
             .map(|_| {
-                let mut solution = problem.create_solution();
+                let mut solution = problem.create_solution(rng);
                 problem.evaluate(&mut solution);
                 solution
             })
@@ -161,9 +178,18 @@ where
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
         problem: &(impl Problem<T> + Sync),
         current_population: &[Solution<T>],
+        generation: usize,
+        run_seed: u64,
         evaluations: &mut usize,
     ) -> Vec<Solution<T>> {
-        let mut offspring = Self::create_offspring(parameters, problem, current_population, evaluations);
+        let generation_seed = Self::derive_seed(run_seed, generation as u64);
+        let mut offspring = Self::create_offspring(
+            parameters,
+            problem,
+            current_population,
+            generation_seed,
+            evaluations,
+        );
         Self::apply_elitism(parameters, current_population, &mut offspring);
         Self::sort_population_desc(&mut offspring);
         offspring.truncate(parameters.population_size);
@@ -174,15 +200,22 @@ where
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
         problem: &(impl Problem<T> + Sync),
         population: &[Solution<T>],
+        generation_seed: u64,
         evaluations: &mut usize,
     ) -> Vec<Solution<T>> {
         let requested_threads = Self::resolve_num_threads(parameters);
         let thread_count = requested_threads.min(parameters.population_size.max(1));
 
         let (mut offspring_population, generation_evaluations) = if thread_count <= 1 {
-            Self::create_offspring_sequential(parameters, problem, population)
+            Self::create_offspring_sequential(parameters, problem, population, generation_seed)
         } else {
-            Self::create_offspring_parallel(parameters, problem, population, thread_count)
+            Self::create_offspring_parallel(
+                parameters,
+                problem,
+                population,
+                thread_count,
+                generation_seed,
+            )
         };
 
         *evaluations += generation_evaluations;
@@ -194,17 +227,20 @@ where
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
         problem: &(impl Problem<T> + Sync),
         population: &[Solution<T>],
+        generation_seed: u64,
     ) -> (Vec<Solution<T>>, usize) {
         let mut offspring_population = Vec::with_capacity(parameters.population_size);
         let mut generation_evaluations = 0usize;
-        let mut rng = Random::new(seed_from_time());
+        let mut rng = Random::new(generation_seed);
 
         while offspring_population.len() < parameters.population_size {
-            let parent1 = parameters.selection_operator.execute(population).copy();
-            let parent2 = parameters.selection_operator.execute(population).copy();
+            let parent1 = parameters.selection_operator.execute(population, &mut rng).copy();
+            let parent2 = parameters.selection_operator.execute(population, &mut rng).copy();
 
             let mut offspring = if rng.next_f64() < parameters.crossover_probability {
-                parameters.crossover_operator.execute(&parent1, &parent2)
+                parameters
+                    .crossover_operator
+                    .execute(&parent1, &parent2, &mut rng)
             } else {
                 vec![parent1, parent2]
             };
@@ -212,7 +248,7 @@ where
             for child in &mut offspring {
                 parameters
                     .mutation_operator
-                    .execute(child, parameters.mutation_probability);
+                    .execute(child, parameters.mutation_probability, &mut rng);
                 problem.evaluate(child);
                 generation_evaluations += 1;
             }
@@ -228,6 +264,7 @@ where
         problem: &(impl Problem<T> + Sync),
         population: &[Solution<T>],
         thread_count: usize,
+        generation_seed: u64,
     ) -> (Vec<Solution<T>>, usize) {
         let target_size = parameters.population_size;
         let mut all_offspring = Vec::with_capacity(target_size);
@@ -246,18 +283,25 @@ where
                         return (Vec::new(), 0usize);
                     }
 
-                    let mut local_rng = Random::new(
-                        seed_from_time() ^ ((worker_id as u64 + 1).wrapping_mul(0x9E37_79B9_7F4A_7C15)),
-                    );
+                    let worker_seed = Self::derive_seed(generation_seed, worker_id as u64 + 1);
+                    let mut local_rng = Random::new(worker_seed);
                     let mut local_offspring = Vec::with_capacity(worker_target);
                     let mut local_evaluations = 0usize;
 
                     while local_offspring.len() < worker_target {
-                        let parent1 = parameters.selection_operator.execute(population).copy();
-                        let parent2 = parameters.selection_operator.execute(population).copy();
+                        let parent1 = parameters
+                            .selection_operator
+                            .execute(population, &mut local_rng)
+                            .copy();
+                        let parent2 = parameters
+                            .selection_operator
+                            .execute(population, &mut local_rng)
+                            .copy();
 
                         let mut children = if local_rng.next_f64() < parameters.crossover_probability {
-                            parameters.crossover_operator.execute(&parent1, &parent2)
+                            parameters
+                                .crossover_operator
+                                .execute(&parent1, &parent2, &mut local_rng)
                         } else {
                             vec![parent1, parent2]
                         };
@@ -265,7 +309,7 @@ where
                         for child in &mut children {
                             parameters
                                 .mutation_operator
-                                .execute(child, parameters.mutation_probability);
+                                .execute(child, parameters.mutation_probability, &mut local_rng);
                             problem.evaluate(child);
                             local_evaluations += 1;
                         }
@@ -297,6 +341,17 @@ where
                 .map(|n| n.get())
                 .unwrap_or(1),
         }
+    }
+
+    fn resolve_seed(parameters: &GeneticAlgorithmParameters<T, C, M, Sel>) -> u64 {
+        parameters.random_seed.unwrap_or_else(seed_from_time)
+    }
+
+    fn derive_seed(base_seed: u64, stream: u64) -> u64 {
+        let mut z = base_seed ^ stream.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
 
     fn apply_elitism(

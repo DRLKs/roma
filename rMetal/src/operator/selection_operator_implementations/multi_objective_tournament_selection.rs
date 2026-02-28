@@ -1,7 +1,6 @@
 use crate::operator::traits::{Operator, SelectionOperator};
 use crate::solution::MultiObjectiveInfo;
-use crate::utils::random::{Random, seed_from_time};
-use std::cell::RefCell;
+use crate::utils::random::Random;
 use crate::solution::Solution;
 
 /// Binary Tournament Selection for Multi-Objective Optimization.
@@ -11,14 +10,11 @@ use crate::solution::Solution;
 /// 2) If rank ties, larger crowding distance is better.
 /// 3) If both tie/missing, fallback to Pareto dominance.
 pub struct MultiObjectiveTournamentSelection {
-    rng: RefCell<Random>,
 }
 
 impl MultiObjectiveTournamentSelection {
     pub fn new() -> Self {
-        MultiObjectiveTournamentSelection {
-            rng: RefCell::new(Random::new(seed_from_time())),
-        }
+        MultiObjectiveTournamentSelection {}
     }
 }
 
@@ -35,7 +31,7 @@ impl Operator for MultiObjectiveTournamentSelection {
 }
 
 impl SelectionOperator<f64, MultiObjectiveInfo> for MultiObjectiveTournamentSelection {
-    fn execute<'a>(&self, population: &'a [Solution<f64, MultiObjectiveInfo>]) -> &'a Solution<f64, MultiObjectiveInfo> {
+    fn execute<'a>(&self, population: &'a [Solution<f64, MultiObjectiveInfo>], rng: &mut Random) -> &'a Solution<f64, MultiObjectiveInfo> {
         if population.is_empty() {
             panic!("Cannot select from empty population");
         }
@@ -44,9 +40,6 @@ impl SelectionOperator<f64, MultiObjectiveInfo> for MultiObjectiveTournamentSele
             return &population[0];
         }
         
-        // Single borrow for efficiency
-        let mut rng = self.rng.borrow_mut();
-
         // Select two random individuals
         let index1 = rng.range_between(0, population.len() as u64) as usize;
         let mut index2 = rng.range_between(0, population.len() as u64) as usize;
@@ -95,13 +88,14 @@ mod tests {
     #[test]
     fn test_selection_from_single_solution() {
         let selection = MultiObjectiveTournamentSelection::new();
+        let mut rng = Random::new(42);
         let solution = MultiObjectiveRealSolutionBuilder::from_variables(vec![1.0])
             .with_objectives(vec![0.5, 0.5])
             .with_rank(0)
             .build();
         let population = vec![solution];
 
-        let selected = selection.execute(&population);
+        let selected = selection.execute(&population, &mut rng);
         assert_eq!(selected.variables(), &[1.0]);
     }
 
@@ -109,13 +103,15 @@ mod tests {
     #[should_panic(expected = "Cannot select from empty population")]
     fn test_selection_from_empty_population() {
         let selection = MultiObjectiveTournamentSelection::new();
+        let mut rng = Random::new(42);
         let population: Vec<Solution<f64, MultiObjectiveInfo>> = vec![];
-        selection.execute(&population);
+        selection.execute(&population, &mut rng);
     }
 
     #[test]
     fn test_selection_prefers_better_rank() {
         let selection = MultiObjectiveTournamentSelection::new();
+        let mut rng = Random::new(42);
 
         let solution1 = MultiObjectiveRealSolutionBuilder::from_variables(vec![1.0])
             .with_objectives(vec![0.1, 0.1])
@@ -130,7 +126,7 @@ mod tests {
         let population = vec![solution1, solution2];
 
         for _ in 0..10 {
-            let selected = selection.execute(&population);
+            let selected = selection.execute(&population, &mut rng);
             assert_eq!(selected.rank(), Some(0));
         }
     }
@@ -138,6 +134,7 @@ mod tests {
     #[test]
     fn test_selection_uses_crowding_distance_when_rank_ties() {
         let selection = MultiObjectiveTournamentSelection::new();
+        let mut rng = Random::new(42);
 
         let solution1 = MultiObjectiveRealSolutionBuilder::from_variables(vec![1.0])
             .with_objectives(vec![0.4, 0.6])
@@ -154,7 +151,7 @@ mod tests {
         let population = vec![solution1, solution2];
 
         for _ in 0..10 {
-            let selected = selection.execute(&population);
+            let selected = selection.execute(&population, &mut rng);
             assert_eq!(selected.crowding_distance(), Some(2.0));
         }
     }

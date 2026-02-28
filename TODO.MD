@@ -26,3 +26,5 @@
 [ ] 7. Memoria, requisitos
     [ ] Desarrollar los casos de uso. Crear tus propios algoritmos y ejemplos o añadir el crate y usar los algoritmos de la biblioteca.
     [ ] .....
+
+[X] 8. Reproducibilidad 28/02/26

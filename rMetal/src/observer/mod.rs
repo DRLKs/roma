@@ -1,6 +1,10 @@
-pub mod traits;
-pub mod runtime;
-pub mod implementations;
+pub(crate) mod traits;
+pub(crate) mod runtime;
+pub(crate) mod implementations;
+
+pub use traits::{AlgorithmObserver, Observable};
+pub use implementations::chart_observer::ChartObserver;
+pub use implementations::console_observer::ConsoleObserver;
 
 
 use crate::solution::Solution;

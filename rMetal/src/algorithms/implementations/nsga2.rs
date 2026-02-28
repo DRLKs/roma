@@ -21,6 +21,7 @@ where
     pub crossover_operator: C,
     pub mutation_operator: M,
     pub selection_operator: Sel,
+    pub random_seed: Option<u64>,
 }
 
 impl<C, M, Sel> NSGAIIParameters<C, M, Sel>
@@ -46,7 +47,13 @@ where
             crossover_operator,
             mutation_operator,
             selection_operator,
+            random_seed: None,
         }
+    }
+
+    pub fn with_seed(mut self, seed: u64) -> Self {
+        self.random_seed = Some(seed);
+        self
     }
 }
 
@@ -118,26 +125,29 @@ where
                 algorithm_name: "NSGA-II".to_string(),
             });
 
+            let mut rng = Random::new(parameters.random_seed.unwrap_or_else(seed_from_time));
+
             let mut population: Vec<_> = (0..parameters.population_size)
                 .map(|_| {
-                    let mut solution = problem.create_solution();
+                    let mut solution = problem.create_solution(&mut rng);
                     problem.evaluate(&mut solution);
                     solution
                 })
                 .collect();
 
-            let mut rng = Random::new(seed_from_time());
             let mut evaluations = parameters.population_size;
 
             for generation in 1..=parameters.max_generations {
                 let mut offspring = Vec::with_capacity(parameters.population_size);
 
                 while offspring.len() < parameters.population_size {
-                    let parent1 = parameters.selection_operator.execute(&population).copy();
-                    let parent2 = parameters.selection_operator.execute(&population).copy();
+                    let parent1 = parameters.selection_operator.execute(&population, &mut rng).copy();
+                    let parent2 = parameters.selection_operator.execute(&population, &mut rng).copy();
 
                     let mut children = if rng.next_f64() < parameters.crossover_probability {
-                        parameters.crossover_operator.execute(&parent1, &parent2)
+                        parameters
+                            .crossover_operator
+                            .execute(&parent1, &parent2, &mut rng)
                     } else {
                         vec![parent1, parent2]
                     };
@@ -145,7 +155,7 @@ where
                     for child in &mut children {
                         parameters
                             .mutation_operator
-                            .execute(child, parameters.mutation_probability);
+                            .execute(child, parameters.mutation_probability, &mut rng);
                         problem.evaluate(child);
                         evaluations += 1;
                     }

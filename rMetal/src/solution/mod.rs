@@ -3,8 +3,8 @@
 //! This module provides a generic `Solution<T, O>` abstraction and
 //! convenience builders for common variable types.
 
-pub mod traits;
-pub mod implementations;
+pub(crate) mod traits;
+pub(crate) mod implementations;
 
 use crate::solution::traits::{QualityValue, ScalarQuality};
 
