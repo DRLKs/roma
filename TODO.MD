@@ -28,3 +28,7 @@
     [ ] .....
 
 [X] 8. Reproducibilidad 28/02/26
+
+[ ] 9. Algoritmos y operadores, ideas de Gabriel
+    [ ] Más criterios de paradas
+    [ ] Operadores, que devuelvan información para quizás hacer más rápidas las evaluaciones de las soluciones, porque devolverán información sobre lo que ha cambiado de la solución

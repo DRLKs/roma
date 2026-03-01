@@ -1,34 +1,31 @@
-# rMetal
-Librería de Optimización Metaheurística en Rust
+<img src="./images/rMetal_logo.png" alt="rMetal Logo" width="250"/>
+
 
 <p align="center">
-  <img src="./images/rMetalLogo1.png" alt="rMetal Logo" width="200"/>
+  <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Made%20with-Rust-black?style=for-the-badge&logo=rust" alt="Made with Rust"></a>
+  <a href="https://crates.io/"><img src="https://img.shields.io/badge/crates.io-soon-red?style=for-the-badge&logo=rust" alt="Crates.io"></a>
+  <a href="https://docs.rs/"><img src="https://img.shields.io/badge/docs.rs-WIP-blue?style=for-the-badge&logo=rust" alt="Docs.rs"></a>
+  <img src="https://img.shields.io/badge/Status-Development-yellow?style=for-the-badge" alt="Build Status">
 </p>
-
-
-## Descripción
-
-Este proyecto consiste en una **biblioteca extensible de optimización metaheurística** desarrollada en Rust. Su objetivo es facilitar la implementación y experimentación con distintos algoritmos de optimización, proporcionando una arquitectura modular que permite añadir nuevos algoritmos, operadores y problemas sin modificar el núcleo del sistema.
-
-Actualmente existen pocas librerías de este tipo en Rust y muchas presentan limitaciones en madurez o extensibilidad. Esta librería pretende ofrecer una alternativa flexible y de fácil uso para desarrolladores e investigadores.
 
 ---
 
-## Características
+## Descripción y Motivación
 
-- Arquitectura modular y extensible
-- Implementación de varios algoritmos metaheurísticos
-- Soporte para monitorización mediante observables
-- Configuración de parámetros y experimentos
-- Documentación y ejemplos de uso
+`rMetal` es una biblioteca de optimización metaheurística escrita íntegramente en Rust. Su objetivo principal es proporcionar un marco de trabajo (*framework*) potente, flexible e idiomático para resolver problemas de optimización complejos, tanto de un solo objetivo (mono-objetivo) como de múltiples objetivos (multiobjetivo).
+
+La motivación detrás de `rMetal` surge de la necesidad de aplicar la **seguridad de memoria y el alto rendimiento** de Rust al campo de la investigación operativa.
+
+Este proyecto es el resultado de mi **TFG**, con el que termino mis estudios sobre la ingeniería del software.
 
 ---
 
 ## Instalación
 
-1. Asegúrate de tener **Rust** y **Cargo** instalados.  
-2. Añade la librería como dependencia en tu `Cargo.toml`:
+`rMetal` está diseñado para ser integrado en proyectos Rust existentes. Una vez publicado en crates.io (actualmente en WIP), podrás añadirlo a tu `Cargo.toml`:
 
 ```toml
 [dependencies]
-rMetal = "0.1.0"
+rmetal = "0.1.0"
+# O directamente desde git mientras está en desarrollo
+# rMetal = { git = "[https://github.com/DRLKs/rMetal.git](https://github.com/DRLKs/rMetal.git)" }
