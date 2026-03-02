@@ -48,6 +48,38 @@ pub enum TerminationReason {
     Criterion(TerminationCriterion),
 }
 
+/// Shared execution snapshot emitted by algorithms and consumed by
+/// termination logic/observers.
+#[derive(Clone, Debug)]
+pub struct ExecutionStateSnapshot {
+    pub seq_id: u64,
+    pub iteration: usize,
+    pub evaluations: usize,
+    pub best_fitness: f64,
+    pub average_fitness: f64,
+    pub worst_fitness: f64,
+}
+
+impl ExecutionStateSnapshot {
+    pub fn new(
+        seq_id: u64,
+        iteration: usize,
+        evaluations: usize,
+        best_fitness: f64,
+        average_fitness: f64,
+        worst_fitness: f64,
+    ) -> Self {
+        Self {
+            seq_id,
+            iteration,
+            evaluations,
+            best_fitness,
+            average_fitness,
+            worst_fitness,
+        }
+    }
+}
+
 /// Estado interno para rastrear el progreso de los criterios de parada
 #[derive(Clone, Debug)]
 pub struct TerminationState {
@@ -90,6 +122,12 @@ impl TerminationController {
 
     pub fn on_best_quality(&mut self, quality: f64, iteration: usize) {
         self.state.update_best_quality(quality, iteration, self.direction);
+    }
+
+    pub fn on_snapshot(&mut self, snapshot: &ExecutionStateSnapshot) {
+        self.on_iteration(snapshot.iteration);
+        self.on_evaluations(snapshot.evaluations);
+        self.on_best_quality(snapshot.best_fitness, snapshot.iteration);
     }
 
     pub fn should_terminate(&mut self) -> bool {

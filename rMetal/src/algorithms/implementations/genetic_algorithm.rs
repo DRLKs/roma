@@ -1,10 +1,10 @@
 use crate::algorithms::termination::{
+    ExecutionStateSnapshot,
     ImprovementDirection,
     TerminationController,
     TerminationCriteria,
 };
 use crate::algorithms::traits::Algorithm;
-use crate::solution::traits::QualityValue;
 use crate::observer::runtime::{run_with_observers_in_worker, ExecutionContext};
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::observer::AlgorithmEvent;
@@ -142,18 +142,16 @@ where
         let mut init_rng = Random::new(Self::derive_seed(run_seed, 0));
         let mut population = Self::initialize_population(parameters, problem, &mut init_rng);
         let mut evaluations = parameters.population_size;
+        let mut snapshot_seq = 0u64;
 
         let mut termination = TerminationController::new(
             parameters.termination_criteria.clone(),
             ImprovementDirection::Maximize,
         );
-        termination.on_evaluations(evaluations);
-
-        // Inicializar con la mejor calidad
-        let best_quality = population.iter().map(|s| s.quality().map(|q| q.quality_value()).unwrap_or(0.0)).fold(f64::NEG_INFINITY, f64::max);
-        termination.on_best_quality(best_quality, 0);
-
-        Self::emit_generation_metrics(context, 0, evaluations, &population);
+        let initial_snapshot =
+            Self::emit_generation_metrics(context, snapshot_seq, 0, evaluations, &population);
+        snapshot_seq += 1;
+        termination.on_snapshot(&initial_snapshot);
         Self::emit_best_solution_update(context, 0, &population);
 
         let mut generation = 0;
@@ -168,14 +166,15 @@ where
                 &mut evaluations,
             );
 
-            termination.on_iteration(generation);
-            termination.on_evaluations(evaluations);
-
-            // Update best quality
-            let current_best = population.iter().map(|s| s.quality().map(|q| q.quality_value()).unwrap_or(0.0)).fold(f64::NEG_INFINITY, f64::max);
-            termination.on_best_quality(current_best, generation);
-
-            Self::emit_generation_metrics(context, generation, evaluations, &population);
+            let snapshot = Self::emit_generation_metrics(
+                context,
+                snapshot_seq,
+                generation,
+                evaluations,
+                &population,
+            );
+            snapshot_seq += 1;
+            termination.on_snapshot(&snapshot);
             Self::emit_best_solution_update(context, generation, &population);
         }
 
@@ -407,18 +406,17 @@ where
 
     fn emit_generation_metrics(
         context: &ExecutionContext<T>,
+        seq_id: u64,
         generation: usize,
         evaluations: usize,
         population: &[Solution<T>],
-    ) {
+    ) -> ExecutionStateSnapshot {
         let (best, avg, worst) = calculate_statistics(population);
-        context.emit(AlgorithmEvent::GenerationCompleted {
-            generation,
-            evaluations,
-            best_fitness: best,
-            average_fitness: avg,
-            worst_fitness: worst,
+        let snapshot = ExecutionStateSnapshot::new(seq_id, generation, evaluations, best, avg, worst);
+        context.emit(AlgorithmEvent::ExecutionStateUpdated {
+            state: snapshot.clone(),
         });
+        snapshot
     }
 
     fn emit_best_solution_update(

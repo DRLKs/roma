@@ -7,6 +7,7 @@ pub use implementations::genetic_algorithm::{GeneticAlgorithm, GeneticAlgorithmP
 pub use implementations::hill_climbing::{HillClimbing, HillClimbingParameters};
 pub use implementations::nsga2::{NSGAII, NSGAIIParameters};
 pub use termination::{
+	ExecutionStateSnapshot,
 	ImprovementDirection,
 	TerminationController,
 	TerminationCriteria,

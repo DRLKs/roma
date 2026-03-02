@@ -9,7 +9,7 @@ pub use implementations::html_report_observer::HtmlReportObserver;
 
 
 use crate::solution::Solution;
-use crate::algorithms::termination::TerminationReason;
+use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationReason};
 
 /// Events that can be observed during algorithm execution
 #[derive(Debug, Clone)]
@@ -21,13 +21,9 @@ where
     Start {
         algorithm_name: String,
     },
-    /// A new generation/iteration has been completed
-    GenerationCompleted {
-        generation: usize,
-        evaluations: usize,
-        best_fitness: f64,
-        worst_fitness: f64,
-        average_fitness: f64,
+    /// Shared execution snapshot update
+    ExecutionStateUpdated {
+        state: ExecutionStateSnapshot,
     },
     /// A new best solution has been found
     BestSolutionUpdate {

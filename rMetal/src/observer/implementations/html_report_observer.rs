@@ -57,6 +57,7 @@ pub struct HtmlReportObserver {
     finished_summary: Option<(usize, usize)>,
     generations: Vec<GenerationMetrics>,
     best_updates: Vec<BestUpdateSnapshot>,
+    last_snapshot_seq: Option<u64>,
 }
 
 impl HtmlReportObserver {
@@ -75,6 +76,7 @@ impl HtmlReportObserver {
             finished_summary: None,
             generations: Vec::new(),
             best_updates: Vec::new(),
+            last_snapshot_seq: None,
         }
     }
 
@@ -383,20 +385,22 @@ where
                 self.finished_summary = None;
                 self.generations.clear();
                 self.best_updates.clear();
+                self.last_snapshot_seq = None;
             }
-            AlgorithmEvent::GenerationCompleted {
-                generation,
-                evaluations,
-                best_fitness,
-                average_fitness,
-                worst_fitness,
-            } => {
+            AlgorithmEvent::ExecutionStateUpdated { state } => {
+                if let Some(last_seq) = self.last_snapshot_seq {
+                    if state.seq_id <= last_seq {
+                        return;
+                    }
+                }
+
+                self.last_snapshot_seq = Some(state.seq_id);
                 self.generations.push(GenerationMetrics {
-                    generation: *generation,
-                    evaluations: *evaluations,
-                    best: *best_fitness,
-                    average: *average_fitness,
-                    worst: *worst_fitness,
+                    generation: state.iteration,
+                    evaluations: state.evaluations,
+                    best: state.best_fitness,
+                    average: state.average_fitness,
+                    worst: state.worst_fitness,
                 });
             }
             AlgorithmEvent::BestSolutionUpdate { generation, solution } => {
@@ -469,12 +473,15 @@ mod tests {
         observer.update(&AlgorithmEvent::<bool>::Start {
             algorithm_name: "GeneticAlgorithm".to_string(),
         });
-        observer.update(&AlgorithmEvent::<bool>::GenerationCompleted {
-            generation: 1,
-            evaluations: 20,
-            best_fitness: 10.0,
-            average_fitness: 7.0,
-            worst_fitness: 3.0,
+        observer.update(&AlgorithmEvent::<bool>::ExecutionStateUpdated {
+            state: crate::algorithms::termination::ExecutionStateSnapshot::new(
+                0,
+                1,
+                20,
+                10.0,
+                7.0,
+                3.0,
+            ),
         });
 
         let mut solution = Solution::<bool>::new(vec![true, false, true]);

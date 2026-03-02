@@ -39,6 +39,7 @@ where
     pub fn emit(&self, event: AlgorithmEvent<T>) {
         emit_event(&self.sender, event);
     }
+
 }
 
 /// Channel-based observer runtime.

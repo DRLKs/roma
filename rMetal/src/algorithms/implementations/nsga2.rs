@@ -1,4 +1,5 @@
 use crate::algorithms::termination::{
+    ExecutionStateSnapshot,
     ImprovementDirection,
     TerminationController,
     TerminationCriteria,
@@ -141,16 +142,14 @@ where
                 .collect();
 
             let mut evaluations = parameters.population_size;
+            let mut snapshot_seq = 0u64;
 
             let mut termination = TerminationController::new(
                 parameters.termination_criteria.clone(),
                 ImprovementDirection::Minimize,
             );
-            termination.on_evaluations(evaluations);
-
             // Para multiobjetivo, usar el promedio de la primera objetivo como "calidad"
             let initial_best = population.first().and_then(|s| s.get_objective(0)).unwrap_or(0.0);
-            termination.on_best_quality(initial_best, 0);
 
             let initial_avg = if population.is_empty() {
                 0.0
@@ -160,13 +159,19 @@ where
             };
             let initial_worst = population.last().and_then(|s| s.get_objective(0)).unwrap_or(0.0);
 
-            context.emit(AlgorithmEvent::GenerationCompleted {
-                generation: 0,
+            let initial_snapshot = ExecutionStateSnapshot::new(
+                snapshot_seq,
+                0,
                 evaluations,
-                best_fitness: initial_best,
-                average_fitness: initial_avg,
-                worst_fitness: initial_worst,
+                initial_best,
+                initial_avg,
+                initial_worst,
+            );
+            snapshot_seq += 1;
+            context.emit(AlgorithmEvent::ExecutionStateUpdated {
+                state: initial_snapshot.clone(),
             });
+            termination.on_snapshot(&initial_snapshot);
 
             let mut generation = 0;
             while !termination.should_terminate() {
@@ -230,17 +235,13 @@ where
                     }
                 };
 
-                termination.on_iteration(generation);
-                termination.on_evaluations(evaluations);
-                termination.on_best_quality(best, generation);
-
-                context.emit(AlgorithmEvent::GenerationCompleted {
-                    generation,
-                    evaluations,
-                    best_fitness: best,
-                    average_fitness: avg,
-                    worst_fitness: worst,
+                let snapshot =
+                    ExecutionStateSnapshot::new(snapshot_seq, generation, evaluations, best, avg, worst);
+                snapshot_seq += 1;
+                context.emit(AlgorithmEvent::ExecutionStateUpdated {
+                    state: snapshot.clone(),
                 });
+                termination.on_snapshot(&snapshot);
             }
 
             context.emit(AlgorithmEvent::End {

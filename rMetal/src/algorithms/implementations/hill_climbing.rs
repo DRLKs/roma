@@ -1,10 +1,10 @@
 use crate::algorithms::termination::{
+    ExecutionStateSnapshot,
     ImprovementDirection,
     TerminationController,
     TerminationCriteria,
 };
 use crate::algorithms::traits::Algorithm;
-use crate::solution::traits::QualityValue;
 use crate::observer::runtime::run_with_observers_in_worker;
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::observer::AlgorithmEvent;
@@ -165,31 +165,19 @@ where
             let mut current = problem.create_solution(&mut rng);
             problem.evaluate(&mut current);
             let mut evaluations = 1;
+            let mut snapshot_seq = 0u64;
 
-            let direction = if is_maximization {
-                ImprovementDirection::Maximize
-            } else {
-                ImprovementDirection::Minimize
-            };
+            
             let mut termination =
-                TerminationController::new(parameters.termination_criteria.clone(), direction);
-            termination.on_evaluations(evaluations);
-            termination.on_best_quality(
-                current
-                    .quality()
-                    .map(|q| q.quality_value())
-                    .unwrap_or(0.0),
-                0,
-            );
-
+                TerminationController::new(parameters.termination_criteria.clone(), get_improvement_direction(is_maximization));
             let initial = current.quality_value();
-            context.emit(AlgorithmEvent::GenerationCompleted {
-                generation: 0,
-                evaluations,
-                best_fitness: initial,
-                average_fitness: initial,
-                worst_fitness: initial,
+            let initial_snapshot =
+                ExecutionStateSnapshot::new(snapshot_seq, 0, evaluations, initial, initial, initial);
+            snapshot_seq += 1;
+            context.emit(AlgorithmEvent::ExecutionStateUpdated {
+                state: initial_snapshot.clone(),
             });
+            termination.on_snapshot(&initial_snapshot);
 
             let mut iteration = 0;
             while !termination.should_terminate() {
@@ -209,31 +197,30 @@ where
 
                 if improved {
                     current = neighbor;
-                    termination.on_best_quality(
-                        current
-                            .quality()
-                            .map(|q| q.quality_value())
-                            .unwrap_or(0.0),
-                        iteration,
-                    );
                     context.emit(AlgorithmEvent::BestSolutionUpdate {
                         generation: iteration,
                         solution: current.copy(),
                     });
                 }
 
-                termination.on_iteration(iteration);
-                termination.on_evaluations(evaluations);
-
                 if iteration % 10 == 0 || improved {
                     let fit = current.quality_value();
-                    context.emit(AlgorithmEvent::GenerationCompleted {
-                        generation: iteration,
+                    let snapshot = ExecutionStateSnapshot::new(
+                        snapshot_seq,
+                        iteration,
                         evaluations,
-                        best_fitness: fit,
-                        average_fitness: fit,
-                        worst_fitness: fit,
+                        fit,
+                        fit,
+                        fit,
+                    );
+                    snapshot_seq += 1;
+                    context.emit(AlgorithmEvent::ExecutionStateUpdated {
+                        state: snapshot.clone(),
                     });
+                    termination.on_snapshot(&snapshot);
+                } else {
+                    termination.on_iteration(iteration);
+                    termination.on_evaluations(evaluations);
                 }
             }
 
@@ -267,5 +254,14 @@ where
     /// Returns the last computed solution set, if the algorithm has been run.
     fn get_solution_set(&self) -> Option<&Self::SolutionSet> {
         self.solution_set.as_ref()
+    }
+}
+
+
+fn get_improvement_direction( is_maximization: bool ) -> ImprovementDirection{
+    if is_maximization {
+        ImprovementDirection::Maximize
+    } else {
+        ImprovementDirection::Minimize
     }
 }

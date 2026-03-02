@@ -5,6 +5,7 @@ use crate::observer::traits::{AlgorithmObserver};
 pub struct ConsoleObserver {
     name: String,
     verbose: bool,
+    last_snapshot_seq: Option<u64>,
 }
 
 impl ConsoleObserver {
@@ -12,6 +13,7 @@ impl ConsoleObserver {
         ConsoleObserver {
             name: "ConsoleObserver".to_string(),
             verbose,
+            last_snapshot_seq: None,
         }
     }
 }
@@ -24,18 +26,24 @@ where
         match event {
             AlgorithmEvent::Start { algorithm_name } => {
                 println!("  Starting algorithm: {}", algorithm_name);
+                self.last_snapshot_seq = None;
             }
-            AlgorithmEvent::GenerationCompleted {
-                generation,
-                evaluations,
-                best_fitness,
-                worst_fitness,
-                average_fitness,
-            } => {
-                if self.verbose || generation % 10 == 0 {
+            AlgorithmEvent::ExecutionStateUpdated { state } => {
+                if let Some(last_seq) = self.last_snapshot_seq {
+                    if state.seq_id <= last_seq {
+                        return;
+                    }
+                }
+
+                self.last_snapshot_seq = Some(state.seq_id);
+                if self.verbose || state.iteration % 10 == 0 {
                     println!(
                         "Generation {}: Evaluations={}, Best={:.4}, Avg={:.4}, Worst={:.4}",
-                        generation, evaluations, best_fitness, average_fitness, worst_fitness
+                        state.iteration,
+                        state.evaluations,
+                        state.best_fitness,
+                        state.average_fitness,
+                        state.worst_fitness
                     );
                 }
             }

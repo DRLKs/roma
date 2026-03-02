@@ -17,6 +17,7 @@ pub struct ChartObserver {
     best_fitness_history: Vec<f64>,
     average_fitness_history: Vec<f64>,
     worst_fitness_history: Vec<f64>,
+    last_snapshot_seq: Option<u64>,
     
     // Configuration
     chart_width: u32,
@@ -42,6 +43,7 @@ impl ChartObserver {
             best_fitness_history: Vec::new(),
             average_fitness_history: Vec::new(),
             worst_fitness_history: Vec::new(),
+            last_snapshot_seq: None,
             chart_width: 1200,
             chart_height: 800,
         }
@@ -293,19 +295,21 @@ where
                 self.best_fitness_history.clear();
                 self.average_fitness_history.clear();
                 self.worst_fitness_history.clear();
+                self.last_snapshot_seq = None;
             }
-            AlgorithmEvent::GenerationCompleted {
-                generation,
-                evaluations,
-                best_fitness,
-                average_fitness,
-                worst_fitness,
-            } => {
-                self.generations.push(*generation);
-                self.evaluations.push(*evaluations);
-                self.best_fitness_history.push(*best_fitness);
-                self.average_fitness_history.push(*average_fitness);
-                self.worst_fitness_history.push(*worst_fitness);
+            AlgorithmEvent::ExecutionStateUpdated { state } => {
+                if let Some(last_seq) = self.last_snapshot_seq {
+                    if state.seq_id <= last_seq {
+                        return;
+                    }
+                }
+
+                self.last_snapshot_seq = Some(state.seq_id);
+                self.generations.push(state.iteration);
+                self.evaluations.push(state.evaluations);
+                self.best_fitness_history.push(state.best_fitness);
+                self.average_fitness_history.push(state.average_fitness);
+                self.worst_fitness_history.push(state.worst_fitness);
             }
             AlgorithmEvent::End { .. } => {
                 println!("  Generating charts...");
@@ -390,12 +394,15 @@ mod tests {
         observer.update(&AlgorithmEvent::<bool>::Start {
             algorithm_name: "NSGA-II".to_string(),
         });
-        observer.update(&AlgorithmEvent::<bool>::GenerationCompleted {
-            generation: 1,
-            evaluations: 10,
-            best_fitness: 1.0,
-            average_fitness: 0.8,
-            worst_fitness: 0.5,
+        observer.update(&AlgorithmEvent::<bool>::ExecutionStateUpdated {
+            state: crate::algorithms::termination::ExecutionStateSnapshot::new(
+                0,
+                1,
+                10,
+                1.0,
+                0.8,
+                0.5,
+            ),
         });
         observer.update(&AlgorithmEvent::<bool>::End {
             total_generations: 1,
