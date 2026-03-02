@@ -20,10 +20,6 @@ where
     /// # Arguments
     /// 
     /// * `problem` - The optimization problem to solve
-    /// * `verbose` - Verbosity level of the output:
-    ///   * `0` - No output
-    ///   * `1` - Basic information (start, end)
-    ///   * `>1` - Full debug information
     /// 
     fn run(&mut self, problem: &(impl Problem<T, Q> + Sync)) -> Self::SolutionSet;
 

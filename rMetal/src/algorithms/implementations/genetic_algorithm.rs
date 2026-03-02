@@ -1,4 +1,10 @@
+use crate::algorithms::termination::{
+    ImprovementDirection,
+    TerminationController,
+    TerminationCriteria,
+};
 use crate::algorithms::traits::Algorithm;
+use crate::solution::traits::QualityValue;
 use crate::observer::runtime::{run_with_observers_in_worker, ExecutionContext};
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::observer::AlgorithmEvent;
@@ -17,7 +23,6 @@ where
     Sel: SelectionOperator<T>,
 {
     pub population_size: usize,
-    pub max_generations: usize,
     pub crossover_probability: f64,
     pub mutation_probability: f64,
     pub elite_size: usize,
@@ -26,6 +31,7 @@ where
     pub selection_operator: Sel,
     pub num_threads: Option<usize>,
     pub random_seed: Option<u64>,
+    pub termination_criteria: TerminationCriteria,
     _phantom: std::marker::PhantomData<T>,
 }
 
@@ -38,16 +44,15 @@ where
 {
     pub fn new(
         population_size: usize,
-        max_generations: usize,
         crossover_probability: f64,
         mutation_probability: f64,
         crossover_operator: C,
         mutation_operator: M,
         selection_operator: Sel,
+        termination_criteria: TerminationCriteria,
     ) -> Self {
         GeneticAlgorithmParameters {
             population_size,
-            max_generations,
             crossover_probability,
             mutation_probability,
             elite_size: 0,
@@ -56,6 +61,7 @@ where
             selection_operator,
             num_threads: None,
             random_seed: None,
+            termination_criteria,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -63,7 +69,7 @@ where
     pub fn show_parameters_information(&self){
         println!("Starting Genetic Algorithm");
         println!("  Population size: {}", self.population_size);
-        println!("  Max generations: {}", self.max_generations);
+        println!("  Termination criteria: {:?}", self.termination_criteria);
         println!("  Crossover: {}", self.crossover_operator.name());
         println!("  Mutation: {}", self.mutation_operator.name());
         println!("  Selection: {}", self.selection_operator.name());
@@ -137,10 +143,22 @@ where
         let mut population = Self::initialize_population(parameters, problem, &mut init_rng);
         let mut evaluations = parameters.population_size;
 
+        let mut termination = TerminationController::new(
+            parameters.termination_criteria.clone(),
+            ImprovementDirection::Maximize,
+        );
+        termination.on_evaluations(evaluations);
+
+        // Inicializar con la mejor calidad
+        let best_quality = population.iter().map(|s| s.quality().map(|q| q.quality_value()).unwrap_or(0.0)).fold(f64::NEG_INFINITY, f64::max);
+        termination.on_best_quality(best_quality, 0);
+
         Self::emit_generation_metrics(context, 0, evaluations, &population);
         Self::emit_best_solution_update(context, 0, &population);
 
-        for generation in 1..=parameters.max_generations {
+        let mut generation = 0;
+        while !termination.should_terminate() {
+            generation += 1;
             population = Self::next_generation(
                 parameters,
                 problem,
@@ -150,13 +168,21 @@ where
                 &mut evaluations,
             );
 
+            termination.on_iteration(generation);
+            termination.on_evaluations(evaluations);
+
+            // Update best quality
+            let current_best = population.iter().map(|s| s.quality().map(|q| q.quality_value()).unwrap_or(0.0)).fold(f64::NEG_INFINITY, f64::max);
+            termination.on_best_quality(current_best, generation);
+
             Self::emit_generation_metrics(context, generation, evaluations, &population);
             Self::emit_best_solution_update(context, generation, &population);
         }
 
         context.emit(AlgorithmEvent::End {
-            total_generations: parameters.max_generations,
+            total_generations: generation,
             total_evaluations: evaluations,
+            termination_reason: termination.reason().cloned(),
         });
 
         VectorSolutionSet::from_vec(population)
@@ -454,7 +480,7 @@ where
 
         let (result, observers) = run_with_observers_in_worker(observers, move |context| {
             if !is_valid {
-                let error_msg = "Invalid parameters: population_size and max_generations must be > 0, probabilities must be in [0, 1]".to_string();
+                let error_msg = "Invalid parameters: population_size must be > 0, termination_criteria must not be empty, probabilities must be in [0, 1]".to_string();
                 context.emit(AlgorithmEvent::Error {
                     message: error_msg.clone(),
                 });
@@ -471,7 +497,7 @@ where
 
     fn validate_parameters(&self) -> bool {
         self.parameters.population_size > 0
-            && self.parameters.max_generations > 0
+            && !self.parameters.termination_criteria.is_empty()
             && self.parameters.crossover_probability >= 0.0
             && self.parameters.crossover_probability <= 1.0
             && self.parameters.mutation_probability >= 0.0

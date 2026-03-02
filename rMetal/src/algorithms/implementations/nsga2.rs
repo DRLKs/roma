@@ -1,3 +1,8 @@
+use crate::algorithms::termination::{
+    ImprovementDirection,
+    TerminationController,
+    TerminationCriteria,
+};
 use crate::algorithms::traits::Algorithm;
 use crate::observer::runtime::run_with_observers_in_worker;
 use crate::observer::traits::{AlgorithmObserver, Observable};
@@ -15,13 +20,13 @@ where
     Sel: SelectionOperator<f64, MultiObjectiveInfo>,
 {
     pub population_size: usize,
-    pub max_generations: usize,
     pub crossover_probability: f64,
     pub mutation_probability: f64,
     pub crossover_operator: C,
     pub mutation_operator: M,
     pub selection_operator: Sel,
     pub random_seed: Option<u64>,
+    pub termination_criteria: TerminationCriteria,
 }
 
 impl<C, M, Sel> NSGAIIParameters<C, M, Sel>
@@ -32,22 +37,22 @@ where
 {
     pub fn new(
         population_size: usize,
-        max_generations: usize,
         crossover_probability: f64,
         mutation_probability: f64,
         crossover_operator: C,
         mutation_operator: M,
         selection_operator: Sel,
+        termination_criteria: TerminationCriteria,
     ) -> Self {
         Self {
             population_size,
-            max_generations,
             crossover_probability,
             mutation_probability,
             crossover_operator,
             mutation_operator,
             selection_operator,
             random_seed: None,
+            termination_criteria,
         }
     }
 
@@ -114,7 +119,7 @@ where
 
         let (result, observers) = run_with_observers_in_worker(observers, move |context| {
             if !is_valid {
-                let message = "Invalid parameters: population_size and max_generations must be > 0, probabilities must be in [0,1]".to_string();
+                let message = "Invalid parameters: population_size must be > 0, termination_criteria must not be empty, probabilities must be in [0,1]".to_string();
                 context.emit(AlgorithmEvent::Error {
                     message: message.clone(),
                 });
@@ -137,7 +142,35 @@ where
 
             let mut evaluations = parameters.population_size;
 
-            for generation in 1..=parameters.max_generations {
+            let mut termination = TerminationController::new(
+                parameters.termination_criteria.clone(),
+                ImprovementDirection::Minimize,
+            );
+            termination.on_evaluations(evaluations);
+
+            // Para multiobjetivo, usar el promedio de la primera objetivo como "calidad"
+            let initial_best = population.first().and_then(|s| s.get_objective(0)).unwrap_or(0.0);
+            termination.on_best_quality(initial_best, 0);
+
+            let initial_avg = if population.is_empty() {
+                0.0
+            } else {
+                let values: Vec<f64> = population.iter().filter_map(|s| s.get_objective(0)).collect();
+                values.iter().sum::<f64>() / values.len() as f64
+            };
+            let initial_worst = population.last().and_then(|s| s.get_objective(0)).unwrap_or(0.0);
+
+            context.emit(AlgorithmEvent::GenerationCompleted {
+                generation: 0,
+                evaluations,
+                best_fitness: initial_best,
+                average_fitness: initial_avg,
+                worst_fitness: initial_worst,
+            });
+
+            let mut generation = 0;
+            while !termination.should_terminate() {
+                generation += 1;
                 let mut offspring = Vec::with_capacity(parameters.population_size);
 
                 while offspring.len() < parameters.population_size {
@@ -197,6 +230,10 @@ where
                     }
                 };
 
+                termination.on_iteration(generation);
+                termination.on_evaluations(evaluations);
+                termination.on_best_quality(best, generation);
+
                 context.emit(AlgorithmEvent::GenerationCompleted {
                     generation,
                     evaluations,
@@ -207,8 +244,9 @@ where
             }
 
             context.emit(AlgorithmEvent::End {
-                total_generations: parameters.max_generations,
+                total_generations: generation,
                 total_evaluations: evaluations,
+                termination_reason: termination.reason().cloned(),
             });
 
             VectorSolutionSet::from_vec(population)
@@ -221,7 +259,7 @@ where
 
     fn validate_parameters(&self) -> bool {
         self.parameters.population_size > 0
-            && self.parameters.max_generations > 0
+            && !self.parameters.termination_criteria.is_empty()
             && self.parameters.crossover_probability >= 0.0
             && self.parameters.crossover_probability <= 1.0
             && self.parameters.mutation_probability >= 0.0

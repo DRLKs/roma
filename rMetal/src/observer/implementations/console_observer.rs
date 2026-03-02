@@ -51,11 +51,17 @@ where
             AlgorithmEvent::End {
                 total_generations,
                 total_evaluations,
+                termination_reason,
             } => {
                 println!(
                     "  Algorithm finished: {} generations, {} evaluations",
                     total_generations, total_evaluations
                 );
+                if self.verbose {
+                    if let Some(reason) = termination_reason {
+                        println!("  Termination reason: {:?}", reason);
+                    }
+                }
             }
             AlgorithmEvent::Error { message } => {
                 eprintln!("  Error: {}", message);

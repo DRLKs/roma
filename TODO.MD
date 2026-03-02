@@ -6,10 +6,9 @@
     [X] Convertir `Solution` de un Trait a un Struct.
     [X] Eliminar las restricciones de traits (bounds como `<O: Ord>` o `Default`) en la definición del `struct Solution`, dejándolas solo en los bloques `impl` donde sea estrictamente necesario.
 
-[ ] 3. Adaptación a Optimización Multiobjetivo
+[X] 3. Adaptación a Optimización Multiobjetivo
     [X] Reemplazar `Set<f64>` por `Vec<f64>` para almacenar los objetivos (los f64 no implementan Eq ni Hash en Rust).
     [X] Eliminar la jerarquía orientada a objetos `QualityIndicator`.
-    [ ] Evaluar si mantener `SolutionSet`; cambiarlo a un `Vec<Solution>` normal o refactorizarlo hacia un concepto más específico como `ParetoArchive` (Non-dominated Set).
 
 [ ] 4. Operadores y Composición Estática
     [ ] Eliminar el uso de `Vec<Operator>` y `Box<dyn Operator>` (Dynamic Dispatch).
@@ -22,6 +21,7 @@
 [X] 6. Manejo de Eventos y Observadores
     [X] Eliminar el patrón Observer clásico (`Observable`, `AlgorithmObserver`) que obliga a manejar lifetimes o punteros compartidos complejos.
     [X] Reemplazar la notificación de progreso por el uso de Closures (`FnMut`) pasados al Builder, o canales de paso de mensajes (`std::sync::mpsc`).
+    [ ] Hemos añadido más información. Cuando el algoritmo termina, termina debido a una condición de parada, estoa condición de parada debe mostrarse en los charts o en lo repots o en ambos. Terminal, etc...
 
 [ ] 7. Memoria, requisitos
     [ ] Desarrollar los casos de uso. Crear tus propios algoritmos y ejemplos o añadir el crate y usar los algoritmos de la biblioteca.
@@ -30,5 +30,8 @@
 [X] 8. Reproducibilidad 28/02/26
 
 [ ] 9. Algoritmos y operadores, ideas de Gabriel
-    [ ] Más criterios de paradas
+    [ ] Más criterios de paradas.
     [ ] Operadores, que devuelvan información para quizás hacer más rápidas las evaluaciones de las soluciones, porque devolverán información sobre lo que ha cambiado de la solución
+
+[ ] 10. Ideas, Observadores y Criterios de paradas. 
+    [ ] Ambas estructuras almacenan información sobre el estado actual del algoritmo, quizás juntar esta información en una estructura más grande

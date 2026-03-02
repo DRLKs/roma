@@ -1,4 +1,10 @@
-use rmetal::algorithms::{Algorithm, GeneticAlgorithm, GeneticAlgorithmParameters};
+use rmetal::algorithms::{
+    Algorithm,
+    GeneticAlgorithm,
+    GeneticAlgorithmParameters,
+    TerminationCriteria,
+    TerminationCriterion,
+};
 use rmetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
 use rmetal::problem::KnapsackBuilder;
 use rmetal::solution_set::SolutionSet;
@@ -16,12 +22,12 @@ fn main() {
 
     let parameters = GeneticAlgorithmParameters::new(
         60,
-        50,
         0.85,
-        0.08,
+        0.04,
         SinglePointCrossover::new(),
         BitFlipMutation::new(),
         BinaryTournamentSelection::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(50)]),
     )
     .with_seed(seed)
     .with_threads(4);

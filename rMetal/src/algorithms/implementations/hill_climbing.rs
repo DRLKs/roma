@@ -1,4 +1,10 @@
+use crate::algorithms::termination::{
+    ImprovementDirection,
+    TerminationController,
+    TerminationCriteria,
+};
 use crate::algorithms::traits::Algorithm;
+use crate::solution::traits::QualityValue;
 use crate::observer::runtime::run_with_observers_in_worker;
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::observer::AlgorithmEvent;
@@ -13,14 +19,15 @@ use crate::utils::random::{Random, seed_from_time};
 /// # Type Parameters
 /// - `T`: decision variable type of the solution.
 /// - `M`: mutation operator used to generate neighbor solutions.
+
 pub struct HillClimbingParameters<T, M>
 where
     T: Clone,
     M: MutationOperator<T>,
 {
-    pub max_iterations: usize,
     pub mutation_operator: M,
     pub mutation_probability: f64,
+    pub termination_criteria: TerminationCriteria,
     pub random_seed: Option<u64>,
     _phantom: std::marker::PhantomData<T>,
 }
@@ -33,14 +40,18 @@ where
     /// Creates a new parameter set.
     ///
     /// # Arguments
-    /// - `max_iterations`: number of iterations to run.
     /// - `mutation_operator`: operator used to mutate the current solution.
     /// - `mutation_probability`: per-variable mutation probability in the range `[0.0, 1.0]`.
-    pub fn new(max_iterations: usize, mutation_operator: M, mutation_probability: f64) -> Self {
+    /// - `termination_criteria`: criteria to stop the algorithm.
+    pub fn new(
+        mutation_operator: M,
+        mutation_probability: f64,
+        termination_criteria: TerminationCriteria,
+    ) -> Self {
         Self {
-            max_iterations,
             mutation_operator,
             mutation_probability,
+            termination_criteria,
             random_seed: None,
             _phantom: std::marker::PhantomData,
         }
@@ -123,7 +134,7 @@ where
     /// Workflow:
     /// 1. Validate parameters.
     /// 2. Create and evaluate an initial random solution.
-    /// 3. Iterate up to `max_iterations`:
+    /// 3. Iterate until the configured termination criteria are met:
     ///    - mutate current solution to produce a neighbor,
     ///    - evaluate neighbor,
     ///    - accept neighbor if it improves current quality.
@@ -139,7 +150,7 @@ where
 
         let (result, observers) = run_with_observers_in_worker(observers, move |context| {
             if !is_valid {
-                let message = "Invalid parameters: max_iterations must be > 0, mutation_probability must be in [0,1]".to_string();
+                let message = "Invalid parameters: termination_criteria must not be empty, mutation_probability must be in [0,1]".to_string();
                 context.emit(AlgorithmEvent::Error {
                     message: message.clone(),
                 });
@@ -155,6 +166,22 @@ where
             problem.evaluate(&mut current);
             let mut evaluations = 1;
 
+            let direction = if is_maximization {
+                ImprovementDirection::Maximize
+            } else {
+                ImprovementDirection::Minimize
+            };
+            let mut termination =
+                TerminationController::new(parameters.termination_criteria.clone(), direction);
+            termination.on_evaluations(evaluations);
+            termination.on_best_quality(
+                current
+                    .quality()
+                    .map(|q| q.quality_value())
+                    .unwrap_or(0.0),
+                0,
+            );
+
             let initial = current.quality_value();
             context.emit(AlgorithmEvent::GenerationCompleted {
                 generation: 0,
@@ -164,7 +191,9 @@ where
                 worst_fitness: initial,
             });
 
-            for iteration in 1..=parameters.max_iterations {
+            let mut iteration = 0;
+            while !termination.should_terminate() {
+                iteration += 1;
                 let mut neighbor = current.copy();
                 parameters
                     .mutation_operator
@@ -180,11 +209,21 @@ where
 
                 if improved {
                     current = neighbor;
+                    termination.on_best_quality(
+                        current
+                            .quality()
+                            .map(|q| q.quality_value())
+                            .unwrap_or(0.0),
+                        iteration,
+                    );
                     context.emit(AlgorithmEvent::BestSolutionUpdate {
                         generation: iteration,
                         solution: current.copy(),
                     });
                 }
+
+                termination.on_iteration(iteration);
+                termination.on_evaluations(evaluations);
 
                 if iteration % 10 == 0 || improved {
                     let fit = current.quality_value();
@@ -199,8 +238,9 @@ where
             }
 
             context.emit(AlgorithmEvent::End {
-                total_generations: parameters.max_iterations,
+                total_generations: iteration,
                 total_evaluations: evaluations,
+                termination_reason: termination.reason().cloned(),
             });
 
             let mut result = VectorSolutionSet::new();
@@ -216,10 +256,10 @@ where
     /// Validates algorithm parameters.
     ///
     /// Returns `true` when:
-    /// - `max_iterations > 0`
+    /// - `termination_criteria` is not empty
     /// - `mutation_probability` is in `[0.0, 1.0]`
     fn validate_parameters(&self) -> bool {
-        self.parameters.max_iterations > 0
+        !self.parameters.termination_criteria.is_empty()
             && self.parameters.mutation_probability >= 0.0
             && self.parameters.mutation_probability <= 1.0
     }

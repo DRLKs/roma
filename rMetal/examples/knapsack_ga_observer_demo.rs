@@ -1,6 +1,12 @@
 use std::path::PathBuf;
 
-use rmetal::algorithms::{Algorithm, GeneticAlgorithm, GeneticAlgorithmParameters};
+use rmetal::algorithms::{
+    Algorithm,
+    GeneticAlgorithm,
+    GeneticAlgorithmParameters,
+    TerminationCriteria,
+    TerminationCriterion,
+};
 use rmetal::observer::{ChartObserver, ConsoleObserver, Observable};
 use rmetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
 use rmetal::problem::KnapsackBuilder;
@@ -23,12 +29,12 @@ fn main() {
 
     let parameters = GeneticAlgorithmParameters::new(
         50,
-        40,
         0.85,
         0.08,
         SinglePointCrossover::new(),
         BitFlipMutation::new(),
         BinaryTournamentSelection::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(40)]),
     )
     .with_elite_size(1)
     .with_seed(seed);

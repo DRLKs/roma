@@ -410,6 +410,7 @@ where
             AlgorithmEvent::End {
                 total_generations,
                 total_evaluations,
+                ..
             } => {
                 self.finished_summary = Some((*total_generations, *total_evaluations));
                 if let Err(error) = self.generate_report() {
@@ -486,6 +487,7 @@ mod tests {
         observer.update(&AlgorithmEvent::<bool>::End {
             total_generations: 1,
             total_evaluations: 20,
+            termination_reason: None,
         });
 
         let report_path = observer.resolve_output_path().join("report.html");

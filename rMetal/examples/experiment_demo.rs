@@ -1,4 +1,12 @@
-use rmetal::algorithms::{Algorithm, GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing, HillClimbingParameters};
+use rmetal::algorithms::{
+    Algorithm,
+    GeneticAlgorithm,
+    GeneticAlgorithmParameters,
+    HillClimbing,
+    HillClimbingParameters,
+    TerminationCriteria,
+    TerminationCriterion,
+};
 use rmetal::experiment::{Experiment, Objective};
 use rmetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
 use rmetal::problem::{KnapsackBuilder, KnapsackProblem};
@@ -59,12 +67,12 @@ fn run_ga_once(seed: u64, instance: &'static str, cfg: GaConfig) -> f64 {
 
     let params = GeneticAlgorithmParameters::new(
         cfg.population,
-        cfg.generations,
         cfg.crossover_probability,
         cfg.mutation_probability,
         SinglePointCrossover::new(),
         BitFlipMutation::new(),
         BinaryTournamentSelection::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(cfg.generations)]),
     )
     .with_seed(seed)
     .with_elite_size(1);
@@ -79,9 +87,9 @@ fn run_hc_once(seed: u64, instance: &'static str, cfg: HcConfig) -> f64 {
     let problem = build_problem(instance);
 
     let params = HillClimbingParameters::new(
-        cfg.iterations,
         BitFlipMutation::new(),
         cfg.mutation_probability,
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(cfg.iterations)]),
     )
     .with_seed(seed);
 

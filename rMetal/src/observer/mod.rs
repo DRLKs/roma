@@ -9,6 +9,7 @@ pub use implementations::html_report_observer::HtmlReportObserver;
 
 
 use crate::solution::Solution;
+use crate::algorithms::termination::TerminationReason;
 
 /// Events that can be observed during algorithm execution
 #[derive(Debug, Clone)]
@@ -37,6 +38,7 @@ where
     End {
         total_generations: usize,
         total_evaluations: usize,
+        termination_reason: Option<TerminationReason>,
     },
     /// An error occurred during execution
     Error {

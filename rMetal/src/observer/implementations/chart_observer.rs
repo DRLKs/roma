@@ -400,6 +400,7 @@ mod tests {
         observer.update(&AlgorithmEvent::<bool>::End {
             total_generations: 1,
             total_evaluations: 10,
+            termination_reason: None,
         });
 
         let run_path = observer

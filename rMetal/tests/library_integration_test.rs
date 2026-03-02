@@ -1,4 +1,25 @@
-use rmetal::prelude::*;
+use rmetal::{
+    Algorithm,
+    Observable,
+    BinaryTournamentSelection,
+    BitFlipMutation,
+    ConsoleObserver,
+    GeneticAlgorithm,
+    GeneticAlgorithmParameters,
+    HillClimbing,
+    HillClimbingParameters,
+    KnapsackBuilder,
+    MultiObjectiveTournamentSelection,
+    NSGAII,
+    NSGAIIParameters,
+    PolynomialMutation,
+    SBXCrossover,
+    SinglePointCrossover,
+    SolutionSet,
+    TerminationCriteria,
+    TerminationCriterion,
+    ZDT1Problem,
+};
 
 #[test]
 fn ga_solves_knapsack_end_to_end_with_observer() {
@@ -10,12 +31,12 @@ fn ga_solves_knapsack_end_to_end_with_observer() {
 
     let parameters = GeneticAlgorithmParameters::new(
         20,
-        5,
         0.9,
         0.05,
         SinglePointCrossover::new(),
         BitFlipMutation::new(),
         BinaryTournamentSelection::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(5)]),
     )
     .with_elite_size(2)
     .with_seed(123)
@@ -39,7 +60,12 @@ fn hill_climbing_handles_empty_problem_edge_case() {
     // Edge case: a knapsack with zero items must not crash and should return a valid empty solution.
     let problem = KnapsackBuilder::new().with_capacity(100.0).build();
 
-    let parameters = HillClimbingParameters::new(5, BitFlipMutation::new(), 1.0).with_seed(7);
+    let parameters = HillClimbingParameters::new(
+        BitFlipMutation::new(),
+        1.0,
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(5)]),
+    )
+    .with_seed(7);
     let mut algorithm = HillClimbing::new(parameters, true);
 
     let result = algorithm.run(&problem);
@@ -57,12 +83,12 @@ fn nsga2_runs_on_minimum_valid_zdt1_dimension() {
 
     let parameters = NSGAIIParameters::new(
         16,
-        4,
         0.9,
         0.2,
         SBXCrossover::new_default(),
         PolynomialMutation::new_default(),
         MultiObjectiveTournamentSelection::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(4)]),
     )
     .with_seed(99);
 
@@ -94,12 +120,12 @@ fn ga_panics_with_invalid_parameters_edge_case() {
 
     let parameters = GeneticAlgorithmParameters::new(
         0,
-        5,
         0.8,
         0.1,
         SinglePointCrossover::new(),
         BitFlipMutation::new(),
         BinaryTournamentSelection::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(5)]),
     )
     .with_seed(1);
 

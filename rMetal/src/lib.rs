@@ -14,8 +14,14 @@ pub use algorithms::{
 	GeneticAlgorithmParameters,
 	HillClimbing,
 	HillClimbingParameters,
+	ImprovementDirection,
 	NSGAII,
 	NSGAIIParameters,
+	TerminationController,
+	TerminationCriteria,
+	TerminationCriterion,
+	TerminationReason,
+	TerminationState,
 };
 pub use operator::{
 	BitFlipMutation,
@@ -59,8 +65,13 @@ pub mod prelude {
 		GeneticAlgorithmParameters,
 		HillClimbing,
 		HillClimbingParameters,
+		ImprovementDirection,
 		NSGAII,
 		NSGAIIParameters,
+		TerminationController,
+		TerminationCriteria,
+		TerminationCriterion,
+		TerminationReason,
 	};
 
 	pub use crate::operator::{

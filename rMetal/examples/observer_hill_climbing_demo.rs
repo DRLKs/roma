@@ -1,6 +1,12 @@
 use std::path::PathBuf;
 
-use rmetal::algorithms::{Algorithm, HillClimbing, HillClimbingParameters};
+use rmetal::algorithms::{
+    Algorithm,
+    HillClimbing,
+    HillClimbingParameters,
+    TerminationCriteria,
+    TerminationCriterion,
+};
 use rmetal::observer::{ChartObserver, ConsoleObserver, Observable};
 use rmetal::operator::BitFlipMutation;
 use rmetal::problem::KnapsackBuilder;
@@ -17,8 +23,12 @@ fn main() {
         .add_item(41.0, 80.0)
         .build();
 
-    let parameters = HillClimbingParameters::new(120, BitFlipMutation::new(), 0.10)
-        .with_seed(seed);
+    let parameters = HillClimbingParameters::new(
+        BitFlipMutation::new(),
+        0.10,
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
+    )
+    .with_seed(seed);
     let mut algorithm = HillClimbing::new(parameters, true);
 
     algorithm.add_observer(Box::new(ConsoleObserver::new(true)));

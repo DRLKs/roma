@@ -1,4 +1,10 @@
-use rmetal::algorithms::{Algorithm, NSGAII, NSGAIIParameters};
+use rmetal::algorithms::{
+    Algorithm,
+    NSGAII,
+    NSGAIIParameters,
+    TerminationCriteria,
+    TerminationCriterion,
+};
 use rmetal::operator::{MultiObjectiveTournamentSelection, PolynomialMutation, SBXCrossover};
 use rmetal::problem::ZDT1Problem;
 use rmetal::solution_set::SolutionSet;
@@ -11,12 +17,12 @@ fn main() {
 
     let parameters = NSGAIIParameters::new(
         60,
-        40,
         0.9,
         1.0 / 30.0,
         SBXCrossover::new_default(),
         PolynomialMutation::new_default(),
         MultiObjectiveTournamentSelection::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(40)]),
     )
     .with_seed(seed);
 
