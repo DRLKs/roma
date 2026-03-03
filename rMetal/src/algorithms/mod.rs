@@ -1,6 +1,7 @@
 pub(crate) mod traits;
 pub(crate) mod implementations;
 pub(crate) mod termination;
+pub(crate) mod runtime;
 
 pub use traits::Algorithm;
 pub use implementations::genetic_algorithm::{GeneticAlgorithm, GeneticAlgorithmParameters};
@@ -14,4 +15,8 @@ pub use termination::{
 	TerminationCriterion,
 	TerminationReason,
 	TerminationState,
+};
+pub use runtime::{
+	ExecutionContext,
+	run_with_observers,
 };

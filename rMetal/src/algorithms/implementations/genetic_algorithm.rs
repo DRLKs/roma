@@ -1,11 +1,10 @@
 use crate::algorithms::termination::{
     ExecutionStateSnapshot,
     ImprovementDirection,
-    TerminationController,
     TerminationCriteria,
 };
 use crate::algorithms::traits::Algorithm;
-use crate::observer::runtime::{run_with_observers_in_worker, ExecutionContext};
+use crate::algorithms::runtime::{run_with_observers, ExecutionContext};
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::observer::AlgorithmEvent;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
@@ -144,18 +143,13 @@ where
         let mut evaluations = parameters.population_size;
         let mut snapshot_seq = 0u64;
 
-        let mut termination = TerminationController::new(
-            parameters.termination_criteria.clone(),
-            ImprovementDirection::Maximize,
-        );
-        let initial_snapshot =
-            Self::emit_generation_metrics(context, snapshot_seq, 0, evaluations, &population);
+        Self::emit_generation_metrics(&context, snapshot_seq, 0, evaluations, &population);
+        let mut should_terminate = context.should_terminate();
         snapshot_seq += 1;
-        termination.on_snapshot(&initial_snapshot);
-        Self::emit_best_solution_update(context, 0, &population);
+        Self::emit_best_solution_update(&context, 0, &population);
 
         let mut generation = 0;
-        while !termination.should_terminate() {
+        while !should_terminate {
             generation += 1;
             population = Self::next_generation(
                 parameters,
@@ -166,22 +160,22 @@ where
                 &mut evaluations,
             );
 
-            let snapshot = Self::emit_generation_metrics(
-                context,
+            Self::emit_generation_metrics(
+                &context,
                 snapshot_seq,
                 generation,
                 evaluations,
                 &population,
             );
+            should_terminate = context.should_terminate();
             snapshot_seq += 1;
-            termination.on_snapshot(&snapshot);
-            Self::emit_best_solution_update(context, generation, &population);
+            Self::emit_best_solution_update(&context, generation, &population);
         }
 
         context.emit(AlgorithmEvent::End {
             total_generations: generation,
             total_evaluations: evaluations,
-            termination_reason: termination.reason().cloned(),
+            termination_reason: context.termination_reason(),
         });
 
         VectorSolutionSet::from_vec(population)
@@ -410,13 +404,10 @@ where
         generation: usize,
         evaluations: usize,
         population: &[Solution<T>],
-    ) -> ExecutionStateSnapshot {
+    ) {
         let (best, avg, worst) = calculate_statistics(population);
         let snapshot = ExecutionStateSnapshot::new(seq_id, generation, evaluations, best, avg, worst);
-        context.emit(AlgorithmEvent::ExecutionStateUpdated {
-            state: snapshot.clone(),
-        });
-        snapshot
+        context.emit(AlgorithmEvent::ExecutionStateUpdated { state: snapshot });
     }
 
     fn emit_best_solution_update(
@@ -476,7 +467,11 @@ where
         let parameters = &self.parameters;
         let observers = std::mem::take(&mut self.observers);
 
-        let (result, observers) = run_with_observers_in_worker(observers, move |context| {
+        let (result, observers) = run_with_observers(
+            observers,
+            parameters.termination_criteria.clone(),
+            ImprovementDirection::Maximize,
+            move |context| {
             if !is_valid {
                 let error_msg = "Invalid parameters: population_size must be > 0, termination_criteria must not be empty, probabilities must be in [0, 1]".to_string();
                 context.emit(AlgorithmEvent::Error {

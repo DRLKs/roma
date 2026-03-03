@@ -33,5 +33,9 @@
     [ ] Más criterios de paradas.
     [ ] Operadores, que devuelvan información para quizás hacer más rápidas las evaluaciones de las soluciones, porque devolverán información sobre lo que ha cambiado de la solución
 
-[ ] 10. Ideas, Observadores y Criterios de paradas. 
-    [ ] Ambas estructuras almacenan información sobre el estado actual del algoritmo, quizás juntar esta información en una estructura más grande
+[X] 10. Ideas, Observadores y Criterios de paradas.  Practicamente 03/03/2026
+    [X] Ambas estructuras almacenan información sobre el estado actual del algoritmo, quizás juntar esta información en una estructura más grande
+
+[ ] 11. CSVs, JSON, YAML. Quiero que también se pueda añadir datos desde distintos tipos de archivos. Solo está implementado para CSVs, que de hecho es el que peor funciona para estos casos.
+
+[ ] 12. Creo que deberiamos quitar el evento BestSolutionEvent, con ExecutionSOlutionUpdate va perfe. Creo que no hace falta que añadamos más lógica al run.

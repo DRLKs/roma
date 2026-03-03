@@ -1,11 +1,10 @@
 use crate::algorithms::termination::{
     ExecutionStateSnapshot,
     ImprovementDirection,
-    TerminationController,
     TerminationCriteria,
 };
 use crate::algorithms::traits::Algorithm;
-use crate::observer::runtime::run_with_observers_in_worker;
+use crate::algorithms::runtime::run_with_observers;
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::observer::AlgorithmEvent;
 use crate::operator::traits::MutationOperator;
@@ -19,7 +18,6 @@ use crate::utils::random::{Random, seed_from_time};
 /// # Type Parameters
 /// - `T`: decision variable type of the solution.
 /// - `M`: mutation operator used to generate neighbor solutions.
-
 pub struct HillClimbingParameters<T, M>
 where
     T: Clone,
@@ -148,7 +146,11 @@ where
         let is_maximization = self.is_maximization;
         let observers = std::mem::take(&mut self.observers);
 
-        let (result, observers) = run_with_observers_in_worker(observers, move |context| {
+        let (result, observers) = run_with_observers(
+            observers,
+            parameters.termination_criteria.clone(),
+            get_improvement_direction(is_maximization),
+            move |context| {
             if !is_valid {
                 let message = "Invalid parameters: termination_criteria must not be empty, mutation_probability must be in [0,1]".to_string();
                 context.emit(AlgorithmEvent::Error {
@@ -167,20 +169,17 @@ where
             let mut evaluations = 1;
             let mut snapshot_seq = 0u64;
 
-            
-            let mut termination =
-                TerminationController::new(parameters.termination_criteria.clone(), get_improvement_direction(is_maximization));
             let initial = current.quality_value();
             let initial_snapshot =
                 ExecutionStateSnapshot::new(snapshot_seq, 0, evaluations, initial, initial, initial);
             snapshot_seq += 1;
             context.emit(AlgorithmEvent::ExecutionStateUpdated {
-                state: initial_snapshot.clone(),
+                state: initial_snapshot,
             });
-            termination.on_snapshot(&initial_snapshot);
+            let mut should_terminate = context.should_terminate();
 
             let mut iteration = 0;
-            while !termination.should_terminate() {
+            while !should_terminate {
                 iteration += 1;
                 let mut neighbor = current.copy();
                 parameters
@@ -203,31 +202,26 @@ where
                     });
                 }
 
-                if iteration % 10 == 0 || improved {
-                    let fit = current.quality_value();
-                    let snapshot = ExecutionStateSnapshot::new(
-                        snapshot_seq,
-                        iteration,
-                        evaluations,
-                        fit,
-                        fit,
-                        fit,
-                    );
-                    snapshot_seq += 1;
-                    context.emit(AlgorithmEvent::ExecutionStateUpdated {
-                        state: snapshot.clone(),
-                    });
-                    termination.on_snapshot(&snapshot);
-                } else {
-                    termination.on_iteration(iteration);
-                    termination.on_evaluations(evaluations);
-                }
+                let fit = current.quality_value();
+                let snapshot = ExecutionStateSnapshot::new(
+                    snapshot_seq,
+                    iteration,
+                    evaluations,
+                    fit,
+                    fit,
+                    fit,
+                );
+                snapshot_seq += 1;
+                context.emit(AlgorithmEvent::ExecutionStateUpdated {
+                    state: snapshot,
+                });
+                should_terminate = context.should_terminate();
             }
 
             context.emit(AlgorithmEvent::End {
                 total_generations: iteration,
                 total_evaluations: evaluations,
-                termination_reason: termination.reason().cloned(),
+                termination_reason: context.termination_reason(),
             });
 
             let mut result = VectorSolutionSet::new();

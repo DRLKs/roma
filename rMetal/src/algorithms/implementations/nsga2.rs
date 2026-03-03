@@ -1,11 +1,10 @@
 use crate::algorithms::termination::{
     ExecutionStateSnapshot,
     ImprovementDirection,
-    TerminationController,
     TerminationCriteria,
 };
 use crate::algorithms::traits::Algorithm;
-use crate::observer::runtime::run_with_observers_in_worker;
+use crate::algorithms::runtime::run_with_observers;
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::observer::AlgorithmEvent;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
@@ -118,7 +117,11 @@ where
         let parameters = &self.parameters;
         let observers = std::mem::take(&mut self.observers);
 
-        let (result, observers) = run_with_observers_in_worker(observers, move |context| {
+        let (result, observers) = run_with_observers(
+            observers,
+            parameters.termination_criteria.clone(),
+            ImprovementDirection::Minimize,
+            move |context| {
             if !is_valid {
                 let message = "Invalid parameters: population_size must be > 0, termination_criteria must not be empty, probabilities must be in [0,1]".to_string();
                 context.emit(AlgorithmEvent::Error {
@@ -144,11 +147,7 @@ where
             let mut evaluations = parameters.population_size;
             let mut snapshot_seq = 0u64;
 
-            let mut termination = TerminationController::new(
-                parameters.termination_criteria.clone(),
-                ImprovementDirection::Minimize,
-            );
-            // Para multiobjetivo, usar el promedio de la primera objetivo como "calidad"
+            // For multi-objective tracking, use objective(0) statistics as the scalar proxy.
             let initial_best = population.first().and_then(|s| s.get_objective(0)).unwrap_or(0.0);
 
             let initial_avg = if population.is_empty() {
@@ -169,12 +168,12 @@ where
             );
             snapshot_seq += 1;
             context.emit(AlgorithmEvent::ExecutionStateUpdated {
-                state: initial_snapshot.clone(),
+                state: initial_snapshot,
             });
-            termination.on_snapshot(&initial_snapshot);
+            let mut should_terminate = context.should_terminate();
 
             let mut generation = 0;
-            while !termination.should_terminate() {
+            while !should_terminate {
                 generation += 1;
                 let mut offspring = Vec::with_capacity(parameters.population_size);
 
@@ -239,15 +238,15 @@ where
                     ExecutionStateSnapshot::new(snapshot_seq, generation, evaluations, best, avg, worst);
                 snapshot_seq += 1;
                 context.emit(AlgorithmEvent::ExecutionStateUpdated {
-                    state: snapshot.clone(),
+                    state: snapshot,
                 });
-                termination.on_snapshot(&snapshot);
+                should_terminate = context.should_terminate();
             }
 
             context.emit(AlgorithmEvent::End {
                 total_generations: generation,
                 total_evaluations: evaluations,
-                termination_reason: termination.reason().cloned(),
+                termination_reason: context.termination_reason(),
             });
 
             VectorSolutionSet::from_vec(population)

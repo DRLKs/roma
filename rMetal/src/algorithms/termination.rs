@@ -1,19 +1,20 @@
 use std::time::{Duration, Instant};
 
-/// Enum que define diferentes criterios de parada para los algoritmos de optimización.
-/// Los algoritmos pueden terminar cuando se cumple cualquiera de estos criterios.
+/// Defines stopping criteria for optimization algorithms.
+///
+/// A run stops when any configured criterion is satisfied.
 #[derive(Clone, Debug)]
 pub enum TerminationCriterion {
-    /// Número máximo de iteraciones (generaciones, pasos, etc.)
+    /// Maximum number of iterations (generations, steps, etc.).
     MaxIterations(usize),
-    /// Número máximo de evaluaciones de la función objetivo
+    /// Maximum number of objective-function evaluations.
     MaxEvaluations(usize),
-    /// Convergencia: el algoritmo para cuando el cambio relativo en la mejor calidad
-    /// es menor que el umbral durante 'patience' iteraciones consecutivas
+    /// Convergence criterion: stop when the relative change in best quality
+    /// is below `threshold` for `patience` consecutive iterations.
     Convergence { threshold: f64, patience: usize },
-    /// Límite de tiempo de ejecución
+    /// Wall-clock time limit.
     TimeLimit(Duration),
-    /// La mejor solución no mejora durante 'patience' iteraciones
+    /// Stop when best quality does not improve for `patience` iterations.
     NoImprovement { patience: usize },
 }
 
@@ -80,13 +81,14 @@ impl ExecutionStateSnapshot {
     }
 }
 
-/// Estado interno para rastrear el progreso de los criterios de parada
+/// Internal state used to track stopping-criteria progress.
 #[derive(Clone, Debug)]
 pub struct TerminationState {
     pub start_time: Instant,
     pub current_iterations: usize,
     pub current_evaluations: usize,
-    pub best_quality_history: Vec<f64>, // Para convergencia y no mejora
+    /// Best-quality history used by convergence and no-improvement criteria.
+    pub best_quality_history: Vec<f64>,
     pub last_improvement_iteration: usize,
 }
 
@@ -156,7 +158,7 @@ impl TerminationState {
         }
     }
 
-    /// Actualiza el estado con la nueva mejor calidad encontrada
+    /// Updates state with a newly observed best quality value.
     pub fn update_best_quality(
         &mut self,
         new_quality: f64,
@@ -191,11 +193,18 @@ impl TerminationState {
                     let min_recent = recent.iter().cloned().fold(f64::INFINITY, f64::min);
                     let range = max_recent - min_recent;
                     let avg = recent.iter().sum::<f64>() / recent.len() as f64;
-                    range / avg.abs() < *threshold // Cambio relativo
+
+                    if avg.abs() <= f64::EPSILON {
+                        range <= *threshold
+                    } else {
+                        range / avg.abs() < *threshold
+                    }
                 }
             }
             TerminationCriterion::NoImprovement { patience } => {
-                self.current_iterations - self.last_improvement_iteration >= *patience
+                self.current_iterations
+                    .saturating_sub(self.last_improvement_iteration)
+                    >= *patience
             }
         }
     }
