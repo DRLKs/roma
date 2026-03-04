@@ -6,7 +6,6 @@ use crate::algorithms::termination::{
 use crate::algorithms::traits::Algorithm;
 use crate::algorithms::runtime::{run_with_observers, ExecutionContext};
 use crate::observer::traits::{AlgorithmObserver, Observable};
-use crate::observer::AlgorithmEvent;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
@@ -133,20 +132,15 @@ where
         problem: &(impl Problem<T> + Sync),
         context: &ExecutionContext<T>,
     ) -> VectorSolutionSet<T> {
-        context.emit(AlgorithmEvent::Start {
-            algorithm_name: "GeneticAlgorithm".to_string(),
-        });
+        context.start("GeneticAlgorithm");
 
         let run_seed = Self::resolve_seed(parameters);
         let mut init_rng = Random::new(Self::derive_seed(run_seed, 0));
         let mut population = Self::initialize_population(parameters, problem, &mut init_rng);
         let mut evaluations = parameters.population_size;
-        let mut snapshot_seq = 0u64;
 
-        Self::emit_generation_metrics(&context, snapshot_seq, 0, evaluations, &population);
+        Self::report_generation_progress(&context, 0, evaluations, &population);
         let mut should_terminate = context.should_terminate();
-        snapshot_seq += 1;
-        Self::emit_best_solution_update(&context, 0, &population);
 
         let mut generation = 0;
         while !should_terminate {
@@ -160,23 +154,16 @@ where
                 &mut evaluations,
             );
 
-            Self::emit_generation_metrics(
+            Self::report_generation_progress(
                 &context,
-                snapshot_seq,
                 generation,
                 evaluations,
                 &population,
             );
             should_terminate = context.should_terminate();
-            snapshot_seq += 1;
-            Self::emit_best_solution_update(&context, generation, &population);
         }
 
-        context.emit(AlgorithmEvent::End {
-            total_generations: generation,
-            total_evaluations: evaluations,
-            termination_reason: context.termination_reason(),
-        });
+        context.end(generation, evaluations);
 
         VectorSolutionSet::from_vec(population)
     }
@@ -398,33 +385,21 @@ where
         next_population.extend(elites);
     }
 
-    fn emit_generation_metrics(
+    fn report_generation_progress(
         context: &ExecutionContext<T>,
-        seq_id: u64,
         generation: usize,
         evaluations: usize,
         population: &[Solution<T>],
     ) {
-        let (best, avg, worst) = calculate_statistics(population);
-        let snapshot = ExecutionStateSnapshot::new(seq_id, generation, evaluations, best, avg, worst);
-        context.emit(AlgorithmEvent::ExecutionStateUpdated { state: snapshot });
-    }
-
-    fn emit_best_solution_update(
-        context: &ExecutionContext<T>,
-        generation: usize,
-        population: &[Solution<T>],
-    ) {
-        if let Some(best_solution) = population.iter().max_by(|a, b| {
+        let (_best, avg, worst) = calculate_statistics(population);
+        let best_solution = population.iter().max_by(|a, b| {
             a.quality_value()
                 .partial_cmp(&b.quality_value())
                 .unwrap_or(std::cmp::Ordering::Equal)
-        }) {
-            context.emit(AlgorithmEvent::BestSolutionUpdate {
-                generation,
-                solution: best_solution.copy(),
-            });
-        }
+        }).map(|solution| solution.copy()).expect("population should not be empty when reporting progress");
+
+        let snapshot = ExecutionStateSnapshot::new(0, generation, evaluations, best_solution, avg, worst);
+        context.report_progress(snapshot);
     }
 
     fn sort_population_desc(population: &mut [Solution<T>]) {
@@ -474,9 +449,7 @@ where
             move |context| {
             if !is_valid {
                 let error_msg = "Invalid parameters: population_size must be > 0, termination_criteria must not be empty, probabilities must be in [0, 1]".to_string();
-                context.emit(AlgorithmEvent::Error {
-                    message: error_msg.clone(),
-                });
+                context.error(error_msg.clone());
                 panic!("{}", error_msg);
             }
 

@@ -3,6 +3,7 @@ use crate::utils::chart::{ChartBuilder, Series};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::path::PathBuf;
 use crate::observer::AlgorithmEvent;
+use crate::solution::traits::QualityValue;
 
 /// Observer that generates charts showing algorithm progress
 pub struct ChartObserver {
@@ -276,11 +277,12 @@ impl ChartObserver {
     }
 }
 
-impl<T> AlgorithmObserver<T> for ChartObserver
+impl<T, Q> AlgorithmObserver<T, Q> for ChartObserver
 where
     T: Clone + Send + 'static,
+    Q: Clone + QualityValue + Send + 'static,
 {
-    fn update(&mut self, event: &AlgorithmEvent<T>) {
+    fn update(&mut self, event: &AlgorithmEvent<T, Q>) {
         match event {
             AlgorithmEvent::Start { algorithm_name } => {
                 println!("  ChartObserver: Monitoring algorithm '{}'", algorithm_name);
@@ -307,7 +309,7 @@ where
                 self.last_snapshot_seq = Some(state.seq_id);
                 self.generations.push(state.iteration);
                 self.evaluations.push(state.evaluations);
-                self.best_fitness_history.push(state.best_fitness);
+                self.best_fitness_history.push(state.best_solution.quality_value());
                 self.average_fitness_history.push(state.average_fitness);
                 self.worst_fitness_history.push(state.worst_fitness);
             }
@@ -348,6 +350,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::solution::Solution;
 
     #[test]
     fn creates_structured_run_directory_on_start() {
@@ -399,7 +402,11 @@ mod tests {
                 0,
                 1,
                 10,
-                1.0,
+                {
+                    let mut solution = Solution::<bool>::new(vec![true, false]);
+                    solution.set_quality(1.0);
+                    solution
+                },
                 0.8,
                 0.5,
             ),

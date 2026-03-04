@@ -23,14 +23,14 @@
     [X] Reemplazar la notificación de progreso por el uso de Closures (`FnMut`) pasados al Builder, o canales de paso de mensajes (`std::sync::mpsc`).
     [ ] Hemos añadido más información. Cuando el algoritmo termina, termina debido a una condición de parada, estoa condición de parada debe mostrarse en los charts o en lo repots o en ambos. Terminal, etc...
 
-[ ] 7. Memoria, requisitos
-    [ ] Desarrollar los casos de uso. Crear tus propios algoritmos y ejemplos o añadir el crate y usar los algoritmos de la biblioteca.
-    [ ] .....
+[X] 7. Memoria, requisitos
+    [X] Desarrollar los casos de uso. Crear tus propios algoritmos y ejemplos o añadir el crate y usar los algoritmos de la biblioteca.
+    [X] .....
 
 [X] 8. Reproducibilidad 28/02/26
 
 [ ] 9. Algoritmos y operadores, ideas de Gabriel
-    [ ] Más criterios de paradas.
+    [X] Más criterios de paradas.
     [ ] Operadores, que devuelvan información para quizás hacer más rápidas las evaluaciones de las soluciones, porque devolverán información sobre lo que ha cambiado de la solución
 
 [X] 10. Ideas, Observadores y Criterios de paradas.  Practicamente 03/03/2026
@@ -38,4 +38,6 @@
 
 [ ] 11. CSVs, JSON, YAML. Quiero que también se pueda añadir datos desde distintos tipos de archivos. Solo está implementado para CSVs, que de hecho es el que peor funciona para estos casos.
 
-[ ] 12. Creo que deberiamos quitar el evento BestSolutionEvent, con ExecutionSOlutionUpdate va perfe. Creo que no hace falta que añadamos más lógica al run.
+[ ] 12. Reestructurar el proyecto, ExecutionStateSnapshot no creo que deba estar en Termination.
+
+[ ] 13. Aunque sea duro decirlo, creo que debemos volver a mirar Solution. Para el multiobjetivo va bastante raro. Obtener la mejor solución es más aleatorio en estos casos que algo real. Se observa el primer objetivo, que quizás si estamos mirando Pareto tiene sentido, pero lo dudo enormemente

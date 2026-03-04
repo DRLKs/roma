@@ -6,7 +6,6 @@ use crate::algorithms::termination::{
 use crate::algorithms::traits::Algorithm;
 use crate::algorithms::runtime::run_with_observers;
 use crate::observer::traits::{AlgorithmObserver, Observable};
-use crate::observer::AlgorithmEvent;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
 use crate::solution::MultiObjectiveInfo;
@@ -70,7 +69,7 @@ where
 {
     parameters: NSGAIIParameters<C, M, Sel>,
     solution_set: Option<VectorSolutionSet<f64, MultiObjectiveInfo>>,
-    observers: Vec<Box<dyn AlgorithmObserver<f64>>>,
+    observers: Vec<Box<dyn AlgorithmObserver<f64, MultiObjectiveInfo>>>,
 }
 
 impl<C, M, Sel> NSGAII<C, M, Sel>
@@ -88,13 +87,13 @@ where
     }
 }
 
-impl<C, M, Sel> Observable<f64> for NSGAII<C, M, Sel>
+impl<C, M, Sel> Observable<f64, MultiObjectiveInfo> for NSGAII<C, M, Sel>
 where
     C: CrossoverOperator<f64, MultiObjectiveInfo>,
     M: MutationOperator<f64, MultiObjectiveInfo>,
     Sel: SelectionOperator<f64, MultiObjectiveInfo>,
 {
-    fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<f64>>) {
+    fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<f64, MultiObjectiveInfo>>) {
         self.observers.push(observer);
     }
 
@@ -124,15 +123,11 @@ where
             move |context| {
             if !is_valid {
                 let message = "Invalid parameters: population_size must be > 0, termination_criteria must not be empty, probabilities must be in [0,1]".to_string();
-                context.emit(AlgorithmEvent::Error {
-                    message: message.clone(),
-                });
+                context.error(message.clone());
                 panic!("{}", message);
             }
 
-            context.emit(AlgorithmEvent::Start {
-                algorithm_name: "NSGA-II".to_string(),
-            });
+            context.start("NSGA-II");
 
             let mut rng = Random::new(parameters.random_seed.unwrap_or_else(seed_from_time));
 
@@ -145,10 +140,12 @@ where
                 .collect();
 
             let mut evaluations = parameters.population_size;
-            let mut snapshot_seq = 0u64;
 
             // For multi-objective tracking, use objective(0) statistics as the scalar proxy.
-            let initial_best = population.first().and_then(|s| s.get_objective(0)).unwrap_or(0.0);
+            let initial_best_solution = population
+                .first()
+                .map(|solution| solution.copy())
+                .expect("population should not be empty when reporting progress");
 
             let initial_avg = if population.is_empty() {
                 0.0
@@ -158,18 +155,14 @@ where
             };
             let initial_worst = population.last().and_then(|s| s.get_objective(0)).unwrap_or(0.0);
 
-            let initial_snapshot = ExecutionStateSnapshot::new(
-                snapshot_seq,
+            context.report_progress(ExecutionStateSnapshot::new(
+                0,
                 0,
                 evaluations,
-                initial_best,
+                initial_best_solution,
                 initial_avg,
                 initial_worst,
-            );
-            snapshot_seq += 1;
-            context.emit(AlgorithmEvent::ExecutionStateUpdated {
-                state: initial_snapshot,
-            });
+            ));
             let mut should_terminate = context.should_terminate();
 
             let mut generation = 0;
@@ -212,10 +205,6 @@ where
                 });
                 population.truncate(parameters.population_size);
 
-                let best = population
-                    .first()
-                    .and_then(|s| s.get_objective(0))
-                    .unwrap_or(0.0);
                 let worst = population
                     .last()
                     .and_then(|s| s.get_objective(0))
@@ -234,20 +223,23 @@ where
                     }
                 };
 
-                let snapshot =
-                    ExecutionStateSnapshot::new(snapshot_seq, generation, evaluations, best, avg, worst);
-                snapshot_seq += 1;
-                context.emit(AlgorithmEvent::ExecutionStateUpdated {
-                    state: snapshot,
-                });
+                let best_solution = population
+                    .first()
+                    .map(|solution| solution.copy())
+                    .expect("population should not be empty when reporting progress");
+
+                context.report_progress(ExecutionStateSnapshot::new(
+                    0,
+                    generation,
+                    evaluations,
+                    best_solution,
+                    avg,
+                    worst,
+                ));
                 should_terminate = context.should_terminate();
             }
 
-            context.emit(AlgorithmEvent::End {
-                total_generations: generation,
-                total_evaluations: evaluations,
-                termination_reason: context.termination_reason(),
-            });
+            context.end(generation, evaluations);
 
             VectorSolutionSet::from_vec(population)
         });

@@ -5,6 +5,7 @@ use rmetal::algorithms::{
     TerminationCriteria,
     TerminationCriterion,
 };
+use rmetal::{ChartObserver, ConsoleObserver, Observable};
 use rmetal::operator::{MultiObjectiveTournamentSelection, PolynomialMutation, SBXCrossover};
 use rmetal::problem::ZDT1Problem;
 use rmetal::solution_set::SolutionSet;
@@ -27,6 +28,10 @@ fn main() {
     .with_seed(seed);
 
     let mut algorithm = NSGAII::new(parameters);
+    let observer = ConsoleObserver::new(true);
+    let observer2 = ChartObserver::new_default();
+    algorithm.add_observer(Box::new(observer));
+    algorithm.add_observer(Box::new(observer2));
     let result = algorithm.run(&problem);
 
     if let Some(best) = result.get(0) {

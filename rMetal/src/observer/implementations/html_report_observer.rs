@@ -9,6 +9,7 @@
 
 use crate::observer::traits::AlgorithmObserver;
 use crate::observer::AlgorithmEvent;
+use crate::solution::traits::QualityValue;
 use crate::utils::chart::{ChartBuilder, Series};
 use std::fmt::Debug;
 use std::fs::File;
@@ -26,7 +27,7 @@ struct GenerationMetrics {
 }
 
 #[derive(Clone, Debug)]
-struct BestUpdateSnapshot {
+struct BestSnapshot {
     generation: usize,
     quality: f64,
     variables_preview: String,
@@ -56,7 +57,7 @@ pub struct HtmlReportObserver {
     error_message: Option<String>,
     finished_summary: Option<(usize, usize)>,
     generations: Vec<GenerationMetrics>,
-    best_updates: Vec<BestUpdateSnapshot>,
+    best_snapshots: Vec<BestSnapshot>,
     last_snapshot_seq: Option<u64>,
 }
 
@@ -75,7 +76,7 @@ impl HtmlReportObserver {
             error_message: None,
             finished_summary: None,
             generations: Vec::new(),
-            best_updates: Vec::new(),
+            best_snapshots: Vec::new(),
             last_snapshot_seq: None,
         }
     }
@@ -248,14 +249,14 @@ impl HtmlReportObserver {
             .reduce(f64::max)
             .unwrap_or(0.0);
 
-        let best_solution_row = self.best_updates.last().map(|b| {
+        let best_solution_row = self.best_snapshots.last().map(|b| {
             format!(
                 "<tr><td>{}</td><td>{:.6}</td><td><code>{}</code></td></tr>",
                 b.generation,
                 b.quality,
                 Self::escape_html(&b.variables_preview)
             )
-        }).unwrap_or_else(|| "<tr><td colspan=\"3\">No best-solution update event captured.</td></tr>".to_string());
+        }).unwrap_or_else(|| "<tr><td colspan=\"3\">No solution snapshot captured.</td></tr>".to_string());
 
         let recent_generations: String = self
             .generations
@@ -271,7 +272,7 @@ impl HtmlReportObserver {
             .collect();
 
         let best_updates_rows: String = self
-            .best_updates
+            .best_snapshots
             .iter()
             .rev()
             .take(20)
@@ -339,7 +340,7 @@ impl HtmlReportObserver {
   </div>
 
   <div class="section">
-    <h2>Observed best-solution updates (latest 20)</h2>
+        <h2>Best-solution snapshots (latest 20)</h2>
     <table>
       <thead><tr><th>Generation</th><th>Quality</th><th>Variables preview</th></tr></thead>
       <tbody>{best_updates_rows}</tbody>
@@ -372,11 +373,12 @@ impl HtmlReportObserver {
     }
 }
 
-impl<T> AlgorithmObserver<T> for HtmlReportObserver
+impl<T, Q> AlgorithmObserver<T, Q> for HtmlReportObserver
 where
     T: Clone + Send + Debug + 'static,
+    Q: Clone + QualityValue + Send + 'static,
 {
-    fn update(&mut self, event: &AlgorithmEvent<T>) {
+    fn update(&mut self, event: &AlgorithmEvent<T, Q>) {
         match event {
             AlgorithmEvent::Start { algorithm_name } => {
                 self.algorithm_name = Some(algorithm_name.clone());
@@ -384,7 +386,7 @@ where
                 self.error_message = None;
                 self.finished_summary = None;
                 self.generations.clear();
-                self.best_updates.clear();
+                self.best_snapshots.clear();
                 self.last_snapshot_seq = None;
             }
             AlgorithmEvent::ExecutionStateUpdated { state } => {
@@ -398,16 +400,17 @@ where
                 self.generations.push(GenerationMetrics {
                     generation: state.iteration,
                     evaluations: state.evaluations,
-                    best: state.best_fitness,
+                    best: state.best_solution.quality_value(),
                     average: state.average_fitness,
                     worst: state.worst_fitness,
                 });
-            }
-            AlgorithmEvent::BestSolutionUpdate { generation, solution } => {
-                let preview = Self::truncate_preview(format!("{:?}", solution.variables()), 220);
-                self.best_updates.push(BestUpdateSnapshot {
-                    generation: *generation,
-                    quality: solution.quality_value(),
+                let preview = Self::truncate_preview(
+                    format!("{:?}", state.best_solution.variables()),
+                    220,
+                );
+                self.best_snapshots.push(BestSnapshot {
+                    generation: state.iteration,
+                    quality: state.best_solution.quality_value(),
                     variables_preview: preview,
                 });
             }
@@ -478,17 +481,14 @@ mod tests {
                 0,
                 1,
                 20,
-                10.0,
+                {
+                    let mut solution = Solution::<bool>::new(vec![true, false, true]);
+                    solution.set_quality(10.0);
+                    solution
+                },
                 7.0,
                 3.0,
             ),
-        });
-
-        let mut solution = Solution::<bool>::new(vec![true, false, true]);
-        solution.set_quality(10.0);
-        observer.update(&AlgorithmEvent::<bool>::BestSolutionUpdate {
-            generation: 1,
-            solution,
         });
 
         observer.update(&AlgorithmEvent::<bool>::End {

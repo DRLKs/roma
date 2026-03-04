@@ -6,7 +6,6 @@ use crate::algorithms::termination::{
 use crate::algorithms::traits::Algorithm;
 use crate::algorithms::runtime::run_with_observers;
 use crate::observer::traits::{AlgorithmObserver, Observable};
-use crate::observer::AlgorithmEvent;
 use crate::operator::traits::MutationOperator;
 use crate::problem::traits::Problem;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
@@ -153,29 +152,26 @@ where
             move |context| {
             if !is_valid {
                 let message = "Invalid parameters: termination_criteria must not be empty, mutation_probability must be in [0,1]".to_string();
-                context.emit(AlgorithmEvent::Error {
-                    message: message.clone(),
-                });
+                context.error(message.clone());
                 panic!("{}", message);
             }
 
-            context.emit(AlgorithmEvent::Start {
-                algorithm_name: "HillClimbing".to_string(),
-            });
+            context.start("HillClimbing");
 
             let mut rng = Random::new(parameters.random_seed.unwrap_or_else(seed_from_time));
             let mut current = problem.create_solution(&mut rng);
             problem.evaluate(&mut current);
             let mut evaluations = 1;
-            let mut snapshot_seq = 0u64;
-
             let initial = current.quality_value();
-            let initial_snapshot =
-                ExecutionStateSnapshot::new(snapshot_seq, 0, evaluations, initial, initial, initial);
-            snapshot_seq += 1;
-            context.emit(AlgorithmEvent::ExecutionStateUpdated {
-                state: initial_snapshot,
-            });
+
+            context.report_progress(ExecutionStateSnapshot::new(
+                0,
+                0,
+                evaluations,
+                current.copy(),
+                initial,
+                initial,
+            ));
             let mut should_terminate = context.should_terminate();
 
             let mut iteration = 0;
@@ -196,33 +192,21 @@ where
 
                 if improved {
                     current = neighbor;
-                    context.emit(AlgorithmEvent::BestSolutionUpdate {
-                        generation: iteration,
-                        solution: current.copy(),
-                    });
                 }
 
                 let fit = current.quality_value();
-                let snapshot = ExecutionStateSnapshot::new(
-                    snapshot_seq,
+                context.report_progress(ExecutionStateSnapshot::new(
+                    0,
                     iteration,
                     evaluations,
+                    current.copy(),
                     fit,
                     fit,
-                    fit,
-                );
-                snapshot_seq += 1;
-                context.emit(AlgorithmEvent::ExecutionStateUpdated {
-                    state: snapshot,
-                });
+                ));
                 should_terminate = context.should_terminate();
             }
 
-            context.emit(AlgorithmEvent::End {
-                total_generations: iteration,
-                total_evaluations: evaluations,
-                termination_reason: context.termination_reason(),
-            });
+            context.end(iteration, evaluations);
 
             let mut result = VectorSolutionSet::new();
             result.add_solution(current);

@@ -1,5 +1,6 @@
 use crate::observer::AlgorithmEvent;
 use crate::observer::traits::{AlgorithmObserver};
+use crate::solution::traits::QualityValue;
 
 /// Simple console observer that prints algorithm progress to stdout
 pub struct ConsoleObserver {
@@ -18,11 +19,12 @@ impl ConsoleObserver {
     }
 }
 
-impl<T> AlgorithmObserver<T> for ConsoleObserver
+impl<T, Q> AlgorithmObserver<T, Q> for ConsoleObserver
 where
     T: Clone + Send + 'static,
+    Q: Clone + QualityValue + Send + 'static,
 {
-    fn update(&mut self, event: &AlgorithmEvent<T>) {
+    fn update(&mut self, event: &AlgorithmEvent<T, Q>) {
         match event {
             AlgorithmEvent::Start { algorithm_name } => {
                 println!("  Starting algorithm: {}", algorithm_name);
@@ -41,18 +43,9 @@ where
                         "Generation {}: Evaluations={}, Best={:.4}, Avg={:.4}, Worst={:.4}",
                         state.iteration,
                         state.evaluations,
-                        state.best_fitness,
+                        state.best_solution.quality_value(),
                         state.average_fitness,
                         state.worst_fitness
-                    );
-                }
-            }
-            AlgorithmEvent::BestSolutionUpdate { generation, solution } => {
-                if self.verbose {
-                    println!(
-                        "  New best solution found at generation {}: fitness={:.4}",
-                        generation,
-                        solution.quality_value()
                     );
                 }
             }
