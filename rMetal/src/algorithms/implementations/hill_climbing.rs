@@ -171,6 +171,7 @@ where
                 current.copy(),
                 initial,
                 initial,
+                initial,
             ));
             let mut should_terminate = context.should_terminate();
 
@@ -200,6 +201,7 @@ where
                     iteration,
                     evaluations,
                     current.copy(),
+                    fit,
                     fit,
                     fit,
                 ));

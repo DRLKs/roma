@@ -1,5 +1,4 @@
 use std::time::{Duration, Instant};
-use crate::solution::traits::{QualityValue, ScalarQuality};
 use crate::solution::Solution;
 
 /// Defines stopping criteria for optimization algorithms.
@@ -54,15 +53,17 @@ pub enum TerminationReason {
 /// Shared execution snapshot emitted by algorithms and consumed by
 /// termination logic/observers.
 #[derive(Clone, Debug)]
-pub struct ExecutionStateSnapshot<T, Q = ScalarQuality>
+pub struct ExecutionStateSnapshot<T, Q = f64>
 where
     T: Clone,
-    Q: Clone + QualityValue,
+    Q: Clone,
 {
     pub seq_id: u64,
     pub iteration: usize,
     pub evaluations: usize,
     pub best_solution: Solution<T, Q>,
+    /// Cached scalar metric for termination/monitoring.
+    pub best_fitness: f64,
     pub average_fitness: f64,
     pub worst_fitness: f64,
 }
@@ -70,13 +71,14 @@ where
 impl<T, Q> ExecutionStateSnapshot<T, Q>
 where
     T: Clone,
-    Q: Clone + QualityValue,
+    Q: Clone,
 {
     pub fn new(
         seq_id: u64,
         iteration: usize,
         evaluations: usize,
         best_solution: Solution<T, Q>,
+        best_fitness: f64,
         average_fitness: f64,
         worst_fitness: f64,
     ) -> Self {
@@ -85,13 +87,10 @@ where
             iteration,
             evaluations,
             best_solution,
+            best_fitness,
             average_fitness,
             worst_fitness,
         }
-    }
-
-    pub fn best_quality_value(&self) -> f64 {
-        self.best_solution.quality_value()
     }
 }
 
@@ -143,11 +142,11 @@ impl TerminationController {
     pub fn on_snapshot<T, Q>(&mut self, snapshot: &ExecutionStateSnapshot<T, Q>)
     where
         T: Clone,
-        Q: Clone + QualityValue,
+        Q: Clone,
     {
         self.on_iteration(snapshot.iteration);
         self.on_evaluations(snapshot.evaluations);
-        self.on_best_quality(snapshot.best_quality_value(), snapshot.iteration);
+        self.on_best_quality(snapshot.best_fitness, snapshot.iteration);
     }
 
     pub fn should_terminate(&mut self) -> bool {

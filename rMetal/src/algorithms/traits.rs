@@ -1,15 +1,15 @@
 use crate::problem::traits::Problem;
 use crate::solution_set::traits::SolutionSet;
-use crate::solution::traits::{QualityValue, ScalarQuality};
+use crate::solution::traits::Dominance;
 
 /// Trait that defines the basic interface for all optimization algorithms.
 /// 
 /// # Type Parameters
 /// * `T` - Type of the solution variables
-pub trait Algorithm<T, Q = ScalarQuality>
+pub trait Algorithm<T, Q = f64>
 where
     T: Clone,
-    Q: Clone + Default + QualityValue,
+    Q: Clone + Default + Dominance,
 {
     type SolutionSet: SolutionSet<T, Q>;
 

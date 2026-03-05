@@ -1,5 +1,5 @@
 use crate::operator::traits::{Operator, SelectionOperator};
-use crate::solution::MultiObjectiveInfo;
+use crate::solution::ParetoCrowdingDistanceQuality;
 use crate::utils::random::Random;
 use crate::solution::Solution;
 
@@ -30,8 +30,8 @@ impl Operator for MultiObjectiveTournamentSelection {
     }
 }
 
-impl SelectionOperator<f64, MultiObjectiveInfo> for MultiObjectiveTournamentSelection {
-    fn execute<'a>(&self, population: &'a [Solution<f64, MultiObjectiveInfo>], rng: &mut Random) -> &'a Solution<f64, MultiObjectiveInfo> {
+impl SelectionOperator<f64, ParetoCrowdingDistanceQuality> for MultiObjectiveTournamentSelection {
+    fn execute<'a>(&self, population: &'a [Solution<f64, ParetoCrowdingDistanceQuality>], rng: &mut Random) -> &'a Solution<f64, ParetoCrowdingDistanceQuality> {
         if population.is_empty() {
             panic!("Cannot select from empty population");
         }
@@ -104,7 +104,7 @@ mod tests {
     fn test_selection_from_empty_population() {
         let selection = MultiObjectiveTournamentSelection::new();
         let mut rng = Random::new(42);
-        let population: Vec<Solution<f64, MultiObjectiveInfo>> = vec![];
+        let population: Vec<Solution<f64, ParetoCrowdingDistanceQuality>> = vec![];
         selection.execute(&population, &mut rng);
     }
 

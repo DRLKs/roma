@@ -1,7 +1,7 @@
 use crate::problem::traits::Problem;
-use crate::solution::implementations::real_multiple_objective::MultiObjectiveRealSolutionBuilder;
+use crate::solution::implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
 use crate::solution::Solution;
-use crate::solution::traits::MultiObjectiveInfo;
+use crate::solution::traits::ParetoCrowdingDistanceQuality;
 use crate::utils::random::Random;
 
 const DEFAULT_NUMBER_OF_VARIABLES: usize = 30;
@@ -61,12 +61,12 @@ impl ZDT1Problem {
     }
 }
 
-impl Problem<f64, MultiObjectiveInfo> for ZDT1Problem {
+impl Problem<f64, ParetoCrowdingDistanceQuality> for ZDT1Problem {
     fn new() -> Self {
         Self::new_default()
     }
 
-    fn evaluate(&self, solution: &mut Solution<f64, MultiObjectiveInfo>) {
+    fn evaluate(&self, solution: &mut Solution<f64, ParetoCrowdingDistanceQuality>) {
         let variables = solution.variables();
         let objectives = self.evaluate_objectives(variables);
         solution.set_objectives(objectives);
@@ -80,7 +80,7 @@ impl Problem<f64, MultiObjectiveInfo> for ZDT1Problem {
         self.description.clone()
     }
 
-    fn create_solution(&self, _rng: &mut Random) -> Solution<f64, MultiObjectiveInfo> {
+    fn create_solution(&self, _rng: &mut Random) -> Solution<f64, ParetoCrowdingDistanceQuality> {
         let variables: Vec<f64> = (0..self.number_of_variables)
             .map(|_| _rng.next_f64())
             .collect();

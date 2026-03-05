@@ -398,7 +398,9 @@ where
                 .unwrap_or(std::cmp::Ordering::Equal)
         }).map(|solution| solution.copy()).expect("population should not be empty when reporting progress");
 
-        let snapshot = ExecutionStateSnapshot::new(0, generation, evaluations, best_solution, avg, worst);
+        let best_fitness = best_solution.quality_value();
+
+        let snapshot = ExecutionStateSnapshot::new(0, generation, evaluations, best_solution, best_fitness, avg, worst);
         context.report_progress(snapshot);
     }
 

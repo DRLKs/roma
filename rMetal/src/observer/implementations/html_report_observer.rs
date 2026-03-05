@@ -9,7 +9,6 @@
 
 use crate::observer::traits::AlgorithmObserver;
 use crate::observer::AlgorithmEvent;
-use crate::solution::traits::QualityValue;
 use crate::utils::chart::{ChartBuilder, Series};
 use std::fmt::Debug;
 use std::fs::File;
@@ -376,7 +375,7 @@ impl HtmlReportObserver {
 impl<T, Q> AlgorithmObserver<T, Q> for HtmlReportObserver
 where
     T: Clone + Send + Debug + 'static,
-    Q: Clone + QualityValue + Send + 'static,
+    Q: Clone + Send + 'static,
 {
     fn update(&mut self, event: &AlgorithmEvent<T, Q>) {
         match event {
@@ -400,7 +399,7 @@ where
                 self.generations.push(GenerationMetrics {
                     generation: state.iteration,
                     evaluations: state.evaluations,
-                    best: state.best_solution.quality_value(),
+                    best: state.best_fitness,
                     average: state.average_fitness,
                     worst: state.worst_fitness,
                 });
@@ -410,7 +409,7 @@ where
                 );
                 self.best_snapshots.push(BestSnapshot {
                     generation: state.iteration,
-                    quality: state.best_solution.quality_value(),
+                    quality: state.best_fitness,
                     variables_preview: preview,
                 });
             }
@@ -486,6 +485,7 @@ mod tests {
                     solution.set_quality(10.0);
                     solution
                 },
+                10.0,
                 7.0,
                 3.0,
             ),

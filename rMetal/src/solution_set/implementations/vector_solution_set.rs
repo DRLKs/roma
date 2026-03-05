@@ -1,9 +1,9 @@
 use crate::solution::Solution;
-use crate::solution::traits::{QualityValue, ScalarQuality};
+use crate::solution::traits::{Dominance};
 use crate::solution_set::traits::SolutionSet;
 
 #[derive(Clone)]
-pub struct VectorSolutionSet<T, Q = ScalarQuality>
+pub struct VectorSolutionSet<T, Q = f64>
 where
     T: Clone,
     Q: Clone,
@@ -32,7 +32,7 @@ where
 impl<T, Q> SolutionSet<T, Q> for VectorSolutionSet<T, Q>
 where
     T: Clone,
-    Q: Clone + QualityValue,
+    Q: Clone + Dominance,
 {
     fn solutions(&self) -> &Vec<Solution<T, Q>> {
         &self.solutions
@@ -86,6 +86,6 @@ mod test {
 
         assert!(!solution_set.is_empty());
         assert_eq!(solution_set.solutions().len(), 1);
-        assert_eq!(solution_set.best_solution().unwrap().quality_value(), 10.0);
+        assert_eq!(solution_set.best_solution().unwrap().quality(), Some(&10.0));
     }
 }

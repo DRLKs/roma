@@ -1,13 +1,12 @@
 use crate::solution::Solution;
-use crate::solution::traits::{QualityValue, ScalarQuality};
 use crate::utils::random::Random;
 
 /// Trait that defines the basic interface for optimization problems.
 /// * `T` - Type of the solution variables
-pub trait Problem<T, Q = ScalarQuality>
+pub trait Problem<T, Q = f64>
 where
     T: Clone,
-    Q: Clone + Default + QualityValue,
+    Q: Clone + Default,
 {
     fn new() -> Self;
 

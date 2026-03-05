@@ -3,7 +3,6 @@ use crate::utils::chart::{ChartBuilder, Series};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::path::PathBuf;
 use crate::observer::AlgorithmEvent;
-use crate::solution::traits::QualityValue;
 
 /// Observer that generates charts showing algorithm progress
 pub struct ChartObserver {
@@ -280,7 +279,7 @@ impl ChartObserver {
 impl<T, Q> AlgorithmObserver<T, Q> for ChartObserver
 where
     T: Clone + Send + 'static,
-    Q: Clone + QualityValue + Send + 'static,
+    Q: Clone + Send + 'static,
 {
     fn update(&mut self, event: &AlgorithmEvent<T, Q>) {
         match event {
@@ -309,7 +308,7 @@ where
                 self.last_snapshot_seq = Some(state.seq_id);
                 self.generations.push(state.iteration);
                 self.evaluations.push(state.evaluations);
-                self.best_fitness_history.push(state.best_solution.quality_value());
+                self.best_fitness_history.push(state.best_fitness);
                 self.average_fitness_history.push(state.average_fitness);
                 self.worst_fitness_history.push(state.worst_fitness);
             }
@@ -407,6 +406,7 @@ mod tests {
                     solution.set_quality(1.0);
                     solution
                 },
+                1.0,
                 0.8,
                 0.5,
             ),

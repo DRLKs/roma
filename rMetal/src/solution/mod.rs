@@ -6,31 +6,45 @@
 pub(crate) mod traits;
 pub(crate) mod implementations;
 
-use crate::solution::traits::{QualityValue, ScalarQuality};
 
-pub use traits::MultiObjectiveInfo;
+pub use traits::ParetoCrowdingDistanceQuality;
+pub use traits::Dominance;
+pub use traits::ScalarDominanceDirection;
+pub use traits::scalar_dominance_direction;
+pub use traits::set_scalar_dominance_direction;
 pub use implementations::binary_solution::BinarySolutionBuilder;
 pub use implementations::real_solution::RealSolutionBuilder;
-pub use implementations::real_multiple_objective::MultiObjectiveRealSolutionBuilder;
+pub use implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
+pub use implementations::pareto_crowding_solution::MultiObjectiveVectorRealSolutionBuilder;
 pub use implementations::string_solution::StringSolutionBuilder;
-
 
 /// Generic optimization solution.
 ///
 /// # Type Parameters
 /// - `T`: variable type.
-/// - `Q`: quality payload type.
+/// - `Q`: quality payload type (defaults to `f64`).
+///
+/// # Notes
+/// This type is intentionally generic over `Q` so algorithms can decide how to
+/// store fitness/quality information:
+/// - single-objective: `f64` (default)
+/// - multi-objective with rank/crowding metadata: `ParetoCrowdingDistanceQuality`
+/// - custom metadata-rich payloads
 #[derive(Clone, Debug)]
-pub struct Solution<T, Q = ScalarQuality> {
+pub struct Solution<T, Q = f64> {
     pub variables: Vec<T>,
-    /// Optional quality payload.
+    /// Optional cached quality payload.
     ///
-    /// For scalar optimization this stores quality (`f64`).
-    /// For multi-objective optimization this stores `MultiObjectiveInfo`.
+    /// This value is expected to be updated by problem evaluation and invalidated
+    /// whenever variables change.
+    /// For scalar optimization this is usually `f64`.
+    /// For vector-based multi-objective optimization this can be `Vec<f64>`.
+    /// For metadata-rich workflows this can be a custom type.
     pub quality: Option<Q>,
 }
 
 impl<T, Q> Solution<T, Q> {
+    /// Creates a solution with variables and no quality assigned.
     pub fn new(variables: Vec<T>) -> Self {
         Self {
             variables,
@@ -38,10 +52,12 @@ impl<T, Q> Solution<T, Q> {
         }
     }
 
+    /// Returns an immutable view of decision variables.
     pub fn variables(&self) -> &[T] {
         &self.variables
     }
 
+    /// Returns a mutable view of decision variables.
     pub fn variables_mut(&mut self) -> &mut [T] {
         &mut self.variables
     }
@@ -88,28 +104,34 @@ impl<T, Q> Solution<T, Q> {
         self.quality.is_some()
     }
 
-    /// Clears quality payload.
-    pub fn clear_quality(&mut self) {
-        self.quality = None;
-    }
-
+    /// Invalidates the quality cache.
     pub fn invalidate(&mut self) {
-        self.clear_quality();
+        self.quality = None;
     }
 }
 
 impl<T, Q> Solution<T, Q>
 where
-    Q: QualityValue,
+    Q: traits::Dominance,
 {
-    /// Returns a scalar proxy value from the quality state.
+    /// Returns `true` when this solution dominates `other` according to
+    /// the quality-cache dominance semantics.
     ///
-    /// If the quality payload is `None`, this method returns `0.0`.
+    /// If any quality cache is missing, returns `false`.
+    pub fn dominates(&self, other: &Self) -> bool {
+        match (&self.quality, &other.quality) {
+            (Some(a), Some(b)) => a.dominates(b),
+            _ => false,
+        }
+    }
+}
+
+impl<T> Solution<T, f64> {
+    /// Returns the scalar quality value.
+    ///
+    /// If the quality cache is missing, this method returns `0.0`.
     pub fn quality_value(&self) -> f64 {
-        self.quality
-            .as_ref()
-            .map(|o| o.quality_value())
-            .unwrap_or(0.0)
+        self.quality.unwrap_or(0.0)
     }
 }
 
@@ -152,7 +174,7 @@ mod tests {
         assert!(s.has_quality());
         assert_eq!(s.quality().copied(), Some(4.0));
 
-        s.clear_quality();
+        s.invalidate();
         assert!(!s.has_quality());
         assert_eq!(s.quality(), None);
     }

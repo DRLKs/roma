@@ -8,15 +8,15 @@ use crate::algorithms::runtime::run_with_observers;
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
-use crate::solution::MultiObjectiveInfo;
+use crate::solution::ParetoCrowdingDistanceQuality;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::utils::random::{seed_from_time, Random};
 
 pub struct NSGAIIParameters<C, M, Sel>
 where
-    C: CrossoverOperator<f64, MultiObjectiveInfo>,
-    M: MutationOperator<f64, MultiObjectiveInfo>,
-    Sel: SelectionOperator<f64, MultiObjectiveInfo>,
+    C: CrossoverOperator<f64, ParetoCrowdingDistanceQuality>,
+    M: MutationOperator<f64, ParetoCrowdingDistanceQuality>,
+    Sel: SelectionOperator<f64, ParetoCrowdingDistanceQuality>,
 {
     pub population_size: usize,
     pub crossover_probability: f64,
@@ -30,9 +30,9 @@ where
 
 impl<C, M, Sel> NSGAIIParameters<C, M, Sel>
 where
-    C: CrossoverOperator<f64, MultiObjectiveInfo>,
-    M: MutationOperator<f64, MultiObjectiveInfo>,
-    Sel: SelectionOperator<f64, MultiObjectiveInfo>,
+    C: CrossoverOperator<f64, ParetoCrowdingDistanceQuality>,
+    M: MutationOperator<f64, ParetoCrowdingDistanceQuality>,
+    Sel: SelectionOperator<f64, ParetoCrowdingDistanceQuality>,
 {
     pub fn new(
         population_size: usize,
@@ -63,20 +63,20 @@ where
 
 pub struct NSGAII<C, M, Sel>
 where
-    C: CrossoverOperator<f64, MultiObjectiveInfo>,
-    M: MutationOperator<f64, MultiObjectiveInfo>,
-    Sel: SelectionOperator<f64, MultiObjectiveInfo>,
+    C: CrossoverOperator<f64, ParetoCrowdingDistanceQuality>,
+    M: MutationOperator<f64, ParetoCrowdingDistanceQuality>,
+    Sel: SelectionOperator<f64, ParetoCrowdingDistanceQuality>,
 {
     parameters: NSGAIIParameters<C, M, Sel>,
-    solution_set: Option<VectorSolutionSet<f64, MultiObjectiveInfo>>,
-    observers: Vec<Box<dyn AlgorithmObserver<f64, MultiObjectiveInfo>>>,
+    solution_set: Option<VectorSolutionSet<f64, ParetoCrowdingDistanceQuality>>,
+    observers: Vec<Box<dyn AlgorithmObserver<f64, ParetoCrowdingDistanceQuality>>>,
 }
 
 impl<C, M, Sel> NSGAII<C, M, Sel>
 where
-    C: CrossoverOperator<f64, MultiObjectiveInfo>,
-    M: MutationOperator<f64, MultiObjectiveInfo>,
-    Sel: SelectionOperator<f64, MultiObjectiveInfo>,
+    C: CrossoverOperator<f64, ParetoCrowdingDistanceQuality>,
+    M: MutationOperator<f64, ParetoCrowdingDistanceQuality>,
+    Sel: SelectionOperator<f64, ParetoCrowdingDistanceQuality>,
 {
     pub fn new(parameters: NSGAIIParameters<C, M, Sel>) -> Self {
         Self {
@@ -87,13 +87,13 @@ where
     }
 }
 
-impl<C, M, Sel> Observable<f64, MultiObjectiveInfo> for NSGAII<C, M, Sel>
+impl<C, M, Sel> Observable<f64, ParetoCrowdingDistanceQuality> for NSGAII<C, M, Sel>
 where
-    C: CrossoverOperator<f64, MultiObjectiveInfo>,
-    M: MutationOperator<f64, MultiObjectiveInfo>,
-    Sel: SelectionOperator<f64, MultiObjectiveInfo>,
+    C: CrossoverOperator<f64, ParetoCrowdingDistanceQuality>,
+    M: MutationOperator<f64, ParetoCrowdingDistanceQuality>,
+    Sel: SelectionOperator<f64, ParetoCrowdingDistanceQuality>,
 {
-    fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<f64, MultiObjectiveInfo>>) {
+    fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<f64, ParetoCrowdingDistanceQuality>>) {
         self.observers.push(observer);
     }
 
@@ -102,16 +102,16 @@ where
     }
 }
 
-impl<C, M, Sel> Algorithm<f64, MultiObjectiveInfo> for NSGAII<C, M, Sel>
+impl<C, M, Sel> Algorithm<f64, ParetoCrowdingDistanceQuality> for NSGAII<C, M, Sel>
 where
-    C: CrossoverOperator<f64, MultiObjectiveInfo>,
-    M: MutationOperator<f64, MultiObjectiveInfo>,
-    Sel: SelectionOperator<f64, MultiObjectiveInfo>,
+    C: CrossoverOperator<f64, ParetoCrowdingDistanceQuality>,
+    M: MutationOperator<f64, ParetoCrowdingDistanceQuality>,
+    Sel: SelectionOperator<f64, ParetoCrowdingDistanceQuality>,
 {
-    type SolutionSet = VectorSolutionSet<f64, MultiObjectiveInfo>;
+    type SolutionSet = VectorSolutionSet<f64, ParetoCrowdingDistanceQuality>;
     type Parameters = NSGAIIParameters<C, M, Sel>;
 
-    fn run(&mut self, problem: &(impl Problem<f64, MultiObjectiveInfo> + Sync)) -> Self::SolutionSet {
+    fn run(&mut self, problem: &(impl Problem<f64, ParetoCrowdingDistanceQuality> + Sync)) -> Self::SolutionSet {
         let is_valid = self.validate_parameters();
         let parameters = &self.parameters;
         let observers = std::mem::take(&mut self.observers);
@@ -153,6 +153,7 @@ where
                 let values: Vec<f64> = population.iter().filter_map(|s| s.get_objective(0)).collect();
                 values.iter().sum::<f64>() / values.len() as f64
             };
+            let initial_best = initial_best_solution.get_objective(0).unwrap_or(0.0);
             let initial_worst = population.last().and_then(|s| s.get_objective(0)).unwrap_or(0.0);
 
             context.report_progress(ExecutionStateSnapshot::new(
@@ -160,6 +161,7 @@ where
                 0,
                 evaluations,
                 initial_best_solution,
+                initial_best,
                 initial_avg,
                 initial_worst,
             ));
@@ -227,12 +229,14 @@ where
                     .first()
                     .map(|solution| solution.copy())
                     .expect("population should not be empty when reporting progress");
+                let best = best_solution.get_objective(0).unwrap_or(0.0);
 
                 context.report_progress(ExecutionStateSnapshot::new(
                     0,
                     generation,
                     evaluations,
                     best_solution,
+                    best,
                     avg,
                     worst,
                 ));

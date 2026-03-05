@@ -7,7 +7,6 @@ use crate::algorithms::termination::{
 };
 use crate::observer::traits::AlgorithmObserver;
 use crate::observer::AlgorithmEvent;
-use crate::solution::traits::{QualityValue, ScalarQuality};
 use std::cell::RefCell;
 use std::panic::{self, AssertUnwindSafe};
 use std::sync::mpsc::{self, Sender};
@@ -17,7 +16,7 @@ use std::thread::{self, JoinHandle};
 enum ObserverMessage<T, Q>
 where
     T: Clone + Send + 'static,
-    Q: Clone + QualityValue + Send + 'static,
+    Q: Clone + Send + 'static,
 {
     Event(AlgorithmEvent<T, Q>),
     Shutdown,
@@ -31,10 +30,10 @@ type ObserverSender<T, Q> = Option<Sender<ObserverMessage<T, Q>>>;
 /// It encapsulates event emission and keeps algorithm logic decoupled from
 /// channel internals.
 #[derive(Clone)]
-pub struct ExecutionContext<T, Q = ScalarQuality>
+pub struct ExecutionContext<T, Q = f64>
 where
     T: Clone + Send + 'static,
-    Q: Clone + QualityValue + Send + 'static,
+    Q: Clone + Send + 'static,
 {
     sender: ObserverSender<T, Q>,
     termination: RefCell<TerminationController>,
@@ -44,7 +43,7 @@ where
 impl<T, Q> ExecutionContext<T, Q>
 where
     T: Clone + Send + 'static,
-    Q: Clone + QualityValue + Send + 'static,
+    Q: Clone + Send + 'static,
 {
     /// Creates a new execution context.
     fn new(
@@ -105,6 +104,7 @@ where
             snapshot.iteration,
             snapshot.evaluations,
             snapshot.best_solution,
+            snapshot.best_fitness,
             snapshot.average_fitness,
             snapshot.worst_fitness,
         );
@@ -135,7 +135,7 @@ where
 struct ObserverRuntime<T, Q>
 where
     T: Clone + Send + 'static,
-    Q: Clone + QualityValue + Send + 'static,
+    Q: Clone + Send + 'static,
 {
     sender: ObserverSender<T, Q>,
     handle: Option<JoinHandle<Vec<Box<dyn AlgorithmObserver<T, Q>>>>>,
@@ -144,7 +144,7 @@ where
 impl<T, Q> ObserverRuntime<T, Q>
 where
     T: Clone + Send + 'static,
-    Q: Clone + QualityValue + Send + 'static,
+    Q: Clone + Send + 'static,
 {
     /// Creates the observer dispatcher thread if at least one observer exists.
     pub fn new(mut observers: Vec<Box<dyn AlgorithmObserver<T, Q>>>) -> Self {
@@ -204,7 +204,7 @@ where
 fn emit_event<T, Q>(sender: &ObserverSender<T, Q>, event: AlgorithmEvent<T, Q>)
 where
     T: Clone + Send + 'static,
-    Q: Clone + QualityValue + Send + 'static,
+    Q: Clone + Send + 'static,
 {
     if let Some(tx) = sender {
         let _ = tx.send(ObserverMessage::Event(event));
@@ -226,7 +226,7 @@ pub fn run_with_observers<T, Q, R, F>(
 ) -> (R, Vec<Box<dyn AlgorithmObserver<T, Q>>>)
 where
     T: Clone + Send + 'static,
-    Q: Clone + QualityValue + Send + 'static,
+    Q: Clone + Send + 'static,
     F: FnOnce(ExecutionContext<T, Q>) -> R,
 {
     if observers.is_empty() {

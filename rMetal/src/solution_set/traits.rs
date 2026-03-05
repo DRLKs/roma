@@ -1,12 +1,12 @@
 use crate::solution::{Solution};
-use crate::solution::traits::{QualityValue, ScalarQuality};
+use crate::solution::traits::{Dominance};
 
 /// Trait that defines the basic interface for sets of solutions.
 /// * `T` - Type of the solution variables
-pub trait SolutionSet<T, Q = ScalarQuality>
+pub trait SolutionSet<T, Q = f64>
 where 
     T: Clone,
-    Q: Clone + QualityValue,
+    Q: Clone + Dominance,
 {
     fn solutions(&self) -> &Vec<Solution<T, Q>>;
     
@@ -42,12 +42,8 @@ where
         }
 
         let mut best_index = 0;
-        let mut best_fitness = f64::NEG_INFINITY;
-        
         for (i, sol) in self.solutions().iter().enumerate() {
-            let value = sol.quality_value();
-            if value > best_fitness {
-                best_fitness = value;
+            if sol.dominates(&self.solutions()[best_index]) {
                 best_index = i;
             }
         }
@@ -56,12 +52,19 @@ where
     }
 
     /// Returns the scalar value of the best solution, if any.
-    fn best_solution_value(&self) -> Option<f64> {
-        self.best_solution().map(|s| s.quality_value())
+    fn best_solution_value(&self) -> Option<f64>
+    where
+        Q: Copy + Into<f64>,
+    {
+        self.best_solution()
+            .and_then(|s| s.quality().copied().map(Into::into))
     }
 
     /// Returns the scalar value of the best solution, or `default` when empty.
-    fn best_solution_value_or(&self, default: f64) -> f64 {
+    fn best_solution_value_or(&self, default: f64) -> f64
+    where
+        Q: Copy + Into<f64>,
+    {
         self.best_solution_value().unwrap_or(default)
     }
 

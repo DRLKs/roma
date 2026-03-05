@@ -1,5 +1,4 @@
 use crate::solution::Solution;
-use crate::solution::traits::ScalarQuality;
 use crate::utils::random::Random;
 
 /// Base trait for all operators in the framework.
@@ -13,7 +12,7 @@ pub trait Operator {
 /// 
 /// # Type Parameters
 /// * `T` - Type of the solution variables
-pub trait MutationOperator<T, Q = ScalarQuality>: Operator
+pub trait MutationOperator<T, Q = f64>: Operator
 where
     T: Clone,
     Q: Clone,
@@ -31,7 +30,7 @@ where
 /// 
 /// # Type Parameters
 /// * `T` - Type of the solution variables
-pub trait CrossoverOperator<T, Q = ScalarQuality>: Operator
+pub trait CrossoverOperator<T, Q = f64>: Operator
 where
     T: Clone,
     Q: Clone,
@@ -82,7 +81,7 @@ where
 /// 
 /// # Type Parameters
 /// * `T` - Type of the solution variables
-pub trait SelectionOperator<T, Q = ScalarQuality>: Operator
+pub trait SelectionOperator<T, Q = f64>: Operator
 where
     T: Clone,
     Q: Clone,

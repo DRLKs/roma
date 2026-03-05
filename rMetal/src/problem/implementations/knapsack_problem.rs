@@ -1,6 +1,5 @@
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
-use crate::solution::traits::ScalarQuality;
 use crate::utils::random::Random;
 
 const PENALTY: f64 = 0.5; // Heavy penalty for infeasible solutions
@@ -84,7 +83,7 @@ impl Problem<bool> for KnapsackProblem {
         solution.set_quality(_fitness);
     }
 
-    fn create_solution(&self, _rng: &mut Random) -> Solution<bool, ScalarQuality> {
+    fn create_solution(&self, _rng: &mut Random) -> Solution<bool> {
         let mut variables: Vec<bool> = vec![];
         for _ in 0..self.number_of_items {
             variables.push(_rng.coin_flip());

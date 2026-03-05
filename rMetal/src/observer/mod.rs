@@ -5,15 +5,14 @@ pub use traits::{AlgorithmObserver, Observable};
 pub use implementations::chart_observer::ChartObserver;
 pub use implementations::console_observer::ConsoleObserver;
 pub use implementations::html_report_observer::HtmlReportObserver;
-use crate::solution::traits::{QualityValue, ScalarQuality};
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationReason};
 
 /// Events that can be observed during algorithm execution
 #[derive(Debug, Clone)]
-pub enum AlgorithmEvent<T, Q = ScalarQuality>
+pub enum AlgorithmEvent<T, Q = f64>
 where
     T: Clone,
-    Q: Clone + QualityValue,
+    Q: Clone,
 {
     /// Algorithm has started
     Start {

@@ -48,11 +48,16 @@ pub use observer::{
 pub use experiment::{Experiment, ExperimentReport, ExperimentRunResult, ExperimentSummary, Objective};
 pub use solution::{
 	BinarySolutionBuilder,
-	MultiObjectiveInfo,
+	Dominance,
+	ParetoCrowdingDistanceQuality,
 	MultiObjectiveRealSolutionBuilder,
+	MultiObjectiveVectorRealSolutionBuilder,
 	RealSolutionBuilder,
+	ScalarDominanceDirection,
 	Solution,
 	StringSolutionBuilder,
+	scalar_dominance_direction,
+	set_scalar_dominance_direction,
 };
 pub use solution_set::{SolutionSet, VectorSolutionSet};
 
@@ -110,11 +115,16 @@ pub mod prelude {
 
 	pub use crate::solution::{
 		BinarySolutionBuilder,
-		MultiObjectiveInfo,
+		Dominance,
+		ParetoCrowdingDistanceQuality,
 		MultiObjectiveRealSolutionBuilder,
+		MultiObjectiveVectorRealSolutionBuilder,
 		RealSolutionBuilder,
+		ScalarDominanceDirection,
 		Solution,
 		StringSolutionBuilder,
+		scalar_dominance_direction,
+		set_scalar_dominance_direction,
 	};
 
 	pub use crate::solution_set::{SolutionSet, VectorSolutionSet};
