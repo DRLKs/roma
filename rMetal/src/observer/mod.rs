@@ -1,10 +1,12 @@
 pub(crate) mod traits;
 pub(crate) mod implementations;
+pub mod experiment;
 
 pub use traits::{AlgorithmObserver, Observable};
 pub use implementations::chart_observer::ChartObserver;
 pub use implementations::console_observer::ConsoleObserver;
 pub use implementations::html_report_observer::HtmlReportObserver;
+pub use experiment::{ExperimentConsoleObserver, ExperimentEvent, ExperimentObservable, ExperimentObserver};
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationReason};
 
 /// Events that can be observed during algorithm execution

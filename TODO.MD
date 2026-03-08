@@ -38,6 +38,16 @@
 
 [ ] 11. CSVs, JSON, YAML. Quiero que también se pueda añadir datos desde distintos tipos de archivos. Solo está implementado para CSVs, que de hecho es el que peor funciona para estos casos.
 
-[ ] 12. Reestructurar el proyecto, ExecutionStateSnapshot no creo que deba estar en Termination.
+[ ] 12. Reestructurar el proyecto
+    [X] ExecutionStateSnapshot no creo que deba estar en Termination.
+    [ ] La estructura que manejamos de traits en cada módulo la vi de un repositorio de X(Twitter), pero no se si será lo mejor para esta librería.
+ 
+[X] 13. Aunque sea duro decirlo, creo que debemos volver a mirar Solution. Para el multiobjetivo va bastante raro. Obtener la mejor solución es más aleatorio en estos casos que algo real. Se observa el primer objetivo, que quizás si estamos mirando Pareto tiene sentido, pero lo dudo enormemente
 
-[ ] 13. Aunque sea duro decirlo, creo que debemos volver a mirar Solution. Para el multiobjetivo va bastante raro. Obtener la mejor solución es más aleatorio en estos casos que algo real. Se observa el primer objetivo, que quizás si estamos mirando Pareto tiene sentido, pero lo dudo enormemente
+[ ] 14. Para el tema de los experimentos, debemos regular de alguna manera los parámetros de los algoritmos. Debe existir alguna manera de categorizar los parámetros para que sean más intuitivo y sencilla la creación de ejecuciones de pruebas y experimentos. Quizás que los parámetros implementen un trait o alguna otra cosa, supongo que existirá algo en Rust para solucionarlo.
+    [ ] Añadir más formas para comparar las ejecuciones.
+    [X] Crear observadores especiales para experimentos.
+    [X] Quizás directamente que los algoritmos puedan implementar algo para que puedan probarse en experimentos. **
+
+    ( lo implementado a mi parecer es muy verboso, debemos observarlo con cautela y modificarlo si fuera necesario )
+    ( los observadores de los experimentos creo que están bastante decentes, pero seguramente sean mejorables )

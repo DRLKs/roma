@@ -13,6 +13,8 @@ pub use algorithms::{
 	GeneticAlgorithm,
 	GeneticAlgorithmParameters,
 	HillClimbing,
+	HillClimbingExperiment,
+	HillClimbingExperimentConfig,
 	HillClimbingParameters,
 	ExecutionStateSnapshot,
 	ImprovementDirection,
@@ -42,10 +44,22 @@ pub use observer::{
 	AlgorithmObserver,
 	ChartObserver,
 	ConsoleObserver,
+	ExperimentConsoleObserver,
+	ExperimentEvent,
+	ExperimentObservable,
+	ExperimentObserver,
 	HtmlReportObserver,
 	Observable,
 };
-pub use experiment::{Experiment, ExperimentReport, ExperimentRunResult, ExperimentSummary, Objective};
+pub use experiment::{
+	AlgorithmConfiguration,
+	Experiment,
+	ExperimentReport,
+	ExperimentRunResult,
+	ExperimentSummary,
+	ExperimentableAlgorithm,
+	Objective,
+};
 pub use solution::{
 	BinarySolutionBuilder,
 	Dominance,
@@ -70,6 +84,8 @@ pub mod prelude {
 		GeneticAlgorithm,
 		GeneticAlgorithmParameters,
 		HillClimbing,
+		HillClimbingExperiment,
+		HillClimbingExperimentConfig,
 		HillClimbingParameters,
 		ExecutionStateSnapshot,
 		ImprovementDirection,
@@ -101,15 +117,21 @@ pub mod prelude {
 		AlgorithmObserver,
 		ChartObserver,
 		ConsoleObserver,
+		ExperimentConsoleObserver,
+		ExperimentEvent,
+		ExperimentObservable,
+		ExperimentObserver,
 		HtmlReportObserver,
 		Observable,
 	};
 
 	pub use crate::experiment::{
+		AlgorithmConfiguration,
 		Experiment,
 		ExperimentReport,
 		ExperimentRunResult,
 		ExperimentSummary,
+		ExperimentableAlgorithm,
 		Objective,
 	};
 

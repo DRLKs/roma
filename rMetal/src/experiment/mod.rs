@@ -1,10 +1,42 @@
 use std::collections::HashMap;
+use std::panic::{self, AssertUnwindSafe};
+use std::sync::Arc;
+use crate::observer::{ExperimentEvent, ExperimentObservable, ExperimentObserver};
+
+pub mod traits;
+mod utils;
+
+pub use traits::ExperimentableAlgorithm;
+use utils::derive_seed;
 
 /// Optimization direction used to sort experiment comparisons.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Objective {
     Maximize,
     Minimize,
+}
+
+/// Named parameter set for one algorithm configuration to be evaluated.
+#[derive(Debug, Clone)]
+pub struct AlgorithmConfiguration<P> {
+    pub name: String,
+    pub parameters: P,
+    pub attributes: HashMap<String, String>,
+}
+
+impl<P> AlgorithmConfiguration<P> {
+    pub fn new(name: impl Into<String>, parameters: P) -> Self {
+        Self {
+            name: name.into(),
+            parameters,
+            attributes: HashMap::new(),
+        }
+    }
+
+    pub fn with_attribute(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.attributes.insert(key.into(), value.into());
+        self
+    }
 }
 
 /// One execution result of a specific algorithm/configuration on a problem instance.
@@ -80,6 +112,7 @@ pub struct Experiment {
     base_seed: u64,
     objective: Objective,
     cases: Vec<ExperimentCase>,
+    observers: Vec<Box<dyn ExperimentObserver>>,
 }
 
 impl Experiment {
@@ -90,6 +123,7 @@ impl Experiment {
             base_seed: 42,
             objective: Objective::Maximize,
             cases: Vec::new(),
+            observers: Vec::new(),
         }
     }
 
@@ -127,24 +161,98 @@ impl Experiment {
         self
     }
 
-    pub fn execute(&self) -> ExperimentReport {
+    /// Adds all configurations exposed by an experimentable algorithm.
+    ///
+    /// This method is intended for parameter/operator sweeps where the same
+    /// algorithm is evaluated under multiple settings and deterministic seeds.
+    pub fn add_experimentable_algorithm<A>(
+        mut self,
+        problem: impl Into<String>,
+        algorithm: A,
+    ) -> Self
+    where
+        A: ExperimentableAlgorithm + 'static,
+    {
+        let problem = problem.into();
+        let algorithm_name = algorithm.algorithm_name().to_string();
+        let algorithm = Arc::new(algorithm);
+
+        for configuration in algorithm.configurations() {
+            let configuration_name = format_configuration_label(&configuration);
+            let parameters_for_runner = configuration.parameters.clone();
+            let algorithm = Arc::clone(&algorithm);
+
+            self.cases.push(ExperimentCase {
+                algorithm: algorithm_name.clone(),
+                configuration: configuration_name,
+                problem: problem.clone(),
+                runner: Box::new(move |seed| {
+                    algorithm.run_with_parameters(&parameters_for_runner, seed)
+                }),
+            });
+        }
+
+        self
+    }
+
+    pub fn execute(&mut self) -> ExperimentReport {
+        Self::notify_observers(&mut self.observers, ExperimentEvent::Start {
+            name: self.name.clone(),
+            objective: self.objective,
+            runs_per_case: self.runs,
+            total_cases: self.cases.len(),
+        });
+
         let mut run_results = Vec::new();
 
         for case in &self.cases {
+            let algorithm = case.algorithm.clone();
+            let configuration = case.configuration.clone();
+            let problem = case.problem.clone();
+
+            Self::notify_observers(&mut self.observers, ExperimentEvent::CaseStarted {
+                algorithm: algorithm.clone(),
+                configuration: configuration.clone(),
+                problem: problem.clone(),
+            });
+
             for run_index in 0..self.runs {
                 let seed = derive_seed(
                     self.base_seed,
-                    &case.algorithm,
-                    &case.configuration,
-                    &case.problem,
+                    &algorithm,
+                    &configuration,
+                    &problem,
                     run_index as u64,
                 );
-                let best_value = (case.runner)(seed);
+                let run_result = panic::catch_unwind(AssertUnwindSafe(|| (case.runner)(seed)));
+
+                let best_value = match run_result {
+                    Ok(value) => value,
+                    Err(payload) => {
+                        let message = panic_payload_to_string(payload);
+                        Self::notify_observers(&mut self.observers, ExperimentEvent::Error {
+                            algorithm: algorithm.clone(),
+                            configuration: configuration.clone(),
+                            problem: problem.clone(),
+                            message,
+                        });
+                        break;
+                    }
+                };
 
                 run_results.push(ExperimentRunResult {
-                    algorithm: case.algorithm.clone(),
-                    configuration: case.configuration.clone(),
-                    problem: case.problem.clone(),
+                    algorithm: algorithm.clone(),
+                    configuration: configuration.clone(),
+                    problem: problem.clone(),
+                    run_index,
+                    seed,
+                    best_value,
+                });
+
+                Self::notify_observers(&mut self.observers, ExperimentEvent::RunCompleted {
+                    algorithm: algorithm.clone(),
+                    configuration: configuration.clone(),
+                    problem: problem.clone(),
                     run_index,
                     seed,
                     best_value,
@@ -154,13 +262,49 @@ impl Experiment {
 
         let summaries = summarize(&run_results, self.objective);
 
-        ExperimentReport {
+        let report = ExperimentReport {
             name: self.name.clone(),
             objective: self.objective,
             runs_per_case: self.runs,
             run_results,
             summaries,
+        };
+
+        Self::notify_observers(&mut self.observers, ExperimentEvent::End {
+            report: report.clone(),
+        });
+
+        for observer in self.observers.iter_mut() {
+            observer.finalize();
         }
+
+        report
+    }
+
+    fn notify_observers(observers: &mut Vec<Box<dyn ExperimentObserver>>, event: ExperimentEvent) {
+        for observer in observers.iter_mut() {
+            observer.update(&event);
+        }
+    }
+}
+
+fn panic_payload_to_string(payload: Box<dyn std::any::Any + Send>) -> String {
+    match payload.downcast::<String>() {
+        Ok(msg) => *msg,
+        Err(payload) => match payload.downcast::<&'static str>() {
+            Ok(msg) => (*msg).to_string(),
+            Err(_) => "Unknown panic during experiment run".to_string(),
+        },
+    }
+}
+
+impl ExperimentObservable for Experiment {
+    fn add_experiment_observer(&mut self, observer: Box<dyn ExperimentObserver>) {
+        self.observers.push(observer);
+    }
+
+    fn clear_experiment_observers(&mut self) {
+        self.observers.clear();
     }
 }
 
@@ -237,31 +381,51 @@ fn summarize(results: &[ExperimentRunResult], objective: Objective) -> Vec<Exper
     summaries
 }
 
-fn derive_seed(base_seed: u64, a: &str, c: &str, p: &str, run: u64) -> u64 {
-    let mut z = base_seed
-        ^ hash64(a)
-        ^ hash64(c).rotate_left(13)
-        ^ hash64(p).rotate_left(27)
-        ^ run.wrapping_mul(0x9E37_79B9_7F4A_7C15);
-
-    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-    z ^ (z >> 31)
-}
-
-fn hash64(s: &str) -> u64 {
-    // FNV-1a 64-bit
-    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-    for b in s.as_bytes() {
-        hash ^= *b as u64;
-        hash = hash.wrapping_mul(0x1000_0000_01b3);
+fn format_configuration_label<P>(configuration: &AlgorithmConfiguration<P>) -> String {
+    if configuration.attributes.is_empty() {
+        return configuration.name.clone();
     }
-    hash
+
+    let mut attributes: Vec<(&String, &String)> = configuration.attributes.iter().collect();
+    attributes.sort_by(|(ka, _), (kb, _)| ka.cmp(kb));
+
+    let details = attributes
+        .into_iter()
+        .map(|(k, v)| format!("{}={}", k, v))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    format!("{} [{}]", configuration.name, details)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct DummyExperimentable;
+
+    impl ExperimentableAlgorithm for DummyExperimentable {
+        type Parameters = f64;
+
+        fn algorithm_name(&self) -> &str {
+            "Dummy"
+        }
+
+        fn configurations(&self) -> Vec<AlgorithmConfiguration<Self::Parameters>> {
+            vec![
+                AlgorithmConfiguration::new("baseline", 1.0)
+                    .with_attribute("mutation", "bit_flip")
+                    .with_attribute("population", "20"),
+                AlgorithmConfiguration::new("aggressive", 2.0)
+                    .with_attribute("mutation", "bit_flip")
+                    .with_attribute("population", "50"),
+            ]
+        }
+
+        fn run_with_parameters(&self, parameters: &Self::Parameters, seed: u64) -> f64 {
+            (seed % 10) as f64 * *parameters
+        }
+    }
 
     #[test]
     fn experiment_is_reproducible() {
@@ -296,5 +460,26 @@ mod tests {
 
         let cmp = report.comparison();
         assert_eq!(cmp.first().map(|x| x.configuration.as_str()), Some("C2"));
+    }
+
+    #[test]
+    fn add_experimentable_algorithm_expands_all_configurations() {
+        let report = Experiment::new("exp")
+            .with_runs(4)
+            .with_base_seed(7)
+            .add_experimentable_algorithm("P1", DummyExperimentable)
+            .execute();
+
+        assert_eq!(report.summaries.len(), 2);
+        assert_eq!(report.run_results.len(), 8);
+
+        let names: Vec<&str> = report
+            .summaries
+            .iter()
+            .map(|s| s.configuration.as_str())
+            .collect();
+
+        assert!(names.iter().any(|n| n.starts_with("baseline")));
+        assert!(names.iter().any(|n| n.starts_with("aggressive")));
     }
 }
