@@ -135,7 +135,9 @@ fn main() {
     let mut algorithm = GeneticAlgorithm::new(parameters);
     algorithm.add_observer(Box::new(chart_observer));
     algorithm.add_observer(Box::new(html_observer));
-    let result = algorithm.run(&problem);
+    let result = algorithm
+        .run(&problem)
+        .expect("Large CSV GA run failed");
 
     if let Some(best) = result.best_solution() {
         println!(

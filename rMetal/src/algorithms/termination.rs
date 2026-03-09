@@ -226,3 +226,121 @@ impl TerminationState {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::solution::RealSolutionBuilder;
+    use std::thread;
+    use std::time::Duration;
+
+    fn snapshot(iteration: usize, evaluations: usize, best_fitness: f64) -> ExecutionStateSnapshot<f64> {
+        let best_solution = RealSolutionBuilder::new(2)
+            .with_quality(best_fitness)
+            .build();
+
+        ExecutionStateSnapshot::new(
+            0,
+            iteration,
+            evaluations,
+            best_solution,
+            best_fitness,
+            best_fitness,
+            best_fitness,
+        )
+    }
+
+    #[test]
+    fn max_iterations_termination_triggers() {
+        let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(3)]);
+        let mut controller = TerminationController::new(criteria, ImprovementDirection::Maximize);
+
+        controller.on_snapshot(&snapshot(0, 1, 1.0));
+        assert!(!controller.should_terminate());
+
+        controller.on_snapshot(&snapshot(1, 2, 1.1));
+        assert!(!controller.should_terminate());
+
+        controller.on_snapshot(&snapshot(3, 4, 1.2));
+        assert!(controller.should_terminate());
+        assert!(matches!(
+            controller.reason(),
+            Some(TerminationReason::Criterion(TerminationCriterion::MaxIterations(3)))
+        ));
+    }
+
+    #[test]
+    fn max_evaluations_termination_triggers() {
+        let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxEvaluations(5)]);
+        let mut controller = TerminationController::new(criteria, ImprovementDirection::Maximize);
+
+        controller.on_snapshot(&snapshot(0, 2, 1.0));
+        assert!(!controller.should_terminate());
+
+        controller.on_snapshot(&snapshot(1, 5, 1.1));
+        assert!(controller.should_terminate());
+        assert!(matches!(
+            controller.reason(),
+            Some(TerminationReason::Criterion(TerminationCriterion::MaxEvaluations(5)))
+        ));
+    }
+
+    #[test]
+    fn convergence_termination_triggers() {
+        let criteria = TerminationCriteria::new(vec![TerminationCriterion::Convergence {
+            threshold: 1e-9,
+            patience: 3,
+        }]);
+        let mut controller = TerminationController::new(criteria, ImprovementDirection::Maximize);
+
+        controller.on_snapshot(&snapshot(0, 1, 10.0));
+        assert!(!controller.should_terminate());
+        controller.on_snapshot(&snapshot(1, 2, 10.0));
+        assert!(!controller.should_terminate());
+        controller.on_snapshot(&snapshot(2, 3, 10.0));
+        assert!(!controller.should_terminate());
+        controller.on_snapshot(&snapshot(3, 4, 10.0));
+        assert!(controller.should_terminate());
+        assert!(matches!(
+            controller.reason(),
+            Some(TerminationReason::Criterion(TerminationCriterion::Convergence { .. }))
+        ));
+    }
+
+    #[test]
+    fn time_limit_termination_triggers() {
+        let criteria = TerminationCriteria::new(vec![TerminationCriterion::TimeLimit(Duration::from_millis(5))]);
+        let mut controller = TerminationController::new(criteria, ImprovementDirection::Maximize);
+
+        thread::sleep(Duration::from_millis(10));
+
+        assert!(controller.should_terminate());
+        assert!(matches!(
+            controller.reason(),
+            Some(TerminationReason::Criterion(TerminationCriterion::TimeLimit(_)))
+        ));
+    }
+
+    #[test]
+    fn no_improvement_termination_triggers() {
+        let criteria = TerminationCriteria::new(vec![TerminationCriterion::NoImprovement { patience: 3 }]);
+        let mut controller = TerminationController::new(criteria, ImprovementDirection::Maximize);
+
+        controller.on_snapshot(&snapshot(0, 1, 1.0));
+        assert!(!controller.should_terminate());
+
+        controller.on_snapshot(&snapshot(1, 2, 2.0));
+        assert!(!controller.should_terminate());
+
+        controller.on_snapshot(&snapshot(2, 3, 2.0));
+        assert!(!controller.should_terminate());
+        controller.on_snapshot(&snapshot(3, 4, 2.0));
+        assert!(!controller.should_terminate());
+        controller.on_snapshot(&snapshot(4, 5, 2.0));
+        assert!(controller.should_terminate());
+        assert!(matches!(
+            controller.reason(),
+            Some(TerminationReason::Criterion(TerminationCriterion::NoImprovement { patience: 3 }))
+        ));
+    }
+}

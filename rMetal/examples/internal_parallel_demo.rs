@@ -33,7 +33,9 @@ fn main() {
     .with_threads(4);
 
     let mut algorithm = GeneticAlgorithm::new(parameters);
-    let result = algorithm.run(&problem);
+    let result = algorithm
+        .run(&problem)
+        .expect("Parallel GA run failed");
 
     if let Some(best) = result.best_solution() {
         println!(

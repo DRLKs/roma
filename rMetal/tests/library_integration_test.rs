@@ -45,7 +45,7 @@ fn ga_solves_knapsack_end_to_end_with_observer() {
     let mut algorithm = GeneticAlgorithm::new(parameters);
     algorithm.add_observer(Box::new(ConsoleObserver::new(false)));
 
-    let result = algorithm.run(&problem);
+    let result = algorithm.run(&problem).expect("GA run should succeed");
 
     assert_eq!(result.size(), 20);
     assert!(algorithm.get_solution_set().is_some());
@@ -68,7 +68,7 @@ fn hill_climbing_handles_empty_problem_edge_case() {
     .with_seed(7);
     let mut algorithm = HillClimbing::new(parameters, true);
 
-    let result = algorithm.run(&problem);
+    let result = algorithm.run(&problem).expect("Hill Climbing run should succeed");
 
     assert_eq!(result.size(), 1);
     let solution = result.get(0).expect("Hill Climbing should return one solution");
@@ -93,7 +93,7 @@ fn nsga2_runs_on_minimum_valid_zdt1_dimension() {
     .with_seed(99);
 
     let mut algorithm = NSGAII::new(parameters);
-    let result = algorithm.run(&problem);
+    let result = algorithm.run(&problem).expect("NSGA-II run should succeed");
 
     assert_eq!(result.size(), 16);
 
@@ -110,9 +110,8 @@ fn nsga2_runs_on_minimum_valid_zdt1_dimension() {
 }
 
 #[test]
-#[should_panic(expected = "Invalid parameters")]
-fn ga_panics_with_invalid_parameters_edge_case() {
-    // Edge case: invalid parameter configuration should fail fast.
+fn ga_returns_error_with_invalid_parameters_edge_case() {
+    // Edge case: invalid parameter configuration should return a validation error.
     let problem = KnapsackBuilder::new()
         .with_capacity(10.0)
         .add_item(5.0, 10.0)
@@ -130,5 +129,9 @@ fn ga_panics_with_invalid_parameters_edge_case() {
     .with_seed(1);
 
     let mut algorithm = GeneticAlgorithm::new(parameters);
-    let _ = algorithm.run(&problem);
+    let error = match algorithm.run(&problem) {
+        Ok(_) => panic!("GA must return an error for invalid parameters"),
+        Err(message) => message,
+    };
+    assert!(error.contains("population_size"));
 }

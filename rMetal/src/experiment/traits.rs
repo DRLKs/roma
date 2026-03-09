@@ -16,5 +16,5 @@ pub trait ExperimentableAlgorithm: Send + Sync {
     /// Executes one run for the given parameters and seed.
     ///
     /// Return value must be the scalar performance indicator used for ranking.
-    fn run_with_parameters(&self, parameters: &Self::Parameters, seed: u64) -> f64;
+    fn run_with_parameters(&self, parameters: &Self::Parameters, seed: u64) -> Result<f64, String>;
 }

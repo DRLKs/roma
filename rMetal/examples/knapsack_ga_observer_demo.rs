@@ -45,7 +45,9 @@ fn main() {
         "output/knapsack_ga_observer_demo/charts",
     ))));
 
-    let result = algorithm.run(&problem);
+    let result = algorithm
+        .run(&problem)
+        .expect("GA run failed");
 
     if let Some(best) = result.best_solution() {
         println!(

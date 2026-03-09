@@ -30,9 +30,5 @@ where
         total_evaluations: usize,
         termination_reason: Option<TerminationReason>,
     },
-    /// An error occurred during execution
-    Error {
-        message: String,
-    },
     _Phantom(std::marker::PhantomData<T>),
 }

@@ -25,6 +25,7 @@ pub use algorithms::{
 	TerminationCriterion,
 	TerminationReason,
 	TerminationState,
+	RuntimeExecutionOutput,
 };
 pub use operator::{
 	BitFlipMutation,
@@ -95,6 +96,7 @@ pub mod prelude {
 		TerminationCriteria,
 		TerminationCriterion,
 		TerminationReason,
+		RuntimeExecutionOutput,
 	};
 
 	pub use crate::operator::{

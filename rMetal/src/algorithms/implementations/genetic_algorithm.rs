@@ -4,7 +4,7 @@ use crate::algorithms::termination::{
     TerminationCriteria,
 };
 use crate::algorithms::traits::Algorithm;
-use crate::algorithms::runtime::{run_with_observers, ExecutionContext};
+use crate::algorithms::runtime::ExecutionContext;
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
@@ -112,6 +112,16 @@ where
     observers: Vec<Box<dyn AlgorithmObserver<T>>>,
 }
 
+pub struct GeneticAlgorithmState<T>
+where
+    T: Clone,
+{
+    population: Vec<Solution<T>>,
+    generation: usize,
+    evaluations: usize,
+    run_seed: u64,
+}
+
 impl<T, C, M, Sel> GeneticAlgorithm<T, C, M, Sel>
 where
     T: Clone + Send + Sync + 'static,
@@ -125,47 +135,6 @@ where
             solution_set: None,
             observers: Vec::new(),
         }
-    }
-
-    fn run_internal(
-        parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
-        problem: &(impl Problem<T> + Sync),
-        context: &ExecutionContext<T>,
-    ) -> VectorSolutionSet<T> {
-        context.start("GeneticAlgorithm");
-
-        let run_seed = Self::resolve_seed(parameters);
-        let mut init_rng = Random::new(Self::derive_seed(run_seed, 0));
-        let mut population = Self::initialize_population(parameters, problem, &mut init_rng);
-        let mut evaluations = parameters.population_size;
-
-        Self::report_generation_progress(&context, 0, evaluations, &population);
-        let mut should_terminate = context.should_terminate();
-
-        let mut generation = 0;
-        while !should_terminate {
-            generation += 1;
-            population = Self::next_generation(
-                parameters,
-                problem,
-                &population,
-                generation,
-                run_seed,
-                &mut evaluations,
-            );
-
-            Self::report_generation_progress(
-                &context,
-                generation,
-                evaluations,
-                &population,
-            );
-            should_terminate = context.should_terminate();
-        }
-
-        context.end(generation, evaluations);
-
-        VectorSolutionSet::from_vec(population)
     }
 
     fn initialize_population(
@@ -331,11 +300,10 @@ where
             }
 
             for handle in handles {
-                let (mut worker_offspring, worker_evaluations) = handle
-                    .join()
-                    .expect("worker thread panicked while creating offspring");
-                total_evaluations += worker_evaluations;
-                all_offspring.append(&mut worker_offspring);
+                if let Ok((mut worker_offspring, worker_evaluations)) = handle.join() {
+                    total_evaluations += worker_evaluations;
+                    all_offspring.append(&mut worker_offspring);
+                }
             }
         });
 
@@ -385,25 +353,6 @@ where
         next_population.extend(elites);
     }
 
-    fn report_generation_progress(
-        context: &ExecutionContext<T>,
-        generation: usize,
-        evaluations: usize,
-        population: &[Solution<T>],
-    ) {
-        let (_best, avg, worst) = calculate_statistics(population);
-        let best_solution = population.iter().max_by(|a, b| {
-            a.quality_value()
-                .partial_cmp(&b.quality_value())
-                .unwrap_or(std::cmp::Ordering::Equal)
-        }).map(|solution| solution.copy()).expect("population should not be empty when reporting progress");
-
-        let best_fitness = best_solution.quality_value();
-
-        let snapshot = ExecutionStateSnapshot::new(0, generation, evaluations, best_solution, best_fitness, avg, worst);
-        context.report_progress(snapshot);
-    }
-
     fn sort_population_desc(population: &mut [Solution<T>]) {
         population.sort_by(|a, b| {
             b.quality_value()
@@ -438,42 +387,116 @@ where
 {
     type SolutionSet = VectorSolutionSet<T>;
     type Parameters = GeneticAlgorithmParameters<T, C, M, Sel>;
+    type StepState = GeneticAlgorithmState<T>;
 
-    fn run(&mut self, problem: &(impl Problem<T> + Sync)) -> Self::SolutionSet {
-        let is_valid = self.validate_parameters();
-        let parameters = &self.parameters;
-        let observers = std::mem::take(&mut self.observers);
-
-        let (result, observers) = run_with_observers(
-            observers,
-            parameters.termination_criteria.clone(),
-            ImprovementDirection::Maximize,
-            move |context| {
-            if !is_valid {
-                let error_msg = "Invalid parameters: population_size must be > 0, termination_criteria must not be empty, probabilities must be in [0, 1]".to_string();
-                context.error(error_msg.clone());
-                panic!("{}", error_msg);
-            }
-
-            Self::run_internal(parameters, problem, &context)
-        });
-
-        self.observers = observers;
-        self.solution_set = Some(result.clone());
-        result
+    fn algorithm_name(&self) -> &str {
+        "GeneticAlgorithm"
     }
 
-    fn validate_parameters(&self) -> bool {
-        self.parameters.population_size > 0
-            && !self.parameters.termination_criteria.is_empty()
-            && self.parameters.crossover_probability >= 0.0
-            && self.parameters.crossover_probability <= 1.0
-            && self.parameters.mutation_probability >= 0.0
-            && self.parameters.mutation_probability <= 1.0
-                && self.parameters.elite_size <= self.parameters.population_size
+    fn termination_criteria(&self) -> TerminationCriteria {
+        self.parameters.termination_criteria.clone()
+    }
+
+    fn improvement_direction(&self) -> ImprovementDirection {
+        ImprovementDirection::Maximize
+    }
+
+    fn observers_mut(&mut self) -> &mut Vec<Box<dyn AlgorithmObserver<T>>> {
+        &mut self.observers
+    }
+
+    fn set_solution_set(&mut self, solution_set: Self::SolutionSet) {
+        self.solution_set = Some(solution_set);
+    }
+
+    fn validate_parameters(&self) -> Result<(), String> {
+        if self.parameters.population_size == 0 {
+            return Err("population_size must be > 0".to_string());
+        }
+
+        if self.parameters.termination_criteria.is_empty() {
+            return Err("termination_criteria must not be empty".to_string());
+        }
+
+        if !(0.0..=1.0).contains(&self.parameters.crossover_probability) {
+            return Err("crossover_probability must be in [0,1]".to_string());
+        }
+
+        if !(0.0..=1.0).contains(&self.parameters.mutation_probability) {
+            return Err("mutation_probability must be in [0,1]".to_string());
+        }
+
+        if self.parameters.elite_size > self.parameters.population_size {
+            return Err("elite_size must be <= population_size".to_string());
+        }
+
+        Ok(())
     }
 
     fn get_solution_set(&self) -> Option<&Self::SolutionSet> {
         self.solution_set.as_ref()
+    }
+
+    fn initialize_step_state(
+        &self,
+        problem: &(impl Problem<T> + Sync),
+        _context: &ExecutionContext<T>,
+    ) -> Self::StepState {
+        let run_seed = Self::resolve_seed(&self.parameters);
+        let mut init_rng = Random::new(Self::derive_seed(run_seed, 0));
+        let population = Self::initialize_population(&self.parameters, problem, &mut init_rng);
+
+        GeneticAlgorithmState {
+            population,
+            generation: 0,
+            evaluations: self.parameters.population_size,
+            run_seed,
+        }
+    }
+
+    fn step(
+        &self,
+        problem: &(impl Problem<T> + Sync),
+        state: &mut Self::StepState,
+        _context: &ExecutionContext<T>,
+    ) {
+        state.generation += 1;
+        state.population = Self::next_generation(
+            &self.parameters,
+            problem,
+            &state.population,
+            state.generation,
+            state.run_seed,
+            &mut state.evaluations,
+        );
+    }
+
+    fn snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T> {
+        let (_best, avg, worst) = calculate_statistics(&state.population);
+        let best_solution = state
+            .population
+            .iter()
+            .max_by(|a, b| {
+                a.quality_value()
+                    .partial_cmp(&b.quality_value())
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .map(|solution| solution.copy())
+            .expect("population should not be empty when reporting progress");
+
+        let best_fitness = best_solution.quality_value();
+        ExecutionStateSnapshot::new(
+            0,
+            state.generation,
+            state.evaluations,
+            best_solution,
+            best_fitness,
+            avg,
+            worst,
+        )
+    }
+
+    fn finalize_step_state(&self, state: Self::StepState) -> Self::SolutionSet {
+        VectorSolutionSet::from_vec(state.population)
     }
 }

@@ -8,28 +8,35 @@ use crate::algorithms::termination::{
 use crate::observer::traits::AlgorithmObserver;
 use crate::observer::AlgorithmEvent;
 use std::cell::RefCell;
-use std::panic::{self, AssertUnwindSafe};
 use std::sync::mpsc::{self, Sender};
 use std::thread::{self, JoinHandle};
 
-/// Message exchanged between algorithm workers and observer dispatcher.
-enum ObserverMessage<T, Q>
-where
-    T: Clone + Send + 'static,
-    Q: Clone + Send + 'static,
-{
-    Event(AlgorithmEvent<T, Q>),
-    Shutdown,
+type ObserverSender<T, Q> = Option<Sender<AlgorithmEvent<T, Q>>>;
+
+/// Output expected from one algorithm execution.
+///
+/// The runtime emits `Start` and `End/Error` events around the task and uses
+/// this structure to complete end-of-run metadata consistently.
+pub struct RuntimeExecutionOutput<R> {
+    pub result: R,
+    pub total_generations: usize,
+    pub total_evaluations: usize,
 }
 
-/// Optional sender used by algorithms to dispatch observer events.
-type ObserverSender<T, Q> = Option<Sender<ObserverMessage<T, Q>>>;
+impl<R> RuntimeExecutionOutput<R> {
+    pub fn new(result: R, total_generations: usize, total_evaluations: usize) -> Self {
+        Self {
+            result,
+            total_generations,
+            total_evaluations,
+        }
+    }
+}
 
 /// Execution context passed to algorithm routines.
 ///
 /// It encapsulates event emission and keeps algorithm logic decoupled from
 /// channel internals.
-#[derive(Clone)]
 pub struct ExecutionContext<T, Q = f64>
 where
     T: Clone + Send + 'static,
@@ -64,16 +71,6 @@ where
             &self.sender,
             AlgorithmEvent::Start {
                 algorithm_name: algorithm_name.into(),
-            },
-        );
-    }
-
-    /// Emits algorithm error event.
-    pub fn error(&self, message: impl Into<String>) {
-        emit_event(
-            &self.sender,
-            AlgorithmEvent::Error {
-                message: message.into(),
             },
         );
     }
@@ -125,7 +122,6 @@ where
     pub fn termination_reason(&self) -> Option<TerminationReason> {
         self.termination.borrow().reason().cloned()
     }
-
 }
 
 /// Channel-based observer runtime.
@@ -155,16 +151,11 @@ where
             };
         }
 
-        let (tx, rx) = mpsc::channel::<ObserverMessage<T, Q>>();
+        let (tx, rx) = mpsc::channel::<AlgorithmEvent<T, Q>>();
         let handle = thread::spawn(move || {
-            while let Ok(message) = rx.recv() {
-                match message {
-                    ObserverMessage::Event(event) => {
-                        for observer in observers.iter_mut() {
-                            observer.update(&event);
-                        }
-                    }
-                    ObserverMessage::Shutdown => break,
+            while let Ok(event) = rx.recv() {
+                for observer in observers.iter_mut() {
+                    observer.update(&event);
                 }
             }
 
@@ -188,9 +179,9 @@ where
 
     /// Stops the observer thread and returns the updated observers.
     pub fn finish(mut self) -> Vec<Box<dyn AlgorithmObserver<T, Q>>> {
-        if let Some(sender) = self.sender.take() {
-            let _ = sender.send(ObserverMessage::Shutdown);
-        }
+        // Closing the sender causes receiver loop to finish after draining all
+        // already queued events.
+        self.sender.take();
 
         if let Some(handle) = self.handle.take() {
             return handle.join().unwrap_or_default();
@@ -207,42 +198,56 @@ where
     Q: Clone + Send + 'static,
 {
     if let Some(tx) = sender {
-        let _ = tx.send(ObserverMessage::Event(event));
+        let _ = tx.send(event);
     }
 }
 
-/// Runs algorithm work with observer runtime.
+/// Runs one algorithm execution with asynchronous observers.
 ///
 /// The algorithm task itself runs in the current thread. If observers are
 /// present, a dedicated observer thread is spawned to consume events.
 ///
 /// When there are no observers, the task still receives a valid execution
 /// context with mandatory termination configuration.
-pub fn run_with_observers<T, Q, R, F>(
-    observers: Vec<Box<dyn AlgorithmObserver<T, Q>>>,
+///
+/// Lifecycle emitted by this runtime:
+/// - `Start` before invoking task,
+/// - `End` on success.
+pub fn run_with_observer_runtime<T, Q, R, F>(
+    observers: &mut Vec<Box<dyn AlgorithmObserver<T, Q>>>,
     criteria: TerminationCriteria,
     direction: ImprovementDirection,
+    algorithm_name: impl Into<String>,
     task: F,
-) -> (R, Vec<Box<dyn AlgorithmObserver<T, Q>>>)
+) -> R
 where
     T: Clone + Send + 'static,
     Q: Clone + Send + 'static,
-    F: FnOnce(ExecutionContext<T, Q>) -> R,
+    F: FnOnce(&ExecutionContext<T, Q>) -> RuntimeExecutionOutput<R>,
 {
+    let algorithm_name = algorithm_name.into();
+
     if observers.is_empty() {
-        let result = task(ExecutionContext::new(None, criteria, direction));
-        return (result, Vec::new());
+        let context = ExecutionContext::new(None, criteria, direction);
+        context.start(algorithm_name);
+        let output = task(&context);
+        context.end(output.total_generations, output.total_evaluations);
+        return output.result;
     }
 
-    let runtime = ObserverRuntime::new(observers);
+    let runtime = ObserverRuntime::new(std::mem::take(observers));
     let context = ExecutionContext::new(runtime.sender(), criteria, direction);
+    context.start(algorithm_name);
 
-    let worker_result = panic::catch_unwind(AssertUnwindSafe(|| task(context)));
+    let output = task(&context);
+    context.end(output.total_generations, output.total_evaluations);
 
-    let observers = runtime.finish();
+    // Must be dropped before joining runtime so the channel closes and observer
+    // thread can drain and terminate.
+    drop(context);
 
-    match worker_result {
-        Ok(result) => (result, observers),
-        Err(payload) => panic::resume_unwind(payload),
-    }
+    let observers_after = runtime.finish();
+    *observers = observers_after;
+
+    output.result
 }

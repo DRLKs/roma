@@ -328,10 +328,6 @@ where
                     self.resolve_output_path().display()
                 );
             }
-            AlgorithmEvent::Error { message } => {
-                eprintln!("  ChartObserver: Error detected - {}", message);
-                eprintln!("   No charts will be generated due to early termination.");
-            }
             _ => {}
         }
     }

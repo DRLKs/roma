@@ -4,11 +4,12 @@ use crate::algorithms::termination::{
     TerminationCriteria,
 };
 use crate::algorithms::traits::Algorithm;
-use crate::algorithms::runtime::run_with_observers;
+use crate::algorithms::runtime::ExecutionContext;
 use crate::experiment::{AlgorithmConfiguration, ExperimentableAlgorithm};
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::operator::traits::MutationOperator;
 use crate::problem::traits::Problem;
+use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::random::{Random, seed_from_time};
@@ -141,16 +142,16 @@ where
         self.configurations.clone()
     }
 
-    fn run_with_parameters(&self, parameters: &Self::Parameters, seed: u64) -> f64 {
+    fn run_with_parameters(&self, parameters: &Self::Parameters, seed: u64) -> Result<f64, String> {
         let problem = (self.problem_builder)();
 
         let mut algorithm = HillClimbing::new(
             parameters.parameters.clone().with_seed(seed),
             parameters.is_maximization,
         );
-        let result = algorithm.run(&problem);
+        let result = algorithm.run(&problem)?;
 
-        result.best_solution_value_or(0.0)
+        Ok(result.best_solution_value_or(0.0))
     }
 }
 
@@ -197,6 +198,16 @@ where
     }
 }
 
+pub struct HillClimbingState<T>
+where
+    T: Clone,
+{
+    current: Solution<T>,
+    rng: Random,
+    iteration: usize,
+    evaluations: usize,
+}
+
 impl<T, M> Observable<T> for HillClimbing<T, M>
 where
     T: Clone + Send + 'static,
@@ -218,115 +229,109 @@ where
 {
     type SolutionSet = VectorSolutionSet<T>;
     type Parameters = HillClimbingParameters<T, M>;
+    type StepState = HillClimbingState<T>;
 
-    /// Runs the Hill Climbing search process.
-    ///
-    /// Workflow:
-    /// 1. Validate parameters.
-    /// 2. Create and evaluate an initial random solution.
-    /// 3. Iterate until the configured termination criteria are met:
-    ///    - mutate current solution to produce a neighbor,
-    ///    - evaluate neighbor,
-    ///    - accept neighbor if it improves current quality.
-    /// 4. Return a solution set with the final best solution.
-    ///
-    /// Observer events are emitted for start, progress updates, best-solution
-    /// improvements, and end-of-run statistics.
-    fn run(&mut self, problem: &(impl Problem<T> + Sync)) -> Self::SolutionSet {
-        let is_valid = self.validate_parameters();
-        let parameters = &self.parameters;
-        let is_maximization = self.is_maximization;
-        let observers = std::mem::take(&mut self.observers);
+    fn algorithm_name(&self) -> &str {
+        "HillClimbing"
+    }
 
-        let (result, observers) = run_with_observers(
-            observers,
-            parameters.termination_criteria.clone(),
-            get_improvement_direction(is_maximization),
-            move |context| {
-            if !is_valid {
-                let message = "Invalid parameters: termination_criteria must not be empty, mutation_probability must be in [0,1]".to_string();
-                context.error(message.clone());
-                panic!("{}", message);
-            }
+    fn termination_criteria(&self) -> TerminationCriteria {
+        self.parameters.termination_criteria.clone()
+    }
 
-            context.start("HillClimbing");
+    fn improvement_direction(&self) -> ImprovementDirection {
+        get_improvement_direction(self.is_maximization)
+    }
 
-            let mut rng = Random::new(parameters.random_seed.unwrap_or_else(seed_from_time));
-            let mut current = problem.create_solution(&mut rng);
-            problem.evaluate(&mut current);
-            let mut evaluations = 1;
-            let initial = current.quality_value();
+    fn observers_mut(&mut self) -> &mut Vec<Box<dyn AlgorithmObserver<T>>> {
+        &mut self.observers
+    }
 
-            context.report_progress(ExecutionStateSnapshot::new(
-                0,
-                0,
-                evaluations,
-                current.copy(),
-                initial,
-                initial,
-                initial,
-            ));
-            let mut should_terminate = context.should_terminate();
-
-            let mut iteration = 0;
-            while !should_terminate {
-                iteration += 1;
-                let mut neighbor = current.copy();
-                parameters
-                    .mutation_operator
-                    .execute(&mut neighbor, parameters.mutation_probability, &mut rng);
-                problem.evaluate(&mut neighbor);
-                evaluations += 1;
-
-                let improved = if is_maximization {
-                    neighbor.quality_value() > current.quality_value()
-                } else {
-                    neighbor.quality_value() < current.quality_value()
-                };
-
-                if improved {
-                    current = neighbor;
-                }
-
-                let fit = current.quality_value();
-                context.report_progress(ExecutionStateSnapshot::new(
-                    0,
-                    iteration,
-                    evaluations,
-                    current.copy(),
-                    fit,
-                    fit,
-                    fit,
-                ));
-                should_terminate = context.should_terminate();
-            }
-
-            context.end(iteration, evaluations);
-
-            let mut result = VectorSolutionSet::new();
-            result.add_solution(current);
-            result
-        });
-
-        self.observers = observers;
-        self.solution_set = Some(result.clone());
-        result
+    fn set_solution_set(&mut self, solution_set: Self::SolutionSet) {
+        self.solution_set = Some(solution_set);
     }
 
     /// Validates algorithm parameters.
     ///
-    /// Returns `true` when:
-    /// - `termination_criteria` is not empty
-    /// - `mutation_probability` is in `[0.0, 1.0]`
-    fn validate_parameters(&self) -> bool {
-        !self.parameters.termination_criteria.is_empty()
-            && self.parameters.mutation_probability >= 0.0
-            && self.parameters.mutation_probability <= 1.0
+    fn validate_parameters(&self) -> Result<(), String> {
+        if self.parameters.termination_criteria.is_empty() {
+            return Err("termination_criteria must not be empty".to_string());
+        }
+
+        if !(0.0..=1.0).contains(&self.parameters.mutation_probability) {
+            return Err("mutation_probability must be in [0,1]".to_string());
+        }
+
+        Ok(())
     }
 
     /// Returns the last computed solution set, if the algorithm has been run.
     fn get_solution_set(&self) -> Option<&Self::SolutionSet> {
         self.solution_set.as_ref()
+    }
+
+    fn initialize_step_state(
+        &self,
+        problem: &(impl Problem<T> + Sync),
+        _context: &ExecutionContext<T>,
+    ) -> Self::StepState {
+        let mut rng = Random::new(self.parameters.random_seed.unwrap_or_else(seed_from_time));
+        let mut current = problem.create_solution(&mut rng);
+        problem.evaluate(&mut current);
+
+        HillClimbingState {
+            current,
+            rng,
+            iteration: 0,
+            evaluations: 1,
+        }
+    }
+
+    fn step(
+        &self,
+        problem: &(impl Problem<T> + Sync),
+        state: &mut Self::StepState,
+        _context: &ExecutionContext<T>,
+    ) {
+        state.iteration += 1;
+
+        let mut neighbor = state.current.copy();
+        self.parameters.mutation_operator.execute(
+            &mut neighbor,
+            self.parameters.mutation_probability,
+            &mut state.rng,
+        );
+        problem.evaluate(&mut neighbor);
+        state.evaluations += 1;
+
+        let improved = if self.is_maximization {
+            neighbor.quality_value() > state.current.quality_value()
+        } else {
+            neighbor.quality_value() < state.current.quality_value()
+        };
+
+        if improved {
+            state.current = neighbor;
+        }
+    }
+
+    fn snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T> {
+        let fit = state.current.quality_value();
+        ExecutionStateSnapshot::new(
+            0,
+            state.iteration,
+            state.evaluations,
+            state.current.copy(),
+            fit,
+            fit,
+            fit,
+        )
+    }
+
+    fn finalize_step_state(&self, state: Self::StepState) -> Self::SolutionSet {
+        let mut result = VectorSolutionSet::new();
+        result.add_solution(state.current);
+        result
     }
 }
 

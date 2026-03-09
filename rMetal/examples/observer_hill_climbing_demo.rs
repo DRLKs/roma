@@ -36,7 +36,9 @@ fn main() {
         "output/hill_climbing_charts",
     ))));
 
-    let result = algorithm.run(&problem);
+    let result = algorithm
+        .run(&problem)
+        .expect("Hill Climbing run failed");
 
     if let Some(best) = result.best_solution() {
         println!(

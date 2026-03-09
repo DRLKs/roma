@@ -23,5 +23,5 @@ pub use termination::{
 };
 pub use runtime::{
 	ExecutionContext,
-	run_with_observers,
+	RuntimeExecutionOutput,
 };

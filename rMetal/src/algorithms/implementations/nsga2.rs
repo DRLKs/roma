@@ -4,7 +4,7 @@ use crate::algorithms::termination::{
     TerminationCriteria,
 };
 use crate::algorithms::traits::Algorithm;
-use crate::algorithms::runtime::run_with_observers;
+use crate::algorithms::runtime::ExecutionContext;
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
@@ -72,6 +72,13 @@ where
     observers: Vec<Box<dyn AlgorithmObserver<f64, ParetoCrowdingDistanceQuality>>>,
 }
 
+pub struct NSGAIIState {
+    population: Vec<crate::solution::Solution<f64, ParetoCrowdingDistanceQuality>>,
+    rng: Random,
+    generation: usize,
+    evaluations: usize,
+}
+
 impl<C, M, Sel> NSGAII<C, M, Sel>
 where
     C: CrossoverOperator<f64, ParetoCrowdingDistanceQuality>,
@@ -110,159 +117,165 @@ where
 {
     type SolutionSet = VectorSolutionSet<f64, ParetoCrowdingDistanceQuality>;
     type Parameters = NSGAIIParameters<C, M, Sel>;
+    type StepState = NSGAIIState;
 
-    fn run(&mut self, problem: &(impl Problem<f64, ParetoCrowdingDistanceQuality> + Sync)) -> Self::SolutionSet {
-        let is_valid = self.validate_parameters();
-        let parameters = &self.parameters;
-        let observers = std::mem::take(&mut self.observers);
-
-        let (result, observers) = run_with_observers(
-            observers,
-            parameters.termination_criteria.clone(),
-            ImprovementDirection::Minimize,
-            move |context| {
-            if !is_valid {
-                let message = "Invalid parameters: population_size must be > 0, termination_criteria must not be empty, probabilities must be in [0,1]".to_string();
-                context.error(message.clone());
-                panic!("{}", message);
-            }
-
-            context.start("NSGA-II");
-
-            let mut rng = Random::new(parameters.random_seed.unwrap_or_else(seed_from_time));
-
-            let mut population: Vec<_> = (0..parameters.population_size)
-                .map(|_| {
-                    let mut solution = problem.create_solution(&mut rng);
-                    problem.evaluate(&mut solution);
-                    solution
-                })
-                .collect();
-
-            let mut evaluations = parameters.population_size;
-
-            // For multi-objective tracking, use objective(0) statistics as the scalar proxy.
-            let initial_best_solution = population
-                .first()
-                .map(|solution| solution.copy())
-                .expect("population should not be empty when reporting progress");
-
-            let initial_avg = if population.is_empty() {
-                0.0
-            } else {
-                let values: Vec<f64> = population.iter().filter_map(|s| s.get_objective(0)).collect();
-                values.iter().sum::<f64>() / values.len() as f64
-            };
-            let initial_best = initial_best_solution.get_objective(0).unwrap_or(0.0);
-            let initial_worst = population.last().and_then(|s| s.get_objective(0)).unwrap_or(0.0);
-
-            context.report_progress(ExecutionStateSnapshot::new(
-                0,
-                0,
-                evaluations,
-                initial_best_solution,
-                initial_best,
-                initial_avg,
-                initial_worst,
-            ));
-            let mut should_terminate = context.should_terminate();
-
-            let mut generation = 0;
-            while !should_terminate {
-                generation += 1;
-                let mut offspring = Vec::with_capacity(parameters.population_size);
-
-                while offspring.len() < parameters.population_size {
-                    let parent1 = parameters.selection_operator.execute(&population, &mut rng).copy();
-                    let parent2 = parameters.selection_operator.execute(&population, &mut rng).copy();
-
-                    let mut children = if rng.next_f64() < parameters.crossover_probability {
-                        parameters
-                            .crossover_operator
-                            .execute(&parent1, &parent2, &mut rng)
-                    } else {
-                        vec![parent1, parent2]
-                    };
-
-                    for child in &mut children {
-                        parameters
-                            .mutation_operator
-                            .execute(child, parameters.mutation_probability, &mut rng);
-                        problem.evaluate(child);
-                        evaluations += 1;
-                    }
-
-                    offspring.extend(children);
-                }
-
-                offspring.truncate(parameters.population_size);
-                population.extend(offspring);
-
-                // Minimization environmental selection over first objective.
-                population.sort_by(|a, b| {
-                    a.get_objective(0)
-                        .unwrap_or(f64::INFINITY)
-                        .partial_cmp(&b.get_objective(0).unwrap_or(f64::INFINITY))
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                });
-                population.truncate(parameters.population_size);
-
-                let worst = population
-                    .last()
-                    .and_then(|s| s.get_objective(0))
-                    .unwrap_or(0.0);
-                let avg = if population.is_empty() {
-                    0.0
-                } else {
-                    let values: Vec<f64> = population
-                        .iter()
-                        .filter_map(|s| s.get_objective(0))
-                        .collect();
-                    if values.is_empty() {
-                        0.0
-                    } else {
-                        values.iter().sum::<f64>() / values.len() as f64
-                    }
-                };
-
-                let best_solution = population
-                    .first()
-                    .map(|solution| solution.copy())
-                    .expect("population should not be empty when reporting progress");
-                let best = best_solution.get_objective(0).unwrap_or(0.0);
-
-                context.report_progress(ExecutionStateSnapshot::new(
-                    0,
-                    generation,
-                    evaluations,
-                    best_solution,
-                    best,
-                    avg,
-                    worst,
-                ));
-                should_terminate = context.should_terminate();
-            }
-
-            context.end(generation, evaluations);
-
-            VectorSolutionSet::from_vec(population)
-        });
-
-        self.observers = observers;
-        self.solution_set = Some(result.clone());
-        result
+    fn algorithm_name(&self) -> &str {
+        "NSGA-II"
     }
 
-    fn validate_parameters(&self) -> bool {
-        self.parameters.population_size > 0
-            && !self.parameters.termination_criteria.is_empty()
-            && self.parameters.crossover_probability >= 0.0
-            && self.parameters.crossover_probability <= 1.0
-            && self.parameters.mutation_probability >= 0.0
-            && self.parameters.mutation_probability <= 1.0
+    fn termination_criteria(&self) -> TerminationCriteria {
+        self.parameters.termination_criteria.clone()
+    }
+
+    fn improvement_direction(&self) -> ImprovementDirection {
+        ImprovementDirection::Minimize
+    }
+
+    fn observers_mut(&mut self) -> &mut Vec<Box<dyn AlgorithmObserver<f64, ParetoCrowdingDistanceQuality>>> {
+        &mut self.observers
+    }
+
+    fn set_solution_set(&mut self, solution_set: Self::SolutionSet) {
+        self.solution_set = Some(solution_set);
+    }
+
+    fn validate_parameters(&self) -> Result<(), String> {
+        if self.parameters.population_size == 0 {
+            return Err("population_size must be > 0".to_string());
+        }
+
+        if self.parameters.termination_criteria.is_empty() {
+            return Err("termination_criteria must not be empty".to_string());
+        }
+
+        if !(0.0..=1.0).contains(&self.parameters.crossover_probability) {
+            return Err("crossover_probability must be in [0,1]".to_string());
+        }
+
+        if !(0.0..=1.0).contains(&self.parameters.mutation_probability) {
+            return Err("mutation_probability must be in [0,1]".to_string());
+        }
+
+        Ok(())
     }
 
     fn get_solution_set(&self) -> Option<&Self::SolutionSet> {
         self.solution_set.as_ref()
+    }
+
+    fn initialize_step_state(
+        &self,
+        problem: &(impl Problem<f64, ParetoCrowdingDistanceQuality> + Sync),
+        _context: &ExecutionContext<f64, ParetoCrowdingDistanceQuality>,
+    ) -> Self::StepState {
+        let mut rng = Random::new(self.parameters.random_seed.unwrap_or_else(seed_from_time));
+
+        let population: Vec<_> = (0..self.parameters.population_size)
+            .map(|_| {
+                let mut solution = problem.create_solution(&mut rng);
+                problem.evaluate(&mut solution);
+                solution
+            })
+            .collect();
+
+        NSGAIIState {
+            population,
+            rng,
+            generation: 0,
+            evaluations: self.parameters.population_size,
+        }
+    }
+
+    fn step(
+        &self,
+        problem: &(impl Problem<f64, ParetoCrowdingDistanceQuality> + Sync),
+        state: &mut Self::StepState,
+        _context: &ExecutionContext<f64, ParetoCrowdingDistanceQuality>,
+    ) {
+        state.generation += 1;
+        let mut offspring = Vec::with_capacity(self.parameters.population_size);
+
+        while offspring.len() < self.parameters.population_size {
+            let parent1 = self
+                .parameters
+                .selection_operator
+                .execute(&state.population, &mut state.rng)
+                .copy();
+            let parent2 = self
+                .parameters
+                .selection_operator
+                .execute(&state.population, &mut state.rng)
+                .copy();
+
+            let mut children = if state.rng.next_f64() < self.parameters.crossover_probability {
+                self.parameters
+                    .crossover_operator
+                    .execute(&parent1, &parent2, &mut state.rng)
+            } else {
+                vec![parent1, parent2]
+            };
+
+            for child in &mut children {
+                self.parameters.mutation_operator.execute(
+                    child,
+                    self.parameters.mutation_probability,
+                    &mut state.rng,
+                );
+                problem.evaluate(child);
+                state.evaluations += 1;
+            }
+
+            offspring.extend(children);
+        }
+
+        offspring.truncate(self.parameters.population_size);
+        state.population.extend(offspring);
+
+        state.population.sort_by(|a, b| {
+            a.get_objective(0)
+                .unwrap_or(f64::INFINITY)
+                .partial_cmp(&b.get_objective(0).unwrap_or(f64::INFINITY))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        state.population.truncate(self.parameters.population_size);
+    }
+
+    fn snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<f64, ParetoCrowdingDistanceQuality> {
+        let worst = state
+            .population
+            .last()
+            .and_then(|s| s.get_objective(0))
+            .unwrap_or(0.0);
+        let avg = if state.population.is_empty() {
+            0.0
+        } else {
+            let values: Vec<f64> = state.population.iter().filter_map(|s| s.get_objective(0)).collect();
+            if values.is_empty() {
+                0.0
+            } else {
+                values.iter().sum::<f64>() / values.len() as f64
+            }
+        };
+
+        let best_solution = state
+            .population
+            .first()
+            .map(|solution| solution.copy())
+            .expect("population should not be empty when reporting progress");
+        let best = best_solution.get_objective(0).unwrap_or(0.0);
+
+        ExecutionStateSnapshot::new(
+            0,
+            state.generation,
+            state.evaluations,
+            best_solution,
+            best,
+            avg,
+            worst,
+        )
+    }
+
+    fn finalize_step_state(&self, state: Self::StepState) -> Self::SolutionSet {
+        VectorSolutionSet::from_vec(state.population)
     }
 }

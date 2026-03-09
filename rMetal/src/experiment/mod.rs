@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::panic::{self, AssertUnwindSafe};
 use std::sync::Arc;
 use crate::observer::{ExperimentEvent, ExperimentObservable, ExperimentObserver};
 
@@ -91,7 +90,7 @@ impl ExperimentReport {
     }
 }
 
-type CaseRunner = Box<dyn Fn(u64) -> f64 + Send + Sync>;
+type CaseRunner = Box<dyn Fn(u64) -> Result<f64, String> + Send + Sync>;
 
 struct ExperimentCase {
     algorithm: String,
@@ -143,7 +142,7 @@ impl Experiment {
     }
 
     pub fn add_case<F>(
-        mut self,
+        self,
         algorithm: impl Into<String>,
         configuration: impl Into<String>,
         problem: impl Into<String>,
@@ -151,6 +150,24 @@ impl Experiment {
     ) -> Self
     where
         F: Fn(u64) -> f64 + Send + Sync + 'static,
+    {
+        self.add_case_result(
+            algorithm,
+            configuration,
+            problem,
+            move |seed| Ok(run_once(seed)),
+        )
+    }
+
+    pub fn add_case_result<F>(
+        mut self,
+        algorithm: impl Into<String>,
+        configuration: impl Into<String>,
+        problem: impl Into<String>,
+        run_once: F,
+    ) -> Self
+    where
+        F: Fn(u64) -> Result<f64, String> + Send + Sync + 'static,
     {
         self.cases.push(ExperimentCase {
             algorithm: algorithm.into(),
@@ -224,12 +241,9 @@ impl Experiment {
                     &problem,
                     run_index as u64,
                 );
-                let run_result = panic::catch_unwind(AssertUnwindSafe(|| (case.runner)(seed)));
-
-                let best_value = match run_result {
+                let best_value = match (case.runner)(seed) {
                     Ok(value) => value,
-                    Err(payload) => {
-                        let message = panic_payload_to_string(payload);
+                    Err(message) => {
                         Self::notify_observers(&mut self.observers, ExperimentEvent::Error {
                             algorithm: algorithm.clone(),
                             configuration: configuration.clone(),
@@ -285,16 +299,6 @@ impl Experiment {
         for observer in observers.iter_mut() {
             observer.update(&event);
         }
-    }
-}
-
-fn panic_payload_to_string(payload: Box<dyn std::any::Any + Send>) -> String {
-    match payload.downcast::<String>() {
-        Ok(msg) => *msg,
-        Err(payload) => match payload.downcast::<&'static str>() {
-            Ok(msg) => (*msg).to_string(),
-            Err(_) => "Unknown panic during experiment run".to_string(),
-        },
     }
 }
 
@@ -422,8 +426,8 @@ mod tests {
             ]
         }
 
-        fn run_with_parameters(&self, parameters: &Self::Parameters, seed: u64) -> f64 {
-            (seed % 10) as f64 * *parameters
+        fn run_with_parameters(&self, parameters: &Self::Parameters, seed: u64) -> Result<f64, String> {
+            Ok((seed % 10) as f64 * *parameters)
         }
     }
 

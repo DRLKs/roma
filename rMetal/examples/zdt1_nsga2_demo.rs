@@ -32,7 +32,9 @@ fn main() {
     let observer2 = ChartObserver::new_default();
     algorithm.add_observer(Box::new(observer));
     algorithm.add_observer(Box::new(observer2));
-    let result = algorithm.run(&problem);
+    let result = algorithm
+        .run(&problem)
+        .expect("NSGA-II run failed");
 
     if let Some(best) = result.get(0) {
         println!(

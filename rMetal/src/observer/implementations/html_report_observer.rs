@@ -429,18 +429,6 @@ where
                     );
                 }
             }
-            AlgorithmEvent::Error { message } => {
-                self.error_message = Some(message.clone());
-                if let Err(error) = self.generate_report() {
-                    eprintln!("HtmlReportObserver: failed to generate report: {}", error);
-                } else {
-                    let report_url = self.report_file_url();
-                    println!(
-                        "  Open report: {}",
-                        Self::terminal_hyperlink(&report_url, "Open HTML report")
-                    );
-                }
-            }
             _ => {}
         }
     }
