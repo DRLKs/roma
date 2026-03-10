@@ -1,4 +1,4 @@
-use crate::algorithms::runtime::{run_with_observer_runtime, ExecutionContext, RuntimeExecutionOutput};
+use crate::algorithms::runtime::{ExecutionContext, run_algorithm};
 use crate::algorithms::termination::{ExecutionStateSnapshot, ImprovementDirection, TerminationCriteria};
 use crate::observer::traits::AlgorithmObserver;
 use crate::problem::traits::Problem;
@@ -50,34 +50,15 @@ where
         let direction = self.improvement_direction();
         let algorithm = &*self;
 
-        let result = run_with_observer_runtime(
+        let result = run_algorithm(
             &mut observers,
             criteria,
             direction,
             algorithm_name,
-            |context| {
-                let mut state = algorithm.initialize_step_state(problem, context);
-
-                let initial_snapshot = algorithm.snapshot(&state);
-                let mut last_iteration = initial_snapshot.iteration;
-                let mut last_evaluations = initial_snapshot.evaluations;
-                context.report_progress(initial_snapshot);
-
-                while !context.should_terminate() {
-                    algorithm.step(problem, &mut state, context);
-
-                    let step_snapshot = algorithm.snapshot(&state);
-                    last_iteration = step_snapshot.iteration;
-                    last_evaluations = step_snapshot.evaluations;
-                    context.report_progress(step_snapshot);
-                }
-
-                RuntimeExecutionOutput::new(
-                    algorithm.finalize_step_state(state),
-                    last_iteration,
-                    last_evaluations,
-                )
-            },
+            |context| algorithm.initialize_step_state(problem, context),
+            |state, context| algorithm.step(problem, state, context),
+            |state| algorithm.snapshot(state),
+            |state| algorithm.finalize_step_state(state),
         );
         *self.observers_mut() = observers;
 

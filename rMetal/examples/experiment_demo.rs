@@ -6,7 +6,6 @@ use rmetal::algorithms::{
     TerminationCriterion,
 };
 use rmetal::experiment::{AlgorithmConfiguration, Experiment, Objective};
-use rmetal::observer::{ExperimentConsoleObserver, ExperimentObservable};
 use rmetal::operator::BitFlipMutation;
 use rmetal::problem::{KnapsackBuilder, KnapsackProblem};
 use rmetal::utils::cli::seed_from_cli_or;
@@ -75,8 +74,6 @@ fn main() {
         .with_base_seed(base_seed)
         .with_objective(Objective::Maximize);
 
-    experiment.add_experiment_observer(Box::new(ExperimentConsoleObserver::new(false)));
-
     for instance in problem_instances {
         let mut hc_experiment =
             HillClimbingExperiment::new("HC", move || build_problem(instance));
@@ -102,5 +99,10 @@ fn main() {
         experiment = experiment.add_experimentable_algorithm(instance, hc_experiment);
     }
 
-    experiment.execute();
+    let report = experiment.execute();
+    let output_path = "output/experiments/knapsack_benchmark.json";
+    match report.write_json(output_path) {
+        Ok(()) => println!("Experiment JSON report written to: {}", output_path),
+        Err(error) => eprintln!("Failed to write experiment report JSON: {}", error),
+    }
 }

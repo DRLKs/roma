@@ -1,6 +1,18 @@
 use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
 use std::sync::Arc;
-use crate::observer::{ExperimentEvent, ExperimentObservable, ExperimentObserver};
+use std::time::{SystemTime, UNIX_EPOCH};
+use crate::utils::json::{
+    f64_to_json,
+    json_array,
+    json_field,
+    json_object,
+    json_string,
+    u64_to_json,
+    usize_to_json,
+    JsonNodeSerializable
+};
 
 pub mod traits;
 mod utils;
@@ -49,6 +61,17 @@ pub struct ExperimentRunResult {
     pub best_value: f64,
 }
 
+/// Failed execution entry for one specific run.
+#[derive(Debug, Clone)]
+pub struct ExperimentRunFailure {
+    pub algorithm: String,
+    pub configuration: String,
+    pub problem: String,
+    pub run_index: usize,
+    pub seed: u64,
+    pub message: String,
+}
+
 /// Aggregated statistics for one (algorithm, configuration, problem) triplet.
 #[derive(Debug, Clone)]
 pub struct ExperimentSummary {
@@ -69,7 +92,66 @@ pub struct ExperimentReport {
     pub objective: Objective,
     pub runs_per_case: usize,
     pub run_results: Vec<ExperimentRunResult>,
+    pub failures: Vec<ExperimentRunFailure>,
     pub summaries: Vec<ExperimentSummary>,
+}
+impl JsonNodeSerializable for ExperimentRunResult {
+    fn to_json_node(&self, indent_level: usize) -> String {
+        json_object(
+            &[
+                json_field("algorithm", json_string(&self.algorithm)),
+                json_field("configuration", json_string(&self.configuration)),
+                json_field("problem", json_string(&self.problem)),
+                json_field("run_index", usize_to_json(self.run_index)),
+                json_field("seed", u64_to_json(self.seed)),
+                json_field("best_value", f64_to_json(self.best_value)),
+            ],
+            indent_level,
+        )
+    }
+}
+
+impl JsonNodeSerializable for ExperimentRunFailure {
+    fn to_json_node(&self, indent_level: usize) -> String {
+        json_object(
+            &[
+                json_field("algorithm", json_string(&self.algorithm)),
+                json_field("configuration", json_string(&self.configuration)),
+                json_field("problem", json_string(&self.problem)),
+                json_field("run_index", usize_to_json(self.run_index)),
+                json_field("seed", u64_to_json(self.seed)),
+                json_field("message", json_string(&self.message)),
+            ],
+            indent_level,
+        )
+    }
+}
+
+impl JsonNodeSerializable for ExperimentSummary {
+    fn to_json_node(&self, indent_level: usize) -> String {
+        json_object(
+            &[
+                json_field("algorithm", json_string(&self.algorithm)),
+                json_field("configuration", json_string(&self.configuration)),
+                json_field("problem", json_string(&self.problem)),
+                json_field("runs", usize_to_json(self.runs)),
+                json_field("best", f64_to_json(self.best)),
+                json_field("mean", f64_to_json(self.mean)),
+                json_field("worst", f64_to_json(self.worst)),
+                json_field("std_dev", f64_to_json(self.std_dev)),
+            ],
+            indent_level,
+        )
+    }
+}
+
+impl JsonNodeSerializable for Objective {
+    fn to_json_node(&self, _indent_level: usize) -> String {
+        match self {
+            Objective::Maximize => json_string("Maximize"),
+            Objective::Minimize => json_string("Minimize"),
+        }
+    }
 }
 
 impl ExperimentReport {
@@ -87,6 +169,106 @@ impl ExperimentReport {
                 .unwrap_or(std::cmp::Ordering::Equal),
         });
         sorted
+    }
+
+    /// Serializes the full report as a JSON string.
+    pub fn to_json(&self) -> String {
+        let generated_at_unix_ms = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0);
+
+        let successful_runs = self.run_results.len();
+        let failed_runs = self.failures.len();
+        let comparison = self.comparison();
+
+        let run_results_json = self
+            .run_results
+            .iter()
+            .map(|r| r.to_json_node(6))
+            .collect::<Vec<_>>();
+
+        let failures_json = self
+            .failures
+            .iter()
+            .map(|f| f.to_json_node(6))
+            .collect::<Vec<_>>();
+
+        let summaries_json = self
+            .summaries
+            .iter()
+            .map(|s| s.to_json_node(6))
+            .collect::<Vec<_>>();
+
+        let comparison_json = comparison
+            .iter()
+            .map(|s| s.to_json_node(6))
+            .collect::<Vec<_>>();
+
+        json_object(
+            &[
+                json_field(
+                    "metadata",
+                    json_object(
+                        &[
+                            json_field("schema_version", usize_to_json(1)),
+                            json_field(
+                                "generated_at_unix_ms",
+                                generated_at_unix_ms.to_string(),
+                            ),
+                        ],
+                        2,
+                    ),
+                ),
+                json_field(
+                    "report",
+                    json_object(
+                        &[
+                            json_field("name", json_string(&self.name)),
+                            json_field("objective", self.objective.to_json_node(0)),
+                            json_field("runs_per_case", usize_to_json(self.runs_per_case)),
+                            json_field(
+                                "totals",
+                                json_object(
+                                    &[
+                                        json_field(
+                                            "successful_runs",
+                                            usize_to_json(successful_runs),
+                                        ),
+                                        json_field("failed_runs", usize_to_json(failed_runs)),
+                                        json_field(
+                                            "summaries",
+                                            usize_to_json(self.summaries.len()),
+                                        ),
+                                    ],
+                                    4,
+                                ),
+                            ),
+                            json_field("run_results", json_array(&run_results_json, 4)),
+                            json_field("failures", json_array(&failures_json, 4)),
+                            json_field("summaries", json_array(&summaries_json, 4)),
+                            json_field("comparison", json_array(&comparison_json, 4)),
+                        ],
+                        2,
+                    ),
+                ),
+            ],
+            0,
+        )
+    }
+
+    /// Writes the report JSON to disk.
+    pub fn write_json<P: AsRef<Path>>(&self, output_path: P) -> Result<(), String> {
+        let path = output_path.as_ref();
+        if let Some(parent) = path.parent() {
+            if !parent.as_os_str().is_empty() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| format!("failed to create '{}': {}", parent.display(), e))?;
+            }
+        }
+
+        fs::write(path, self.to_json())
+            .map_err(|e| format!("failed to write '{}': {}", path.display(), e))
     }
 }
 
@@ -111,7 +293,6 @@ pub struct Experiment {
     base_seed: u64,
     objective: Objective,
     cases: Vec<ExperimentCase>,
-    observers: Vec<Box<dyn ExperimentObserver>>,
 }
 
 impl Experiment {
@@ -122,7 +303,6 @@ impl Experiment {
             base_seed: 42,
             objective: Objective::Maximize,
             cases: Vec::new(),
-            observers: Vec::new(),
         }
     }
 
@@ -213,25 +393,13 @@ impl Experiment {
     }
 
     pub fn execute(&mut self) -> ExperimentReport {
-        Self::notify_observers(&mut self.observers, ExperimentEvent::Start {
-            name: self.name.clone(),
-            objective: self.objective,
-            runs_per_case: self.runs,
-            total_cases: self.cases.len(),
-        });
-
         let mut run_results = Vec::new();
+        let mut failures = Vec::new();
 
         for case in &self.cases {
             let algorithm = case.algorithm.clone();
             let configuration = case.configuration.clone();
             let problem = case.problem.clone();
-
-            Self::notify_observers(&mut self.observers, ExperimentEvent::CaseStarted {
-                algorithm: algorithm.clone(),
-                configuration: configuration.clone(),
-                problem: problem.clone(),
-            });
 
             for run_index in 0..self.runs {
                 let seed = derive_seed(
@@ -244,10 +412,12 @@ impl Experiment {
                 let best_value = match (case.runner)(seed) {
                     Ok(value) => value,
                     Err(message) => {
-                        Self::notify_observers(&mut self.observers, ExperimentEvent::Error {
+                        failures.push(ExperimentRunFailure {
                             algorithm: algorithm.clone(),
                             configuration: configuration.clone(),
                             problem: problem.clone(),
+                            run_index,
+                            seed,
                             message,
                         });
                         break;
@@ -255,15 +425,6 @@ impl Experiment {
                 };
 
                 run_results.push(ExperimentRunResult {
-                    algorithm: algorithm.clone(),
-                    configuration: configuration.clone(),
-                    problem: problem.clone(),
-                    run_index,
-                    seed,
-                    best_value,
-                });
-
-                Self::notify_observers(&mut self.observers, ExperimentEvent::RunCompleted {
                     algorithm: algorithm.clone(),
                     configuration: configuration.clone(),
                     problem: problem.clone(),
@@ -281,34 +442,11 @@ impl Experiment {
             objective: self.objective,
             runs_per_case: self.runs,
             run_results,
+            failures,
             summaries,
         };
 
-        Self::notify_observers(&mut self.observers, ExperimentEvent::End {
-            report: report.clone(),
-        });
-
-        for observer in self.observers.iter_mut() {
-            observer.finalize();
-        }
-
         report
-    }
-
-    fn notify_observers(observers: &mut Vec<Box<dyn ExperimentObserver>>, event: ExperimentEvent) {
-        for observer in observers.iter_mut() {
-            observer.update(&event);
-        }
-    }
-}
-
-impl ExperimentObservable for Experiment {
-    fn add_experiment_observer(&mut self, observer: Box<dyn ExperimentObserver>) {
-        self.observers.push(observer);
-    }
-
-    fn clear_experiment_observers(&mut self) {
-        self.observers.clear();
     }
 }
 

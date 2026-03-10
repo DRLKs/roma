@@ -25,7 +25,6 @@ pub use algorithms::{
 	TerminationCriterion,
 	TerminationReason,
 	TerminationState,
-	RuntimeExecutionOutput,
 };
 pub use operator::{
 	BitFlipMutation,
@@ -45,10 +44,6 @@ pub use observer::{
 	AlgorithmObserver,
 	ChartObserver,
 	ConsoleObserver,
-	ExperimentConsoleObserver,
-	ExperimentEvent,
-	ExperimentObservable,
-	ExperimentObserver,
 	HtmlReportObserver,
 	Observable,
 };
@@ -96,7 +91,6 @@ pub mod prelude {
 		TerminationCriteria,
 		TerminationCriterion,
 		TerminationReason,
-		RuntimeExecutionOutput,
 	};
 
 	pub use crate::operator::{
@@ -119,10 +113,6 @@ pub mod prelude {
 		AlgorithmObserver,
 		ChartObserver,
 		ConsoleObserver,
-		ExperimentConsoleObserver,
-		ExperimentEvent,
-		ExperimentObservable,
-		ExperimentObserver,
 		HtmlReportObserver,
 		Observable,
 	};

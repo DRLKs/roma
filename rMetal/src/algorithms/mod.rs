@@ -23,5 +23,4 @@ pub use termination::{
 };
 pub use runtime::{
 	ExecutionContext,
-	RuntimeExecutionOutput,
 };

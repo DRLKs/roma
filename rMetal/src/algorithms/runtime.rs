@@ -15,7 +15,7 @@ type ObserverSender<T, Q> = Option<Sender<AlgorithmEvent<T, Q>>>;
 
 /// Output expected from one algorithm execution.
 ///
-/// The runtime emits `Start` and `End/Error` events around the task and uses
+/// The runtime emits `Start` and `End` events around the task and uses
 /// this structure to complete end-of-run metadata consistently.
 pub struct RuntimeExecutionOutput<R> {
     pub result: R,
@@ -250,4 +250,54 @@ where
     *observers = observers_after;
 
     output.result
+}
+
+/// Executes the common step-based algorithm lifecycle using runtime observers.
+pub(crate) fn run_algorithm<T, Q, S, R, Initialize, Step, Snapshot, Finalize>(
+    observers: &mut Vec<Box<dyn AlgorithmObserver<T, Q>>>,
+    criteria: TerminationCriteria,
+    direction: ImprovementDirection,
+    algorithm_name: impl Into<String>,
+    initialize: Initialize,
+    mut step: Step,
+    snapshot: Snapshot,
+    finalize: Finalize,
+) -> R
+where
+    T: Clone + Send + 'static,
+    Q: Clone + Send + 'static,
+    Initialize: FnOnce(&ExecutionContext<T, Q>) -> S,
+    Step: FnMut(&mut S, &ExecutionContext<T, Q>),
+    Snapshot: Fn(&S) -> ExecutionStateSnapshot<T, Q>,
+    Finalize: FnOnce(S) -> R,
+{
+    run_with_observer_runtime(
+        observers,
+        criteria,
+        direction,
+        algorithm_name,
+        move |context| {
+            let mut state = initialize(context);
+
+            let initial_snapshot = snapshot(&state);
+            let mut last_iteration = initial_snapshot.iteration;
+            let mut last_evaluations = initial_snapshot.evaluations;
+            context.report_progress(initial_snapshot);
+
+            while !context.should_terminate() {
+                step(&mut state, context);
+
+                let step_snapshot = snapshot(&state);
+                last_iteration = step_snapshot.iteration;
+                last_evaluations = step_snapshot.evaluations;
+                context.report_progress(step_snapshot);
+            }
+
+            RuntimeExecutionOutput::new(
+                finalize(state),
+                last_iteration,
+                last_evaluations,
+            )
+        },
+    )
 }
