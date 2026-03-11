@@ -14,7 +14,6 @@ pub use algorithms::{
 	GeneticAlgorithmParameters,
 	HillClimbing,
 	HillClimbingExperiment,
-	HillClimbingExperimentConfig,
 	HillClimbingParameters,
 	ExecutionStateSnapshot,
 	ImprovementDirection,
@@ -48,13 +47,7 @@ pub use observer::{
 	Observable,
 };
 pub use experiment::{
-	AlgorithmConfiguration,
 	Experiment,
-	ExperimentReport,
-	ExperimentRunResult,
-	ExperimentSummary,
-	ExperimentableAlgorithm,
-	Objective,
 };
 pub use solution::{
 	BinarySolutionBuilder,
@@ -81,7 +74,6 @@ pub mod prelude {
 		GeneticAlgorithmParameters,
 		HillClimbing,
 		HillClimbingExperiment,
-		HillClimbingExperimentConfig,
 		HillClimbingParameters,
 		ExecutionStateSnapshot,
 		ImprovementDirection,
@@ -118,13 +110,7 @@ pub mod prelude {
 	};
 
 	pub use crate::experiment::{
-		AlgorithmConfiguration,
 		Experiment,
-		ExperimentReport,
-		ExperimentRunResult,
-		ExperimentSummary,
-		ExperimentableAlgorithm,
-		Objective,
 	};
 
 	pub use crate::solution::{

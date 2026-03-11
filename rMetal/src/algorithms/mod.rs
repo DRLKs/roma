@@ -8,7 +8,6 @@ pub use implementations::genetic_algorithm::{GeneticAlgorithm, GeneticAlgorithmP
 pub use implementations::hill_climbing::{
 	HillClimbing,
 	HillClimbingExperiment,
-	HillClimbingExperimentConfig,
 	HillClimbingParameters,
 };
 pub use implementations::nsga2::{NSGAII, NSGAIIParameters};

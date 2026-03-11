@@ -1,20 +1,61 @@
-use crate::experiment::AlgorithmConfiguration;
+use crate::problem::traits::Problem;
+use crate::solution::traits::Dominance;
+use crate::solution_set::traits::SolutionSet;
+use std::fmt;
 
-/// Contract for algorithms that can be automatically benchmarked in experiments.
+/// Generic key/value parameter descriptor used by experiment cases.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CaseParameter {
+    pub key: String,
+    pub value: String,
+}
+
+impl CaseParameter {
+    pub fn new(key: impl Into<String>, value: impl Into<String>) -> Self {
+        Self {
+            key: key.into(),
+            value: value.into(),
+        }
+    }
+}
+
+impl fmt::Display for CaseParameter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}={}", self.key, self.value)
+    }
+}
+
+/// One executable experiment case for a concrete algorithm/configuration.
 ///
-/// Implementers expose a list of configurations (parameters/operators/attributes)
-/// and define how to execute one run with a deterministic seed.
-pub trait ExperimentableAlgorithm: Send + Sync {
-    type Parameters: Clone + Send + Sync + 'static;
-
-    /// Stable name used in experiment reports.
+/// The case is responsible for:
+/// - exposing user-facing identifiers for reporting,
+/// - creating/running the algorithm with a deterministic seed,
+/// - returning one scalar best-value metric for aggregation.
+pub trait ExperimentalCase<T, Q, P>: Send + Sync
+where
+    T: Clone + Send + 'static,
+    Q: Clone + Default + Dominance + Send + 'static + Copy + Into<f64>,
+    P: Problem<T, Q> + Sync,
+{
     fn algorithm_name(&self) -> &str;
 
-    /// Parameter sweep to evaluate.
-    fn configurations(&self) -> Vec<AlgorithmConfiguration<Self::Parameters>>;
+    /// Human-readable identifier for this concrete configuration.
+    fn case_name(&self) -> String {
+        self.algorithm_name().to_string()
+    }
 
-    /// Executes one run for the given parameters and seed.
-    ///
-    /// Return value must be the scalar performance indicator used for ranking.
-    fn run_with_parameters(&self, parameters: &Self::Parameters, seed: u64) -> Result<f64, String>;
+    /// Returns generic parameter key/value pairs for reporting.
+    fn parameters(&self) -> Vec<CaseParameter>;
+
+    /// Helper to print all parameters in a single textual line.
+    fn parameters_as_text(&self) -> String {
+        self.parameters()
+            .into_iter()
+            .map(|p| p.to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
+    /// Creates and executes the algorithm with the provided deterministic seed.
+    fn run(&self, problem: &P, seed: u64) -> Result<Box<dyn SolutionSet<T, Q>>, String>;
 }

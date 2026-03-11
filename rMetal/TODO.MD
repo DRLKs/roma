@@ -61,3 +61,11 @@
 
     ( lo implementado a mi parecer es muy verboso, debemos observarlo con cautela y modificarlo si fuera necesario )
     ( los observadores de los experimentos creo que están bastante decentes, pero seguramente sean mejorables )
+
+[ ] 15. Creación de macros para hacer más abstracta la biblioteca, esto quizáses demasiado avanzado
+
+[ ] 16. Cosas que hacer en los experimentos.
+    [X] Estandarizar los parámetros para que se puedan añadir a los summaries { Hecho a medias con el parser, es mejorable }
+    [X] El algoritmo debe recibir parámetros, estos parámetros construir algoritmos y que estos se ejecuten
+
+[ ] 17. TAREA MAÑANA: Pruebas + Limpiar código + Arquitectura

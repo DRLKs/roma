@@ -5,7 +5,7 @@ use crate::algorithms::termination::{
 };
 use crate::algorithms::traits::Algorithm;
 use crate::algorithms::runtime::ExecutionContext;
-use crate::experiment::{AlgorithmConfiguration, ExperimentableAlgorithm};
+use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::operator::traits::MutationOperator;
 use crate::problem::traits::Problem;
@@ -64,96 +64,7 @@ where
     }
 }
 
-/// Run parameters used by `HillClimbingExperiment`.
-#[derive(Clone)]
-pub struct HillClimbingExperimentConfig<T, M>
-where
-    T: Clone,
-    M: MutationOperator<T>,
-{
-    pub parameters: HillClimbingParameters<T, M>,
-    pub is_maximization: bool,
-}
 
-impl<T, M> HillClimbingExperimentConfig<T, M>
-where
-    T: Clone,
-    M: MutationOperator<T>,
-{
-    pub fn new(parameters: HillClimbingParameters<T, M>, is_maximization: bool) -> Self {
-        Self {
-            parameters,
-            is_maximization,
-        }
-    }
-}
-
-/// Experiment adapter for Hill Climbing with support for configuration sweeps.
-pub struct HillClimbingExperiment<T, M, PB, P>
-where
-    T: Clone,
-    M: MutationOperator<T>,
-    PB: Fn() -> P + Send + Sync,
-    P: Problem<T> + Sync,
-{
-    algorithm_name: String,
-    problem_builder: PB,
-    configurations: Vec<AlgorithmConfiguration<HillClimbingExperimentConfig<T, M>>>,
-}
-
-impl<T, M, PB, P> HillClimbingExperiment<T, M, PB, P>
-where
-    T: Clone,
-    M: MutationOperator<T>,
-    PB: Fn() -> P + Send + Sync,
-    P: Problem<T> + Sync,
-{
-    pub fn new(algorithm_name: impl Into<String>, problem_builder: PB) -> Self {
-        Self {
-            algorithm_name: algorithm_name.into(),
-            problem_builder,
-            configurations: Vec::new(),
-        }
-    }
-
-    pub fn add_configuration(
-        mut self,
-        configuration: AlgorithmConfiguration<HillClimbingExperimentConfig<T, M>>,
-    ) -> Self {
-        self.configurations.push(configuration);
-        self
-    }
-}
-
-impl<T, M, PB, P> ExperimentableAlgorithm for HillClimbingExperiment<T, M, PB, P>
-where
-    T: Clone + Send + Sync + 'static,
-    M: MutationOperator<T> + Clone + Send + Sync + 'static,
-    PB: Fn() -> P + Send + Sync,
-    P: Problem<T> + Sync,
-{
-    type Parameters = HillClimbingExperimentConfig<T, M>;
-
-    fn algorithm_name(&self) -> &str {
-        &self.algorithm_name
-    }
-
-    fn configurations(&self) -> Vec<AlgorithmConfiguration<Self::Parameters>> {
-        self.configurations.clone()
-    }
-
-    fn run_with_parameters(&self, parameters: &Self::Parameters, seed: u64) -> Result<f64, String> {
-        let problem = (self.problem_builder)();
-
-        let mut algorithm = HillClimbing::new(
-            parameters.parameters.clone().with_seed(seed),
-            parameters.is_maximization,
-        );
-        let result = algorithm.run(&problem)?;
-
-        Ok(result.best_solution_value_or(0.0))
-    }
-}
 
 /// Hill Climbing optimization algorithm.
 ///
@@ -341,5 +252,77 @@ fn get_improvement_direction( is_maximization: bool ) -> ImprovementDirection{
         ImprovementDirection::Maximize
     } else {
         ImprovementDirection::Minimize
+    }
+}
+
+
+
+/// Executable experiment case for the Hill Climbing algorithm.
+#[derive(Clone)]
+pub struct HillClimbingExperiment<T, M>
+where
+    T: Clone,
+    M: MutationOperator<T> + Clone,
+{
+    pub parameters: HillClimbingParameters<T, M>,
+    pub maximization: bool,
+}
+
+impl<T, M> HillClimbingExperiment<T, M>
+where
+    T: Clone,
+    M: MutationOperator<T> + Clone,
+{
+    pub fn new(
+        parameters: HillClimbingParameters<T, M>,
+        maximization: bool,
+    ) -> Self {
+        Self {
+            parameters,
+            maximization,
+        }
+    }
+}
+
+impl<T, M, P> ExperimentalCase<T, f64, P> for HillClimbingExperiment<T, M>
+where
+    T: Clone + Send + Sync + 'static,
+    M: MutationOperator<T> + Clone + Send + Sync + 'static,
+    P: Problem<T, f64> + Sync,
+{
+    fn algorithm_name(&self) -> &str {
+        "HillClimbing"
+    }
+
+    fn case_name(&self) -> String {
+        format!(
+            "{}(mutation_prob={:.4}, direction={})",
+            "HillClimbing",
+            self.parameters.mutation_probability,
+            if self.maximization { "max" } else { "min" }
+        )
+    }
+
+    fn parameters(&self) -> Vec<CaseParameter> {
+        vec![
+            CaseParameter::new("mutation_operator", self.parameters.mutation_operator.name()),
+            CaseParameter::new(
+                "mutation_probability",
+                format!("{:.6}", self.parameters.mutation_probability),
+            ),
+            CaseParameter::new(
+                "termination_criteria",
+                format!("{:?}", self.parameters.termination_criteria),
+            ),
+            CaseParameter::new("direction", if self.maximization { "maximize" } else { "minimize" }),
+        ]
+    }
+
+    fn run(&self, problem: &P, seed: u64) -> Result<Box<dyn SolutionSet<T, f64>>, String> {
+        let mut parameters = self.parameters.clone();
+        parameters.random_seed = Some(seed);
+
+        let result = HillClimbing::new(parameters, self.maximization).run(problem)?;
+        Ok(Box::new(result))
     }
 }
