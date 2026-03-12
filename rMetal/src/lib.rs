@@ -11,6 +11,7 @@ pub mod experiment;
 pub use algorithms::{
 	Algorithm,
 	GeneticAlgorithm,
+	GeneticAlgorithmExperiment,
 	GeneticAlgorithmParameters,
 	HillClimbing,
 	HillClimbingExperiment,
@@ -71,6 +72,7 @@ pub mod prelude {
 	pub use crate::algorithms::{
 		Algorithm,
 		GeneticAlgorithm,
+		GeneticAlgorithmExperiment,
 		GeneticAlgorithmParameters,
 		HillClimbing,
 		HillClimbingExperiment,

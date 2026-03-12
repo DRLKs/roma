@@ -10,7 +10,6 @@ pub struct ExperimentRunResult {
     pub algorithm_name: String,
     pub case_name: String,
     pub run_index: usize,
-    pub seed: u64,
     pub best_value: f64,
 }
 
@@ -19,7 +18,6 @@ pub struct ExperimentFailure {
     pub algorithm_name: String,
     pub case_name: String,
     pub run_index: usize,
-    pub seed: u64,
     pub error: String,
 }
 
@@ -82,10 +80,9 @@ impl ExperimentReport {
             for failure in &self.failures {
                 let _ = writeln!(
                     out,
-                    "- {} | run={} seed={} | {}",
+                    "- {} | run={} | {}",
                     failure.case_name,
                     failure.run_index,
-                    failure.seed,
                     failure.error
                 );
             }

@@ -5,14 +5,17 @@ use crate::algorithms::termination::{
 };
 use crate::algorithms::traits::Algorithm;
 use crate::algorithms::runtime::ExecutionContext;
+use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
+use crate::solution_set::traits::SolutionSet;
 use crate::utils::random::{seed_from_time, Random};
 use crate::utils::statistics::calculate_statistics;
 
+#[derive(Clone)]
 pub struct GeneticAlgorithmParameters<T, C, M, Sel>
 where
     T: Clone,
@@ -498,5 +501,87 @@ where
 
     fn finalize_step_state(&self, state: Self::StepState) -> Self::SolutionSet {
         VectorSolutionSet::from_vec(state.population)
+    }
+}
+
+/// Executable experiment case for the Genetic Algorithm.
+#[derive(Clone)]
+pub struct GeneticAlgorithmExperiment<T, C, M, Sel>
+where
+    T: Clone,
+    C: CrossoverOperator<T> + Clone,
+    M: MutationOperator<T> + Clone,
+    Sel: SelectionOperator<T> + Clone,
+{
+    pub parameters: GeneticAlgorithmParameters<T, C, M, Sel>,
+}
+
+impl<T, C, M, Sel> GeneticAlgorithmExperiment<T, C, M, Sel>
+where
+    T: Clone,
+    C: CrossoverOperator<T> + Clone,
+    M: MutationOperator<T> + Clone,
+    Sel: SelectionOperator<T> + Clone,
+{
+    pub fn new(parameters: GeneticAlgorithmParameters<T, C, M, Sel>) -> Self {
+        Self { parameters }
+    }
+}
+
+impl<T, C, M, Sel, P> ExperimentalCase<T, f64, P> for GeneticAlgorithmExperiment<T, C, M, Sel>
+where
+    T: Clone + Send + Sync + 'static,
+    C: CrossoverOperator<T> + Clone + Send + Sync + 'static,
+    M: MutationOperator<T> + Clone + Send + Sync + 'static,
+    Sel: SelectionOperator<T> + Clone + Send + Sync + 'static,
+    P: Problem<T, f64> + Sync,
+{
+    fn algorithm_name(&self) -> &str {
+        "GeneticAlgorithm"
+    }
+
+    fn case_name(&self) -> String {
+        format!(
+            "{}(pop={}, cx={:.3}, mut={:.3}, elite={})",
+            "GeneticAlgorithm",
+            self.parameters.population_size,
+            self.parameters.crossover_probability,
+            self.parameters.mutation_probability,
+            self.parameters.elite_size,
+        )
+    }
+
+    fn parameters(&self) -> Vec<CaseParameter> {
+        let threads_text = match self.parameters.num_threads {
+            Some(v) => v.to_string(),
+            None => "auto".to_string(),
+        };
+
+        vec![
+            CaseParameter::new("population_size", self.parameters.population_size.to_string()),
+            CaseParameter::new(
+                "crossover_probability",
+                format!("{:.6}", self.parameters.crossover_probability),
+            ),
+            CaseParameter::new(
+                "mutation_probability",
+                format!("{:.6}", self.parameters.mutation_probability),
+            ),
+            CaseParameter::new("elite_size", self.parameters.elite_size.to_string()),
+            CaseParameter::new("threads", threads_text),
+            CaseParameter::new("crossover_operator", self.parameters.crossover_operator.name()),
+            CaseParameter::new("mutation_operator", self.parameters.mutation_operator.name()),
+            CaseParameter::new("selection_operator", self.parameters.selection_operator.name()),
+            CaseParameter::new(
+                "termination_criteria",
+                format!("{:?}", self.parameters.termination_criteria),
+            ),
+        ]
+    }
+
+    fn run(&self, problem: &P) -> Result<Box<dyn SolutionSet<T, f64>>, String> {
+        let mut algorithm = GeneticAlgorithm::new(self.parameters.clone());
+        let result = algorithm.run(problem)?;
+        Ok(Box::new(result))
     }
 }

@@ -318,11 +318,8 @@ where
         ]
     }
 
-    fn run(&self, problem: &P, seed: u64) -> Result<Box<dyn SolutionSet<T, f64>>, String> {
-        let mut parameters = self.parameters.clone();
-        parameters.random_seed = Some(seed);
-
-        let result = HillClimbing::new(parameters, self.maximization).run(problem)?;
+    fn run(&self, problem: &P) -> Result<Box<dyn SolutionSet<T, f64>>, String> {
+        let result = HillClimbing::new(self.parameters.clone(), self.maximization).run(problem)?;
         Ok(Box::new(result))
     }
 }

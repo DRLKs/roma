@@ -10,7 +10,7 @@ use super::report::{
     ExperimentSummary,
     Objective
 };
-use super::utils::{derive_seed, mean, variance, best_and_worst};
+use super::utils::{mean, variance, best_and_worst};
 
 pub struct Experiment<T, Q, P>
 where
@@ -20,7 +20,6 @@ where
 {
     problem: P,
     runs: usize,
-    base_seed: u64,
     objective: Objective,
     cases: Vec<Box<dyn ExperimentalCase<T, Q, P>>>,
 }
@@ -35,7 +34,6 @@ where
         Self {
             problem,
             runs: 30,
-            base_seed: 42,
             objective: Objective::Maximize,
             cases: Vec::new(),
         }
@@ -43,11 +41,6 @@ where
 
     pub fn with_runs(mut self, runs: usize) -> Self {
         self.runs = runs.max(1);
-        self
-    }
-
-    pub fn with_base_seed(mut self, seed: u64) -> Self {
-        self.base_seed = seed;
         self
     }
 
@@ -68,29 +61,19 @@ where
 
         let mut run_results = Vec::<ExperimentRunResult>::new();
         let mut failures = Vec::<ExperimentFailure>::new();
-        let problem_name = self.problem.get_problem_description();
 
         for case in &self.cases {
             let case_name = case.case_name();
             let algorithm_name = case.algorithm_name().to_string();
 
             for run_index in 0..self.runs {
-                let seed = derive_seed(
-                    self.base_seed,
-                    &algorithm_name,
-                    &case_name,
-                    &problem_name,
-                    run_index as u64,
-                );
-
-                match case.run(&self.problem, seed) {
+                match case.run(&self.problem) {
                     Ok(solution_set) => {
                         if let Some(best_value) = solution_set.best_solution_value() {
                             run_results.push(ExperimentRunResult {
                                 algorithm_name: algorithm_name.clone(),
                                 case_name: case_name.clone(),
                                 run_index,
-                                seed,
                                 best_value,
                             });
                         } else {
@@ -98,7 +81,6 @@ where
                                 algorithm_name: algorithm_name.clone(),
                                 case_name: case_name.clone(),
                                 run_index,
-                                seed,
                                 error: "algorithm returned an empty solution set".to_string(),
                             });
                         }
@@ -108,7 +90,6 @@ where
                             algorithm_name: algorithm_name.clone(),
                             case_name: case_name.clone(),
                             run_index,
-                            seed,
                             error,
                         });
                     }

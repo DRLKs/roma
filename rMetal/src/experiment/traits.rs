@@ -29,7 +29,7 @@ impl fmt::Display for CaseParameter {
 ///
 /// The case is responsible for:
 /// - exposing user-facing identifiers for reporting,
-/// - creating/running the algorithm with a deterministic seed,
+/// - creating/running the algorithm using its own configured parameters,
 /// - returning one scalar best-value metric for aggregation.
 pub trait ExperimentalCase<T, Q, P>: Send + Sync
 where
@@ -56,6 +56,6 @@ where
             .join(", ")
     }
 
-    /// Creates and executes the algorithm with the provided deterministic seed.
-    fn run(&self, problem: &P, seed: u64) -> Result<Box<dyn SolutionSet<T, Q>>, String>;
+    /// Creates and executes the algorithm with its configured parameters.
+    fn run(&self, problem: &P) -> Result<Box<dyn SolutionSet<T, Q>>, String>;
 }

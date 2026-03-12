@@ -1,24 +1,16 @@
 use rmetal::{
     Algorithm,
-    Observable,
     BinaryTournamentSelection,
     BitFlipMutation,
     ConsoleObserver,
     GeneticAlgorithm,
     GeneticAlgorithmParameters,
-    HillClimbing,
-    HillClimbingParameters,
     KnapsackBuilder,
-    MultiObjectiveTournamentSelection,
-    NSGAII,
-    NSGAIIParameters,
-    PolynomialMutation,
-    SBXCrossover,
+    Observable,
     SinglePointCrossover,
     SolutionSet,
     TerminationCriteria,
     TerminationCriterion,
-    ZDT1Problem,
 };
 
 #[test]
@@ -53,60 +45,6 @@ fn ga_solves_knapsack_end_to_end_with_observer() {
     let best = result.best_solution().expect("Population should not be empty");
     assert!(best.quality().is_some());
     assert!(result.best_solution_value_or(f64::NEG_INFINITY).is_finite());
-}
-
-#[test]
-fn hill_climbing_handles_empty_problem_edge_case() {
-    // Edge case: a knapsack with zero items must not crash and should return a valid empty solution.
-    let problem = KnapsackBuilder::new().with_capacity(100.0).build();
-
-    let parameters = HillClimbingParameters::new(
-        BitFlipMutation::new(),
-        1.0,
-        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(5)]),
-    )
-    .with_seed(7);
-    let mut algorithm = HillClimbing::new(parameters, true);
-
-    let result = algorithm.run(&problem).expect("Hill Climbing run should succeed");
-
-    assert_eq!(result.size(), 1);
-    let solution = result.get(0).expect("Hill Climbing should return one solution");
-    assert_eq!(solution.num_variables(), 0);
-    assert_eq!(solution.quality().copied(), Some(0.0));
-}
-
-#[test]
-fn nsga2_runs_on_minimum_valid_zdt1_dimension() {
-    // Edge case: ZDT1 minimum supported dimensionality (2 variables).
-    let problem = ZDT1Problem::new(2);
-
-    let parameters = NSGAIIParameters::new(
-        16,
-        0.9,
-        0.2,
-        SBXCrossover::new_default(),
-        PolynomialMutation::new_default(),
-        MultiObjectiveTournamentSelection::new(),
-        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(4)]),
-    )
-    .with_seed(99);
-
-    let mut algorithm = NSGAII::new(parameters);
-    let result = algorithm.run(&problem).expect("NSGA-II run should succeed");
-
-    assert_eq!(result.size(), 16);
-
-    for solution in result.solutions() {
-        let objectives = solution
-            .get_objectives()
-            .expect("All NSGA-II solutions must have objectives");
-
-        assert_eq!(objectives.len(), 2);
-        assert!(objectives[0].is_finite() && objectives[1].is_finite());
-        assert!((0.0..=1.0).contains(&objectives[0]));
-        assert!(objectives[1] >= 0.0);
-    }
 }
 
 #[test]

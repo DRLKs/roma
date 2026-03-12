@@ -38,7 +38,6 @@ fn main() {
 
     let report = Experiment::new(problem)
         .with_runs(12)
-        .with_base_seed(12345)
         .with_objective(Objective::Maximize)
         .add_case(case_a)
         .add_case(case_b)
