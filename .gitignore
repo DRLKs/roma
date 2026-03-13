@@ -89,4 +89,4 @@ build/
 /texmf-var/
 
 # Archivos generados por los observadores 
-output/
+observers_outputs/

@@ -51,7 +51,7 @@ impl ChartObserver {
 
     /// Creates a `ChartObserver` with a standard base directory.
     pub fn new_default() -> Self {
-        Self::new(PathBuf::from("output/charts"))
+        Self::new(crate::observer::default_observers_output_path().join("charts"))
     }
 
     /// Disables automatic per-run subdirectories.

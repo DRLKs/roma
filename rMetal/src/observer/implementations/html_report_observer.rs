@@ -37,7 +37,7 @@ struct BestSnapshot {
 /// # Output layout
 ///
 /// By default, each run is written to:
-/// `output/reports/<algorithm_slug>/run_<timestamp_ms>_<pid>/report.html`.
+/// `target/observers_outputs/reports/<algorithm_slug>/run_<timestamp_ms>_<pid>/report.html`.
 ///
 /// Use [`HtmlReportObserver::with_flat_output`] if you prefer a flat output
 /// folder without per-run subdirectories.
@@ -80,9 +80,10 @@ impl HtmlReportObserver {
         }
     }
 
-    /// Creates a report observer with default base directory: `output/reports`.
+    /// Creates a report observer with default base directory:
+    /// `target/observers_outputs/reports`.
     pub fn new_default() -> Self {
-        Self::new(PathBuf::from("output/reports"))
+        Self::new(crate::observer::default_observers_output_path().join("reports"))
     }
 
     /// Disables automatic per-run subdirectories.

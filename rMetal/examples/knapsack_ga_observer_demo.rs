@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use rmetal::algorithms::{
     Algorithm,
     GeneticAlgorithm,
@@ -41,9 +39,7 @@ fn main() {
 
     let mut algorithm = GeneticAlgorithm::new(parameters);
     algorithm.add_observer(Box::new(ConsoleObserver::new(true)));
-    algorithm.add_observer(Box::new(ChartObserver::new(PathBuf::from(
-        "output/knapsack_ga_observer_demo/charts",
-    ))));
+    algorithm.add_observer(Box::new(ChartObserver::new_default()));
 
     let result = algorithm
         .run(&problem)

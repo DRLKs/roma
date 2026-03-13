@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use rmetal::algorithms::{
     Algorithm,
     HillClimbing,
@@ -32,9 +30,7 @@ fn main() {
     let mut algorithm = HillClimbing::new(parameters, true);
 
     algorithm.add_observer(Box::new(ConsoleObserver::new(true)));
-    algorithm.add_observer(Box::new(ChartObserver::new(PathBuf::from(
-        "output/hill_climbing_charts",
-    ))));
+    algorithm.add_observer(Box::new(ChartObserver::new_default()));
 
     let result = algorithm
         .run(&problem)

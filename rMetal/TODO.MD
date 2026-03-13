@@ -21,7 +21,7 @@
 [X] 6. Manejo de Eventos y Observadores
     [X] Eliminar el patrón Observer clásico (`Observable`, `AlgorithmObserver`) que obliga a manejar lifetimes o punteros compartidos complejos.
     [X] Reemplazar la notificación de progreso por el uso de Closures (`FnMut`) pasados al Builder, o canales de paso de mensajes (`std::sync::mpsc`).
-    [ ] Hemos añadido más información. Cuando el algoritmo termina, termina debido a una condición de parada, estoa condición de parada debe mostrarse en los charts o en lo repots o en ambos. Terminal, etc...
+    [ ] Hemos añadido más información. Cuando el algoritmo termina, termina debido a una condición de parada, esta condición de parada debe mostrarse en los charts o en lo repots o en ambos. Terminal, etc...
 
 [X] 7. Memoria, requisitos
     [X] Desarrollar los casos de uso. Crear tus propios algoritmos y ejemplos o añadir el crate y usar los algoritmos de la biblioteca.
@@ -29,22 +29,20 @@
 
 [X] 8. Reproducibilidad 28/02/26
 
-[ ] 9. Algoritmos y operadores, ideas de Gabriel
+[ ] 9. Algoritmos y operadores, ideas de Tutor
     [X] Más criterios de paradas.
     [ ] Operadores, que devuelvan información para quizás hacer más rápidas las evaluaciones de las soluciones, porque devolverán información sobre lo que ha cambiado de la solución
 
 [X] 10. Ideas, Observadores y Criterios de paradas. MUY CORE.  - - - Asignado para --> 09/03/2026 u 10/03/2026
     [X] Ambas estructuras almacenan información sobre el estado actual del algoritmo, quizás juntar esta información en una estructura más grande    
-
-    Algoritmos
+    ---Algoritmos
     [ ] Quizás quitar get_solution_set y get_solution_set
-    [ ] Mi idea general es que la función run, sea la misma para todos los algoritmos. 
+    [X] Mi idea general es que la función run, sea la misma para todos los algoritmos. 
         Hilo distinto para que los observadores estén en otro hilo {Validate parameters, while !should_terminate : step(), context.update }.
         Luego step cambia para cada algoritmo.
-    [ ] No me gustan los panics, quizás quitarlos
+    [X] No me gustan los panics, quizás quitarlos y cambiarlos por Result<>
     [ ] Quizás si no tuvieramos que copiar los criterios de terminación estaría bastante bien
-    [ ] Cambiar validate_parameters para que devuelva un result o algo así con el mensaje de error en caso de que los parámetros estén mal
-    [ ] Quizás desde run_with_observers no tiene mucho sentido que devuelva RuntimeExecutionOutput
+    [X] Cambiar validate_parameters para que devuelva un result o algo así con el mensaje de error en caso de que los parámetros estén mal
 
 [ ] 11. CSVs, JSON, YAML. Quiero que también se pueda añadir datos desde distintos tipos de archivos. Solo está implementado para CSVs, que de hecho es el que peor funciona para estos casos.
 
@@ -64,8 +62,9 @@
 
 [ ] 15. Creación de macros para hacer más abstracta la biblioteca, esto quizáses demasiado avanzado
 
-[ ] 16. Cosas que hacer en los experimentos.
+[X] 16. Experimentos.
     [X] Estandarizar los parámetros para que se puedan añadir a los summaries { Hecho a medias con el parser, es mejorable }
     [X] El algoritmo debe recibir parámetros, estos parámetros construir algoritmos y que estos se ejecuten
 
-[ ] 17. TAREA MAÑANA: Pruebas + Limpiar código + Arquitectura
+[X] 17. TAREA 12/03/2026: Pruebas + Limpiar código + Arquitectura
+[ ] 18. Limpiar mucho el código 

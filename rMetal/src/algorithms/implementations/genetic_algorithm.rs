@@ -183,7 +183,7 @@ where
         generation_seed: u64,
         evaluations: &mut usize,
     ) -> Vec<Solution<T>> {
-        let requested_threads = Self::resolve_num_threads(parameters);
+        let requested_threads = Self::resolve_num_threads(parameters.num_threads);
         let thread_count = requested_threads.min(parameters.population_size.max(1));
 
         let (mut offspring_population, generation_evaluations) = if thread_count <= 1 {
@@ -239,6 +239,10 @@ where
         (offspring_population, generation_evaluations)
     }
 
+    /// IMPORTANT:
+    /// 
+    ///  Parallelism breaks determinism if you work on machines with different numbers of cores.
+    /// - An 8-core machine will generate a different output than a 16-core machine.
     fn create_offspring_parallel(
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
         problem: &(impl Problem<T> + Sync),
@@ -313,8 +317,8 @@ where
         (all_offspring, total_evaluations)
     }
 
-    fn resolve_num_threads(parameters: &GeneticAlgorithmParameters<T, C, M, Sel>) -> usize {
-        match parameters.num_threads {
+    fn resolve_num_threads(num_threads: Option<usize>) -> usize {
+        match num_threads {
             Some(n) => n.max(1),
             None => std::thread::available_parallelism()
                 .map(|n| n.get())

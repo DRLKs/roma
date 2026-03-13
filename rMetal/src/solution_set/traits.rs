@@ -3,6 +3,8 @@ use crate::solution::traits::{Dominance};
 
 /// Trait that defines the basic interface for sets of solutions.
 /// * `T` - Type of the solution variables
+/// * `Q` - Quality payload type (defaults to `f64`)
+
 pub trait SolutionSet<T, Q = f64>
 where 
     T: Clone,
