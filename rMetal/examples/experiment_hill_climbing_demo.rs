@@ -1,5 +1,4 @@
 use rmetal::algorithms::{
-    HillClimbingExperiment,
     HillClimbingParameters,
     TerminationCriteria,
     TerminationCriterion,
@@ -18,23 +17,17 @@ fn main() {
         .add_item(8.0, 12.0)
         .build();
 
-    let case_a = HillClimbingExperiment::new(
-        HillClimbingParameters::new(
+    let case_a = HillClimbingParameters::new(
             BitFlipMutation::new(),
             0.08,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
-        ),
-        true,
-    );
+        );
 
-    let case_b = HillClimbingExperiment::new(
-        HillClimbingParameters::new(
+    let case_b = HillClimbingParameters::new(
             BitFlipMutation::new(),
             0.20,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
-        ),
-        true,
-    );
+        );
 
     let report = Experiment::new(problem)
         .with_runs(12)

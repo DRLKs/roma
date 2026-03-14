@@ -19,6 +19,8 @@ where
     type Parameters;
     type StepState;
 
+    fn new(parameters: Self::Parameters) -> Self;
+
     /// Human-readable algorithm name used by observers and runtime reports.
     fn algorithm_name(&self) -> &str;
 

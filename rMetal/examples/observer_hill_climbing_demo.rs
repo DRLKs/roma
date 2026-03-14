@@ -27,7 +27,7 @@ fn main() {
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
     )
     .with_seed(seed);
-    let mut algorithm = HillClimbing::new(parameters, true);
+    let mut algorithm = HillClimbing::new(parameters);
 
     algorithm.add_observer(Box::new(ConsoleObserver::new(true)));
     algorithm.add_observer(Box::new(ChartObserver::new_default()));

@@ -11,7 +11,6 @@ pub use implementations::genetic_algorithm::{
 };
 pub use implementations::hill_climbing::{
 	HillClimbing,
-	HillClimbingExperiment,
 	HillClimbingParameters,
 };
 pub use implementations::nsga2::{NSGAII, NSGAIIParameters};

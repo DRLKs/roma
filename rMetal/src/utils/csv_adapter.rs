@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
@@ -38,4 +39,38 @@ pub fn read_csv(
     }
 
     Ok(data)
+}
+
+/// Reads a CSV file as records (header -> value).
+///
+/// The first row is treated as the header. Empty headers are ignored.
+/// If a row has fewer columns than the header, missing values are skipped.
+pub fn read_csv_records(
+    path: &Path,
+    delimiter: char,
+) -> std::io::Result<Vec<HashMap<String, String>>> {
+    let rows = read_csv(path, delimiter, false)?;
+    if rows.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let header = &rows[0];
+    let mut records = Vec::new();
+
+    for row in rows.iter().skip(1) {
+        let mut record = HashMap::new();
+        for (idx, key) in header.iter().enumerate() {
+            let key = key.trim();
+            if key.is_empty() {
+                continue;
+            }
+
+            if let Some(value) = row.get(idx) {
+                record.insert(key.to_string(), value.trim().to_string());
+            }
+        }
+        records.push(record);
+    }
+
+    Ok(records)
 }

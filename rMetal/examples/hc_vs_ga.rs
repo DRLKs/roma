@@ -1,7 +1,6 @@
 use rmetal::algorithms::{
     GeneticAlgorithmExperiment,
     GeneticAlgorithmParameters,
-    HillClimbingExperiment,
     HillClimbingParameters,
     TerminationCriteria,
     TerminationCriterion,
@@ -22,14 +21,11 @@ fn main() {
         .add_item(150.0, 300.0)
         .build();
 
-    let hill_climbing_case = HillClimbingExperiment::new(
-        HillClimbingParameters::new(
+    let hill_climbing_case = HillClimbingParameters::new(
             BitFlipMutation::new(),
             0.12,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(180)]),
-        ),
-        true,
-    );
+        );
 
     let genetic_algorithm_case = GeneticAlgorithmExperiment::new(
         GeneticAlgorithmParameters::new(

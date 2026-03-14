@@ -132,14 +132,6 @@ where
     M: MutationOperator<T> + Send + Sync,
     Sel: SelectionOperator<T> + Send + Sync,
 {
-    pub fn new(parameters: GeneticAlgorithmParameters<T, C, M, Sel>) -> Self {
-        GeneticAlgorithm {
-            parameters,
-            solution_set: None,
-            observers: Vec::new(),
-        }
-    }
-
     fn initialize_population(
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
         problem: &(impl Problem<T> + Sync),
@@ -395,6 +387,14 @@ where
     type SolutionSet = VectorSolutionSet<T>;
     type Parameters = GeneticAlgorithmParameters<T, C, M, Sel>;
     type StepState = GeneticAlgorithmState<T>;
+
+    fn new(parameters: GeneticAlgorithmParameters<T, C, M, Sel>) -> Self {
+        GeneticAlgorithm {
+            parameters,
+            solution_set: None,
+            observers: Vec::new(),
+        }
+    }
 
     fn algorithm_name(&self) -> &str {
         "GeneticAlgorithm"

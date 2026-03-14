@@ -21,7 +21,7 @@ fn hill_climbing_handles_empty_problem_edge_case() {
     )
     .with_seed(7);
 
-    let mut algorithm = HillClimbing::new(parameters, true);
+    let mut algorithm = HillClimbing::new(parameters);
     let result = algorithm.run(&problem).expect("Hill Climbing run should succeed");
 
     assert_eq!(result.size(), 1);

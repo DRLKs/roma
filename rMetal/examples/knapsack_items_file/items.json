@@ -1,0 +1,23 @@
+{
+  "meta": {
+    "problem": "knapsack",
+    "description": "Ejemplo JSON con estructura anidada"
+  },
+  "algorithm": {
+    "population_size": 80,
+    "crossover_rate": 0.85,
+    "mutation_rate": 0.04,
+    "max_iterations": 60
+  },
+  "dataset": {
+    "items": [
+      { "id": "A", "attributes": { "weight": 10, "value": 20 } },
+      { "id": "B", "attributes": { "weight": 20, "value": 30 } },
+      { "id": "C", "attributes": { "weight": 30, "value": 60 } },
+      { "id": "D", "attributes": { "weight": 35, "value": 65 } },
+      { "id": "E", "attributes": { "weight": 45, "value": 70 } },
+      { "id": "F", "attributes": { "weight": 55, "value": 90 } },
+      { "id": "G", "attributes": { "weight": 150, "value": 300 } }
+    ]
+  }
+}

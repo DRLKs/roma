@@ -5,7 +5,6 @@ use rmetal::{
     Experiment,
     GeneticAlgorithmExperiment,
     GeneticAlgorithmParameters,
-    HillClimbingExperiment,
     HillClimbingParameters,
     KnapsackBuilder,
     SinglePointCrossover,
@@ -21,15 +20,12 @@ fn experiment_compares_hill_climbing_and_ga_end_to_end() {
         .add_items(vec![(4.0, 8.0), (7.0, 13.0), (5.0, 10.0), (3.0, 4.0), (8.0, 15.0)])
         .build();
 
-    let hill_climbing_case = HillClimbingExperiment::new(
-        HillClimbingParameters::new(
+    let hill_climbing_case = HillClimbingParameters::new(
             BitFlipMutation::new(),
             0.15,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(20)]),
         )
-        .with_seed(111),
-        true,
-    );
+        .with_seed(111);
 
     let genetic_algorithm_case = GeneticAlgorithmExperiment::new(
         GeneticAlgorithmParameters::new(

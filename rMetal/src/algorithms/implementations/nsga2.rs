@@ -79,21 +79,6 @@ pub struct NSGAIIState {
     evaluations: usize,
 }
 
-impl<C, M, Sel> NSGAII<C, M, Sel>
-where
-    C: CrossoverOperator<f64, ParetoCrowdingDistanceQuality>,
-    M: MutationOperator<f64, ParetoCrowdingDistanceQuality>,
-    Sel: SelectionOperator<f64, ParetoCrowdingDistanceQuality>,
-{
-    pub fn new(parameters: NSGAIIParameters<C, M, Sel>) -> Self {
-        Self {
-            parameters,
-            solution_set: None,
-            observers: Vec::new(),
-        }
-    }
-}
-
 impl<C, M, Sel> Observable<f64, ParetoCrowdingDistanceQuality> for NSGAII<C, M, Sel>
 where
     C: CrossoverOperator<f64, ParetoCrowdingDistanceQuality>,
@@ -119,6 +104,14 @@ where
     type Parameters = NSGAIIParameters<C, M, Sel>;
     type StepState = NSGAIIState;
 
+    fn new(parameters: NSGAIIParameters<C, M, Sel>) -> Self {
+        Self {
+            parameters,
+            solution_set: None,
+            observers: Vec::new(),
+        }
+    }
+    
     fn algorithm_name(&self) -> &str {
         "NSGA-II"
     }

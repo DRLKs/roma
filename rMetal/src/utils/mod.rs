@@ -1,5 +1,7 @@
 pub mod random;
 pub mod csv_adapter;
+pub mod json_adapter;
+pub mod yaml_adapter;
 pub mod chart;
 pub mod statistics;
 pub mod cli;
