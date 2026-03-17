@@ -1,37 +1,39 @@
+use rmetal::TspProblem;
 use rmetal::algorithms::{
     HillClimbingParameters,
     TerminationCriteria,
     TerminationCriterion,
 };
 use rmetal::experiment::{Experiment, Objective};
-use rmetal::operator::BitFlipMutation;
-use rmetal::problem::KnapsackBuilder;
+use rmetal::operator::SwapMutation;
 
 fn main() {
-    let problem = KnapsackBuilder::new()
-        .with_capacity(90.0)
-        .add_item(12.0, 24.0)
-        .add_item(22.0, 33.0)
-        .add_item(41.0, 80.0)
-        .add_item(18.0, 29.0)
-        .add_item(8.0, 12.0)
-        .build();
+    let problem = TspProblem::with_distance_matrix(vec![
+        vec![0.0, 10.0, 25.0, 18.0, 12.0],
+        vec![10.0, 0.0, 14.0, 21.0, 17.0],
+        vec![25.0, 14.0, 0.0, 9.0, 16.0],
+        vec![18.0, 21.0, 9.0, 0.0, 11.0],
+        vec![12.0, 17.0, 16.0, 11.0, 0.0],
+    ])
+    .with_open_route();
 
     let case_a = HillClimbingParameters::new(
-            BitFlipMutation::new(),
+            SwapMutation::new(),
             0.08,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
-        );
+        )
+        .minimization();
 
     let case_b = HillClimbingParameters::new(
-            BitFlipMutation::new(),
+            SwapMutation::new(),
             0.20,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
-        );
+        )
+        .minimization();
 
     let report = Experiment::new(problem)
         .with_runs(12)
-        .with_objective(Objective::Maximize)
+        .with_objective(Objective::Minimize)
         .add_case(case_a)
         .add_case(case_b)
         .execute();

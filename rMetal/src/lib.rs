@@ -19,6 +19,10 @@ pub use algorithms::{
 	ImprovementDirection,
 	NSGAII,
 	NSGAIIParameters,
+	PSO,
+	PSOParameters,
+	SimulatedAnnealing,
+	SimulatedAnnealingParameters,
 	TerminationController,
 	TerminationCriteria,
 	TerminationCriterion,
@@ -33,11 +37,12 @@ pub use operator::{
 	MultiObjectiveTournamentSelection,
 	Operator,
 	PolynomialMutation,
+	SwapMutation,
 	SBXCrossover,
 	SelectionOperator,
 	SinglePointCrossover,
 };
-pub use problem::{KnapsackBuilder, KnapsackProblem, Problem, ZDT1Problem};
+pub use problem::{KnapsackBuilder, KnapsackProblem, Problem, TspProblem, ZDT1Problem};
 pub use observer::{
 	AlgorithmEvent,
 	AlgorithmObserver,
@@ -55,6 +60,7 @@ pub use solution::{
 	ParetoCrowdingDistanceQuality,
 	MultiObjectiveRealSolutionBuilder,
 	MultiObjectiveVectorRealSolutionBuilder,
+	PermutationSolutionBuilder,
 	RealSolutionBuilder,
 	ScalarDominanceDirection,
 	Solution,
@@ -79,6 +85,10 @@ pub mod prelude {
 		ImprovementDirection,
 		NSGAII,
 		NSGAIIParameters,
+		PSO,
+		PSOParameters,
+		SimulatedAnnealing,
+		SimulatedAnnealingParameters,
 		TerminationController,
 		TerminationCriteria,
 		TerminationCriterion,
@@ -93,12 +103,13 @@ pub mod prelude {
 		MultiObjectiveTournamentSelection,
 		Operator,
 		PolynomialMutation,
+		SwapMutation,
 		SBXCrossover,
 		SelectionOperator,
 		SinglePointCrossover,
 	};
 
-	pub use crate::problem::{KnapsackBuilder, KnapsackProblem, Problem, ZDT1Problem};
+	pub use crate::problem::{KnapsackBuilder, KnapsackProblem, Problem, TspProblem, ZDT1Problem};
 
 	pub use crate::observer::{
 		AlgorithmEvent,
@@ -119,6 +130,7 @@ pub mod prelude {
 		ParetoCrowdingDistanceQuality,
 		MultiObjectiveRealSolutionBuilder,
 		MultiObjectiveVectorRealSolutionBuilder,
+		PermutationSolutionBuilder,
 		RealSolutionBuilder,
 		ScalarDominanceDirection,
 		Solution,

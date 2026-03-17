@@ -16,6 +16,7 @@ pub use implementations::binary_solution::BinarySolutionBuilder;
 pub use implementations::real_solution::RealSolutionBuilder;
 pub use implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
 pub use implementations::pareto_crowding_solution::MultiObjectiveVectorRealSolutionBuilder;
+pub use implementations::permutation_solution::PermutationSolutionBuilder;
 pub use implementations::string_solution::StringSolutionBuilder;
 
 /// Generic optimization solution.

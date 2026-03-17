@@ -14,6 +14,11 @@ pub use implementations::hill_climbing::{
 	HillClimbingParameters,
 };
 pub use implementations::nsga2::{NSGAII, NSGAIIParameters};
+pub use implementations::simulated_annealing::{
+	SimulatedAnnealing,
+	SimulatedAnnealingParameters,
+};
+pub use implementations::pso::{PSO, PSOParameters};
 pub use termination::{
 	ExecutionStateSnapshot,
 	ImprovementDirection,
