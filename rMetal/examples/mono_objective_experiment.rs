@@ -59,7 +59,6 @@ fn main() {
         0.985,
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(220)]),
     )
-    .maximization()
     .with_seed(777);
 
     let pso_case = PSOParameters::new(
@@ -70,7 +69,6 @@ fn main() {
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
     )
     .with_velocity_clamp(4.0)
-    .maximization()
     .with_seed(999);
 
     let report = Experiment::new(problem)

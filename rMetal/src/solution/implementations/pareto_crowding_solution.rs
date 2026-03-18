@@ -249,7 +249,7 @@ mod tests {
             .build();
         let b = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
             .with_rank(1)
-            .with_crowding_distance(100.0)
+            .with_crowding_distance(0.1)
             .build();
 
         assert!(a.dominates(&b));

@@ -1,6 +1,5 @@
 use crate::algorithms::termination::{
     ExecutionStateSnapshot,
-    ImprovementDirection,
     TerminationCriteria,
 };
 use crate::algorithms::traits::Algorithm;
@@ -29,7 +28,6 @@ where
     pub mutation_probability: f64,
     pub termination_criteria: TerminationCriteria,
     pub random_seed: Option<u64>,
-    pub is_maximization: bool,
     _phantom: std::marker::PhantomData<T>,
 }
 
@@ -54,7 +52,6 @@ where
             mutation_probability,
             termination_criteria,
             random_seed: None,
-            is_maximization: true,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -62,18 +59,6 @@ where
     /// Sets a deterministic random seed for reproducible runs.
     pub fn with_seed(mut self, seed: u64) -> Self {
         self.random_seed = Some(seed);
-        self
-    }
-
-    /// Sets a deterministic random seed for reproducible runs.
-    pub fn minimization(mut self) -> Self {
-        self.is_maximization = false;
-        self
-    }
-
-    /// Sets a deterministic random seed for reproducible runs.
-    pub fn maximization(mut self) -> Self {
-        self.is_maximization = true;
         self
     }
 }
@@ -165,10 +150,6 @@ where
         self.parameters.termination_criteria.clone()
     }
 
-    fn improvement_direction(&self) -> ImprovementDirection {
-        get_improvement_direction(self.parameters.is_maximization)
-    }
-
     fn observers_mut(&mut self) -> &mut Vec<Box<dyn AlgorithmObserver<T>>> {
         &mut self.observers
     }
@@ -230,10 +211,13 @@ where
         problem.evaluate(&mut neighbor);
         state.evaluations += 1;
 
-        let improved = if self.parameters.is_maximization {
-            neighbor.quality_value() > state.current.quality_value()
-        } else {
-            neighbor.quality_value() < state.current.quality_value()
+        let improved = match problem.get_improvement_direction() {
+            crate::algorithms::termination::ImprovementDirection::Maximize => {
+                neighbor.quality_value() > state.current.quality_value()
+            }
+            crate::algorithms::termination::ImprovementDirection::Minimize => {
+                neighbor.quality_value() < state.current.quality_value()
+            }
         };
 
         if improved {
@@ -261,15 +245,6 @@ where
     }
 }
 
-
-fn get_improvement_direction( is_maximization: bool ) -> ImprovementDirection{
-    if is_maximization {
-        ImprovementDirection::Maximize
-    } else {
-        ImprovementDirection::Minimize
-    }
-}
-
 impl<T, M, P> ExperimentalCase<T, f64, P> for HillClimbingParameters<T, M>
 where
     T: Clone + Send + Sync + 'static,
@@ -282,10 +257,9 @@ where
 
     fn case_name(&self) -> String {
         format!(
-            "{}(mutation_prob={:.4}, direction={})",
+            "{}(mutation_prob={:.4})",
             "HillClimbing",
             self.mutation_probability,
-            if self.is_maximization { "max" } else { "min" }
         )
     }
 
@@ -300,7 +274,6 @@ where
                 "termination_criteria",
                 format!("{:?}", self.termination_criteria),
             ),
-            CaseParameter::new("direction", if self.is_maximization { "maximize" } else { "minimize" }),
         ]
     }
 

@@ -13,6 +13,9 @@ use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::random::{seed_from_time, Random};
 
+/// Configuration parameters for Binary PSO.
+///
+/// `PSO` in this library is currently specialized for `Solution<bool>`.
 #[derive(Clone)]
 pub struct PSOParameters {
     pub swarm_size: usize,
@@ -22,7 +25,6 @@ pub struct PSOParameters {
     pub velocity_clamp: f64,
     pub termination_criteria: TerminationCriteria,
     pub random_seed: Option<u64>,
-    pub is_maximization: bool,
 }
 
 impl PSOParameters {
@@ -41,7 +43,6 @@ impl PSOParameters {
             velocity_clamp: 4.0,
             termination_criteria,
             random_seed: None,
-            is_maximization: true,
         }
     }
 
@@ -52,16 +53,6 @@ impl PSOParameters {
 
     pub fn with_seed(mut self, seed: u64) -> Self {
         self.random_seed = Some(seed);
-        self
-    }
-
-    pub fn minimization(mut self) -> Self {
-        self.is_maximization = false;
-        self
-    }
-
-    pub fn maximization(mut self) -> Self {
-        self.is_maximization = true;
         self
     }
 }
@@ -77,6 +68,7 @@ pub struct PSOState {
     velocities: Vec<Vec<f64>>,
     personal_best: Vec<Solution<bool>>,
     global_best: Solution<bool>,
+    direction: ImprovementDirection,
     rng: Random,
     iteration: usize,
     evaluations: usize,
@@ -93,11 +85,14 @@ impl Observable<bool> for PSO {
 }
 
 impl PSO {
-    fn is_better(&self, candidate: f64, reference: f64) -> bool {
-        if self.parameters.is_maximization {
-            candidate > reference
-        } else {
-            candidate < reference
+    fn is_better(
+        candidate: f64,
+        reference: f64,
+        direction: ImprovementDirection,
+    ) -> bool {
+        match direction {
+            ImprovementDirection::Maximize => candidate > reference,
+            ImprovementDirection::Minimize => candidate < reference,
         }
     }
 
@@ -125,14 +120,6 @@ impl Algorithm<bool> for PSO {
 
     fn termination_criteria(&self) -> TerminationCriteria {
         self.parameters.termination_criteria.clone()
-    }
-
-    fn improvement_direction(&self) -> ImprovementDirection {
-        if self.parameters.is_maximization {
-            ImprovementDirection::Maximize
-        } else {
-            ImprovementDirection::Minimize
-        }
     }
 
     fn observers_mut(&mut self) -> &mut Vec<Box<dyn AlgorithmObserver<bool>>> {
@@ -176,6 +163,8 @@ impl Algorithm<bool> for PSO {
         problem: &(impl Problem<bool> + Sync),
         _context: &ExecutionContext<bool>,
     ) -> Self::StepState {
+        let direction: ImprovementDirection =
+            problem.get_improvement_direction();
         let mut rng = Random::new(self.parameters.random_seed.unwrap_or_else(seed_from_time));
 
         let mut particles = Vec::with_capacity(self.parameters.swarm_size);
@@ -200,7 +189,7 @@ impl Algorithm<bool> for PSO {
             .iter()
             .cloned()
             .reduce(|a, b| {
-                if self.is_better(b.quality_value(), a.quality_value()) {
+                if Self::is_better(b.quality_value(), a.quality_value(), direction) {
                     b
                 } else {
                     a
@@ -213,6 +202,7 @@ impl Algorithm<bool> for PSO {
             velocities,
             personal_best,
             global_best,
+            direction,
             rng,
             iteration: 0,
             evaluations: self.parameters.swarm_size,
@@ -254,16 +244,18 @@ impl Algorithm<bool> for PSO {
             problem.evaluate(&mut state.particles[i]);
             state.evaluations += 1;
 
-            if self.is_better(
+            if Self::is_better(
                 state.particles[i].quality_value(),
                 state.personal_best[i].quality_value(),
+                state.direction,
             ) {
                 state.personal_best[i] = state.particles[i].copy();
             }
 
-            if self.is_better(
+            if Self::is_better(
                 state.personal_best[i].quality_value(),
                 state.global_best.quality_value(),
+                state.direction,
             ) {
                 state.global_best = state.personal_best[i].copy();
             }
@@ -286,16 +278,15 @@ impl Algorithm<bool> for PSO {
         let values: Vec<f64> = state.particles.iter().map(|s| s.quality_value()).collect();
         let average = values.iter().sum::<f64>() / values.len() as f64;
 
-        let (best_value, worst_value) = if self.parameters.is_maximization {
-            (
+        let (best_value, worst_value) = match state.direction {
+            ImprovementDirection::Maximize => (
                 values.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
                 values.iter().cloned().fold(f64::INFINITY, f64::min),
-            )
-        } else {
-            (
+            ),
+            ImprovementDirection::Minimize => (
                 values.iter().cloned().fold(f64::INFINITY, f64::min),
                 values.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
-            )
+            ),
         };
 
         ExecutionStateSnapshot::new(
@@ -326,13 +317,12 @@ where
 
     fn case_name(&self) -> String {
         format!(
-            "{}(swarm={}, w={:.3}, c1={:.3}, c2={:.3}, direction={})",
+            "{}(swarm={}, w={:.3}, c1={:.3}, c2={:.3})",
             "PSO",
             self.swarm_size,
             self.inertia_weight,
             self.cognitive_coefficient,
             self.social_coefficient,
-            if self.is_maximization { "max" } else { "min" }
         )
     }
 
@@ -346,14 +336,6 @@ where
             ),
             CaseParameter::new("social_coefficient", format!("{:.6}", self.social_coefficient)),
             CaseParameter::new("velocity_clamp", format!("{:.6}", self.velocity_clamp)),
-            CaseParameter::new(
-                "direction",
-                if self.is_maximization {
-                    "maximize"
-                } else {
-                    "minimize"
-                },
-            ),
             CaseParameter::new(
                 "termination_criteria",
                 format!("{:?}", self.termination_criteria),
@@ -390,8 +372,7 @@ mod tests {
             1.49,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(20)]),
         )
-        .with_seed(42)
-        .maximization();
+        .with_seed(42);
 
         let mut pso = PSO::new(params);
         let result = pso.run(&problem).expect("PSO should run");

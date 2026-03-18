@@ -27,9 +27,6 @@ where
     /// Termination criteria configured for this algorithm instance.
     fn termination_criteria(&self) -> TerminationCriteria;
 
-    /// Objective direction used by termination logic.
-    fn improvement_direction(&self) -> ImprovementDirection;
-
     /// Mutable access to registered observers.
     fn observers_mut(&mut self) -> &mut Vec<Box<dyn AlgorithmObserver<T, Q>>>;
 
@@ -39,17 +36,18 @@ where
     /// Runs the optimization algorithm on the given problem.
     ///
     /// Default implementation shared by all algorithms.
-    fn run(&mut self, problem: &(impl Problem<T, Q> + Sync)) -> Result<Self::SolutionSet, String>
+    fn run<P>(&mut self, problem: &P) -> Result<Self::SolutionSet, String>
     where
         Self: Sized,
         Self::SolutionSet: Clone,
+        P: Problem<T, Q> + Sync,
     {
         self.validate_parameters()?;
 
         let mut observers = std::mem::take(self.observers_mut());
         let algorithm_name = self.algorithm_name().to_string();
         let criteria = self.termination_criteria();
-        let direction = self.improvement_direction();
+        let direction: ImprovementDirection = problem.get_improvement_direction();
         let algorithm = &*self;
 
         let result = run_algorithm(

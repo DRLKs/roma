@@ -21,15 +21,13 @@ fn main() {
             SwapMutation::new(),
             0.08,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
-        )
-        .minimization();
+        );
 
     let case_b = HillClimbingParameters::new(
             SwapMutation::new(),
             0.20,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
-        )
-        .minimization();
+        );
 
     let report = Experiment::new(problem)
         .with_runs(12)

@@ -1,3 +1,4 @@
+use crate::algorithms::termination::ImprovementDirection;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 
@@ -20,5 +21,10 @@ where
 
     fn get_problem_description(&self) -> String;
 
+    /// Returns the objective improvement direction for this problem.
+    ///
+    /// This is the single source of truth for scalar optimization direction
+    /// in the framework. Algorithms and runtime termination consume this value
+    fn get_improvement_direction(&self) -> ImprovementDirection;
     
 }

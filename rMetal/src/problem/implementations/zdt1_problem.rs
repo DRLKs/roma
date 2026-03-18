@@ -3,6 +3,7 @@ use crate::solution::implementations::pareto_crowding_solution::MultiObjectiveRe
 use crate::solution::Solution;
 use crate::solution::traits::ParetoCrowdingDistanceQuality;
 use crate::utils::random::Random;
+use crate::algorithms::termination::ImprovementDirection;
 
 const DEFAULT_NUMBER_OF_VARIABLES: usize = 30;
 
@@ -89,11 +90,16 @@ impl Problem<f64, ParetoCrowdingDistanceQuality> for ZDT1Problem {
             .with_bounds(0.0, 1.0)
             .build()
     }
+
+    fn get_improvement_direction(&self) -> ImprovementDirection {
+        ImprovementDirection::Minimize
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::algorithms::termination::ImprovementDirection;
 
     #[test]
     fn test_zdt1_creation() {
@@ -138,5 +144,14 @@ mod tests {
     #[should_panic(expected = "ZDT1 requires at least 2 variables")]
     fn test_zdt1_invalid_variables() {
         ZDT1Problem::new(1);
+    }
+
+    #[test]
+    fn zdt1_improvement_direction_is_minimize() {
+        let problem = ZDT1Problem::new(30);
+        assert_eq!(
+            problem.get_improvement_direction(),
+            ImprovementDirection::Minimize
+        );
     }
 }

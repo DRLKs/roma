@@ -1,7 +1,6 @@
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{
     ExecutionStateSnapshot,
-    ImprovementDirection,
     TerminationCriteria,
 };
 use crate::algorithms::traits::Algorithm;
@@ -27,7 +26,6 @@ where
     pub cooling_rate: f64,
     pub termination_criteria: TerminationCriteria,
     pub random_seed: Option<u64>,
-    pub is_maximization: bool,
     _phantom: std::marker::PhantomData<T>,
 }
 
@@ -51,7 +49,6 @@ where
             cooling_rate,
             termination_criteria,
             random_seed: None,
-            is_maximization: false,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -63,16 +60,6 @@ where
 
     pub fn with_seed(mut self, seed: u64) -> Self {
         self.random_seed = Some(seed);
-        self
-    }
-
-    pub fn minimization(mut self) -> Self {
-        self.is_maximization = false;
-        self
-    }
-
-    pub fn maximization(mut self) -> Self {
-        self.is_maximization = true;
         self
     }
 }
@@ -136,14 +123,6 @@ where
 
     fn termination_criteria(&self) -> TerminationCriteria {
         self.parameters.termination_criteria.clone()
-    }
-
-    fn improvement_direction(&self) -> ImprovementDirection {
-        if self.parameters.is_maximization {
-            ImprovementDirection::Maximize
-        } else {
-            ImprovementDirection::Minimize
-        }
     }
 
     fn observers_mut(&mut self) -> &mut Vec<Box<dyn AlgorithmObserver<T>>> {
@@ -224,19 +203,27 @@ where
 
         let current_quality = state.current.quality_value();
         let candidate_quality = candidate.quality_value();
-        let is_better = if self.parameters.is_maximization {
-            candidate_quality > current_quality
-        } else {
-            candidate_quality < current_quality
+        let direction: crate::algorithms::termination::ImprovementDirection =
+            problem.get_improvement_direction();
+        let is_better = match direction {
+            crate::algorithms::termination::ImprovementDirection::Maximize => {
+                candidate_quality > current_quality
+            }
+            crate::algorithms::termination::ImprovementDirection::Minimize => {
+                candidate_quality < current_quality
+            }
         };
 
         if is_better {
             state.current = candidate;
         } else {
-            let loss = if self.parameters.is_maximization {
-                current_quality - candidate_quality
-            } else {
-                candidate_quality - current_quality
+            let loss = match direction {
+                crate::algorithms::termination::ImprovementDirection::Maximize => {
+                    current_quality - candidate_quality
+                }
+                crate::algorithms::termination::ImprovementDirection::Minimize => {
+                    candidate_quality - current_quality
+                }
             };
 
             if state.temperature > 0.0 {
@@ -249,10 +236,13 @@ where
 
         let current_best = state.best.quality_value();
         let current_value = state.current.quality_value();
-        let improved_best = if self.parameters.is_maximization {
-            current_value > current_best
-        } else {
-            current_value < current_best
+        let improved_best = match direction {
+            crate::algorithms::termination::ImprovementDirection::Maximize => {
+                current_value > current_best
+            }
+            crate::algorithms::termination::ImprovementDirection::Minimize => {
+                current_value < current_best
+            }
         };
 
         if improved_best {
@@ -295,12 +285,11 @@ where
 
     fn case_name(&self) -> String {
         format!(
-            "{}(mut={:.4}, t0={:.3}, cooling={:.4}, direction={})",
+            "{}(mut={:.4}, t0={:.3}, cooling={:.4})",
             "SimulatedAnnealing",
             self.mutation_probability,
             self.initial_temperature,
             self.cooling_rate,
-            if self.is_maximization { "max" } else { "min" }
         )
     }
 
@@ -320,14 +309,6 @@ where
                 format!("{:.6}", self.minimum_temperature),
             ),
             CaseParameter::new("cooling_rate", format!("{:.6}", self.cooling_rate)),
-            CaseParameter::new(
-                "direction",
-                if self.is_maximization {
-                    "maximize"
-                } else {
-                    "minimize"
-                },
-            ),
             CaseParameter::new(
                 "termination_criteria",
                 format!("{:?}", self.termination_criteria),
@@ -366,8 +347,7 @@ mod tests {
             0.99,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(50)]),
         )
-        .with_seed(42)
-        .minimization();
+        .with_seed(42);
 
         let mut algorithm = SimulatedAnnealing::new(params);
         let result = algorithm.run(&problem).expect("simulated annealing should run");

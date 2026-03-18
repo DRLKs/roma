@@ -1,6 +1,7 @@
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::utils::random::Random;
+use crate::algorithms::termination::ImprovementDirection;
 
 const PENALTY: f64 = 0.5; // Heavy penalty for infeasible solutions
 
@@ -98,6 +99,10 @@ impl Problem<bool> for KnapsackProblem {
     fn get_problem_description(&self) -> String {
         self.description.clone()
     }
+
+    fn get_improvement_direction(&self) -> ImprovementDirection {
+        ImprovementDirection::Maximize
+    }
 }
 
 pub struct KnapsackBuilder {
@@ -149,6 +154,7 @@ impl Default for KnapsackBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::algorithms::termination::ImprovementDirection;
 
     #[test]
     fn problem_description_test() {
@@ -205,5 +211,14 @@ mod tests {
         problem.evaluate(&mut solution);
 
         assert!(solution.quality().copied().unwrap() > 0.0);
+    }
+
+    #[test]
+    fn knapsack_improvement_direction_is_maximize() {
+        let problem = KnapsackBuilder::new().build();
+        assert_eq!(
+            problem.get_improvement_direction(),
+            ImprovementDirection::Maximize
+        );
     }
 }

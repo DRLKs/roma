@@ -1,6 +1,5 @@
 use crate::algorithms::termination::{
     ExecutionStateSnapshot,
-    ImprovementDirection,
     TerminationCriteria,
 };
 use crate::algorithms::traits::Algorithm;
@@ -118,10 +117,6 @@ where
 
     fn termination_criteria(&self) -> TerminationCriteria {
         self.parameters.termination_criteria.clone()
-    }
-
-    fn improvement_direction(&self) -> ImprovementDirection {
-        ImprovementDirection::Minimize
     }
 
     fn observers_mut(&mut self) -> &mut Vec<Box<dyn AlgorithmObserver<f64, ParetoCrowdingDistanceQuality>>> {
