@@ -34,12 +34,32 @@ where
     T: Clone,
     Q: Clone + Dominance,
 {
-    fn solutions(&self) -> &Vec<Solution<T, Q>> {
-        &self.solutions
+    fn iter(&self) -> Box<dyn Iterator<Item = &Solution<T, Q>> + '_> {
+        Box::new(self.solutions.iter())
     }
-    
-    fn solutions_mut(&mut self) -> &mut Vec<Solution<T, Q>> {
-        &mut self.solutions
+
+    fn push_solution(&mut self, solution: Solution<T, Q>) {
+        self.solutions.push(solution);
+    }
+
+    fn pop_solution(&mut self) -> Option<Solution<T, Q>> {
+        self.solutions.pop()
+    }
+
+    fn clear_solutions(&mut self) {
+        self.solutions.clear();
+    }
+
+    fn get_solution(&self, index: usize) -> Option<&Solution<T, Q>> {
+        self.solutions.get(index)
+    }
+
+    fn get_solution_mut(&mut self, index: usize) -> Option<&mut Solution<T, Q>> {
+        self.solutions.get_mut(index)
+    }
+
+    fn len(&self) -> usize {
+        self.solutions.len()
     }
 }
 
@@ -85,7 +105,26 @@ mod test {
         solution_set.add_solution(solution);
 
         assert!(!solution_set.is_empty());
-        assert_eq!(solution_set.solutions().len(), 1);
+        assert_eq!(solution_set.size(), 1);
         assert_eq!(solution_set.best_solution().unwrap().quality(), Some(&10.0));
+    }
+
+    #[test]
+    fn best_solution_value_or_uses_default_for_empty_set() {
+        let solution_set: VectorSolutionSet<f64> = VectorSolutionSet::new();
+        assert_eq!(solution_set.best_solution_value_or(-1.0), -1.0);
+    }
+
+    #[test]
+    fn remove_solution_returns_last_inserted_solution() {
+        let mut solution_set: VectorSolutionSet<f64> = VectorSolutionSet::new();
+        solution_set.add_solution(RealSolutionBuilder::new(2).with_quality(1.0).build());
+        solution_set.add_solution(RealSolutionBuilder::new(2).with_quality(3.0).build());
+
+        let removed = solution_set
+            .remove_solution()
+            .expect("Expected one removed solution");
+        assert_eq!(removed.quality().copied(), Some(3.0));
+        assert_eq!(solution_set.size(), 1);
     }
 }

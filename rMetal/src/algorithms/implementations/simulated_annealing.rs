@@ -351,7 +351,13 @@ mod tests {
 
         let mut algorithm = SimulatedAnnealing::new(params);
         let result = algorithm.run(&problem).expect("simulated annealing should run");
-        assert_eq!(result.solutions().len(), 1);
-        assert!(result.solutions()[0].quality_value().is_finite());
+        assert_eq!(result.size(), 1);
+        assert!(
+            result
+                .get(0)
+                .expect("expected one solution")
+                .quality_value()
+                .is_finite()
+        );
     }
 }

@@ -26,5 +26,4 @@ where
     /// This is the single source of truth for scalar optimization direction
     /// in the framework. Algorithms and runtime termination consume this value
     fn get_improvement_direction(&self) -> ImprovementDirection;
-    
 }

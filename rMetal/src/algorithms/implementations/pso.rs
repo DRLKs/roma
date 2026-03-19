@@ -19,9 +19,13 @@ use crate::utils::random::{seed_from_time, Random};
 #[derive(Clone)]
 pub struct PSOParameters {
     pub swarm_size: usize,
+    /// Inertia factor (`w`) that controls how much previous velocity is kept.
     pub inertia_weight: f64,
+    /// Cognitive acceleration (`c1`) towards each particle's personal best.
     pub cognitive_coefficient: f64,
+    /// Social acceleration (`c2`) towards the global best.
     pub social_coefficient: f64,
+    /// Maximum absolute velocity value used to clamp updates.
     pub velocity_clamp: f64,
     pub termination_criteria: TerminationCriteria,
     pub random_seed: Option<u64>,
@@ -65,9 +69,11 @@ pub struct PSO {
 
 pub struct PSOState {
     particles: Vec<Solution<bool>>,
+    /// Real-valued velocity vectors associated with particle dimensions.
     velocities: Vec<Vec<f64>>,
     personal_best: Vec<Solution<bool>>,
     global_best: Solution<bool>,
+    /// Problem objective direction (maximize/minimize), taken from `Problem`.
     direction: ImprovementDirection,
     rng: Random,
     iteration: usize,
@@ -85,6 +91,7 @@ impl Observable<bool> for PSO {
 }
 
 impl PSO {
+    /// Compares two scalar fitness values using the active optimization direction.
     fn is_better(
         candidate: f64,
         reference: f64,
@@ -96,6 +103,10 @@ impl PSO {
         }
     }
 
+    /// Logistic transfer function used by Binary PSO.
+    ///
+    /// Maps velocity to a probability in `(0, 1)`, then the bit value is sampled
+    /// from that probability.
     fn sigmoid(x: f64) -> f64 {
         1.0 / (1.0 + (-x).exp())
     }
@@ -220,6 +231,11 @@ impl Algorithm<bool> for PSO {
         for i in 0..state.particles.len() {
             let dimension = state.particles[i].num_variables();
             for d in 0..dimension {
+                // Binary PSO update:
+                // 1) Build velocity from inertia + cognitive + social components.
+                // 2) Clamp velocity for numeric stability.
+                // 3) Convert velocity to a Bernoulli probability via sigmoid.
+                // 4) Sample new bit value from that probability.
                 let x = if state.particles[i].variables[d] { 1.0 } else { 0.0 };
                 let p = if state.personal_best[i].variables[d] { 1.0 } else { 0.0 };
                 let g = if state.global_best.variables[d] { 1.0 } else { 0.0 };
@@ -352,8 +368,41 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algorithms::termination::TerminationCriterion;
+    use crate::algorithms::termination::{ImprovementDirection, TerminationCriterion};
+    use crate::problem::traits::Problem;
     use crate::problem::implementations::knapsack_problem::KnapsackBuilder;
+    use crate::solution::Solution;
+    use crate::utils::random::Random;
+
+    struct MinOnesProblem {
+        num_variables: usize,
+    }
+
+    impl Problem<bool> for MinOnesProblem {
+        fn new() -> Self {
+            Self { num_variables: 0 }
+        }
+
+        fn evaluate(&self, solution: &mut Solution<bool>) {
+            let ones = solution.variables().iter().filter(|&&x| x).count() as f64;
+            solution.set_quality(ones);
+        }
+
+        fn create_solution(&self, rng: &mut Random) -> Solution<bool> {
+            let vars: Vec<bool> = (0..self.num_variables).map(|_| rng.coin_flip()).collect();
+            Solution::new(vars)
+        }
+
+        fn set_problem_description(&mut self, _description: String) {}
+
+        fn get_problem_description(&self) -> String {
+            "MinOnesProblem".to_string()
+        }
+
+        fn get_improvement_direction(&self) -> ImprovementDirection {
+            ImprovementDirection::Minimize
+        }
+    }
 
     #[test]
     fn pso_runs_on_knapsack() {
@@ -376,7 +425,93 @@ mod tests {
 
         let mut pso = PSO::new(params);
         let result = pso.run(&problem).expect("PSO should run");
-        assert_eq!(result.solutions().len(), 1);
-        assert!(result.solutions()[0].has_quality());
+        assert_eq!(result.size(), 1);
+        assert!(result.get(0).expect("expected one solution").has_quality());
+    }
+
+    #[test]
+    fn pso_is_deterministic_with_same_seed() {
+        let problem = KnapsackBuilder::new()
+            .with_capacity(30.0)
+            .add_item(7.0, 12.0)
+            .add_item(9.0, 18.0)
+            .add_item(12.0, 25.0)
+            .build();
+
+        let params = PSOParameters::new(
+            16,
+            0.7,
+            1.4,
+            1.4,
+            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(25)]),
+        )
+        .with_seed(12345);
+
+        let mut run_a = PSO::new(params.clone());
+        let mut run_b = PSO::new(params);
+
+        let quality_a = run_a
+            .run(&problem)
+            .expect("first run should succeed")
+            .get(0)
+            .expect("result should contain one solution")
+            .quality_value();
+
+        let quality_b = run_b
+            .run(&problem)
+            .expect("second run should succeed")
+            .get(0)
+            .expect("result should contain one solution")
+            .quality_value();
+
+        assert_eq!(quality_a, quality_b);
+    }
+
+    #[test]
+    fn pso_rejects_non_positive_velocity_clamp() {
+        let problem = KnapsackBuilder::new().with_capacity(20.0).add_item(5.0, 10.0).build();
+
+        let params = PSOParameters::new(
+            10,
+            0.72,
+            1.49,
+            1.49,
+            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(5)]),
+        )
+        .with_velocity_clamp(0.0)
+        .with_seed(1);
+
+        let mut algorithm = PSO::new(params);
+        let error = match algorithm.run(&problem) {
+            Ok(_) => panic!("PSO with non-positive velocity clamp should fail validation"),
+            Err(message) => message,
+        };
+
+        assert!(error.contains("velocity_clamp"));
+    }
+
+    #[test]
+    fn pso_honors_minimization_direction_from_problem() {
+        let problem = MinOnesProblem { num_variables: 12 };
+
+        let params = PSOParameters::new(
+            20,
+            0.7,
+            1.4,
+            1.4,
+            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(30)]),
+        )
+        .with_seed(99);
+
+        let mut algorithm = PSO::new(params);
+        let best = algorithm
+            .run(&problem)
+            .expect("PSO should run under minimization")
+            .get(0)
+            .expect("result should contain one solution")
+            .quality_value();
+
+        assert!(best >= 0.0);
+        assert!(best <= 12.0);
     }
 }

@@ -32,7 +32,7 @@ fn nsga2_runs_on_minimum_valid_zdt1_dimension() {
 
     assert_eq!(result.size(), 16);
 
-    for solution in result.solutions() {
+    for solution in result.iter() {
         let objectives = solution
             .get_objectives()
             .expect("All NSGA-II solutions must have objectives");

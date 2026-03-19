@@ -68,7 +68,7 @@ pub use solution::{
 	scalar_dominance_direction,
 	set_scalar_dominance_direction,
 };
-pub use solution_set::{SolutionSet, VectorSolutionSet};
+pub use solution_set::{DequeSolutionSet, SolutionSet, VectorSolutionSet};
 
 /// Commonly used types and traits.
 ///
@@ -139,7 +139,7 @@ pub mod prelude {
 		set_scalar_dominance_direction,
 	};
 
-	pub use crate::solution_set::{SolutionSet, VectorSolutionSet};
+	pub use crate::solution_set::{DequeSolutionSet, SolutionSet, VectorSolutionSet};
 
 	pub use crate::utils::{seed_from_cli_or, seed_from_time, Random};
 }
