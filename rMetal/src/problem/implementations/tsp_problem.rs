@@ -1,7 +1,7 @@
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::utils::random::Random;
-use crate::algorithms::termination::ImprovementDirection;
+use crate::algorithms::runtime::ImprovementDirection;
 
 /// Traveling Salesman Problem (TSP) with explicit distance matrix.
 ///

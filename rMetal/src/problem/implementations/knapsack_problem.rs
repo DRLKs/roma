@@ -1,7 +1,7 @@
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::utils::random::Random;
-use crate::algorithms::termination::ImprovementDirection;
+use crate::algorithms::runtime::ImprovementDirection;
 
 const PENALTY: f64 = 0.5; // Heavy penalty for infeasible solutions
 
@@ -154,7 +154,7 @@ impl Default for KnapsackBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algorithms::termination::ImprovementDirection;
+    use crate::algorithms::runtime::ImprovementDirection;
 
     #[test]
     fn problem_description_test() {

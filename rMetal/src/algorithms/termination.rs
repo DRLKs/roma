@@ -1,5 +1,6 @@
 use std::time::{Duration, Instant};
 use crate::solution::Solution;
+use crate::algorithms::runtime::{ImprovementDirection};
 
 /// Defines stopping criteria for optimization algorithms.
 ///
@@ -37,12 +38,6 @@ impl TerminationCriteria {
     pub fn all(&self) -> &[TerminationCriterion] {
         self.criteria.as_slice()
     }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ImprovementDirection {
-    Maximize,
-    Minimize,
 }
 
 #[derive(Clone, Debug)]

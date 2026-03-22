@@ -1,4 +1,7 @@
-use crate::algorithms::runtime::ExecutionContext;
+use crate::algorithms::runtime::{
+    ExecutionContext,
+    ImprovementDirection
+};
 use crate::algorithms::termination::{
     ExecutionStateSnapshot,
     TerminationCriteria,
@@ -203,13 +206,13 @@ where
 
         let current_quality = state.current.quality_value();
         let candidate_quality = candidate.quality_value();
-        let direction: crate::algorithms::termination::ImprovementDirection =
+        let direction: ImprovementDirection =
             problem.get_improvement_direction();
         let is_better = match direction {
-            crate::algorithms::termination::ImprovementDirection::Maximize => {
+            ImprovementDirection::Maximize => {
                 candidate_quality > current_quality
             }
-            crate::algorithms::termination::ImprovementDirection::Minimize => {
+            ImprovementDirection::Minimize => {
                 candidate_quality < current_quality
             }
         };
@@ -218,10 +221,10 @@ where
             state.current = candidate;
         } else {
             let loss = match direction {
-                crate::algorithms::termination::ImprovementDirection::Maximize => {
+                ImprovementDirection::Maximize => {
                     current_quality - candidate_quality
                 }
-                crate::algorithms::termination::ImprovementDirection::Minimize => {
+                ImprovementDirection::Minimize => {
                     candidate_quality - current_quality
                 }
             };
@@ -237,10 +240,10 @@ where
         let current_best = state.best.quality_value();
         let current_value = state.current.quality_value();
         let improved_best = match direction {
-            crate::algorithms::termination::ImprovementDirection::Maximize => {
+            ImprovementDirection::Maximize => {
                 current_value > current_best
             }
-            crate::algorithms::termination::ImprovementDirection::Minimize => {
+            ImprovementDirection::Minimize => {
                 current_value < current_best
             }
         };

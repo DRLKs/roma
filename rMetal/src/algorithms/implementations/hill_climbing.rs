@@ -3,7 +3,10 @@ use crate::algorithms::termination::{
     TerminationCriteria,
 };
 use crate::algorithms::traits::Algorithm;
-use crate::algorithms::runtime::ExecutionContext;
+use crate::algorithms::runtime::{
+    ExecutionContext,
+    ImprovementDirection
+};
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::operator::traits::MutationOperator;
@@ -212,10 +215,10 @@ where
         state.evaluations += 1;
 
         let improved = match problem.get_improvement_direction() {
-            crate::algorithms::termination::ImprovementDirection::Maximize => {
+            ImprovementDirection::Maximize => {
                 neighbor.quality_value() > state.current.quality_value()
             }
-            crate::algorithms::termination::ImprovementDirection::Minimize => {
+            ImprovementDirection::Minimize => {
                 neighbor.quality_value() < state.current.quality_value()
             }
         };

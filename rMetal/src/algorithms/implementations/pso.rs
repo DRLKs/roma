@@ -1,7 +1,9 @@
-use crate::algorithms::runtime::ExecutionContext;
+use crate::algorithms::runtime::{
+    ExecutionContext,
+    ImprovementDirection
+};
 use crate::algorithms::termination::{
     ExecutionStateSnapshot,
-    ImprovementDirection,
     TerminationCriteria,
 };
 use crate::algorithms::traits::Algorithm;
@@ -368,7 +370,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algorithms::termination::{ImprovementDirection, TerminationCriterion};
+    use crate::algorithms::termination::TerminationCriterion;
     use crate::problem::traits::Problem;
     use crate::problem::implementations::knapsack_problem::KnapsackBuilder;
     use crate::solution::Solution;

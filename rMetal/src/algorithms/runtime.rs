@@ -1,6 +1,5 @@
 use crate::algorithms::termination::{
     ExecutionStateSnapshot,
-    ImprovementDirection,
     TerminationController,
     TerminationCriteria,
     TerminationReason,
@@ -31,6 +30,12 @@ impl<R> RuntimeExecutionOutput<R> {
             total_evaluations,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ImprovementDirection {
+    Maximize,
+    Minimize,
 }
 
 /// Execution context passed to algorithm routines.

@@ -21,7 +21,6 @@ pub use implementations::simulated_annealing::{
 pub use implementations::pso::{PSO, PSOParameters};
 pub use termination::{
 	ExecutionStateSnapshot,
-	ImprovementDirection,
 	TerminationController,
 	TerminationCriteria,
 	TerminationCriterion,
@@ -30,4 +29,5 @@ pub use termination::{
 };
 pub use runtime::{
 	ExecutionContext,
+	ImprovementDirection
 };
