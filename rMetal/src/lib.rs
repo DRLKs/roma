@@ -62,11 +62,8 @@ pub use solution::{
 	MultiObjectiveVectorRealSolutionBuilder,
 	PermutationSolutionBuilder,
 	RealSolutionBuilder,
-	ScalarDominanceDirection,
 	Solution,
 	StringSolutionBuilder,
-	scalar_dominance_direction,
-	set_scalar_dominance_direction,
 };
 pub use solution_set::{DequeSolutionSet, SolutionSet, VectorSolutionSet};
 
@@ -132,11 +129,8 @@ pub mod prelude {
 		MultiObjectiveVectorRealSolutionBuilder,
 		PermutationSolutionBuilder,
 		RealSolutionBuilder,
-		ScalarDominanceDirection,
 		Solution,
 		StringSolutionBuilder,
-		scalar_dominance_direction,
-		set_scalar_dominance_direction,
 	};
 
 	pub use crate::solution_set::{DequeSolutionSet, SolutionSet, VectorSolutionSet};

@@ -1,5 +1,6 @@
 use crate::solution::Solution;
 use crate::utils::random::Random;
+use crate::algorithms::objective::ImprovementDirection;
 
 /// Base trait for all operators in the framework.
 /// Operators transform solutions in some way (mutation, crossover, selection, etc.)
@@ -91,10 +92,16 @@ where
     /// # Arguments
     /// * `population` - The population to select from
     /// * `rng` - Random generator provided by the algorithm
+    /// * `direction` - Improvement direction for scalar quality comparisons.
     /// 
     /// # Returns
     /// A reference to the selected solution
-    fn execute<'a>(&self, population: &'a [Solution<T, Q>], rng: &mut Random) -> &'a Solution<T, Q>;
+    fn execute<'a>(
+        &self,
+        population: &'a [Solution<T, Q>],
+        rng: &mut Random,
+        direction: ImprovementDirection,
+    ) -> &'a Solution<T, Q>;
     
     /// Selects multiple solutions from a population.
     /// 
@@ -110,7 +117,10 @@ where
         population: &'a [Solution<T, Q>],
         count: usize,
         rng: &mut Random,
+        direction: ImprovementDirection,
     ) -> Vec<&'a Solution<T, Q>> {
-        (0..count).map(|_| self.execute(population, rng)).collect()
+        (0..count)
+            .map(|_| self.execute(population, rng, direction))
+            .collect()
     }
 }

@@ -4,6 +4,7 @@ use crate::algorithms::termination::{
     TerminationCriteria,
     TerminationReason,
 };
+use crate::algorithms::objective::ImprovementDirection;
 use crate::observer::traits::AlgorithmObserver;
 use crate::observer::AlgorithmEvent;
 use std::cell::RefCell;
@@ -30,12 +31,6 @@ impl<R> RuntimeExecutionOutput<R> {
             total_evaluations,
         }
     }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ImprovementDirection {
-    Maximize,
-    Minimize,
 }
 
 /// Execution context passed to algorithm routines.

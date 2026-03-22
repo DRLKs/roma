@@ -2,6 +2,7 @@ pub(crate) mod traits;
 pub(crate) mod implementations;
 pub(crate) mod termination;
 pub(crate) mod runtime;
+pub(crate) mod objective;
 
 pub use traits::Algorithm;
 pub use implementations::genetic_algorithm::{
@@ -29,5 +30,10 @@ pub use termination::{
 };
 pub use runtime::{
 	ExecutionContext,
-	ImprovementDirection
+};
+pub use objective::{
+	ImprovementDirection,
+	is_better,
+	non_improving_loss,
+	best_worst,
 };

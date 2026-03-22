@@ -1,7 +1,5 @@
-use crate::algorithms::runtime::{
-    ExecutionContext,
-    ImprovementDirection
-};
+use crate::algorithms::objective::{best_worst, is_better, ImprovementDirection};
+use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{
     ExecutionStateSnapshot,
     TerminationCriteria,
@@ -93,18 +91,6 @@ impl Observable<bool> for PSO {
 }
 
 impl PSO {
-    /// Compares two scalar fitness values using the active optimization direction.
-    fn is_better(
-        candidate: f64,
-        reference: f64,
-        direction: ImprovementDirection,
-    ) -> bool {
-        match direction {
-            ImprovementDirection::Maximize => candidate > reference,
-            ImprovementDirection::Minimize => candidate < reference,
-        }
-    }
-
     /// Logistic transfer function used by Binary PSO.
     ///
     /// Maps velocity to a probability in `(0, 1)`, then the bit value is sampled
@@ -202,7 +188,7 @@ impl Algorithm<bool> for PSO {
             .iter()
             .cloned()
             .reduce(|a, b| {
-                if Self::is_better(b.quality_value(), a.quality_value(), direction) {
+                if is_better(b.quality_value(), a.quality_value(), direction) {
                     b
                 } else {
                     a
@@ -262,7 +248,7 @@ impl Algorithm<bool> for PSO {
             problem.evaluate(&mut state.particles[i]);
             state.evaluations += 1;
 
-            if Self::is_better(
+            if is_better(
                 state.particles[i].quality_value(),
                 state.personal_best[i].quality_value(),
                 state.direction,
@@ -270,7 +256,7 @@ impl Algorithm<bool> for PSO {
                 state.personal_best[i] = state.particles[i].copy();
             }
 
-            if Self::is_better(
+            if is_better(
                 state.personal_best[i].quality_value(),
                 state.global_best.quality_value(),
                 state.direction,
@@ -296,16 +282,7 @@ impl Algorithm<bool> for PSO {
         let values: Vec<f64> = state.particles.iter().map(|s| s.quality_value()).collect();
         let average = values.iter().sum::<f64>() / values.len() as f64;
 
-        let (best_value, worst_value) = match state.direction {
-            ImprovementDirection::Maximize => (
-                values.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
-                values.iter().cloned().fold(f64::INFINITY, f64::min),
-            ),
-            ImprovementDirection::Minimize => (
-                values.iter().cloned().fold(f64::INFINITY, f64::min),
-                values.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
-            ),
-        };
+        let (best_value, worst_value) = best_worst(&values, state.direction);
 
         ExecutionStateSnapshot::new(
             0,

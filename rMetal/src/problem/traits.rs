@@ -1,4 +1,4 @@
-use crate::algorithms::runtime::ImprovementDirection;
+use crate::algorithms::objective::ImprovementDirection;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 

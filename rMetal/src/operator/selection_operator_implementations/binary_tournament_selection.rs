@@ -1,4 +1,5 @@
 use crate::operator::traits::{Operator, SelectionOperator};
+use crate::algorithms::objective::{is_better, ImprovementDirection};
 use crate::solution::Solution;
 use crate::utils::random::Random;
 
@@ -33,7 +34,12 @@ impl<T> SelectionOperator<T> for BinaryTournamentSelection
 where
     T: Clone,
 {
-    fn execute<'a>(&self, population: &'a [Solution<T>], rng: &mut Random) -> &'a Solution<T> {
+    fn execute<'a>(
+        &self,
+        population: &'a [Solution<T>],
+        rng: &mut Random,
+        direction: ImprovementDirection,
+    ) -> &'a Solution<T> {
         if population.is_empty() {
             panic!("Cannot select from empty population");
         }
@@ -53,14 +59,14 @@ where
         let individual1 = &population[index1];
         let individual2 = &population[index2];
         
-        // Return the better solution (higher scalar quality value)
-        let fitness1 = individual1.quality_value();
-        let fitness2 = individual2.quality_value();
-        
-        if fitness1 >= fitness2 {
-            individual1
-        } else {
+        if is_better(
+            individual2.quality_value(),
+            individual1.quality_value(),
+            direction,
+        ) {
             individual2
+        } else {
+            individual1
         }
     }
 }
@@ -68,6 +74,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::algorithms::objective::ImprovementDirection;
     use crate::solution::BinarySolutionBuilder;
 
     #[test]
@@ -88,7 +95,7 @@ mod tests {
 
         let population = vec![solution1, solution2];
         
-        let selected = selection.execute(&population, &mut rng);
+        let selected = selection.execute(&population, &mut rng, ImprovementDirection::Maximize);
         
         // Should consistently select the better solution
         assert_eq!(selected.quality_value(), 10.0);
@@ -102,7 +109,7 @@ mod tests {
 
         let population: Vec<Solution<bool>> = vec![];
 
-        let _selected = selection.execute(&population, &mut rng);
+        let _selected = selection.execute(&population, &mut rng, ImprovementDirection::Maximize);
     }
 
     #[test]
@@ -116,8 +123,22 @@ mod tests {
 
         let population = vec![solution];
 
-        let selected = selection.execute(&population, &mut rng);
+        let selected = selection.execute(&population, &mut rng, ImprovementDirection::Maximize);
 
         assert_eq!(selected.quality_value(), fitness);
+    }
+
+    #[test]
+    fn test_binary_tournament_selection_minimization() {
+        let selection = BinaryTournamentSelection::new();
+        let mut rng = Random::new(42);
+
+        let solution1 = BinarySolutionBuilder::zeros(5).with_quality(10.0).build();
+        let solution2 = BinarySolutionBuilder::ones(5).with_quality(5.0).build();
+
+        let population = vec![solution1, solution2];
+
+        let selected = selection.execute(&population, &mut rng, ImprovementDirection::Minimize);
+        assert_eq!(selected.quality_value(), 5.0);
     }
 }

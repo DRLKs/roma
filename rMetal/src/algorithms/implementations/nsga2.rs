@@ -181,18 +181,19 @@ where
         _context: &ExecutionContext<f64, ParetoCrowdingDistanceQuality>,
     ) {
         state.generation += 1;
+        let direction = problem.get_improvement_direction();
         let mut offspring = Vec::with_capacity(self.parameters.population_size);
 
         while offspring.len() < self.parameters.population_size {
             let parent1 = self
                 .parameters
                 .selection_operator
-                .execute(&state.population, &mut state.rng)
+                .execute(&state.population, &mut state.rng, direction)
                 .copy();
             let parent2 = self
                 .parameters
                 .selection_operator
-                .execute(&state.population, &mut state.rng)
+                .execute(&state.population, &mut state.rng, direction)
                 .copy();
 
             let mut children = if state.rng.next_f64() < self.parameters.crossover_probability {

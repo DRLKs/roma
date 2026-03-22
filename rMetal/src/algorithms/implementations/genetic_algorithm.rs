@@ -3,6 +3,7 @@ use crate::algorithms::termination::{
     TerminationCriteria,
 };
 use crate::algorithms::traits::Algorithm;
+use crate::algorithms::objective::{ImprovementDirection, is_better};
 use crate::algorithms::runtime::ExecutionContext;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
@@ -119,6 +120,7 @@ where
     T: Clone,
 {
     population: Vec<Solution<T>>,
+    direction: ImprovementDirection,
     generation: usize,
     evaluations: usize,
     run_seed: u64,
@@ -149,6 +151,7 @@ where
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
         problem: &(impl Problem<T> + Sync),
         current_population: &[Solution<T>],
+        direction: ImprovementDirection,
         generation: usize,
         run_seed: u64,
         evaluations: &mut usize,
@@ -158,11 +161,12 @@ where
             parameters,
             problem,
             current_population,
+            direction,
             generation_seed,
             evaluations,
         );
-        Self::apply_elitism(parameters, current_population, &mut offspring);
-        Self::sort_population_desc(&mut offspring);
+        Self::apply_elitism(parameters, current_population, &mut offspring, direction);
+        Self::sort_population(&mut offspring, direction);
         offspring.truncate(parameters.population_size);
         offspring
     }
@@ -171,6 +175,7 @@ where
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
         problem: &(impl Problem<T> + Sync),
         population: &[Solution<T>],
+        direction: ImprovementDirection,
         generation_seed: u64,
         evaluations: &mut usize,
     ) -> Vec<Solution<T>> {
@@ -178,12 +183,19 @@ where
         let thread_count = requested_threads.min(parameters.population_size.max(1));
 
         let (mut offspring_population, generation_evaluations) = if thread_count <= 1 {
-            Self::create_offspring_sequential(parameters, problem, population, generation_seed)
+            Self::create_offspring_sequential(
+                parameters,
+                problem,
+                population,
+                direction,
+                generation_seed,
+            )
         } else {
             Self::create_offspring_parallel(
                 parameters,
                 problem,
                 population,
+                direction,
                 thread_count,
                 generation_seed,
             )
@@ -198,6 +210,7 @@ where
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
         problem: &(impl Problem<T> + Sync),
         population: &[Solution<T>],
+        direction: ImprovementDirection,
         generation_seed: u64,
     ) -> (Vec<Solution<T>>, usize) {
         let mut offspring_population = Vec::with_capacity(parameters.population_size);
@@ -205,8 +218,14 @@ where
         let mut rng = Random::new(generation_seed);
 
         while offspring_population.len() < parameters.population_size {
-            let parent1 = parameters.selection_operator.execute(population, &mut rng).copy();
-            let parent2 = parameters.selection_operator.execute(population, &mut rng).copy();
+            let parent1 = parameters
+                .selection_operator
+                .execute(population, &mut rng, direction)
+                .copy();
+            let parent2 = parameters
+                .selection_operator
+                .execute(population, &mut rng, direction)
+                .copy();
 
             let mut offspring = if rng.next_f64() < parameters.crossover_probability {
                 parameters
@@ -238,6 +257,7 @@ where
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
         problem: &(impl Problem<T> + Sync),
         population: &[Solution<T>],
+        direction: ImprovementDirection,
         thread_count: usize,
         generation_seed: u64,
     ) -> (Vec<Solution<T>>, usize) {
@@ -266,11 +286,11 @@ where
                     while local_offspring.len() < worker_target {
                         let parent1 = parameters
                             .selection_operator
-                            .execute(population, &mut local_rng)
+                            .execute(population, &mut local_rng, direction)
                             .copy();
                         let parent2 = parameters
                             .selection_operator
-                            .execute(population, &mut local_rng)
+                            .execute(population, &mut local_rng, direction)
                             .copy();
 
                         let mut children = if local_rng.next_f64() < parameters.crossover_probability {
@@ -332,6 +352,7 @@ where
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
         current_population: &[Solution<T>],
         next_population: &mut Vec<Solution<T>>,
+        direction: ImprovementDirection,
     ) {
         if parameters.elite_size == 0 || current_population.is_empty() {
             return;
@@ -343,19 +364,27 @@ where
             .min(current_population.len());
 
         let mut elites = current_population.to_vec();
-        Self::sort_population_desc(&mut elites);
+        Self::sort_population(&mut elites, direction);
         elites.truncate(elite_count);
 
-        Self::sort_population_desc(next_population);
+        Self::sort_population(next_population, direction);
         next_population.truncate(parameters.population_size.saturating_sub(elite_count));
         next_population.extend(elites);
     }
 
-    fn sort_population_desc(population: &mut [Solution<T>]) {
+    fn sort_population(population: &mut [Solution<T>], direction: ImprovementDirection) {
         population.sort_by(|a, b| {
-            b.quality_value()
-                .partial_cmp(&a.quality_value())
-                .unwrap_or(std::cmp::Ordering::Equal)
+            let a_val = a.quality_value();
+            let b_val = b.quality_value();
+            let ordering = if is_better(a_val, b_val, direction) {
+                std::cmp::Ordering::Less
+            } else if is_better(b_val, a_val, direction) {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            };
+
+            ordering
         });
     }
 }
@@ -447,9 +476,11 @@ where
         let run_seed = Self::resolve_seed(&self.parameters);
         let mut init_rng = Random::new(Self::derive_seed(run_seed, 0));
         let population = Self::initialize_population(&self.parameters, problem, &mut init_rng);
+        let direction = problem.get_improvement_direction();
 
         GeneticAlgorithmState {
             population,
+            direction,
             generation: 0,
             evaluations: self.parameters.population_size,
             run_seed,
@@ -467,6 +498,7 @@ where
             &self.parameters,
             problem,
             &state.population,
+            state.direction,
             state.generation,
             state.run_seed,
             &mut state.evaluations,
@@ -474,16 +506,18 @@ where
     }
 
     fn snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T> {
-        let (_best, avg, worst) = calculate_statistics(&state.population);
+        let (_best, avg, worst) = calculate_statistics(&state.population, state.direction);
         let best_solution = state
             .population
             .iter()
-            .max_by(|a, b| {
-                a.quality_value()
-                    .partial_cmp(&b.quality_value())
-                    .unwrap_or(std::cmp::Ordering::Equal)
+            .cloned()
+            .reduce(|best, candidate| {
+                if is_better(candidate.quality_value(), best.quality_value(), state.direction) {
+                    candidate
+                } else {
+                    best
+                }
             })
-            .map(|solution| solution.copy())
             .expect("population should not be empty when reporting progress");
 
         let best_fitness = best_solution.quality_value();

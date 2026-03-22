@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 use crate::solution::Solution;
-use crate::algorithms::runtime::{ImprovementDirection};
+use crate::algorithms::objective::{is_better, ImprovementDirection};
 
 /// Defines stopping criteria for optimization algorithms.
 ///
@@ -180,10 +180,7 @@ impl TerminationState {
         self.best_quality_history.push(new_quality);
         if self.best_quality_history.len() > 1 {
             let prev = self.best_quality_history[self.best_quality_history.len() - 2];
-            let improved = match direction {
-                ImprovementDirection::Maximize => new_quality > prev,
-                ImprovementDirection::Minimize => new_quality < prev,
-            };
+            let improved = is_better(new_quality, prev, direction);
 
             if improved {
                 self.last_improvement_iteration = iteration;

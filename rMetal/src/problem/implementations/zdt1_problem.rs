@@ -3,7 +3,7 @@ use crate::solution::implementations::pareto_crowding_solution::MultiObjectiveRe
 use crate::solution::Solution;
 use crate::solution::traits::ParetoCrowdingDistanceQuality;
 use crate::utils::random::Random;
-use crate::algorithms::runtime::ImprovementDirection;
+use crate::algorithms::objective::ImprovementDirection;
 
 const DEFAULT_NUMBER_OF_VARIABLES: usize = 30;
 
@@ -99,7 +99,7 @@ impl Problem<f64, ParetoCrowdingDistanceQuality> for ZDT1Problem {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algorithms::runtime::ImprovementDirection;
+    use crate::algorithms::objective::ImprovementDirection;
 
     #[test]
     fn test_zdt1_creation() {

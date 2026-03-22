@@ -1,4 +1,4 @@
-use super::{scalar_dominance_direction, ParetoCrowdingDistanceQuality, ScalarDominanceDirection};
+use super::ParetoCrowdingDistanceQuality;
 
 /// Defines pairwise dominance between quality cache values.
 ///
@@ -9,12 +9,12 @@ pub trait Dominance {
 }
 
 impl Dominance for f64 {
-    /// Scalar dominance semantics are configurable at runtime.
+    /// Scalar dominance defaults to maximization semantics.
+    ///
+    /// Direction-aware scalar comparisons are handled explicitly in
+    /// algorithm/objective code paths.
     fn dominates(&self, other: &Self) -> bool {
-        match scalar_dominance_direction() {
-            ScalarDominanceDirection::Maximize => self > other,
-            ScalarDominanceDirection::Minimize => self < other,
-        }
+        self > other
     }
 }
 

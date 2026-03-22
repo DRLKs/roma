@@ -1,7 +1,5 @@
-use crate::algorithms::runtime::{
-    ExecutionContext,
-    ImprovementDirection
-};
+use crate::algorithms::objective::{is_better, non_improving_loss};
+use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{
     ExecutionStateSnapshot,
     TerminationCriteria,
@@ -206,28 +204,13 @@ where
 
         let current_quality = state.current.quality_value();
         let candidate_quality = candidate.quality_value();
-        let direction: ImprovementDirection =
-            problem.get_improvement_direction();
-        let is_better = match direction {
-            ImprovementDirection::Maximize => {
-                candidate_quality > current_quality
-            }
-            ImprovementDirection::Minimize => {
-                candidate_quality < current_quality
-            }
-        };
+        let direction = problem.get_improvement_direction();
+        let candidate_is_better = is_better(candidate_quality, current_quality, direction);
 
-        if is_better {
+        if candidate_is_better {
             state.current = candidate;
         } else {
-            let loss = match direction {
-                ImprovementDirection::Maximize => {
-                    current_quality - candidate_quality
-                }
-                ImprovementDirection::Minimize => {
-                    candidate_quality - current_quality
-                }
-            };
+            let loss = non_improving_loss(current_quality, candidate_quality, direction);
 
             if state.temperature > 0.0 {
                 let acceptance_probability = (-loss / state.temperature).exp().clamp(0.0, 1.0);
@@ -239,14 +222,7 @@ where
 
         let current_best = state.best.quality_value();
         let current_value = state.current.quality_value();
-        let improved_best = match direction {
-            ImprovementDirection::Maximize => {
-                current_value > current_best
-            }
-            ImprovementDirection::Minimize => {
-                current_value < current_best
-            }
-        };
+        let improved_best = is_better(current_value, current_best, direction);
 
         if improved_best {
             state.best = state.current.copy();

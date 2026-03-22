@@ -1,4 +1,5 @@
 use crate::operator::traits::{Operator, SelectionOperator};
+use crate::algorithms::objective::ImprovementDirection;
 use crate::solution::ParetoCrowdingDistanceQuality;
 use crate::utils::random::Random;
 use crate::solution::Solution;
@@ -31,7 +32,12 @@ impl Operator for MultiObjectiveTournamentSelection {
 }
 
 impl SelectionOperator<f64, ParetoCrowdingDistanceQuality> for MultiObjectiveTournamentSelection {
-    fn execute<'a>(&self, population: &'a [Solution<f64, ParetoCrowdingDistanceQuality>], rng: &mut Random) -> &'a Solution<f64, ParetoCrowdingDistanceQuality> {
+    fn execute<'a>(
+        &self,
+        population: &'a [Solution<f64, ParetoCrowdingDistanceQuality>],
+        rng: &mut Random,
+        _direction: ImprovementDirection,
+    ) -> &'a Solution<f64, ParetoCrowdingDistanceQuality> {
         if population.is_empty() {
             panic!("Cannot select from empty population");
         }
@@ -95,7 +101,7 @@ mod tests {
             .build();
         let population = vec![solution];
 
-        let selected = selection.execute(&population, &mut rng);
+        let selected = selection.execute(&population, &mut rng, ImprovementDirection::Minimize);
         assert_eq!(selected.variables(), &[1.0]);
     }
 
@@ -105,7 +111,7 @@ mod tests {
         let selection = MultiObjectiveTournamentSelection::new();
         let mut rng = Random::new(42);
         let population: Vec<Solution<f64, ParetoCrowdingDistanceQuality>> = vec![];
-        selection.execute(&population, &mut rng);
+        selection.execute(&population, &mut rng, ImprovementDirection::Minimize);
     }
 
     #[test]
@@ -126,7 +132,7 @@ mod tests {
         let population = vec![solution1, solution2];
 
         for _ in 0..10 {
-            let selected = selection.execute(&population, &mut rng);
+            let selected = selection.execute(&population, &mut rng, ImprovementDirection::Minimize);
             assert_eq!(selected.rank(), Some(0));
         }
     }
@@ -151,7 +157,7 @@ mod tests {
         let population = vec![solution1, solution2];
 
         for _ in 0..10 {
-            let selected = selection.execute(&population, &mut rng);
+            let selected = selection.execute(&population, &mut rng, ImprovementDirection::Minimize);
             assert_eq!(selected.crowding_distance(), Some(2.0));
         }
     }

@@ -9,9 +9,6 @@ pub(crate) mod implementations;
 
 pub use traits::ParetoCrowdingDistanceQuality;
 pub use traits::Dominance;
-pub use traits::ScalarDominanceDirection;
-pub use traits::scalar_dominance_direction;
-pub use traits::set_scalar_dominance_direction;
 pub use implementations::binary_solution::BinarySolutionBuilder;
 pub use implementations::real_solution::RealSolutionBuilder;
 pub use implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
