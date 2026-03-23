@@ -55,7 +55,7 @@ impl Random {
         min + self.range(max - min)
     }
 
-    /// p ∈ [0,1]
+    /// p ∈ \[0,1\]
     #[inline]
     pub fn chance(&mut self, p: f64) -> bool {
         self.next_f64() < p

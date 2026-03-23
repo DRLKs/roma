@@ -69,5 +69,5 @@
 [X] 17. TAREA 12/03/2026: Pruebas + Limpiar código + Arquitectura
 [ ] 18. Limpiar mucho el código 
 [ ] 19. Los problemas multiobjetivo, son inresolvibles por algoritmo de mono-objetivo, quizás deberiamos hacer reestricciones para que estos algoritmos no puedan solucionarlos
-[ ] 20. Sin duda existen redundancias en la elección de que si el modelo es de minimización o de optimización. 
-    [ ]Quizás el compare solutions debería estar en problema, porque que una solución sea mejor que otra creo que depende más del problema que de la misma solución.
+[X] 20. Sin duda existen redundancias en la elección de que si el modelo es de minimización o de optimización. 
+    [X]Quizás el compare solutions debería estar en problema, porque que una solución sea mejor que otra creo que depende más del problema que de la misma solución.
