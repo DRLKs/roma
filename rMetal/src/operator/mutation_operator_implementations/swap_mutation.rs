@@ -44,11 +44,9 @@ impl MutationOperator<usize> for SwapMutation {
                 if j == i {
                     j = (j + 1) % n;
                 }
-                solution.variables.swap(i, j);
+                let _ = solution.swap_variables(i, j);
             }
         }
-
-        solution.invalidate();
     }
 }
 

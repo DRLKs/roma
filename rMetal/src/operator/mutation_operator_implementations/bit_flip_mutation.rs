@@ -33,11 +33,13 @@ impl MutationOperator<bool> for BitFlipMutation {
     fn execute(&self, solution: &mut Solution<bool>, probability: f64, rng: &mut Random) {
         for i in 0..solution.num_variables() {
             if rng.next_f64() < probability {
-                let value = solution.variables[i];
-                solution.variables[i] = !value;
+                let value = solution
+                    .get_variable(i)
+                    .copied()
+                    .expect("index must be valid within num_variables loop");
+                solution.set_variable(i, !value);
             }
         }
-        solution.invalidate();
     }
 }
 
@@ -63,12 +65,7 @@ mod tests {
         // With probability 1.0, all bits should be flipped
         mutation.execute(&mut solution, 1.0, &mut rng);
 
-        let mut number_ones = 0;
-        for x in solution.variables {
-            if x == true {
-                number_ones += 1;
-            }
-        }
+        let number_ones = solution.variables().iter().filter(|&&x| x).count();
         assert!(number_ones > 0, "At least some bits should be flipped");
     }
 
@@ -81,12 +78,7 @@ mod tests {
         // With probability 0.0, no bits should be flipped
         mutation.execute(&mut solution, 0.0, &mut rng);
 
-        let mut number_ones = 0;
-        for x in solution.variables {
-            if x == true {
-                number_ones += 1;
-            }
-        }
+        let number_ones = solution.variables().iter().filter(|&&x| x).count();
         assert_eq!(number_ones, 0, "No one should be flipped");
     }
 
@@ -99,12 +91,7 @@ mod tests {
         // With probability 0.0, no bits should be flipped
         mutation.execute(&mut solution, -2.0, &mut rng);
 
-        let mut number_ones = 0;
-        for x in solution.variables {
-            if x == true {
-                number_ones += 1;
-            }
-        }
+        let number_ones = solution.variables().iter().filter(|&&x| x).count();
         assert_eq!(number_ones, 0, "No one should be flipped");
     }
 
@@ -118,12 +105,7 @@ mod tests {
         // With probability 2.0, all bits should be flipped
         mutation.execute(&mut solution, 2.0, &mut rng);
 
-        let mut number_ones = 0;
-        for x in solution.variables {
-            if x == true {
-                number_ones += 1;
-            }
-        }
+        let number_ones = solution.variables().iter().filter(|&&x| x).count();
         assert_eq!(number_ones, size, "All bits should be flipped");
     }
 }

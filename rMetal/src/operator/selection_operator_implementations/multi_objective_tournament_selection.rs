@@ -10,6 +10,7 @@ use crate::solution::Solution;
 /// 1) Lower rank is better.
 /// 2) If rank ties, larger crowding distance is better.
 /// 3) If both tie/missing, fallback to Pareto dominance.
+/// 4) If neither dominates (common in Pareto fronts), break tie randomly.
 pub struct MultiObjectiveTournamentSelection {
 }
 
@@ -80,8 +81,16 @@ impl SelectionOperator<f64, ParetoCrowdingDistanceQuality> for MultiObjectiveTou
 
         if solution1.dominates(solution2) {
             solution1
-        } else {
+        } else if solution2.dominates(solution1) {
             solution2
+        } else {
+            // In multi-objective optimization, incomparability is common.
+            // Avoid deterministic bias by using a random tie-break.
+            if rng.next_f64() < 0.5 {
+                solution1
+            } else {
+                solution2
+            }
         }
     }
 }
@@ -166,5 +175,40 @@ mod tests {
     fn test_selection_name() {
         let selection = MultiObjectiveTournamentSelection::new();
         assert_eq!(selection.name(), "Multi-Objective Tournament Selection");
+    }
+
+    #[test]
+    fn test_selection_breaks_non_dominated_ties_without_bias_to_second() {
+        let selection = MultiObjectiveTournamentSelection::new();
+        let mut rng = Random::new(1234);
+
+        // Same rank and crowding, and no dominance relation.
+        let solution1 = MultiObjectiveRealSolutionBuilder::from_variables(vec![1.0])
+            .with_objectives(vec![0.5, 0.5])
+            .with_rank(0)
+            .with_crowding_distance(1.0)
+            .build();
+
+        let solution2 = MultiObjectiveRealSolutionBuilder::from_variables(vec![2.0])
+            .with_objectives(vec![0.5, 0.5])
+            .with_rank(0)
+            .with_crowding_distance(1.0)
+            .build();
+
+        let population = vec![solution1, solution2];
+        let mut picked_first = 0usize;
+        let mut picked_second = 0usize;
+
+        for _ in 0..100 {
+            let selected = selection.execute(&population, &mut rng, ImprovementDirection::Minimize);
+            if selected.variables() == &[1.0] {
+                picked_first += 1;
+            } else {
+                picked_second += 1;
+            }
+        }
+
+        assert!(picked_first > 0);
+        assert!(picked_second > 0);
     }
 }

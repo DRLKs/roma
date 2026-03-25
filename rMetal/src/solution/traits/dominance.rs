@@ -19,25 +19,38 @@ impl Dominance for f64 {
 }
 
 impl Dominance for ParetoCrowdingDistanceQuality {
-    /// Dominance based on rank/crowding-distance ordering.
+    /// Pareto dominance based on objective vectors (minimization semantics).
     ///
     /// Rules:
-    /// - lower rank dominates higher rank,
-    /// - if ranks tie, larger crowding distance dominates,
-    /// - if both tie (or missing), no dominance.
+    /// - `self` dominates `other` iff all objectives are <= and at least one
+    ///   objective is strictly <,
+    /// - rank and crowding-distance are **not** part of Pareto dominance;
+    ///   they are selection metadata used as tie-breakers in algorithms
+    ///   (e.g., NSGA-II tournament/replacement).
+    /// - if objective vectors are missing, empty, or mismatched in length,
+    ///   dominance is undefined and this returns `false`.
+    ///
+    /// In Pareto optimization, it is common that two solutions are
+    /// non-dominated with respect to each other. In that case this method must
+    /// return `false` in both directions.
     fn dominates(&self, other: &Self) -> bool {
-        let self_rank = self.rank.unwrap_or(usize::MAX);
-        let other_rank = other.rank.unwrap_or(usize::MAX);
-
-        if self_rank < other_rank {
-            return true;
-        }
-        if self_rank > other_rank {
+        if self.objectives.is_empty()
+            || other.objectives.is_empty()
+            || self.objectives.len() != other.objectives.len()
+        {
             return false;
         }
 
-        let self_crowding = self.crowding_distance.unwrap_or(0.0);
-        let other_crowding = other.crowding_distance.unwrap_or(0.0);
-        self_crowding > other_crowding
+        let mut strictly_better_in_any = false;
+        for (&a, &b) in self.objectives.iter().zip(other.objectives.iter()) {
+            if a > b {
+                return false;
+            }
+            if a < b {
+                strictly_better_in_any = true;
+            }
+        }
+
+        strictly_better_in_any
     }
 }

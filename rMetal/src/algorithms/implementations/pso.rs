@@ -224,9 +224,30 @@ impl Algorithm<bool> for PSO {
                 // 2) Clamp velocity for numeric stability.
                 // 3) Convert velocity to a Bernoulli probability via sigmoid.
                 // 4) Sample new bit value from that probability.
-                let x = if state.particles[i].variables[d] { 1.0 } else { 0.0 };
-                let p = if state.personal_best[i].variables[d] { 1.0 } else { 0.0 };
-                let g = if state.global_best.variables[d] { 1.0 } else { 0.0 };
+                let x = if *state.particles[i]
+                    .get_variable(d)
+                    .expect("index must be valid within particle dimension")
+                {
+                    1.0
+                } else {
+                    0.0
+                };
+                let p = if *state.personal_best[i]
+                    .get_variable(d)
+                    .expect("index must be valid within particle dimension")
+                {
+                    1.0
+                } else {
+                    0.0
+                };
+                let g = if *state.global_best
+                    .get_variable(d)
+                    .expect("index must be valid within particle dimension")
+                {
+                    1.0
+                } else {
+                    0.0
+                };
 
                 let r1 = state.rng.next_f64();
                 let r2 = state.rng.next_f64();
@@ -241,10 +262,10 @@ impl Algorithm<bool> for PSO {
                 );
 
                 let flip_probability = Self::sigmoid(state.velocities[i][d]);
-                state.particles[i].variables[d] = state.rng.next_f64() < flip_probability;
+                let _ = state.particles[i]
+                    .set_variable(d, state.rng.next_f64() < flip_probability);
             }
 
-            state.particles[i].invalidate();
             problem.evaluate(&mut state.particles[i]);
             state.evaluations += 1;
 

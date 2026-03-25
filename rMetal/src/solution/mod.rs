@@ -30,7 +30,7 @@ pub use implementations::string_solution::StringSolutionBuilder;
 /// - custom metadata-rich payloads
 #[derive(Clone, Debug)]
 pub struct Solution<T, Q = f64> {
-    pub variables: Vec<T>,
+    variables: Vec<T>,
     /// Optional cached quality payload.
     ///
     /// This value is expected to be updated by problem evaluation and invalidated
@@ -38,7 +38,7 @@ pub struct Solution<T, Q = f64> {
     /// For scalar optimization this is usually `f64`.
     /// For vector-based multi-objective optimization this can be `Vec<f64>`.
     /// For metadata-rich workflows this can be a custom type.
-    pub quality: Option<Q>,
+    quality: Option<Q>,
 }
 
 impl<T, Q> Solution<T, Q> {
@@ -56,8 +56,23 @@ impl<T, Q> Solution<T, Q> {
     }
 
     /// Returns a mutable view of decision variables.
+    ///
+    /// # Cache invalidation
+    /// Calling this method invalidates cached quality immediately.
+    /// Any subsequent mutation through the returned slice means this solution
+    /// is no longer considered evaluated and must be re-evaluated.
     pub fn variables_mut(&mut self) -> &mut [T] {
+        self.invalidate();
         &mut self.variables
+    }
+
+    /// Replaces all decision variables and invalidates quality cache.
+    ///
+    /// After this call, quality is cleared because decision data changed.
+    /// The solution must be re-evaluated.
+    pub fn set_variables(&mut self, variables: Vec<T>) {
+        self.variables = variables;
+        self.invalidate();
     }
 
     /// Returns the number of decision variables.
@@ -78,8 +93,48 @@ impl<T, Q> Solution<T, Q> {
         self.variables.get(index)
     }
 
+    /// Returns a mutable reference to one decision variable by index.
+    ///
+    /// # Cache invalidation
+    /// Calling this method invalidates cached quality immediately,
+    /// even if `index` is out of bounds and the returned value is `None`.
+    /// This keeps a strict invariant: mutable variable access implies stale
+    /// quality cache and requires re-evaluation.
     pub fn get_variable_mut(&mut self, index: usize) -> Option<&mut T> {
+        self.invalidate();
         self.variables.get_mut(index)
+    }
+
+    /// Replaces one variable and invalidates quality cache.
+    ///
+    /// Returns `true` when index is valid.
+    ///
+    /// When this returns `true`, decision data changed and quality is cleared.
+    /// The solution must be re-evaluated.
+    pub fn set_variable(&mut self, index: usize, value: T) -> bool {
+        if let Some(variable) = self.variables.get_mut(index) {
+            *variable = value;
+            self.invalidate();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Swaps two variables and invalidates quality cache.
+    ///
+    /// Returns `true` when both indexes are valid.
+    ///
+    /// When this returns `true`, decision data changed and quality is cleared.
+    /// The solution must be re-evaluated.
+    pub fn swap_variables(&mut self, i: usize, j: usize) -> bool {
+        if i < self.variables.len() && j < self.variables.len() {
+            self.variables.swap(i, j);
+            self.invalidate();
+            true
+        } else {
+            false
+        }
     }
 
     /// Returns quality payload if present.
@@ -103,6 +158,10 @@ impl<T, Q> Solution<T, Q> {
     }
 
     /// Invalidates the quality cache.
+    ///
+    /// Use this when decision variables are changed through external logic.
+    /// After invalidation, the solution has no valid quality and must be
+    /// re-evaluated by the problem.
     pub fn invalidate(&mut self) {
         self.quality = None;
     }
@@ -125,11 +184,22 @@ where
 }
 
 impl<T> Solution<T, f64> {
+    /// Returns the scalar quality value if present.
+    pub fn try_quality_value(&self) -> Option<f64> {
+        self.quality
+    }
+
     /// Returns the scalar quality value.
     ///
-    /// If the quality cache is missing, this method returns `0.0`.
+    /// # Panics
+    /// Panics when the quality cache is missing.
+    ///
+    /// In optimization hot paths, silently defaulting quality can hide invalid
+    /// states (non-evaluated solutions participating in selection/ranking).
+    /// Use [`try_quality_value`](Self::try_quality_value) when absence is expected.
     pub fn quality_value(&self) -> f64 {
-        self.quality.unwrap_or(0.0)
+        self.quality
+            .expect("quality_value() called on a solution without evaluated quality")
     }
 }
 
@@ -148,10 +218,19 @@ fn apply_bounds(
     upper_bounds: &Option<Vec<f64>>,
 ) -> Vec<f64> {
     if let (Some(lower), Some(upper)) = (lower_bounds, upper_bounds) {
-        for i in 0..variables.len() {
-            if i < lower.len() && i < upper.len() {
-                variables[i] = variables[i].clamp(lower[i], upper[i]);
-            }
+        debug_assert_eq!(
+            lower.len(),
+            variables.len(),
+            "lower_bounds length should match variables length"
+        );
+        debug_assert_eq!(
+            upper.len(),
+            variables.len(),
+            "upper_bounds length should match variables length"
+        );
+
+        for ((value, &lo), &up) in variables.iter_mut().zip(lower.iter()).zip(upper.iter()) {
+            *value = value.clamp(lo, up);
         }
     }
 
@@ -185,4 +264,21 @@ mod tests {
         s.invalidate();
         assert_eq!(s.quality(), None);
     }
+
+    #[test]
+    fn try_quality_value_reflects_presence() {
+        let mut s: Solution<i32> = Solution::new(vec![1, 2, 3]);
+        assert_eq!(s.try_quality_value(), None);
+
+        s.set_quality(1.25);
+        assert_eq!(s.try_quality_value(), Some(1.25));
+    }
+
+    #[test]
+    #[should_panic(expected = "quality_value() called on a solution without evaluated quality")]
+    fn quality_value_panics_when_missing() {
+        let s: Solution<i32> = Solution::new(vec![1, 2, 3]);
+        let _ = s.quality_value();
+    }
+
 }

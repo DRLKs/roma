@@ -58,15 +58,16 @@ where
                 let delta = self.calculate_delta(u);
                 
                 // Apply mutation
-                let x = solution.variables[i];
+                let x = solution
+                    .get_variable(i)
+                    .copied()
+                    .expect("index must be valid within num_variables loop");
                 let mutated = x + delta;
                 
                 // Ensure mutated value is in valid range [0, 1]
-                solution.variables[i] = mutated.clamp(0.0, 1.0);
+                solution.set_variable(i, mutated.clamp(0.0, 1.0));
             }
         }
-        
-        solution.invalidate();
     }
 }
 
@@ -85,7 +86,7 @@ mod tests {
 
         mutation.execute(&mut solution, 0.0, &mut rng);
 
-        assert_eq!(solution.variables, original_vars);
+        assert_eq!(solution.variables(), original_vars.as_slice());
     }
 
     #[test]

@@ -220,19 +220,17 @@ where
         while offspring_population.len() < parameters.population_size {
             let parent1 = parameters
                 .selection_operator
-                .execute(population, &mut rng, direction)
-                .copy();
+                .execute(population, &mut rng, direction);
             let parent2 = parameters
                 .selection_operator
-                .execute(population, &mut rng, direction)
-                .copy();
+                .execute(population, &mut rng, direction);
 
             let mut offspring = if rng.next_f64() < parameters.crossover_probability {
                 parameters
                     .crossover_operator
                     .execute(&parent1, &parent2, &mut rng)
             } else {
-                vec![parent1, parent2]
+                vec![parent1.copy(), parent2.copy()]
             };
 
             for child in &mut offspring {
@@ -286,19 +284,17 @@ where
                     while local_offspring.len() < worker_target {
                         let parent1 = parameters
                             .selection_operator
-                            .execute(population, &mut local_rng, direction)
-                            .copy();
+                            .execute(population, &mut local_rng, direction);
                         let parent2 = parameters
                             .selection_operator
-                            .execute(population, &mut local_rng, direction)
-                            .copy();
+                            .execute(population, &mut local_rng, direction);
 
                         let mut children = if local_rng.next_f64() < parameters.crossover_probability {
                             parameters
                                 .crossover_operator
                                 .execute(&parent1, &parent2, &mut local_rng)
                         } else {
-                            vec![parent1, parent2]
+                            vec![parent1.copy(), parent2.copy()]
                         };
 
                         for child in &mut children {
@@ -363,13 +359,30 @@ where
             .min(parameters.population_size)
             .min(current_population.len());
 
-        let mut elites = current_population.to_vec();
-        Self::sort_population(&mut elites, direction);
-        elites.truncate(elite_count);
+        let mut elite_indices: Vec<usize> = (0..current_population.len()).collect();
+        elite_indices.sort_by(|&ia, &ib| {
+            let a = &current_population[ia];
+            let b = &current_population[ib];
+            let a_val = a.quality_value();
+            let b_val = b.quality_value();
+
+            if is_better(a_val, b_val, direction) {
+                std::cmp::Ordering::Less
+            } else if is_better(b_val, a_val, direction) {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
+        elite_indices.truncate(elite_count);
 
         Self::sort_population(next_population, direction);
         next_population.truncate(parameters.population_size.saturating_sub(elite_count));
-        next_population.extend(elites);
+        next_population.extend(
+            elite_indices
+                .into_iter()
+                .map(|idx| current_population[idx].copy()),
+        );
     }
 
     fn sort_population(population: &mut [Solution<T>], direction: ImprovementDirection) {

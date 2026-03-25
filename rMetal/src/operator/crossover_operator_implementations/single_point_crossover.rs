@@ -60,14 +60,17 @@ impl CrossoverOperator<bool> for SinglePointCrossover {
         
         // Exchange segments after crossover point
         for i in crossover_point..length {
-            let val1 = parent1.variables[i];
-            let val2 = parent2.variables[i];
-            offspring1.variables[i] = val2;
-            offspring2.variables[i] = val1;
+            let val1 = parent1
+                .get_variable(i)
+                .copied()
+                .expect("index must be valid within crossover length");
+            let val2 = parent2
+                .get_variable(i)
+                .copied()
+                .expect("index must be valid within crossover length");
+            let _ = offspring1.set_variable(i, val2);
+            let _ = offspring2.set_variable(i, val1);
         }
-        
-        offspring1.invalidate();
-        offspring2.invalidate();
         
         if self.offspring_count == 1 {
             vec![offspring1]

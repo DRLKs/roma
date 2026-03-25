@@ -242,14 +242,14 @@ mod tests {
     }
 
     #[test]
-    fn dominates_prefers_lower_rank() {
+    fn pareto_dominates_when_all_objectives_no_worse_and_one_better() {
         let a = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
-            .with_rank(0)
-            .with_crowding_distance(0.1)
+            .with_objectives(vec![0.2, 0.3])
+            .with_rank(5)
             .build();
         let b = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
-            .with_rank(1)
-            .with_crowding_distance(0.1)
+            .with_objectives(vec![0.3, 0.4])
+            .with_rank(0)
             .build();
 
         assert!(a.dominates(&b));
@@ -257,27 +257,31 @@ mod tests {
     }
 
     #[test]
-    fn dominates_prefers_higher_crowding_when_rank_ties() {
+    fn pareto_non_dominated_when_trade_off_exists() {
         let a = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
+            .with_objectives(vec![0.2, 0.6])
             .with_rank(0)
             .with_crowding_distance(2.0)
             .build();
         let b = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
+            .with_objectives(vec![0.3, 0.5])
             .with_rank(0)
             .with_crowding_distance(1.0)
             .build();
 
-        assert!(a.dominates(&b));
+        assert!(!a.dominates(&b));
         assert!(!b.dominates(&a));
     }
 
     #[test]
-    fn dominates_returns_false_when_rank_and_crowding_tie() {
+    fn dominates_returns_false_when_objectives_equal() {
         let a = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
+            .with_objectives(vec![0.4, 0.4])
             .with_rank(0)
             .with_crowding_distance(1.0)
             .build();
         let b = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
+            .with_objectives(vec![0.4, 0.4])
             .with_rank(0)
             .with_crowding_distance(1.0)
             .build();
@@ -295,7 +299,7 @@ mod tests {
             .with_objectives(vec![0.3, 0.4])
             .build();
 
-        a.set_rank(0);
+        a.set_rank(0); // metadata does not alter Pareto dominance semantics
         b.set_rank(1);
 
         assert!(a.dominates(&b));
@@ -307,11 +311,12 @@ mod tests {
     }
 
     #[test]
-    fn rank_missing_does_not_dominate_valid_rank() {
+    fn missing_objectives_do_not_dominate() {
         let mut a: Solution<f64, ParetoCrowdingDistanceQuality> = Solution::new(vec![0.0, 0.0]);
         a.set_crowding_distance(3.0);
 
         let b = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
+            .with_objectives(vec![0.1, 0.2])
             .with_rank(0)
             .with_crowding_distance(0.0)
             .build();

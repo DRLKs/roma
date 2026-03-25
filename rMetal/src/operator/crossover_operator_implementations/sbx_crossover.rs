@@ -57,8 +57,8 @@ where
         parent2: &Solution<f64, Q>,
         rng: &mut Random,
     ) -> Vec<Solution<f64, Q>> {
-        let variables1 = &parent1.variables;
-        let variables2 = &parent2.variables;
+        let variables1 = parent1.variables();
+        let variables2 = parent2.variables();
 
         if variables1.len() != variables2.len() {
             // If parents have different lengths, return copies
