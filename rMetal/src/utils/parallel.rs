@@ -15,7 +15,7 @@ use std::thread;
 /// - `min_chunk_size`: desired minimum chunk size. This avoids over-splitting
 ///   very small workloads and caps the maximum worker count to
 ///   `ceil(total_work_items / min_chunk_size)`.
-pub fn resolve_parallelism(
+pub(crate) fn resolve_parallelism(
     total_work_items: usize,
     requested_threads: Option<usize>,
     min_chunk_size: usize,
@@ -40,7 +40,7 @@ pub fn resolve_parallelism(
 }
 
 /// Splits `[0, total)` into `workers` contiguous ranges.
-pub fn split_ranges(total: usize, workers: usize) -> Vec<Range<usize>> {
+pub(crate) fn split_ranges(total: usize, workers: usize) -> Vec<Range<usize>> {
     let mut ranges = Vec::with_capacity(workers);
     for worker_id in 0..workers {
         let start = worker_id * total / workers;
@@ -54,7 +54,7 @@ pub fn split_ranges(total: usize, workers: usize) -> Vec<Range<usize>> {
 ///
 /// This helper avoids shared mutability by generating worker-local vectors and
 /// then concatenating them by chunk order.
-pub fn parallel_map_indexed<T, R, F>(
+pub(crate) fn parallel_map_indexed<T, R, F>(
     input: &[T],
     requested_threads: Option<usize>,
     min_chunk_size: usize,

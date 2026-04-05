@@ -3,6 +3,7 @@ pub(crate) mod implementations;
 pub(crate) mod termination;
 pub(crate) mod runtime;
 pub(crate) mod objective;
+pub(crate) mod async_runner;
 
 pub use traits::Algorithm;
 pub use implementations::genetic_algorithm::{
@@ -31,6 +32,10 @@ pub use termination::{
 pub use runtime::{
 	ExecutionContext,
 	spawn_algorithm_run,
+};
+pub use async_runner::{
+	run_algorithm_instances_async,
+	run_algorithms_async,
 };
 pub use objective::{
 	ImprovementDirection,

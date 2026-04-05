@@ -1,5 +1,5 @@
 use std::ops::Range;
-use std::thread;
+use crate::algorithms::run_algorithms_async;
 
 /// Internal parallel execution configuration for experiment workloads.
 ///
@@ -84,22 +84,14 @@ where
     }
 
     let ranges = split_ranges(total_work_items, worker_count);
-    let mut results = Vec::with_capacity(worker_count);
-
-    thread::scope(|scope| {
-        let mut handles = Vec::with_capacity(worker_count);
-        for (worker_id, range) in ranges.into_iter().enumerate() {
+    let jobs: Vec<_> = ranges
+        .into_iter()
+        .enumerate()
+        .map(|(worker_id, range)| {
             let worker_ref = &worker;
-            handles.push(scope.spawn(move || worker_ref(worker_id, range)));
-        }
+            move || worker_ref(worker_id, range)
+        })
+        .collect();
 
-        for handle in handles {
-            let value = handle
-                .join()
-                .expect("parallel worker panicked while executing experiment job");
-            results.push(value);
-        }
-    });
-
-    results
+    run_algorithms_async(jobs)
 }

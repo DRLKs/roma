@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use rmetal::algorithms::{
     GeneticAlgorithmExperiment,
@@ -12,6 +12,7 @@ use rmetal::algorithms::{
 use rmetal::experiment::{Experiment, ExperimentReport, Objective};
 use rmetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
 use rmetal::problem::KnapsackBuilder;
+use rmetal::utils::{measure_result, speedup};
 
 fn build_problem() -> impl rmetal::problem::Problem<bool, f64> + Sync {
     KnapsackBuilder::new()
@@ -85,15 +86,13 @@ fn run_experiment(parallel: bool, runs: usize) -> Result<(Duration, ExperimentRe
         .add_case(simulated_annealing_case)
         .add_case(pso_case);
 
-    let start = Instant::now();
-    let report = if parallel {
-        experiment.with_parallel().execute()
-    } else {
-        experiment.sequential().execute()
-    }?;
-    let elapsed = start.elapsed();
-
-    Ok((elapsed, report))
+    measure_result(|| {
+        if parallel {
+            experiment.with_parallel().execute()
+        } else {
+            experiment.sequential().execute()
+        }
+    })
 }
 
 fn main() {
@@ -118,7 +117,7 @@ fn main() {
         }
     };
 
-    let speedup = sequential_time.as_secs_f64() / parallel_time.as_secs_f64();
+    let speedup = speedup(sequential_time, parallel_time);
 
     println!("\nTiming results:");
     println!("  Sequential: {:?}", sequential_time);
