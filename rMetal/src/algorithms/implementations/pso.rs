@@ -11,6 +11,7 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
+use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::random::{seed_from_time, Random};
 
 /// Configuration parameters for Binary PSO.
@@ -27,6 +28,7 @@ pub struct PSOParameters {
     pub social_coefficient: f64,
     /// Maximum absolute velocity value used to clamp updates.
     pub velocity_clamp: f64,
+    pub num_threads: Option<usize>,
     pub termination_criteria: TerminationCriteria,
     pub random_seed: Option<u64>,
 }
@@ -45,9 +47,25 @@ impl PSOParameters {
             cognitive_coefficient,
             social_coefficient,
             velocity_clamp: 4.0,
+            num_threads: None,
             termination_criteria,
             random_seed: None,
         }
+    }
+
+    pub fn with_threads(mut self, num_threads: usize) -> Self {
+        self.num_threads = Some(num_threads.max(1));
+        self
+    }
+
+    pub fn with_parallel(mut self) -> Self {
+        self.num_threads = None;
+        self
+    }
+
+    pub fn sequential(mut self) -> Self {
+        self.num_threads = Some(1);
+        self
     }
 
     pub fn with_velocity_clamp(mut self, velocity_clamp: f64) -> Self {
@@ -97,6 +115,37 @@ impl PSO {
     /// from that probability.
     fn sigmoid(x: f64) -> f64 {
         1.0 / (1.0 + (-x).exp())
+    }
+
+    fn resolve_num_threads(requested: Option<usize>) -> usize {
+        match requested {
+            Some(v) => v.max(1),
+            None => std::thread::available_parallelism()
+                .map(|n| n.get())
+                .unwrap_or(1),
+        }
+    }
+
+    fn evaluate_particles(
+        problem: &(impl Problem<bool> + Sync),
+        particles: &[Solution<bool>],
+        requested_threads: Option<usize>,
+    ) -> Vec<Solution<bool>> {
+        let thread_count = Self::resolve_num_threads(requested_threads);
+
+        if thread_count <= 1 {
+            let mut evaluated = particles.to_vec();
+            for particle in &mut evaluated {
+                problem.evaluate(particle);
+            }
+            return evaluated;
+        }
+
+        parallel_map_indexed(particles, Some(thread_count), 1, |_, particle| {
+            let mut evaluated = particle.copy();
+            problem.evaluate(&mut evaluated);
+            evaluated
+        })
     }
 }
 
@@ -170,8 +219,7 @@ impl Algorithm<bool> for PSO {
         let mut velocities = Vec::with_capacity(self.parameters.swarm_size);
 
         for _ in 0..self.parameters.swarm_size {
-            let mut particle = problem.create_solution(&mut rng);
-            problem.evaluate(&mut particle);
+            let particle = problem.create_solution(&mut rng);
 
             let dimension = particle.num_variables();
             let velocity: Vec<f64> = (0..dimension)
@@ -181,6 +229,8 @@ impl Algorithm<bool> for PSO {
             particles.push(particle);
             velocities.push(velocity);
         }
+
+        particles = Self::evaluate_particles(problem, &particles, self.parameters.num_threads);
 
         let personal_best = particles.clone();
 
@@ -265,10 +315,16 @@ impl Algorithm<bool> for PSO {
                 let _ = state.particles[i]
                     .set_variable(d, state.rng.next_f64() < flip_probability);
             }
+        }
 
-            problem.evaluate(&mut state.particles[i]);
-            state.evaluations += 1;
+        state.particles = Self::evaluate_particles(
+            problem,
+            &state.particles,
+            self.parameters.num_threads,
+        );
+        state.evaluations += state.particles.len();
 
+        for i in 0..state.particles.len() {
             if is_better(
                 state.particles[i].quality_value(),
                 state.personal_best[i].quality_value(),

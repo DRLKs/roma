@@ -23,6 +23,7 @@ pub use algorithms::{
 	PSOParameters,
 	SimulatedAnnealing,
 	SimulatedAnnealingParameters,
+	spawn_algorithm_run,
 	TerminationController,
 	TerminationCriteria,
 	TerminationCriterion,
@@ -53,6 +54,7 @@ pub use observer::{
 };
 pub use experiment::{
 	Experiment,
+	run_algorithms_async,
 };
 pub use solution::{
 	BinarySolutionBuilder,
@@ -86,6 +88,7 @@ pub mod prelude {
 		PSOParameters,
 		SimulatedAnnealing,
 		SimulatedAnnealingParameters,
+		spawn_algorithm_run,
 		TerminationController,
 		TerminationCriteria,
 		TerminationCriterion,
@@ -119,6 +122,7 @@ pub mod prelude {
 
 	pub use crate::experiment::{
 		Experiment,
+		run_algorithms_async,
 	};
 
 	pub use crate::solution::{

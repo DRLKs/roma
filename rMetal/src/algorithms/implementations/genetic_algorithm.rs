@@ -12,6 +12,7 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
+use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::random::{seed_from_time, Random};
 use crate::utils::statistics::calculate_statistics;
 
@@ -138,13 +139,35 @@ where
         problem: &(impl Problem<T> + Sync),
         rng: &mut Random,
     ) -> Vec<Solution<T>> {
-        (0..parameters.population_size)
+        let initial_population: Vec<Solution<T>> = (0..parameters.population_size)
             .map(|_| {
-                let mut solution = problem.create_solution(rng);
-                problem.evaluate(&mut solution);
-                solution
+                problem.create_solution(rng)
             })
-            .collect()
+            .collect();
+
+        Self::evaluate_population(initial_population, problem, parameters.num_threads)
+    }
+
+    fn evaluate_population(
+        population: Vec<Solution<T>>,
+        problem: &(impl Problem<T> + Sync),
+        requested_threads: Option<usize>,
+    ) -> Vec<Solution<T>> {
+        let thread_count = Self::resolve_num_threads(requested_threads);
+
+        if thread_count <= 1 {
+            let mut evaluated = population;
+            for solution in &mut evaluated {
+                problem.evaluate(solution);
+            }
+            return evaluated;
+        }
+
+        parallel_map_indexed(&population, Some(thread_count), 1, |_, solution| {
+            let mut evaluated = solution.copy();
+            problem.evaluate(&mut evaluated);
+            evaluated
+        })
     }
 
     fn next_generation(

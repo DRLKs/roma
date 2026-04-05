@@ -9,6 +9,7 @@ use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOper
 use crate::problem::traits::Problem;
 use crate::solution::ParetoCrowdingDistanceQuality;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
+use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::random::{seed_from_time, Random};
 use std::cmp::Ordering;
 
@@ -24,6 +25,7 @@ where
     pub crossover_operator: C,
     pub mutation_operator: M,
     pub selection_operator: Sel,
+    pub num_threads: Option<usize>,
     pub random_seed: Option<u64>,
     pub termination_criteria: TerminationCriteria,
 }
@@ -50,9 +52,25 @@ where
             crossover_operator,
             mutation_operator,
             selection_operator,
+            num_threads: None,
             random_seed: None,
             termination_criteria,
         }
+    }
+
+    pub fn with_threads(mut self, num_threads: usize) -> Self {
+        self.num_threads = Some(num_threads.max(1));
+        self
+    }
+
+    pub fn with_parallel(mut self) -> Self {
+        self.num_threads = None;
+        self
+    }
+
+    pub fn sequential(mut self) -> Self {
+        self.num_threads = Some(1);
+        self
     }
 
     pub fn with_seed(mut self, seed: u64) -> Self {
@@ -85,6 +103,37 @@ where
     M: MutationOperator<f64, ParetoCrowdingDistanceQuality>,
     Sel: SelectionOperator<f64, ParetoCrowdingDistanceQuality>,
 {
+    fn resolve_num_threads(requested: Option<usize>) -> usize {
+        match requested {
+            Some(v) => v.max(1),
+            None => std::thread::available_parallelism()
+                .map(|n| n.get())
+                .unwrap_or(1),
+        }
+    }
+
+    fn evaluate_population(
+        problem: &(impl Problem<f64, ParetoCrowdingDistanceQuality> + Sync),
+        population: Vec<crate::solution::Solution<f64, ParetoCrowdingDistanceQuality>>,
+        requested_threads: Option<usize>,
+    ) -> Vec<crate::solution::Solution<f64, ParetoCrowdingDistanceQuality>> {
+        let thread_count = Self::resolve_num_threads(requested_threads);
+
+        if thread_count <= 1 {
+            let mut evaluated = population;
+            for solution in &mut evaluated {
+                problem.evaluate(solution);
+            }
+            return evaluated;
+        }
+
+        parallel_map_indexed(&population, Some(thread_count), 1, |_, solution| {
+            let mut evaluated = solution.copy();
+            problem.evaluate(&mut evaluated);
+            evaluated
+        })
+    }
+
     fn non_dominated_sort(
         population: &[crate::solution::Solution<f64, ParetoCrowdingDistanceQuality>],
     ) -> Vec<Vec<usize>> {
@@ -315,13 +364,15 @@ where
 
         let population: Vec<_> = (0..self.parameters.population_size)
             .map(|_| {
-                let mut solution = problem.create_solution(&mut rng);
-                problem.evaluate(&mut solution);
-                solution
+                problem.create_solution(&mut rng)
             })
             .collect();
 
-        let mut population = population;
+        let mut population = Self::evaluate_population(
+            problem,
+            population,
+            self.parameters.num_threads,
+        );
         Self::annotate_population(&mut population);
 
         NSGAIIState {
@@ -367,14 +418,18 @@ where
                     self.parameters.mutation_probability,
                     &mut state.rng,
                 );
-                problem.evaluate(child);
-                state.evaluations += 1;
             }
 
             offspring.extend(children);
         }
 
         offspring.truncate(self.parameters.population_size);
+        offspring = Self::evaluate_population(
+            problem,
+            offspring,
+            self.parameters.num_threads,
+        );
+        state.evaluations += offspring.len();
         state.population.extend(offspring);
 
         let fronts = Self::annotate_population(&mut state.population);

@@ -30,6 +30,7 @@ pub use termination::{
 };
 pub use runtime::{
 	ExecutionContext,
+	spawn_algorithm_run,
 };
 pub use objective::{
 	ImprovementDirection,

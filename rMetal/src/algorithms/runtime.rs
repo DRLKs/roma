@@ -4,11 +4,14 @@ use crate::algorithms::termination::{
     TerminationCriteria,
     TerminationReason,
 };
+use crate::algorithms::traits::Algorithm;
 use crate::algorithms::objective::ImprovementDirection;
 use crate::observer::traits::AlgorithmObserver;
 use crate::observer::AlgorithmEvent;
+use crate::problem::traits::Problem;
 use std::cell::RefCell;
 use std::sync::mpsc::{self, Sender};
+use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
 type ObserverSender<T, Q> = Option<Sender<AlgorithmEvent<T, Q>>>;
@@ -250,6 +253,30 @@ where
     *observers = observers_after;
 
     output.result
+}
+
+/// Spawns one algorithm execution in a dedicated thread.
+///
+/// Returns a join handle that yields the algorithm instance (with its updated
+/// internal state, observers and latest solution set) and the run result.
+///
+/// This helper is intended for coarse-grained asynchronous orchestration, such
+/// as launching multiple algorithms or island populations concurrently.
+pub fn spawn_algorithm_run<A, T, Q, P>(
+    mut algorithm: A,
+    problem: Arc<P>,
+) -> JoinHandle<(A, Result<A::SolutionSet, String>)>
+where
+    T: Clone + Send + 'static,
+    Q: Clone + Default + crate::solution::traits::Dominance + Send + 'static,
+    A: Algorithm<T, Q> + Send + 'static,
+    A::SolutionSet: Clone + Send + 'static,
+    P: Problem<T, Q> + Sync + Send + 'static,
+{
+    thread::spawn(move || {
+        let result = algorithm.run(problem.as_ref());
+        (algorithm, result)
+    })
 }
 
 /// Executes the common step-based algorithm lifecycle using runtime observers.
