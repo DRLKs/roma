@@ -1,4 +1,3 @@
-use rmetal::experiment::Objective;
 use rmetal::{
     BinaryTournamentSelection,
     BitFlipMutation,
@@ -44,7 +43,6 @@ fn experiment_compares_hill_climbing_and_ga_end_to_end() {
 
     let report = Experiment::new(problem)
         .with_runs(3)
-        .with_objective(Objective::Maximize)
         .add_case(hill_climbing_case)
         .add_case(genetic_algorithm_case)
         .execute()

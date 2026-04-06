@@ -1,9 +1,5 @@
 /// Optimization direction used to sort experiment comparisons.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Objective {
-    Maximize,
-    Minimize,
-}
+use crate::ImprovementDirection;
 
 #[derive(Debug, Clone)]
 pub struct ExperimentRunResult {
@@ -36,7 +32,7 @@ pub struct ExperimentSummary {
 
 #[derive(Debug, Clone)]
 pub struct ExperimentReport {
-    pub objective: Objective,
+    pub objective: ImprovementDirection,
     pub runs_per_case: usize,
     pub run_results: Vec<ExperimentRunResult>,
     pub failures: Vec<ExperimentFailure>,
@@ -44,6 +40,7 @@ pub struct ExperimentReport {
 }
 
 use std::fmt::Write;
+
 
 impl ExperimentReport {
     /// Builds a plain-text report ready for terminal output.

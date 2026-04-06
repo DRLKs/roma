@@ -1,3 +1,4 @@
+use crate::ImprovementDirection;
 use crate::experiment::traits::ExperimentalCase;
 use crate::problem::traits::Problem;
 use crate::solution::traits::Dominance;
@@ -8,7 +9,6 @@ use super::report::{
     ExperimentReport,
     ExperimentRunResult,
     ExperimentSummary,
-    Objective
 };
 use super::parallel::{ParallelConfig, parallel_collect_by_range};
 use super::utils::{mean, variance, best_and_worst};
@@ -48,7 +48,7 @@ where
     problem: P,
     runs: usize,
     parallel_threads: Option<usize>,
-    objective: Objective,
+    objective: ImprovementDirection,
     cases: Vec<Box<dyn ExperimentalCase<T, Q, P>>>,
 }
 
@@ -195,8 +195,8 @@ where
 
         summaries.sort_by(|a, b| {
             let ord = match self.objective {
-                Objective::Maximize => b.best.partial_cmp(&a.best).unwrap_or(Ordering::Equal),
-                Objective::Minimize => a.best.partial_cmp(&b.best).unwrap_or(Ordering::Equal),
+                ImprovementDirection::Maximize => b.best.partial_cmp(&a.best).unwrap_or(Ordering::Equal),
+                ImprovementDirection::Minimize => a.best.partial_cmp(&b.best).unwrap_or(Ordering::Equal),
             };
 
             if ord == Ordering::Equal {
@@ -216,11 +216,12 @@ where
     /// - objective: `Objective::Maximize`
     /// - threads: auto
     pub fn new(problem: P) -> Self {
+        let objective = problem.get_improvement_direction().clone();
         Self {
             problem,
             runs: 30,
             parallel_threads: None,
-            objective: Objective::Maximize,
+            objective: objective,
             cases: Vec::new(),
         }
     }
@@ -228,12 +229,6 @@ where
     /// Sets number of runs per case (`runs >= 1`).
     pub fn with_runs(mut self, runs: usize) -> Self {
         self.runs = runs.max(1);
-        self
-    }
-
-    /// Sets optimization objective used for ranking/summaries.
-    pub fn with_objective(mut self, objective: Objective) -> Self {
-        self.objective = objective;
         self
     }
 

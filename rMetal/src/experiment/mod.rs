@@ -9,6 +9,5 @@ pub use report::{
     ExperimentReport,
     ExperimentRunResult,
     ExperimentSummary,
-    Objective,
 };
 pub use executor::Experiment;

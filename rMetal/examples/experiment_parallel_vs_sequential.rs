@@ -9,7 +9,7 @@ use rmetal::algorithms::{
     TerminationCriteria,
     TerminationCriterion,
 };
-use rmetal::experiment::{Experiment, ExperimentReport, Objective};
+use rmetal::experiment::{Experiment, ExperimentReport};
 use rmetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
 use rmetal::problem::KnapsackBuilder;
 use rmetal::utils::{measure_result, speedup};
@@ -80,7 +80,6 @@ fn run_experiment(parallel: bool, runs: usize) -> Result<(Duration, ExperimentRe
 
     let experiment = Experiment::new(problem)
         .with_runs(runs)
-        .with_objective(Objective::Maximize)
         .add_case(hill_climbing_case)
         .add_case(genetic_algorithm_case)
         .add_case(simulated_annealing_case)

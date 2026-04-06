@@ -7,7 +7,7 @@ use rmetal::algorithms::{
     TerminationCriteria,
     TerminationCriterion,
 };
-use rmetal::experiment::{Experiment, Objective};
+use rmetal::experiment::Experiment;
 use rmetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
 use rmetal::problem::KnapsackBuilder;
 
@@ -73,7 +73,6 @@ fn main() {
 
     let report = Experiment::new(problem)
         .with_runs(24)
-        .with_objective(Objective::Maximize)
         .add_case(hill_climbing_case)
         .add_case(genetic_algorithm_case)
         .add_case(simulated_annealing_case)

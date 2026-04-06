@@ -4,7 +4,7 @@ use rmetal::algorithms::{
     TerminationCriteria,
     TerminationCriterion,
 };
-use rmetal::experiment::{Experiment, Objective};
+use rmetal::experiment::Experiment;
 use rmetal::operator::SwapMutation;
 
 fn main() {
@@ -31,7 +31,6 @@ fn main() {
 
     let report = Experiment::new(problem)
         .with_runs(12)
-        .with_objective(Objective::Minimize)
         .add_case(case_a)
         .add_case(case_b)
         .execute();
