@@ -10,37 +10,19 @@ use rmetal::algorithms::{
     TerminationCriterion,
 };
 use rmetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
-use rmetal::problem::KnapsackBuilder;
+use rmetal::problem::build_knapsack_from_records;
 use rmetal::solution_set::SolutionSet;
 use rmetal::utils::cli::{
     argument_value,
     infer_format_from_extension,
     parse_f64_flag_or,
-    parse_string_flag_or,
     parse_usize_flag_or,
     resolve_path_from_flag_or_default,
     seed_from_cli_or,
 };
 use rmetal::utils::csv_adapter::read_csv_records;
-use rmetal::utils::json_adapter::read_json_records;
-use rmetal::utils::yaml_adapter::read_yaml_records;
-
-// CLI usage notes:
-// - Cargo intercepts `--help` before your binary receives it.
-// - To forward flags to this example, use `--`.
-//
-// Example:
-//   cargo run --example knapsack_items_file -- --input examples/knapsack_items_file/items.json --records-path dataset.items
-//
-// Supported flags for this example:
-//   --seed <u64>
-//   --input <path>
-//   --format <csv|json|yaml>
-//   --capacity <f64>
-//   --limit <usize>
-//   --records-path <path>
-//   --weight-key <key>
-//   --value-key <key>
+use rmetal::utils::json_adapter::{get_json_value, read_json_records};
+use rmetal::utils::yaml_adapter::{get_yaml_value, read_yaml_records};
 
 #[derive(Debug, Clone, Copy)]
 enum InputFormat {
@@ -50,13 +32,13 @@ enum InputFormat {
 }
 
 fn print_help_if_requested() -> bool {
-        let wants_help = std::env::args().skip(1).any(|arg| arg == "--help" || arg == "-h");
-        if !wants_help {
-                return false;
-        }
+    let wants_help = std::env::args().skip(1).any(|arg| arg == "--help" || arg == "-h");
+    if !wants_help {
+        return false;
+    }
 
-        println!(
-                "Knapsack Items File Demo\n\
+    println!(
+        "Knapsack Items File Demo\n\
 Usage:\n\
     cargo run --example knapsack_items_file -- [OPTIONS]\n\n\
 Options:\n\
@@ -65,18 +47,23 @@ Options:\n\
     --input <path>           Input file path (.csv, .json, .yaml, .yml)\n\
     --format <fmt>           Input format override: csv | json | yaml\n\
                                                      If omitted, format is inferred from file extension\n\
-    --capacity <f64>         Knapsack capacity (default: 400.0)\n\
-    --limit <usize>          Maximum number of records to read (default: 120)\n\
-    --records-path <path>    JSON/YAML path to the records array (default: empty = root array)\n\
-    --weight-key <key>       Record key for item weight (default: weight)\n\
-    --value-key <key>        Record key for item value (default: value)\n\n\
+    --capacity <f64>         (CSV only) Knapsack capacity (default: 400.0)\n\
+    --limit <usize>          (CSV only) Maximum number of records (default: 120)\n\n\
+Record mapping policy (configured in code, not by CLI):\n\
+    CSV  -> records=root array, weight='weight', value='value'\n\
+    JSON -> records='dataset.items', weight='attributes.weight', value='attributes.value'\n\
+    YAML -> records='dataset.items', weight='attributes.weight', value='attributes.value'\n\n\
+Capacity/limit source:\n\
+    CSV  -> CLI flags (or defaults)\n\
+    JSON -> fields problem.capacity and problem.limit in file\n\
+    YAML -> fields problem.capacity and problem.limit in file\n\n\
 Examples:\n\
     cargo run --example knapsack_items_file -- --input examples/knapsack_items_file/items.csv\n\
-    cargo run --example knapsack_items_file -- --input examples/knapsack_items_file/items.json --records-path dataset.items --weight-key attributes.weight --value-key attributes.value\n\
-    cargo run --example knapsack_items_file -- --input examples/knapsack_items_file/items.yaml --records-path dataset.items --weight-key attributes.weight --value-key attributes.value\n"
-        );
+    cargo run --example knapsack_items_file -- --input examples/knapsack_items_file/items.json\n\
+    cargo run --example knapsack_items_file -- --input examples/knapsack_items_file/items.yaml\n"
+    );
 
-        true
+    true
 }
 
 fn resolve_input_path() -> PathBuf {
@@ -110,11 +97,32 @@ fn resolve_input_format(path: &Path) -> Result<InputFormat, String> {
             _ => None,
         })
         .ok_or_else(|| {
-        format!(
-            "Could not infer format from extension '{}'. Use --format=csv|json|yaml",
-            path.display()
-        )
-    })
+            format!(
+                "Could not infer format from extension '{}'. Use --format=csv|json|yaml",
+                path.display()
+            )
+        })
+}
+
+fn records_path_for_format(input_format: InputFormat) -> &'static str {
+    match input_format {
+        InputFormat::Csv => "",
+        InputFormat::Json | InputFormat::Yaml => "dataset.items",
+    }
+}
+
+fn weight_key_for_format(input_format: InputFormat) -> &'static str {
+    match input_format {
+        InputFormat::Csv => "weight",
+        InputFormat::Json | InputFormat::Yaml => "attributes.weight",
+    }
+}
+
+fn value_key_for_format(input_format: InputFormat) -> &'static str {
+    match input_format {
+        InputFormat::Csv => "value",
+        InputFormat::Json | InputFormat::Yaml => "attributes.value",
+    }
 }
 
 fn read_records_from_input(
@@ -132,47 +140,57 @@ fn read_records_from_input(
     }
 }
 
-fn load_knapsack_from_records(
-    records: Vec<std::collections::HashMap<String, String>>,
-    capacity: f64,
-    row_limit: usize,
-    weight_key: &str,
-    value_key: &str,
-) -> Result<(rmetal::KnapsackProblem, usize), String> {
-    if records.is_empty() {
-        return Err("Input data has no records".to_string());
+fn read_json_required_f64(path: &Path, key_path: &str) -> Result<f64, String> {
+    let raw = get_json_value(path, key_path)
+        .map_err(|e| format!("Failed to read JSON '{}': {}", path.display(), e))?
+        .ok_or_else(|| format!("Missing JSON key '{}'", key_path))?;
+
+    raw.parse::<f64>()
+        .map_err(|_| format!("JSON key '{}' must be numeric, got '{}'", key_path, raw))
+}
+
+fn read_json_required_usize(path: &Path, key_path: &str) -> Result<usize, String> {
+    let raw = get_json_value(path, key_path)
+        .map_err(|e| format!("Failed to read JSON '{}': {}", path.display(), e))?
+        .ok_or_else(|| format!("Missing JSON key '{}'", key_path))?;
+
+    raw.parse::<usize>()
+        .map_err(|_| format!("JSON key '{}' must be usize, got '{}'", key_path, raw))
+}
+
+fn read_yaml_required_f64(path: &Path, key_path: &str) -> Result<f64, String> {
+    let raw = get_yaml_value(path, key_path)
+        .map_err(|e| format!("Failed to read YAML '{}': {}", path.display(), e))?
+        .ok_or_else(|| format!("Missing YAML key '{}'", key_path))?;
+
+    raw.parse::<f64>()
+        .map_err(|_| format!("YAML key '{}' must be numeric, got '{}'", key_path, raw))
+}
+
+fn read_yaml_required_usize(path: &Path, key_path: &str) -> Result<usize, String> {
+    let raw = get_yaml_value(path, key_path)
+        .map_err(|e| format!("Failed to read YAML '{}': {}", path.display(), e))?
+        .ok_or_else(|| format!("Missing YAML key '{}'", key_path))?;
+
+    raw.parse::<usize>()
+        .map_err(|_| format!("YAML key '{}' must be usize, got '{}'", key_path, raw))
+}
+
+fn resolve_capacity_and_limit(path: &Path, input_format: InputFormat) -> Result<(f64, usize), String> {
+    match input_format {
+        InputFormat::Csv => Ok((
+            parse_f64_flag_or("--capacity", 400.0),
+            parse_usize_flag_or("--limit", 120),
+        )),
+        InputFormat::Json => Ok((
+            read_json_required_f64(path, "problem.capacity")?,
+            read_json_required_usize(path, "problem.limit")?,
+        )),
+        InputFormat::Yaml => Ok((
+            read_yaml_required_f64(path, "problem.capacity")?,
+            read_yaml_required_usize(path, "problem.limit")?,
+        )),
     }
-
-    let mut builder = KnapsackBuilder::new().with_capacity(capacity);
-    let mut loaded_items = 0usize;
-
-    for record in records.iter().take(row_limit) {
-        let Some(weight_text) = record.get(weight_key) else {
-            continue;
-        };
-        let Some(value_text) = record.get(value_key) else {
-            continue;
-        };
-
-        let Ok(weight) = weight_text.parse::<f64>() else {
-            continue;
-        };
-        let Ok(value) = value_text.parse::<f64>() else {
-            continue;
-        };
-
-        builder = builder.add_item(weight, value);
-        loaded_items += 1;
-    }
-
-    if loaded_items == 0 {
-        return Err(format!(
-            "No valid records found. Ensure keys '{}' and '{}' exist and are numeric",
-            weight_key, value_key
-        ));
-    }
-
-    Ok((builder.build(), loaded_items))
 }
 
 fn main() {
@@ -183,24 +201,20 @@ fn main() {
     let seed = seed_from_cli_or(42);
     let input_path = resolve_input_path();
     let input_format = resolve_input_format(&input_path).unwrap_or_else(|msg| panic!("{}", msg));
-    let capacity = parse_f64_flag_or("--capacity", 400.0);
-    let row_limit = parse_usize_flag_or("--limit", 120);
-    let records_path = parse_string_flag_or("--records-path", "");
-    let weight_key = parse_string_flag_or("--weight-key", "weight");
-    let value_key = parse_string_flag_or("--value-key", "value");
+    let records_path = records_path_for_format(input_format);
+    let weight_key = weight_key_for_format(input_format);
+    let value_key = value_key_for_format(input_format);
+    let (capacity, row_limit) =
+        resolve_capacity_and_limit(&input_path, input_format).unwrap_or_else(|msg| panic!("{}", msg));
 
-    let records = read_records_from_input(&input_path, input_format, &records_path)
+    let records = read_records_from_input(&input_path, input_format, records_path)
         .unwrap_or_else(|msg| panic!("{}", msg));
 
-    let (problem, loaded_items) = load_knapsack_from_records(
-        records,
-        capacity,
-        row_limit,
-        &weight_key,
-        &value_key,
-    )
-    .unwrap_or_else(|msg| panic!("{}", msg));
+    let (problem, loaded_items) =
+        build_knapsack_from_records(&records, capacity, row_limit, weight_key, value_key)
+            .unwrap_or_else(|msg| panic!("{}", msg));
 
+    // Build the algorithm 
     let parameters = GeneticAlgorithmParameters::new(
         80,
         0.85,
@@ -218,16 +232,19 @@ fn main() {
     let mut algorithm = GeneticAlgorithm::new(parameters);
     algorithm.add_observer(Box::new(chart_observer));
     algorithm.add_observer(Box::new(html_observer));
-    let result = algorithm
-        .run(&problem)
-        .expect("Large CSV GA run failed");
+    let result = algorithm.run(&problem).expect("Large CSV GA run failed");
 
     if let Some(best) = result.best_solution() {
         println!(
-            "Large dataset GA demo finished (seed={}). input='{}', format={:?}, items={}, best fitness={:.4}",
+            "Large dataset GA demo finished (seed={}). input='{}', format={:?}, capacity={}, limit={}, records_path='{}', weight_key='{}', value_key='{}', items={}, best fitness={:.4}",
             seed,
             input_path.display(),
             input_format,
+            capacity,
+            row_limit,
+            records_path,
+            weight_key,
+            value_key,
             loaded_items,
             best.quality_value()
         );

@@ -1,3 +1,7 @@
+problem:
+  capacity: 400.0
+  limit: 120
+
 meta:
   problem: knapsack
   description: Ejemplo YAML con estructura anidada

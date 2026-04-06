@@ -45,7 +45,15 @@ pub use operator::{
 	SelectionOperator,
 	SinglePointCrossover,
 };
-pub use problem::{KnapsackBuilder, KnapsackProblem, Problem, TspProblem, ZDT1Problem};
+pub use problem::{
+	KnapsackBuilder,
+	KnapsackProblem,
+	Problem,
+	TspProblem,
+	ZDT1Problem,
+	build_knapsack_from_records,
+	build_tsp_from_records,
+};
 pub use observer::{
 	AlgorithmEvent,
 	AlgorithmObserver,
@@ -112,7 +120,15 @@ pub mod prelude {
 		SinglePointCrossover,
 	};
 
-	pub use crate::problem::{KnapsackBuilder, KnapsackProblem, Problem, TspProblem, ZDT1Problem};
+	pub use crate::problem::{
+		KnapsackBuilder,
+		KnapsackProblem,
+		Problem,
+		TspProblem,
+		ZDT1Problem,
+		build_knapsack_from_records,
+		build_tsp_from_records,
+	};
 
 	pub use crate::observer::{
 		AlgorithmEvent,

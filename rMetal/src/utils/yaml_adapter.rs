@@ -401,16 +401,6 @@ fn parse_yaml_file(path: &Path) -> std::io::Result<YamlValue> {
         .map_err(|e| Error::new(ErrorKind::InvalidData, format!("Invalid YAML: {}", e)))
 }
 
-/// Reads all scalar values from a YAML file, flattening nested keys with dot notation.
-///
-/// Arrays are represented with index notation, for example `items[0].weight`.
-pub fn read_yaml_flat(path: &Path) -> std::io::Result<HashMap<String, String>> {
-    let root = parse_yaml_file(path)?;
-    let mut out = HashMap::new();
-    flatten_to_map(&root, "", &mut out);
-    Ok(out)
-}
-
 /// Reads a scalar value from YAML using a path expression like `config.algorithm.population` or `items[0].weight`.
 pub fn get_yaml_value(path: &Path, key_path: &str) -> std::io::Result<Option<String>> {
     let root = parse_yaml_file(path)?;
@@ -418,23 +408,6 @@ pub fn get_yaml_value(path: &Path, key_path: &str) -> std::io::Result<Option<Str
         .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("Invalid path: {}", e)))?;
 
     Ok(value.and_then(scalar_to_string))
-}
-
-/// Reads multiple scalar values from YAML by path.
-pub fn get_yaml_values(path: &Path, key_paths: &[&str]) -> std::io::Result<HashMap<String, String>> {
-    let root = parse_yaml_file(path)?;
-    let mut out = HashMap::new();
-
-    for key_path in key_paths {
-        let value = resolve_path(&root, key_path)
-            .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("Invalid path '{}': {}", key_path, e)))?;
-
-        if let Some(text) = value.and_then(scalar_to_string) {
-            out.insert((*key_path).to_string(), text);
-        }
-    }
-
-    Ok(out)
 }
 
 /// Reads a YAML sequence of objects and flattens each object into a map.

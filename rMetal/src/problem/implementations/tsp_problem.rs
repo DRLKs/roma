@@ -2,6 +2,7 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 use crate::algorithms::objective::ImprovementDirection;
+use std::collections::{BTreeMap, HashMap};
 
 /// Traveling Salesman Problem (TSP) with explicit distance matrix.
 ///
@@ -175,6 +176,93 @@ impl Problem<usize> for TspProblem {
     fn get_improvement_direction(&self) -> ImprovementDirection {
         ImprovementDirection::Minimize
     }
+}
+
+/// Builds a `TspProblem` from edge-like records.
+///
+/// Each record must contain three scalar fields:
+/// - `from_key`: source city label
+/// - `to_key`: destination city label
+/// - `distance_key`: edge distance as `f64`
+///
+/// City labels are mapped to indexes in deterministic lexicographic order.
+/// The resulting matrix must be complete for all non-diagonal pairs; otherwise an error is returned.
+///
+/// Returns the built problem and the number of loaded edges.
+pub fn build_tsp_from_records(
+    records: &[HashMap<String, String>],
+    from_key: &str,
+    to_key: &str,
+    distance_key: &str,
+) -> Result<(TspProblem, usize), String> {
+    if records.is_empty() {
+        return Err("Input data has no records".to_string());
+    }
+
+    let mut city_labels = BTreeMap::<String, ()>::new();
+    let mut edges: Vec<(String, String, f64)> = Vec::new();
+
+    for record in records {
+        let Some(from_label) = record.get(from_key) else {
+            continue;
+        };
+        let Some(to_label) = record.get(to_key) else {
+            continue;
+        };
+        let Some(distance_text) = record.get(distance_key) else {
+            continue;
+        };
+
+        let Ok(distance) = distance_text.parse::<f64>() else {
+            continue;
+        };
+
+        city_labels.insert(from_label.clone(), ());
+        city_labels.insert(to_label.clone(), ());
+        edges.push((from_label.clone(), to_label.clone(), distance));
+    }
+
+    if edges.is_empty() {
+        return Err(format!(
+            "No valid edges found. Ensure keys '{}', '{}' and '{}' exist and distance is numeric",
+            from_key, to_key, distance_key
+        ));
+    }
+
+    let city_to_index: BTreeMap<String, usize> = city_labels
+        .keys()
+        .enumerate()
+        .map(|(index, label)| (label.clone(), index))
+        .collect();
+
+    let n = city_to_index.len();
+    let mut matrix = vec![vec![f64::INFINITY; n]; n];
+    for (i, row) in matrix.iter_mut().enumerate() {
+        row[i] = 0.0;
+    }
+
+    for (from_label, to_label, distance) in &edges {
+        let from_index = city_to_index
+            .get(from_label)
+            .copied()
+            .ok_or_else(|| format!("Unknown source city label '{}'", from_label))?;
+        let to_index = city_to_index
+            .get(to_label)
+            .copied()
+            .ok_or_else(|| format!("Unknown destination city label '{}'", to_label))?;
+
+        matrix[from_index][to_index] = *distance;
+    }
+
+    for (i, row) in matrix.iter().enumerate() {
+        for (j, value) in row.iter().enumerate() {
+            if i != j && !value.is_finite() {
+                return Err("TSP edge set does not define a complete distance matrix".to_string());
+            }
+        }
+    }
+
+    Ok((TspProblem::with_distance_matrix(matrix), edges.len()))
 }
 
 #[cfg(test)]

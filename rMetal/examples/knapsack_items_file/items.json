@@ -1,4 +1,8 @@
 {
+  "problem": {
+    "capacity": 400.0,
+    "limit": 120
+  },
   "meta": {
     "problem": "knapsack",
     "description": "Ejemplo JSON con estructura anidada"

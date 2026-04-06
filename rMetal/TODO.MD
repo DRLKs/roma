@@ -45,7 +45,8 @@
     [X] Cambiar validate_parameters para que devuelva un result o algo así con el mensaje de error en caso de que los parámetros estén mal
 
 [ ] 11. CSVs, JSON, YAML. Quiero que también se pueda añadir datos desde distintos tipos de archivos. Solo está implementado para CSVs, que de hecho es el que peor funciona para estos casos.
-    [ ] Mejorar esta implementación, por ahora muy mala
+    [X] Mejorar esta implementación, por ahora muy mala (Más o menos)
+    [ ] Tiene margen de mejora
 
 [ ] 12. Reestructurar el proyecto
     [X] ExecutionStateSnapshot no creo que deba estar en Termination.

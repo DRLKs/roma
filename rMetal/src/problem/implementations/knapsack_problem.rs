@@ -2,6 +2,7 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 use crate::algorithms::objective::ImprovementDirection;
+use std::collections::HashMap;
 
 const PENALTY: f64 = 0.5; // Heavy penalty for infeasible solutions
 
@@ -148,6 +149,56 @@ impl Default for KnapsackBuilder {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Builds a `KnapsackProblem` from generic record maps.
+///
+/// This function is intended for data-ingestion flows where CSV/JSON/YAML adapters return
+/// `Vec<HashMap<String, String>>`. Callers provide the key mapping in code (`weight_key`,
+/// `value_key`) and this function converts valid rows into knapsack items.
+///
+/// Returns the built problem and the number of successfully loaded items.
+pub fn build_knapsack_from_records(
+    records: &[HashMap<String, String>],
+    capacity: f64,
+    row_limit: usize,
+    weight_key: &str,
+    value_key: &str,
+) -> Result<(KnapsackProblem, usize), String> {
+    if records.is_empty() {
+        return Err("Input data has no records".to_string());
+    }
+
+    let mut builder = KnapsackBuilder::new().with_capacity(capacity);
+    let mut loaded_items = 0usize;
+
+    for record in records.iter().take(row_limit) {
+        let Some(weight_text) = record.get(weight_key) else {
+            continue;
+        };
+        let Some(value_text) = record.get(value_key) else {
+            continue;
+        };
+
+        let Ok(weight) = weight_text.parse::<f64>() else {
+            continue;
+        };
+        let Ok(value) = value_text.parse::<f64>() else {
+            continue;
+        };
+
+        builder = builder.add_item(weight, value);
+        loaded_items += 1;
+    }
+
+    if loaded_items == 0 {
+        return Err(format!(
+            "No valid records found. Ensure keys '{}' and '{}' exist and are numeric",
+            weight_key, value_key
+        ));
+    }
+
+    Ok((builder.build(), loaded_items))
 }
 
 
