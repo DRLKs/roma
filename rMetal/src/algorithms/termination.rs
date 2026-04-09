@@ -1,6 +1,6 @@
-use std::time::{Duration, Instant};
-use crate::solution::Solution;
 use crate::algorithms::objective::{is_better, ImprovementDirection};
+use crate::solution::Solution;
+use std::time::{Duration, Instant};
 
 /// Defines stopping criteria for optimization algorithms.
 ///
@@ -131,7 +131,8 @@ impl TerminationController {
     }
 
     pub fn on_best_quality(&mut self, quality: f64, iteration: usize) {
-        self.state.update_best_quality(quality, iteration, self.direction);
+        self.state
+            .update_best_quality(quality, iteration, self.direction);
     }
 
     pub fn on_snapshot<T, Q>(&mut self, snapshot: &ExecutionStateSnapshot<T, Q>)
@@ -193,11 +194,15 @@ impl TerminationState {
             TerminationCriterion::MaxIterations(max) => self.current_iterations >= *max,
             TerminationCriterion::MaxEvaluations(max) => self.current_evaluations >= *max,
             TerminationCriterion::TimeLimit(duration) => self.start_time.elapsed() >= *duration,
-            TerminationCriterion::Convergence { threshold, patience } => {
+            TerminationCriterion::Convergence {
+                threshold,
+                patience,
+            } => {
                 if self.best_quality_history.len() < *patience + 1 {
                     false
                 } else {
-                    let recent = &self.best_quality_history[self.best_quality_history.len() - patience..];
+                    let recent =
+                        &self.best_quality_history[self.best_quality_history.len() - patience..];
                     let max_recent = recent.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
                     let min_recent = recent.iter().cloned().fold(f64::INFINITY, f64::min);
                     let range = max_recent - min_recent;
@@ -226,7 +231,11 @@ mod tests {
     use std::thread;
     use std::time::Duration;
 
-    fn snapshot(iteration: usize, evaluations: usize, best_fitness: f64) -> ExecutionStateSnapshot<f64> {
+    fn snapshot(
+        iteration: usize,
+        evaluations: usize,
+        best_fitness: f64,
+    ) -> ExecutionStateSnapshot<f64> {
         let best_solution = RealSolutionBuilder::new(2)
             .with_quality(best_fitness)
             .build();
@@ -257,7 +266,9 @@ mod tests {
         assert!(controller.should_terminate());
         assert!(matches!(
             controller.reason(),
-            Some(TerminationReason::Criterion(TerminationCriterion::MaxIterations(3)))
+            Some(TerminationReason::Criterion(
+                TerminationCriterion::MaxIterations(3)
+            ))
         ));
     }
 
@@ -273,7 +284,9 @@ mod tests {
         assert!(controller.should_terminate());
         assert!(matches!(
             controller.reason(),
-            Some(TerminationReason::Criterion(TerminationCriterion::MaxEvaluations(5)))
+            Some(TerminationReason::Criterion(
+                TerminationCriterion::MaxEvaluations(5)
+            ))
         ));
     }
 
@@ -295,13 +308,17 @@ mod tests {
         assert!(controller.should_terminate());
         assert!(matches!(
             controller.reason(),
-            Some(TerminationReason::Criterion(TerminationCriterion::Convergence { .. }))
+            Some(TerminationReason::Criterion(
+                TerminationCriterion::Convergence { .. }
+            ))
         ));
     }
 
     #[test]
     fn time_limit_termination_triggers() {
-        let criteria = TerminationCriteria::new(vec![TerminationCriterion::TimeLimit(Duration::from_millis(5))]);
+        let criteria = TerminationCriteria::new(vec![TerminationCriterion::TimeLimit(
+            Duration::from_millis(5),
+        )]);
         let mut controller = TerminationController::new(criteria, ImprovementDirection::Maximize);
 
         thread::sleep(Duration::from_millis(10));
@@ -309,13 +326,16 @@ mod tests {
         assert!(controller.should_terminate());
         assert!(matches!(
             controller.reason(),
-            Some(TerminationReason::Criterion(TerminationCriterion::TimeLimit(_)))
+            Some(TerminationReason::Criterion(
+                TerminationCriterion::TimeLimit(_)
+            ))
         ));
     }
 
     #[test]
     fn no_improvement_termination_triggers() {
-        let criteria = TerminationCriteria::new(vec![TerminationCriterion::NoImprovement { patience: 3 }]);
+        let criteria =
+            TerminationCriteria::new(vec![TerminationCriterion::NoImprovement { patience: 3 }]);
         let mut controller = TerminationController::new(criteria, ImprovementDirection::Maximize);
 
         controller.on_snapshot(&snapshot(0, 1, 1.0));
@@ -332,7 +352,9 @@ mod tests {
         assert!(controller.should_terminate());
         assert!(matches!(
             controller.reason(),
-            Some(TerminationReason::Criterion(TerminationCriterion::NoImprovement { patience: 3 }))
+            Some(TerminationReason::Criterion(
+                TerminationCriterion::NoImprovement { patience: 3 }
+            ))
         ));
     }
 }

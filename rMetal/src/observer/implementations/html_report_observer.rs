@@ -249,14 +249,20 @@ impl HtmlReportObserver {
             .reduce(f64::max)
             .unwrap_or(0.0);
 
-        let best_solution_row = self.best_snapshots.last().map(|b| {
-            format!(
-                "<tr><td>{}</td><td>{:.6}</td><td><code>{}</code></td></tr>",
-                b.generation,
-                b.quality,
-                Self::escape_html(&b.variables_preview)
-            )
-        }).unwrap_or_else(|| "<tr><td colspan=\"3\">No solution snapshot captured.</td></tr>".to_string());
+        let best_solution_row = self
+            .best_snapshots
+            .last()
+            .map(|b| {
+                format!(
+                    "<tr><td>{}</td><td>{:.6}</td><td><code>{}</code></td></tr>",
+                    b.generation,
+                    b.quality,
+                    Self::escape_html(&b.variables_preview)
+                )
+            })
+            .unwrap_or_else(|| {
+                "<tr><td colspan=\"3\">No solution snapshot captured.</td></tr>".to_string()
+            });
 
         let recent_generations: String = self
             .generations
@@ -404,10 +410,8 @@ where
                     average: state.average_fitness,
                     worst: state.worst_fitness,
                 });
-                let preview = Self::truncate_preview(
-                    format!("{:?}", state.best_solution.variables()),
-                    220,
-                );
+                let preview =
+                    Self::truncate_preview(format!("{:?}", state.best_solution.variables()), 220);
                 self.best_snapshots.push(BestSnapshot {
                     generation: state.iteration,
                     quality: state.best_fitness,
@@ -436,7 +440,10 @@ where
 
     fn finalize(&mut self) {
         if let Err(error) = self.generate_report() {
-            eprintln!("HtmlReportObserver: failed to generate report in finalize: {}", error);
+            eprintln!(
+                "HtmlReportObserver: failed to generate report in finalize: {}",
+                error
+            );
         }
     }
 

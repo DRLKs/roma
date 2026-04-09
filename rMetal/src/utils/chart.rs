@@ -152,7 +152,15 @@ impl LineChart {
             self.draw_axes(&mut svg, plot_width, plot_height);
 
             // Dibujar grid
-            self.draw_grid(&mut svg, plot_width, plot_height, min_x, max_x, min_y, max_y);
+            self.draw_grid(
+                &mut svg,
+                plot_width,
+                plot_height,
+                min_x,
+                max_x,
+                min_y,
+                max_y,
+            );
 
             // Dibujar series
             for series in self.series.iter() {
@@ -398,12 +406,12 @@ impl LineChart {
     fn draw_legend(&self, svg: &mut String, plot_width: u32) {
         let plot_height = self.config.height - self.config.margin_top - self.config.margin_bottom;
         let x = self.config.margin_left + plot_width - 150;
-        
+
         // Posicionar la leyenda en la esquina inferior derecha
         let legend_height = 20 + self.series.len() as u32 * 20;
         let y_start = self.config.margin_top + plot_height - legend_height - 10;
         let mut y = y_start + 20;
-        
+
         // Fondo de la leyenda
         svg.push_str(&format!(
             "  <rect x=\"{}\" y=\"{}\" width=\"140\" height=\"{}\" fill=\"white\" stroke=\"#d1d5db\" stroke-width=\"1\"/>\n",
@@ -547,7 +555,10 @@ mod tests {
     #[test]
     fn calculate_ranges_handles_single_x_value_without_zero_division() {
         let chart = ChartBuilder::new()
-            .add_series(Series::new("FlatX", vec![(5.0, 1.0), (5.0, 2.0), (5.0, 3.0)]))
+            .add_series(Series::new(
+                "FlatX",
+                vec![(5.0, 1.0), (5.0, 2.0), (5.0, 3.0)],
+            ))
             .build();
 
         let (min_x, max_x, _min_y, _max_y) = chart
@@ -559,13 +570,7 @@ mod tests {
 
     #[test]
     fn test_simple_chart() {
-        let data = vec![
-            (0.0, 0.0),
-            (1.0, 1.0),
-            (2.0, 4.0),
-            (3.0, 9.0),
-            (4.0, 16.0),
-        ];
+        let data = vec![(0.0, 0.0), (1.0, 1.0), (2.0, 4.0), (3.0, 9.0), (4.0, 16.0)];
 
         let series = Series::new("x²", data).with_color("#2563eb");
 
@@ -583,8 +588,8 @@ mod tests {
 
     #[test]
     fn test_multiple_series() {
-        let series1 = Series::new("Linear", vec![(0.0, 0.0), (1.0, 1.0), (2.0, 2.0)])
-            .with_color("#2563eb");
+        let series1 =
+            Series::new("Linear", vec![(0.0, 0.0), (1.0, 1.0), (2.0, 2.0)]).with_color("#2563eb");
         let series2 = Series::new("Quadratic", vec![(0.0, 0.0), (1.0, 1.0), (2.0, 4.0)])
             .with_color("#dc2626");
 

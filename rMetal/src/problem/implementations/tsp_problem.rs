@@ -1,7 +1,7 @@
+use crate::algorithms::objective::ImprovementDirection;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::utils::random::Random;
-use crate::algorithms::objective::ImprovementDirection;
 use std::collections::{BTreeMap, HashMap};
 
 /// Traveling Salesman Problem (TSP) with explicit distance matrix.
@@ -34,11 +34,7 @@ impl TspProblem {
 
         let size = distance_matrix.len();
         for row in &distance_matrix {
-            assert_eq!(
-                row.len(),
-                size,
-                "distance_matrix must be square (NxN)"
-            );
+            assert_eq!(row.len(), size, "distance_matrix must be square (NxN)");
         }
 
         Self {

@@ -1,9 +1,9 @@
+use crate::algorithms::objective::ImprovementDirection;
 use crate::problem::traits::Problem;
 use crate::solution::implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
-use crate::solution::Solution;
 use crate::solution::traits::ParetoCrowdingDistanceQuality;
+use crate::solution::Solution;
 use crate::utils::random::Random;
-use crate::algorithms::objective::ImprovementDirection;
 
 const DEFAULT_NUMBER_OF_VARIABLES: usize = 30;
 
@@ -57,7 +57,7 @@ impl ZDT1Problem {
         vec![f1, f2]
     }
 
-    pub fn number_of_variables(&self) -> usize{
+    pub fn number_of_variables(&self) -> usize {
         self.number_of_variables
     }
 }
@@ -129,8 +129,7 @@ mod tests {
         let mut variables = vec![0.0; 30];
         variables[0] = 0.5;
 
-        let mut solution = MultiObjectiveRealSolutionBuilder::from_variables(variables)
-            .build();
+        let mut solution = MultiObjectiveRealSolutionBuilder::from_variables(variables).build();
         problem.evaluate(&mut solution);
 
         let objectives = solution.get_objectives().unwrap();

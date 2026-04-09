@@ -1,7 +1,7 @@
 use crate::observer::AlgorithmEvent;
 
 /// Trait for observing algorithm execution
-/// 
+///
 /// Observers can monitor the algorithm's progress and perform actions.
 /// Implementations are executed from a dedicated observer thread.
 pub trait AlgorithmObserver<T, Q = f64>: Send + 'static

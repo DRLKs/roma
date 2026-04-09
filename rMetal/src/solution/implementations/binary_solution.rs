@@ -105,9 +105,7 @@ mod tests {
 
     #[test]
     fn test_binary_solution_builder_with_quality() {
-        let solution = BinarySolutionBuilder::zeros(3)
-            .with_quality(42.5)
-            .build();
+        let solution = BinarySolutionBuilder::zeros(3).with_quality(42.5).build();
         assert_eq!(solution.quality().copied(), Some(42.5));
     }
 }

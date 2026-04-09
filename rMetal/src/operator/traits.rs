@@ -1,6 +1,6 @@
+use crate::algorithms::objective::ImprovementDirection;
 use crate::solution::Solution;
 use crate::utils::random::Random;
-use crate::algorithms::objective::ImprovementDirection;
 
 /// Base trait for all operators in the framework.
 /// Operators transform solutions in some way (mutation, crossover, selection, etc.)
@@ -10,7 +10,7 @@ pub trait Operator {
 }
 
 /// Trait for mutation operators that modify a single solution.
-/// 
+///
 /// # Type Parameters
 /// * `T` - Type of the solution variables
 pub trait MutationOperator<T, Q = f64>: Operator
@@ -19,7 +19,7 @@ where
     Q: Clone,
 {
     /// Applies the mutation to a solution, modifying it in place.
-    /// 
+    ///
     /// # Arguments
     /// * `solution` - The solution to mutate
     /// * `probability` - Probability of mutation (0.0 to 1.0)
@@ -28,7 +28,7 @@ where
 }
 
 /// Trait for crossover operators that combine two parent solutions.
-/// 
+///
 /// # Type Parameters
 /// * `T` - Type of the solution variables
 pub trait CrossoverOperator<T, Q = f64>: Operator
@@ -37,12 +37,12 @@ where
     Q: Clone,
 {
     /// Applies crossover to two parent solutions and returns offspring.
-    /// 
+    ///
     /// # Arguments
     /// * `parent1` - First parent solution
     /// * `parent2` - Second parent solution
     /// * `rng` - Random generator provided by the algorithm
-    /// 
+    ///
     /// # Returns
     /// A vector of offspring solutions (typically 1 or 2)
     fn execute(
@@ -64,14 +64,14 @@ where
         &self,
         parents: Vec<Solution<T, Q>>,
         _rng: &mut Random,
-    ) -> Vec<Solution<T, Q>>{
-        let mut offspring_result= vec![];
+    ) -> Vec<Solution<T, Q>> {
+        let mut offspring_result = vec![];
         for i in 1..parents.len() {
             offspring_result.push(parents[i].clone());
         }
         offspring_result
     }
-    
+
     /// Returns the expected number of offspring produced by this operator
     fn number_of_offspring(&self) -> usize {
         2
@@ -79,7 +79,7 @@ where
 }
 
 /// Trait for selection operators that choose solutions from a population.
-/// 
+///
 /// # Type Parameters
 /// * `T` - Type of the solution variables
 pub trait SelectionOperator<T, Q = f64>: Operator
@@ -88,12 +88,12 @@ where
     Q: Clone,
 {
     /// Selects a solution from a population.
-    /// 
+    ///
     /// # Arguments
     /// * `population` - The population to select from
     /// * `rng` - Random generator provided by the algorithm
     /// * `direction` - Improvement direction for scalar quality comparisons.
-    /// 
+    ///
     /// # Returns
     /// A reference to the selected solution
     fn execute<'a>(
@@ -102,14 +102,14 @@ where
         rng: &mut Random,
         direction: ImprovementDirection,
     ) -> &'a Solution<T, Q>;
-    
+
     /// Selects multiple solutions from a population.
-    /// 
+    ///
     /// # Arguments
     /// * `population` - The population to select from
     /// * `count` - Number of solutions to select
     /// * `rng` - Random generator provided by the algorithm
-    /// 
+    ///
     /// # Returns
     /// A vector of references to selected solutions
     fn select_many<'a>(

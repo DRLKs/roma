@@ -1,8 +1,8 @@
-use crate::operator::traits::{Operator, SelectionOperator};
 use crate::algorithms::objective::ImprovementDirection;
+use crate::operator::traits::{Operator, SelectionOperator};
 use crate::solution::ParetoCrowdingDistanceQuality;
-use crate::utils::random::Random;
 use crate::solution::Solution;
+use crate::utils::random::Random;
 
 /// Binary Tournament Selection for Multi-Objective Optimization.
 ///
@@ -11,8 +11,7 @@ use crate::solution::Solution;
 /// 2) If rank ties, larger crowding distance is better.
 /// 3) If both tie/missing, fallback to Pareto dominance.
 /// 4) If neither dominates (common in Pareto fronts), break tie randomly.
-pub struct MultiObjectiveTournamentSelection {
-}
+pub struct MultiObjectiveTournamentSelection {}
 
 impl MultiObjectiveTournamentSelection {
     pub fn new() -> Self {
@@ -46,7 +45,7 @@ impl SelectionOperator<f64, ParetoCrowdingDistanceQuality> for MultiObjectiveTou
         if population.len() == 1 {
             return &population[0];
         }
-        
+
         // Select two random individuals
         let index1 = rng.range_between(0, population.len() as u64) as usize;
         let mut index2 = rng.range_between(0, population.len() as u64) as usize;
@@ -97,8 +96,8 @@ impl SelectionOperator<f64, ParetoCrowdingDistanceQuality> for MultiObjectiveTou
 
 #[cfg(test)]
 mod tests {
-    use crate::solution::{MultiObjectiveRealSolutionBuilder};
     use super::*;
+    use crate::solution::MultiObjectiveRealSolutionBuilder;
 
     #[test]
     fn test_selection_from_single_solution() {

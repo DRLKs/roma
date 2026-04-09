@@ -1,11 +1,8 @@
+use crate::algorithms::objective::ImprovementDirection;
 use crate::algorithms::termination::{
-    ExecutionStateSnapshot,
-    TerminationController,
-    TerminationCriteria,
-    TerminationReason,
+    ExecutionStateSnapshot, TerminationController, TerminationCriteria, TerminationReason,
 };
 use crate::algorithms::traits::Algorithm;
-use crate::algorithms::objective::ImprovementDirection;
 use crate::observer::traits::AlgorithmObserver;
 use crate::observer::AlgorithmEvent;
 use crate::problem::traits::Problem;
@@ -320,11 +317,7 @@ where
                 context.report_progress(step_snapshot);
             }
 
-            RuntimeExecutionOutput::new(
-                finalize(state),
-                last_iteration,
-                last_evaluations,
-            )
+            RuntimeExecutionOutput::new(finalize(state), last_iteration, last_evaluations)
         },
     )
 }

@@ -18,11 +18,7 @@ pub fn is_better(candidate: f64, reference: f64, direction: ImprovementDirection
 ///
 /// - `0.0` means candidate is not worse than current.
 /// - Positive values indicate how much worse the candidate is.
-pub fn non_improving_loss(
-    current: f64,
-    candidate: f64,
-    direction: ImprovementDirection,
-) -> f64 {
+pub fn non_improving_loss(current: f64, candidate: f64, direction: ImprovementDirection) -> f64 {
     match direction {
         ImprovementDirection::Maximize => (current - candidate).max(0.0),
         ImprovementDirection::Minimize => (candidate - current).max(0.0),

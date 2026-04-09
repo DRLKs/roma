@@ -3,7 +3,7 @@ use crate::solution::{finalize_scalar_solution, Solution};
 /// Builder for string-based solutions (`Solution<String>`).
 pub struct StringSolutionBuilder {
     variables: Vec<String>,
-    quality: Option<f64>
+    quality: Option<f64>,
 }
 
 impl StringSolutionBuilder {
@@ -11,7 +11,7 @@ impl StringSolutionBuilder {
     pub fn new(size: usize) -> Self {
         Self {
             variables: vec!["".to_string(); size],
-            quality: None
+            quality: None,
         }
     }
 
@@ -19,7 +19,7 @@ impl StringSolutionBuilder {
     pub fn from_variables(variables: Vec<String>) -> Self {
         Self {
             variables,
-            quality: None
+            quality: None,
         }
     }
 

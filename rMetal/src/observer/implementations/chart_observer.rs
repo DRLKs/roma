@@ -1,8 +1,8 @@
-use crate::observer::traits::{AlgorithmObserver};
-use crate::utils::chart::{ChartBuilder, Series};
-use std::time::{SystemTime, UNIX_EPOCH};
-use std::path::PathBuf;
+use crate::observer::traits::AlgorithmObserver;
 use crate::observer::AlgorithmEvent;
+use crate::utils::chart::{ChartBuilder, Series};
+use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Observer that generates charts showing algorithm progress
 pub struct ChartObserver {
@@ -10,7 +10,7 @@ pub struct ChartObserver {
     base_output_path: PathBuf,
     run_output_path: Option<PathBuf>,
     use_run_subdirectory: bool,
-    
+
     // Data collection
     generations: Vec<usize>,
     evaluations: Vec<usize>,
@@ -18,7 +18,7 @@ pub struct ChartObserver {
     average_fitness_history: Vec<f64>,
     worst_fitness_history: Vec<f64>,
     last_snapshot_seq: Option<u64>,
-    
+
     // Configuration
     chart_width: u32,
     chart_height: u32,
@@ -26,7 +26,7 @@ pub struct ChartObserver {
 
 impl ChartObserver {
     /// Creates a new ChartObserver
-    /// 
+    ///
     /// The observer creates a structured path per run using this format:
     /// `<base>/<algorithm_slug>/run_<timestamp_ms>_<pid>/`.
     ///
@@ -142,16 +142,17 @@ impl ChartObserver {
     /// Consolidate data from multiple threads by taking the best value for each generation
     fn consolidate_data(&self) -> (Vec<usize>, Vec<f64>, Vec<f64>, Vec<f64>) {
         use std::collections::HashMap;
-        
+
         let mut gen_map: HashMap<usize, (f64, Vec<f64>, Vec<f64>)> = HashMap::new();
-        
+
         for i in 0..self.generations.len() {
             let generation = self.generations[i];
             let best = self.best_fitness_history[i];
             let avg = self.average_fitness_history[i];
             let worst = self.worst_fitness_history[i];
-            
-            gen_map.entry(generation)
+
+            gen_map
+                .entry(generation)
                 .and_modify(|(b, avgs, worsts)| {
                     *b = b.max(best);
                     avgs.push(avg);
@@ -159,24 +160,29 @@ impl ChartObserver {
                 })
                 .or_insert((best, vec![avg], vec![worst]));
         }
-        
+
         let mut generations: Vec<usize> = gen_map.keys().copied().collect();
         generations.sort();
-        
+
         let mut best_fitness = Vec::new();
         let mut avg_fitness = Vec::new();
         let mut worst_fitness = Vec::new();
-        
+
         for generation in &generations {
             if let Some((best, avgs, worsts)) = gen_map.get(generation) {
                 best_fitness.push(*best);
                 // Average of averages from all threads for this generation
                 avg_fitness.push(avgs.iter().sum::<f64>() / avgs.len() as f64);
                 // Worst of worsts
-                worst_fitness.push(*worsts.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0));
+                worst_fitness.push(
+                    *worsts
+                        .iter()
+                        .min_by(|a, b| a.partial_cmp(b).unwrap())
+                        .unwrap_or(&0.0),
+                );
             }
         }
-        
+
         (generations, best_fitness, avg_fitness, worst_fitness)
     }
 
@@ -187,20 +193,23 @@ impl ChartObserver {
         }
 
         let output_file = self.resolve_output_path().join("convergence.svg");
-        
+
         let (generations, best_fitness, avg_fitness, worst_fitness) = self.consolidate_data();
 
-        let best_data: Vec<(f64, f64)> = generations.iter()
+        let best_data: Vec<(f64, f64)> = generations
+            .iter()
             .zip(best_fitness.iter())
             .map(|(generation, fitness)| (*generation as f64, *fitness))
             .collect();
 
-        let avg_data: Vec<(f64, f64)> = generations.iter()
+        let avg_data: Vec<(f64, f64)> = generations
+            .iter()
             .zip(avg_fitness.iter())
             .map(|(generation, fitness)| (*generation as f64, *fitness))
             .collect();
 
-        let worst_data: Vec<(f64, f64)> = generations.iter()
+        let worst_data: Vec<(f64, f64)> = generations
+            .iter()
             .zip(worst_fitness.iter())
             .map(|(generation, fitness)| (*generation as f64, *fitness))
             .collect();
@@ -290,7 +299,7 @@ where
                     "   Charts will be saved to: {}",
                     self.resolve_output_path().display()
                 );
-                
+
                 self.generations.clear();
                 self.evaluations.clear();
                 self.best_fitness_history.clear();
@@ -314,15 +323,15 @@ where
             }
             AlgorithmEvent::End { .. } => {
                 println!("  Generating charts...");
-                
+
                 if let Err(e) = self.generate_convergence_chart() {
                     eprintln!("Error generating convergence chart: {}", e);
                 }
-                
+
                 if let Err(e) = self.generate_best_by_evaluations_chart() {
                     eprintln!("Error generating best-by-evaluations chart: {}", e);
                 }
-                
+
                 println!(
                     "  Charts saved to: {}",
                     self.resolve_output_path().display()

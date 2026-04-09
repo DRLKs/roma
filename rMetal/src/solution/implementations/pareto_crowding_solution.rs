@@ -1,5 +1,5 @@
-use crate::solution::{apply_bounds, Solution};
 use crate::solution::traits::ParetoCrowdingDistanceQuality;
+use crate::solution::{apply_bounds, Solution};
 
 /// Convenience API for Pareto-and-crowding quality (`ParetoCrowdingDistanceQuality`).
 impl<T> Solution<T, ParetoCrowdingDistanceQuality> {
@@ -222,11 +222,10 @@ impl MultiObjectiveRealSolutionBuilder {
 #[cfg(test)]
 mod tests {
     use crate::solution::implementations::pareto_crowding_solution::{
-        MultiObjectiveRealSolutionBuilder,
-        MultiObjectiveVectorRealSolutionBuilder,
+        MultiObjectiveRealSolutionBuilder, MultiObjectiveVectorRealSolutionBuilder,
     };
-    use crate::solution::Solution;
     use crate::solution::ParetoCrowdingDistanceQuality;
+    use crate::solution::Solution;
 
     #[test]
     fn test_multiobjective_builder_rank_and_crowding() {

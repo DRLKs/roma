@@ -67,10 +67,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::{run_algorithm_instances_async, run_algorithms_async};
-    use crate::algorithms::implementations::hill_climbing::{
-        HillClimbing,
-        HillClimbingParameters,
-    };
+    use crate::algorithms::implementations::hill_climbing::{HillClimbing, HillClimbingParameters};
     use crate::algorithms::objective::ImprovementDirection;
     use crate::algorithms::termination::{TerminationCriteria, TerminationCriterion};
     use crate::algorithms::traits::Algorithm;
@@ -137,12 +134,11 @@ mod tests {
         .with_seed(22);
 
         let algorithms = vec![HillClimbing::new(params_a), HillClimbing::new(params_b)];
-        let results = run_algorithm_instances_async::<
-            HillClimbing<bool, BitFlipMutation>,
-            bool,
-            f64,
-            _,
-        >(Arc::clone(&problem), algorithms);
+        let results =
+            run_algorithm_instances_async::<HillClimbing<bool, BitFlipMutation>, bool, f64, _>(
+                Arc::clone(&problem),
+                algorithms,
+            );
 
         assert_eq!(results.len(), 2);
         for (_algorithm, run_result) in results {

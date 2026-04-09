@@ -41,7 +41,6 @@ pub struct ExperimentReport {
 
 use std::fmt::Write;
 
-
 impl ExperimentReport {
     /// Builds a plain-text report ready for terminal output.
     pub fn to_text_table(&self) -> String {
@@ -78,9 +77,7 @@ impl ExperimentReport {
                 let _ = writeln!(
                     out,
                     "- {} | run={} | {}",
-                    failure.case_name,
-                    failure.run_index,
-                    failure.error
+                    failure.case_name, failure.run_index, failure.error
                 );
             }
         }

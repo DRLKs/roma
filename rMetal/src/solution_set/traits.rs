@@ -1,11 +1,11 @@
-use crate::solution::{Solution};
-use crate::solution::traits::{Dominance};
+use crate::solution::traits::Dominance;
+use crate::solution::Solution;
 
 /// Trait that defines the basic interface for sets of solutions.
 /// * `T` - Type of the solution variables
 /// * `Q` - Quality payload type (defaults to `f64`)
 pub trait SolutionSet<T, Q = f64>
-where 
+where
     T: Clone,
     Q: Clone + Dominance,
 {
@@ -29,11 +29,11 @@ where
 
     /// Returns the number of solutions in the set.
     fn len(&self) -> usize;
-    
+
     fn add_solution(&mut self, solution: Solution<T, Q>) {
         self.push_solution(solution);
     }
-    
+
     /// Remove the last solution
     fn remove_solution(&mut self) -> Option<Solution<T, Q>> {
         self.pop_solution()
@@ -43,7 +43,7 @@ where
     fn clear(&mut self) {
         self.clear_solutions();
     }
-    
+
     /// Contains some solution
     fn is_empty(&self) -> bool {
         self.len() == 0
@@ -53,7 +53,7 @@ where
     fn size(&self) -> usize {
         self.len()
     }
-    
+
     /// Returns the best solution according to `Dominance`.
     ///
     /// This works for both scalar and multi-objective quality payloads because
@@ -94,7 +94,7 @@ where
     fn get(&self, index: usize) -> Option<&Solution<T, Q>> {
         self.get_solution(index)
     }
-    
+
     fn get_mut(&mut self, index: usize) -> Option<&mut Solution<T, Q>> {
         self.get_solution_mut(index)
     }

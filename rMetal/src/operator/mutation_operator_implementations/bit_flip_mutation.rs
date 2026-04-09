@@ -43,11 +43,10 @@ impl MutationOperator<bool> for BitFlipMutation {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::solution::BinarySolutionBuilder;
     use super::*;
+    use crate::solution::BinarySolutionBuilder;
 
     #[test]
     fn test_bit_flip_mutation_name() {
@@ -109,4 +108,3 @@ mod tests {
         assert_eq!(number_ones, size, "All bits should be flipped");
     }
 }
-

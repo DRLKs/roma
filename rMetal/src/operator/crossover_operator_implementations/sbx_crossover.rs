@@ -20,9 +20,7 @@ impl SBXCrossover {
     /// - `distribution_index`: Controls the spread of offspring (typical value: 20.0)
     ///   Higher values produce offspring closer to parents
     pub fn new(distribution_index: f64) -> Self {
-        SBXCrossover {
-            distribution_index,
-        }
+        SBXCrossover { distribution_index }
     }
 
     /// Create with default distribution index
@@ -67,7 +65,7 @@ where
 
         let mut offspring1_vars = Vec::with_capacity(variables1.len());
         let mut offspring2_vars = Vec::with_capacity(variables2.len());
-        
+
         for i in 0..variables1.len() {
             let x1 = variables1[i];
             let x2 = variables2[i];
@@ -96,7 +94,11 @@ where
         vec![offspring1, offspring2]
     }
 
-    fn execute_several(&self, solutions: Vec<Solution<f64, Q>>, rng: &mut Random) -> Vec<Solution<f64, Q>> {
+    fn execute_several(
+        &self,
+        solutions: Vec<Solution<f64, Q>>,
+        rng: &mut Random,
+    ) -> Vec<Solution<f64, Q>> {
         if solutions.len() < 2 {
             return solutions;
         }
@@ -121,8 +123,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::solution::RealSolutionBuilder;
     use super::*;
+    use crate::solution::RealSolutionBuilder;
 
     #[test]
     fn test_sbx_crossover_creates_two_offspring() {
@@ -134,14 +136,8 @@ mod tests {
         let offspring = crossover.execute(&parent1, &parent2, &mut rng);
 
         assert_eq!(offspring.len(), 2);
-        assert_eq!(
-            offspring[0].num_variables(),
-            3
-        );
-        assert_eq!(
-            offspring[1].num_variables(),
-            3
-        );
+        assert_eq!(offspring[0].num_variables(), 3);
+        assert_eq!(offspring[1].num_variables(), 3);
     }
 
     #[test]

@@ -1,5 +1,5 @@
+use crate::observer::traits::AlgorithmObserver;
 use crate::observer::AlgorithmEvent;
-use crate::observer::traits::{AlgorithmObserver};
 
 /// Simple console observer that prints algorithm progress to stdout
 pub struct ConsoleObserver {

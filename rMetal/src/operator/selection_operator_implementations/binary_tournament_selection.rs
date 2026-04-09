@@ -1,5 +1,5 @@
-use crate::operator::traits::{Operator, SelectionOperator};
 use crate::algorithms::objective::{is_better, ImprovementDirection};
+use crate::operator::traits::{Operator, SelectionOperator};
 use crate::solution::Solution;
 use crate::utils::random::Random;
 
@@ -47,18 +47,18 @@ where
         if population.len() == 1 {
             return &population[0];
         }
-        
+
         let index1 = rng.range(population.len() as u64) as usize;
         let mut index2 = rng.range(population.len() as u64) as usize;
-        
+
         // Ensure we select two different individuals
         while index2 == index1 && population.len() > 1 {
             index2 = rng.range(population.len() as u64) as usize;
         }
-        
+
         let individual1 = &population[index1];
         let individual2 = &population[index2];
-        
+
         if is_better(
             individual2.quality_value(),
             individual1.quality_value(),
@@ -83,20 +83,20 @@ mod tests {
 
         assert_eq!(selection.name(), "BinaryTournamentSelection");
     }
-    
+
     #[test]
     fn test_binary_tournament_selection() {
         let selection = BinaryTournamentSelection::new();
         let mut rng = Random::new(42);
-        
+
         let solution1 = BinarySolutionBuilder::zeros(5).with_quality(10.0).build();
 
         let solution2 = BinarySolutionBuilder::ones(5).with_quality(5.0).build();
 
         let population = vec![solution1, solution2];
-        
+
         let selected = selection.execute(&population, &mut rng, ImprovementDirection::Maximize);
-        
+
         // Should consistently select the better solution
         assert_eq!(selected.quality_value(), 10.0);
     }
@@ -118,8 +118,9 @@ mod tests {
         let mut rng = Random::new(42);
 
         let fitness = 10.0;
-        let solution = BinarySolutionBuilder::zeros(5).with_quality(fitness).build();
-
+        let solution = BinarySolutionBuilder::zeros(5)
+            .with_quality(fitness)
+            .build();
 
         let population = vec![solution];
 

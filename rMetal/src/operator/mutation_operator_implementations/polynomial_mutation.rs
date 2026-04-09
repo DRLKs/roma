@@ -18,9 +18,7 @@ impl PolynomialMutation {
     /// - `distribution_index`: Controls the mutation spread (typical value: 20.0)
     ///   Higher values produce smaller mutations
     pub fn new(distribution_index: f64) -> Self {
-        PolynomialMutation {
-            distribution_index,
-        }
+        PolynomialMutation { distribution_index }
     }
 
     /// Create with default distribution index (20.0)
@@ -56,14 +54,14 @@ where
             if rng.next_f64() < probability {
                 let u = rng.next_f64();
                 let delta = self.calculate_delta(u);
-                
+
                 // Apply mutation
                 let x = solution
                     .get_variable(i)
                     .copied()
                     .expect("index must be valid within num_variables loop");
                 let mutated = x + delta;
-                
+
                 // Ensure mutated value is in valid range [0, 1]
                 solution.set_variable(i, mutated.clamp(0.0, 1.0));
             }
@@ -71,11 +69,10 @@ where
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::solution::RealSolutionBuilder;
     use super::*;
+    use crate::solution::RealSolutionBuilder;
 
     #[test]
     fn test_polynomial_mutation_zero_probability() {

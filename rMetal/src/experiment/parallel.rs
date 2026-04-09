@@ -1,5 +1,5 @@
-use std::ops::Range;
 use crate::algorithms::run_algorithms_async;
+use std::ops::Range;
 
 /// Internal parallel execution configuration for experiment workloads.
 ///

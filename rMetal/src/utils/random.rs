@@ -7,7 +7,6 @@ pub fn seed_from_time() -> u64 {
         .as_nanos() as u64
 }
 
-
 #[derive(Debug, Clone)]
 pub struct Random {
     state: u64,
@@ -67,14 +66,13 @@ impl Random {
     }
 }
 
-
 #[cfg(test)]
 mod test {
 
-    use crate::utils::random::{Random,seed_from_time};
-    
+    use crate::utils::random::{seed_from_time, Random};
+
     #[test]
-        fn range_between_test() {
+    fn range_between_test() {
         let min: u64 = 100;
         let max: u64 = 200;
         let mut rng: Random = Random::new(seed_from_time());
@@ -100,21 +98,37 @@ mod test {
     }
 
     #[test]
-    fn random_determinism_test(){
+    fn random_determinism_test() {
         let mut rng_seed_generator = Random::new(seed_from_time());
         let seed: u64 = rng_seed_generator.next_u64();
-        
+
         let mut rng_1: Random = Random::new(seed);
         let mut rng_2: Random = Random::new(seed);
 
-        assert_eq!(rng_1.coin_flip(), rng_2.coin_flip(), "Structure Random with the same seed should give the same result");
-        assert_eq!(rng_1.next_f64(), rng_2.next_f64(), "Structure Random with the same seed should give the same result");
-        assert_eq!(rng_1.next_u32(), rng_2.next_u32(), "Structure Random with the same seed should give the same result");
-        assert_eq!(rng_1.next_u64(), rng_2.next_u64(), "Structure Random with the same seed should give the same result");
+        assert_eq!(
+            rng_1.coin_flip(),
+            rng_2.coin_flip(),
+            "Structure Random with the same seed should give the same result"
+        );
+        assert_eq!(
+            rng_1.next_f64(),
+            rng_2.next_f64(),
+            "Structure Random with the same seed should give the same result"
+        );
+        assert_eq!(
+            rng_1.next_u32(),
+            rng_2.next_u32(),
+            "Structure Random with the same seed should give the same result"
+        );
+        assert_eq!(
+            rng_1.next_u64(),
+            rng_2.next_u64(),
+            "Structure Random with the same seed should give the same result"
+        );
     }
 
     #[test]
-    fn zero_seed_test(){
+    fn zero_seed_test() {
         let seed: u64 = 0;
         let mut rng: Random = Random::new(seed);
 
@@ -124,7 +138,7 @@ mod test {
     }
 
     #[test]
-    fn highest_seed_test(){
+    fn highest_seed_test() {
         let seed = u64::MAX;
         let mut rng: Random = Random::new(seed);
 

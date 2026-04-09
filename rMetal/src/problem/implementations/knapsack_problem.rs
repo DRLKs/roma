@@ -1,7 +1,7 @@
+use crate::algorithms::objective::ImprovementDirection;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::utils::random::Random;
-use crate::algorithms::objective::ImprovementDirection;
 use std::collections::HashMap;
 
 const PENALTY: f64 = 0.5; // Heavy penalty for infeasible solutions
@@ -16,15 +16,26 @@ pub struct KnapsackProblem {
     values: Vec<f64>,
 }
 
-impl KnapsackProblem   
-{
+impl KnapsackProblem {
     /// Creates a new KnapsackProblem with specified items
-    pub fn with_data(capacity: f64, weights: Vec<f64>, values: Vec<f64>, random_seed: Option<u64>) -> Self {
-        assert_eq!(weights.len(), values.len(), "Weights and values must have the same length");
+    pub fn with_data(
+        capacity: f64,
+        weights: Vec<f64>,
+        values: Vec<f64>,
+        random_seed: Option<u64>,
+    ) -> Self {
+        assert_eq!(
+            weights.len(),
+            values.len(),
+            "Weights and values must have the same length"
+        );
         let number_of_items = weights.len();
         let _ = random_seed;
         KnapsackProblem {
-            description: format!("Knapsack Problem with {} items and capacity {}", number_of_items, capacity),
+            description: format!(
+                "Knapsack Problem with {} items and capacity {}",
+                number_of_items, capacity
+            ),
             number_of_items,
             capacity,
             weights,
@@ -74,14 +85,14 @@ impl Problem<bool> for KnapsackProblem {
     fn evaluate(&self, solution: &mut Solution<bool>) {
         let weight = self.calculate_weight(solution);
         let value = self.calculate_value(solution);
-        
+
         // If weight exceeds capacity, apply penalty
         let _fitness = if weight > self.capacity {
             -(weight - self.capacity) * PENALTY // Penalty for infeasible solutions
         } else {
             value // Maximize value_fitness
         };
-        
+
         solution.set_quality(_fitness);
     }
 
@@ -201,7 +212,6 @@ pub fn build_knapsack_from_records(
     Ok((builder.build(), loaded_items))
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -214,7 +224,7 @@ mod tests {
         let description = "Test Problem".to_string();
         knapsack_problem.set_problem_description(description.clone());
 
-        assert_eq!( knapsack_problem.description, description );
+        assert_eq!(knapsack_problem.description, description);
     }
 
     #[test]

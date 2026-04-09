@@ -1,5 +1,5 @@
 use crate::algorithms::objective::ImprovementDirection;
-use crate::algorithms::runtime::{ExecutionContext, run_algorithm};
+use crate::algorithms::runtime::{run_algorithm, ExecutionContext};
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::observer::traits::AlgorithmObserver;
 use crate::problem::traits::Problem;

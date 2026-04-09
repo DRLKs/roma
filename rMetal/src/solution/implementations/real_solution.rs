@@ -103,6 +103,4 @@ mod tests {
             .build();
         assert_eq!(solution.variables(), &[1.0, 0.0, 1.0]);
     }
-
-
 }

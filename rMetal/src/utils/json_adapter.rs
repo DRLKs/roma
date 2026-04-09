@@ -428,7 +428,10 @@ pub fn get_json_value(path: &Path, key_path: &str) -> std::io::Result<Option<Str
 ///
 /// If `records_path` is empty, the root value is expected to be an array.
 /// Otherwise, the value at the provided path must be an array.
-pub fn read_json_records(path: &Path, records_path: &str) -> std::io::Result<Vec<HashMap<String, String>>> {
+pub fn read_json_records(
+    path: &Path,
+    records_path: &str,
+) -> std::io::Result<Vec<HashMap<String, String>>> {
     let root = parse_json_file(path)?;
     let target = if records_path.trim().is_empty() {
         Some(&root)

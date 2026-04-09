@@ -13,7 +13,7 @@ where
 
     /// Evaluates a solution and updates its quality/fitness
     fn evaluate(&self, solution: &mut Solution<T, Q>);
-    
+
     /// Creates a new random solution for this problem that serves as a starting point for the algorithm
     fn create_solution(&self, _rng: &mut Random) -> Solution<T, Q>;
 

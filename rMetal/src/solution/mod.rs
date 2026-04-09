@@ -3,18 +3,17 @@
 //! This module provides a generic `Solution<T, Q>` abstraction and
 //! convenience builders for common variable types.
 
-pub(crate) mod traits;
 pub(crate) mod implementations;
+pub(crate) mod traits;
 
-
-pub use traits::ParetoCrowdingDistanceQuality;
-pub use traits::Dominance;
 pub use implementations::binary_solution::BinarySolutionBuilder;
-pub use implementations::real_solution::RealSolutionBuilder;
 pub use implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
 pub use implementations::pareto_crowding_solution::MultiObjectiveVectorRealSolutionBuilder;
 pub use implementations::permutation_solution::PermutationSolutionBuilder;
+pub use implementations::real_solution::RealSolutionBuilder;
 pub use implementations::string_solution::StringSolutionBuilder;
+pub use traits::Dominance;
+pub use traits::ParetoCrowdingDistanceQuality;
 
 /// Generic optimization solution.
 ///
@@ -211,7 +210,6 @@ fn finalize_scalar_solution<T>(variables: Vec<T>, quality: Option<f64>) -> Solut
     solution
 }
 
-
 fn apply_bounds(
     mut variables: Vec<f64>,
     lower_bounds: &Option<Vec<f64>>,
@@ -280,5 +278,4 @@ mod tests {
         let s: Solution<i32> = Solution::new(vec![1, 2, 3]);
         let _ = s.quality_value();
     }
-
 }

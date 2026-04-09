@@ -32,9 +32,7 @@ pub(crate) fn resolve_parallelism(
     };
 
     let max_by_work = total_work_items;
-    let max_by_chunk = total_work_items
-        .div_ceil(min_chunk_size.max(1))
-        .max(1);
+    let max_by_chunk = total_work_items.div_ceil(min_chunk_size.max(1)).max(1);
 
     requested.min(max_by_work).min(max_by_chunk).max(1)
 }

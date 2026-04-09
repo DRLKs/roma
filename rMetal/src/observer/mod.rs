@@ -1,13 +1,13 @@
-pub(crate) mod traits;
 pub(crate) mod implementations;
+pub(crate) mod traits;
 
 use std::path::PathBuf;
 
-pub use traits::{AlgorithmObserver, Observable};
+use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationReason};
 pub use implementations::chart_observer::ChartObserver;
 pub use implementations::console_observer::ConsoleObserver;
 pub use implementations::html_report_observer::HtmlReportObserver;
-use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationReason};
+pub use traits::{AlgorithmObserver, Observable};
 
 pub(crate) fn default_observers_output_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))

@@ -414,7 +414,10 @@ pub fn get_yaml_value(path: &Path, key_path: &str) -> std::io::Result<Option<Str
 ///
 /// If `records_path` is empty, the root value is expected to be a sequence.
 /// Otherwise, the value at the provided path must be a sequence.
-pub fn read_yaml_records(path: &Path, records_path: &str) -> std::io::Result<Vec<HashMap<String, String>>> {
+pub fn read_yaml_records(
+    path: &Path,
+    records_path: &str,
+) -> std::io::Result<Vec<HashMap<String, String>>> {
     let root = parse_yaml_file(path)?;
     let target = if records_path.trim().is_empty() {
         Some(&root)

@@ -1,13 +1,8 @@
-pub mod traits;
-mod utils;
-mod report;
 mod executor;
 mod parallel;
+mod report;
+pub mod traits;
+mod utils;
 
-pub use report::{
-    ExperimentFailure,
-    ExperimentReport,
-    ExperimentRunResult,
-    ExperimentSummary,
-};
 pub use executor::Experiment;
+pub use report::{ExperimentFailure, ExperimentReport, ExperimentRunResult, ExperimentSummary};

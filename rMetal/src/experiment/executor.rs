@@ -1,17 +1,12 @@
-use crate::ImprovementDirection;
 use crate::experiment::traits::ExperimentalCase;
 use crate::problem::traits::Problem;
 use crate::solution::traits::Dominance;
+use crate::ImprovementDirection;
 use std::cmp::Ordering;
 
-use super::report::{
-    ExperimentFailure,
-    ExperimentReport,
-    ExperimentRunResult,
-    ExperimentSummary,
-};
-use super::parallel::{ParallelConfig, parallel_collect_by_range};
-use super::utils::{mean, variance, best_and_worst};
+use super::parallel::{parallel_collect_by_range, ParallelConfig};
+use super::report::{ExperimentFailure, ExperimentReport, ExperimentRunResult, ExperimentSummary};
+use super::utils::{best_and_worst, mean, variance};
 
 /// Immutable metadata snapshot for each registered experiment case.
 ///
@@ -195,8 +190,12 @@ where
 
         summaries.sort_by(|a, b| {
             let ord = match self.objective {
-                ImprovementDirection::Maximize => b.best.partial_cmp(&a.best).unwrap_or(Ordering::Equal),
-                ImprovementDirection::Minimize => a.best.partial_cmp(&b.best).unwrap_or(Ordering::Equal),
+                ImprovementDirection::Maximize => {
+                    b.best.partial_cmp(&a.best).unwrap_or(Ordering::Equal)
+                }
+                ImprovementDirection::Minimize => {
+                    a.best.partial_cmp(&b.best).unwrap_or(Ordering::Equal)
+                }
             };
 
             if ord == Ordering::Equal {

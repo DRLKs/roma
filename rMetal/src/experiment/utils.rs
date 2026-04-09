@@ -1,6 +1,5 @@
 use crate::ImprovementDirection;
 
-
 #[inline(always)]
 pub(crate) fn mean(values: &[f64]) -> f64 {
     if values.is_empty() {
