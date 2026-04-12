@@ -7,7 +7,7 @@ pub(crate) mod traits;
 
 pub use async_runner::{run_algorithm_instances_async, run_algorithms_async};
 pub use implementations::genetic_algorithm::{
-    GeneticAlgorithm, GeneticAlgorithmExperiment, GeneticAlgorithmParameters,
+    GeneticAlgorithm, GeneticAlgorithmParameters,
 };
 pub use implementations::hill_climbing::{HillClimbing, HillClimbingParameters};
 pub use implementations::nsga2::{NSGAIIParameters, NSGAII};

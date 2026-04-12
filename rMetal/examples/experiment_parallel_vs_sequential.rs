@@ -1,7 +1,6 @@
 use std::time::Duration;
 
 use rmetal::algorithms::{
-    GeneticAlgorithmExperiment,
     GeneticAlgorithmParameters,
     HillClimbingParameters,
     PSOParameters,
@@ -44,8 +43,7 @@ fn run_experiment(parallel: bool, runs: usize) -> Result<(Duration, ExperimentRe
     .with_seed(111);
 
     // Keep GA internally sequential to focus the comparison on experiment-level parallelism.
-    let genetic_algorithm_case = GeneticAlgorithmExperiment::new(
-        GeneticAlgorithmParameters::new(
+    let genetic_algorithm_case = GeneticAlgorithmParameters::new(
             80,
             0.90,
             0.06,
@@ -56,8 +54,7 @@ fn run_experiment(parallel: bool, runs: usize) -> Result<(Duration, ExperimentRe
         )
         .with_elite_size(1)
         .with_seed(222)
-        .sequential(),
-    );
+        .sequential();
 
     let simulated_annealing_case = SimulatedAnnealingParameters::new(
         BitFlipMutation::new(),

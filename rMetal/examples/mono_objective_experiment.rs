@@ -1,5 +1,4 @@
 use rmetal::algorithms::{
-    GeneticAlgorithmExperiment,
     GeneticAlgorithmParameters,
     HillClimbingParameters,
     PSOParameters,
@@ -38,8 +37,7 @@ fn main() {
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(180)]),
         );
 
-    let genetic_algorithm_case = GeneticAlgorithmExperiment::new(
-        GeneticAlgorithmParameters::new(
+    let genetic_algorithm_case = GeneticAlgorithmParameters::new(
             80,
             0.90,
             0.06,
@@ -49,8 +47,7 @@ fn main() {
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(60)]),
         )
         .with_elite_size(1)
-        .with_threads(4),
-    );
+        .with_threads(4);
 
     let simulated_annealing_case = SimulatedAnnealingParameters::new(
         BitFlipMutation::new(),

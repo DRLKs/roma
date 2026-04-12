@@ -12,7 +12,7 @@ pub mod utils;
 // Top-level re-exports for ergonomic imports.
 pub use algorithms::{
     run_algorithm_instances_async, run_algorithms_async, spawn_algorithm_run, Algorithm,
-    ExecutionStateSnapshot, GeneticAlgorithm, GeneticAlgorithmExperiment,
+    ExecutionStateSnapshot, GeneticAlgorithm,
     GeneticAlgorithmParameters, HillClimbing, HillClimbingParameters, ImprovementDirection,
     NSGAIIParameters, PSOParameters, SimulatedAnnealing, SimulatedAnnealingParameters,
     TerminationController, TerminationCriteria, TerminationCriterion, TerminationReason,
@@ -45,7 +45,7 @@ pub use solution_set::{DequeSolutionSet, SolutionSet, VectorSolutionSet};
 pub mod prelude {
     pub use crate::algorithms::{
         run_algorithm_instances_async, run_algorithms_async, spawn_algorithm_run, Algorithm,
-        ExecutionStateSnapshot, GeneticAlgorithm, GeneticAlgorithmExperiment,
+        ExecutionStateSnapshot, GeneticAlgorithm,
         GeneticAlgorithmParameters, HillClimbing, HillClimbingParameters, ImprovementDirection,
         NSGAIIParameters, PSOParameters, SimulatedAnnealing, SimulatedAnnealingParameters,
         TerminationController, TerminationCriteria, TerminationCriterion, TerminationReason,

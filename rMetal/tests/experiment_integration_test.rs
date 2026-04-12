@@ -1,5 +1,5 @@
 use rmetal::{
-    BinaryTournamentSelection, BitFlipMutation, Experiment, GeneticAlgorithmExperiment,
+    BinaryTournamentSelection, BitFlipMutation, Experiment,
     GeneticAlgorithmParameters, HillClimbingParameters, KnapsackBuilder, SinglePointCrossover,
     TerminationCriteria, TerminationCriterion,
 };
@@ -25,8 +25,7 @@ fn experiment_compares_hill_climbing_and_ga_end_to_end() {
     )
     .with_seed(111);
 
-    let genetic_algorithm_case = GeneticAlgorithmExperiment::new(
-        GeneticAlgorithmParameters::new(
+    let genetic_algorithm_case = GeneticAlgorithmParameters::new(
             24,
             0.9,
             0.08,
@@ -37,8 +36,7 @@ fn experiment_compares_hill_climbing_and_ga_end_to_end() {
         )
         .with_elite_size(2)
         .with_seed(222)
-        .sequential(),
-    );
+        .sequential();
 
     let report = Experiment::new(problem)
         .with_runs(3)
