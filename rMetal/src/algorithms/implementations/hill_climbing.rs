@@ -1,18 +1,16 @@
-use crate::algorithms::termination::{
-    ExecutionStateSnapshot,
-    TerminationCriteria,
-};
-use crate::algorithms::traits::Algorithm;
 use crate::algorithms::objective::is_better;
 use crate::algorithms::runtime::ExecutionContext;
+use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
+use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
-use crate::observer::traits::{AlgorithmObserver, Observable};
+use crate::observer::Observable;
+use crate::observer::traits::AlgorithmObserver;
 use crate::operator::traits::MutationOperator;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::utils::random::{Random, seed_from_time};
+use crate::utils::random::{seed_from_time, Random};
 
 /// Configuration parameters for the Hill Climbing algorithm.
 ///

@@ -18,10 +18,12 @@
     [ ] Eliminar el struct monolítico `AlgorithmParameters`.
     [ ] Implementar el Patrón Builder para cada algoritmo específico. Esto permite configurar los parámetros particulares de cada uno (ej. `population_size`, `mutation_rate`) con validación en tiempo de compilación.
 
-[X] 6. Manejo de Eventos y Observadores
+[ ] 6. Manejo de Eventos y Observadores
     [X] Eliminar el patrón Observer clásico (`Observable`, `AlgorithmObserver`) que obliga a manejar lifetimes o punteros compartidos complejos.
     [X] Reemplazar la notificación de progreso por el uso de Closures (`FnMut`) pasados al Builder, o canales de paso de mensajes (`std::sync::mpsc`).
     [ ] Hemos añadido más información. Cuando el algoritmo termina, termina debido a una condición de parada, esta condición de parada debe mostrarse en los charts o en lo repots o en ambos. Terminal, etc...
+
+    [ ] Arreglar los observadores. Mejorar los HTML report observers
 
 [X] 7. Memoria, requisitos
     [X] Desarrollar los casos de uso. Crear tus propios algoritmos y ejemplos o añadir el crate y usar los algoritmos de la biblioteca.
@@ -73,3 +75,7 @@
 [ ] 19. Los problemas multiobjetivo, son inresolvibles por algoritmo de mono-objetivo, quizás deberiamos hacer reestricciones para que estos algoritmos no puedan solucionarlos
 [X] 20. Sin duda existen redundancias en la elección de que si el modelo es de minimización o de optimización. 
     [X]Quizás el compare solutions debería estar en problema, porque que una solución sea mejor que otra creo que depende más del problema que de la misma solución.
+
+[ ] 21. Hacer representaciones de las soluciones dependientemente del problema
+
+[ ] 22. Desarrollar reportes sobre los experimentos

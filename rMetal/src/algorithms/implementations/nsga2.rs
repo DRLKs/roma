@@ -1,10 +1,8 @@
-use crate::algorithms::termination::{
-    ExecutionStateSnapshot,
-    TerminationCriteria,
-};
-use crate::algorithms::traits::Algorithm;
 use crate::algorithms::runtime::ExecutionContext;
-use crate::observer::traits::{AlgorithmObserver, Observable};
+use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
+use crate::algorithms::traits::Algorithm;
+use crate::observer::Observable;
+use crate::observer::traits::AlgorithmObserver;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
 use crate::solution::ParetoCrowdingDistanceQuality;
@@ -217,8 +215,12 @@ where
         for objective in 0..objectives_len {
             let mut sorted = front.to_vec();
             sorted.sort_by(|&a, &b| {
-                let av = population[a].get_objective(objective).unwrap_or(f64::INFINITY);
-                let bv = population[b].get_objective(objective).unwrap_or(f64::INFINITY);
+                let av = population[a]
+                    .get_objective(objective)
+                    .unwrap_or(f64::INFINITY);
+                let bv = population[b]
+                    .get_objective(objective)
+                    .unwrap_or(f64::INFINITY);
                 av.partial_cmp(&bv).unwrap_or(Ordering::Equal)
             });
 
@@ -227,17 +229,28 @@ where
             population[first].set_crowding_distance(f64::INFINITY);
             population[last].set_crowding_distance(f64::INFINITY);
 
-            let min_val = population[first].get_objective(objective).unwrap_or(f64::INFINITY);
-            let max_val = population[last].get_objective(objective).unwrap_or(f64::INFINITY);
+            let min_val = population[first]
+                .get_objective(objective)
+                .unwrap_or(f64::INFINITY);
+            let max_val = population[last]
+                .get_objective(objective)
+                .unwrap_or(f64::INFINITY);
 
-            if !min_val.is_finite() || !max_val.is_finite() || (max_val - min_val).abs() <= f64::EPSILON {
+            if !min_val.is_finite()
+                || !max_val.is_finite()
+                || (max_val - min_val).abs() <= f64::EPSILON
+            {
                 continue;
             }
 
             for w in 1..(sorted.len() - 1) {
                 let idx = sorted[w];
-                let prev = population[sorted[w - 1]].get_objective(objective).unwrap_or(min_val);
-                let next = population[sorted[w + 1]].get_objective(objective).unwrap_or(max_val);
+                let prev = population[sorted[w - 1]]
+                    .get_objective(objective)
+                    .unwrap_or(min_val);
+                let next = population[sorted[w + 1]]
+                    .get_objective(objective)
+                    .unwrap_or(max_val);
 
                 if !prev.is_finite() || !next.is_finite() {
                     continue;
@@ -314,7 +327,7 @@ where
             observers: Vec::new(),
         }
     }
-    
+
     fn algorithm_name(&self) -> &str {
         "NSGA-II"
     }
@@ -323,7 +336,9 @@ where
         self.parameters.termination_criteria.clone()
     }
 
-    fn observers_mut(&mut self) -> &mut Vec<Box<dyn AlgorithmObserver<f64, ParetoCrowdingDistanceQuality>>> {
+    fn observers_mut(
+        &mut self,
+    ) -> &mut Vec<Box<dyn AlgorithmObserver<f64, ParetoCrowdingDistanceQuality>>> {
         &mut self.observers
     }
 
@@ -363,16 +378,11 @@ where
         let mut rng = Random::new(self.parameters.random_seed.unwrap_or_else(seed_from_time));
 
         let population: Vec<_> = (0..self.parameters.population_size)
-            .map(|_| {
-                problem.create_solution(&mut rng)
-            })
+            .map(|_| problem.create_solution(&mut rng))
             .collect();
 
-        let mut population = Self::evaluate_population(
-            problem,
-            population,
-            self.parameters.num_threads,
-        );
+        let mut population =
+            Self::evaluate_population(problem, population, self.parameters.num_threads);
         Self::annotate_population(&mut population);
 
         NSGAIIState {
@@ -394,15 +404,17 @@ where
         let mut offspring = Vec::with_capacity(self.parameters.population_size);
 
         while offspring.len() < self.parameters.population_size {
-            let parent1 = self
-                .parameters
-                .selection_operator
-                .execute(&state.population, &mut state.rng, direction);
+            let parent1 = self.parameters.selection_operator.execute(
+                &state.population,
+                &mut state.rng,
+                direction,
+            );
 
-            let parent2 = self
-                .parameters
-                .selection_operator
-                .execute(&state.population, &mut state.rng, direction);
+            let parent2 = self.parameters.selection_operator.execute(
+                &state.population,
+                &mut state.rng,
+                direction,
+            );
 
             let mut children = if state.rng.next_f64() < self.parameters.crossover_probability {
                 self.parameters
@@ -424,11 +436,7 @@ where
         }
 
         offspring.truncate(self.parameters.population_size);
-        offspring = Self::evaluate_population(
-            problem,
-            offspring,
-            self.parameters.num_threads,
-        );
+        offspring = Self::evaluate_population(problem, offspring, self.parameters.num_threads);
         state.evaluations += offspring.len();
         state.population.extend(offspring);
 
@@ -457,7 +465,10 @@ where
         state.population = next_population;
     }
 
-    fn snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<f64, ParetoCrowdingDistanceQuality> {
+    fn snapshot(
+        &self,
+        state: &Self::StepState,
+    ) -> ExecutionStateSnapshot<f64, ParetoCrowdingDistanceQuality> {
         let worst = state
             .population
             .iter()
@@ -468,7 +479,11 @@ where
         let avg = if state.population.is_empty() {
             0.0
         } else {
-            let values: Vec<f64> = state.population.iter().filter_map(|s| s.get_objective(0)).collect();
+            let values: Vec<f64> = state
+                .population
+                .iter()
+                .filter_map(|s| s.get_objective(0))
+                .collect();
             if values.is_empty() {
                 0.0
             } else {

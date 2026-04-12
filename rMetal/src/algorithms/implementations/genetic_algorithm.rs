@@ -1,12 +1,10 @@
-use crate::algorithms::termination::{
-    ExecutionStateSnapshot,
-    TerminationCriteria,
-};
-use crate::algorithms::traits::Algorithm;
-use crate::algorithms::objective::{ImprovementDirection, is_better};
+use crate::algorithms::objective::{is_better, ImprovementDirection};
 use crate::algorithms::runtime::ExecutionContext;
+use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
+use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
-use crate::observer::traits::{AlgorithmObserver, Observable};
+use crate::Observable;
+use crate::observer::traits::AlgorithmObserver;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
@@ -68,7 +66,7 @@ where
         }
     }
 
-    pub fn show_parameters_information(&self){
+    pub fn show_parameters_information(&self) {
         println!("Starting Genetic Algorithm");
         println!("  Population size: {}", self.population_size);
         println!("  Termination criteria: {:?}", self.termination_criteria);
@@ -140,9 +138,7 @@ where
         rng: &mut Random,
     ) -> Vec<Solution<T>> {
         let initial_population: Vec<Solution<T>> = (0..parameters.population_size)
-            .map(|_| {
-                problem.create_solution(rng)
-            })
+            .map(|_| problem.create_solution(rng))
             .collect();
 
         Self::evaluate_population(initial_population, problem, parameters.num_threads)
@@ -257,9 +253,11 @@ where
             };
 
             for child in &mut offspring {
-                parameters
-                    .mutation_operator
-                    .execute(child, parameters.mutation_probability, &mut rng);
+                parameters.mutation_operator.execute(
+                    child,
+                    parameters.mutation_probability,
+                    &mut rng,
+                );
                 problem.evaluate(child);
                 generation_evaluations += 1;
             }
@@ -271,7 +269,7 @@ where
     }
 
     /// IMPORTANT:
-    /// 
+    ///
     ///  Parallelism breaks determinism if you work on machines with different numbers of cores.
     /// - An 8-core machine will generate a different output than a 16-core machine.
     fn create_offspring_parallel(
@@ -305,25 +303,34 @@ where
                     let mut local_evaluations = 0usize;
 
                     while local_offspring.len() < worker_target {
-                        let parent1 = parameters
-                            .selection_operator
-                            .execute(population, &mut local_rng, direction);
-                        let parent2 = parameters
-                            .selection_operator
-                            .execute(population, &mut local_rng, direction);
+                        let parent1 = parameters.selection_operator.execute(
+                            population,
+                            &mut local_rng,
+                            direction,
+                        );
+                        let parent2 = parameters.selection_operator.execute(
+                            population,
+                            &mut local_rng,
+                            direction,
+                        );
 
-                        let mut children = if local_rng.next_f64() < parameters.crossover_probability {
-                            parameters
-                                .crossover_operator
-                                .execute(&parent1, &parent2, &mut local_rng)
-                        } else {
-                            vec![parent1.copy(), parent2.copy()]
-                        };
+                        let mut children =
+                            if local_rng.next_f64() < parameters.crossover_probability {
+                                parameters.crossover_operator.execute(
+                                    &parent1,
+                                    &parent2,
+                                    &mut local_rng,
+                                )
+                            } else {
+                                vec![parent1.copy(), parent2.copy()]
+                            };
 
                         for child in &mut children {
-                            parameters
-                                .mutation_operator
-                                .execute(child, parameters.mutation_probability, &mut local_rng);
+                            parameters.mutation_operator.execute(
+                                child,
+                                parameters.mutation_probability,
+                                &mut local_rng,
+                            );
                             problem.evaluate(child);
                             local_evaluations += 1;
                         }
@@ -548,7 +555,11 @@ where
             .iter()
             .cloned()
             .reduce(|best, candidate| {
-                if is_better(candidate.quality_value(), best.quality_value(), state.direction) {
+                if is_better(
+                    candidate.quality_value(),
+                    best.quality_value(),
+                    state.direction,
+                ) {
                     candidate
                 } else {
                     best
@@ -627,7 +638,10 @@ where
         };
 
         vec![
-            CaseParameter::new("population_size", self.parameters.population_size.to_string()),
+            CaseParameter::new(
+                "population_size",
+                self.parameters.population_size.to_string(),
+            ),
             CaseParameter::new(
                 "crossover_probability",
                 format!("{:.6}", self.parameters.crossover_probability),
@@ -638,9 +652,18 @@ where
             ),
             CaseParameter::new("elite_size", self.parameters.elite_size.to_string()),
             CaseParameter::new("threads", threads_text),
-            CaseParameter::new("crossover_operator", self.parameters.crossover_operator.name()),
-            CaseParameter::new("mutation_operator", self.parameters.mutation_operator.name()),
-            CaseParameter::new("selection_operator", self.parameters.selection_operator.name()),
+            CaseParameter::new(
+                "crossover_operator",
+                self.parameters.crossover_operator.name(),
+            ),
+            CaseParameter::new(
+                "mutation_operator",
+                self.parameters.mutation_operator.name(),
+            ),
+            CaseParameter::new(
+                "selection_operator",
+                self.parameters.selection_operator.name(),
+            ),
             CaseParameter::new(
                 "termination_criteria",
                 format!("{:?}", self.parameters.termination_criteria),
