@@ -172,6 +172,42 @@ impl Problem<usize> for TspProblem {
     fn get_improvement_direction(&self) -> ImprovementDirection {
         ImprovementDirection::Minimize
     }
+
+    fn format_solution(&self, solution: &Solution<usize>) -> String {
+        let route = solution.variables();
+        let valid = self.is_valid_permutation(route);
+        let topology = if self.close_tour { "closed" } else { "open" };
+        let fixed_start = self
+            .fixed_start_city
+            .map(|city| city.to_string())
+            .unwrap_or_else(|| "none".to_string());
+
+        let route_text = if route.is_empty() {
+            "[]".to_string()
+        } else {
+            let mut nodes: Vec<String> = route.iter().map(|city| city.to_string()).collect();
+            if self.close_tour {
+                nodes.push(route[0].to_string());
+            }
+            format!("[{}]", nodes.join(" -> "))
+        };
+
+        let distance_text = if valid {
+            format!("{:.3}", self.route_distance(route))
+        } else {
+            "invalid".to_string()
+        };
+
+        let quality_text = solution
+            .try_quality_value()
+            .map(|quality| format!("{:.3}", quality))
+            .unwrap_or_else(|| "not evaluated".to_string());
+
+        format!(
+            "topology={}, fixed_start={}, valid={}, route={}, distance={}, quality={}",
+            topology, fixed_start, valid, route_text, distance_text, quality_text
+        )
+    }
 }
 
 /// Builds a `TspProblem` from edge-like records.
@@ -368,5 +404,40 @@ mod tests {
     fn fixed_start_city_out_of_range_panics() {
         let _ = TspProblem::with_distance_matrix(vec![vec![0.0, 1.0], vec![1.0, 0.0]])
             .with_fixed_start_city(2);
+    }
+
+    #[test]
+    fn format_solution_reports_route_and_distance() {
+        let matrix = vec![
+            vec![0.0, 10.0, 15.0],
+            vec![10.0, 0.0, 20.0],
+            vec![15.0, 20.0, 0.0],
+        ];
+        let problem = TspProblem::with_distance_matrix(matrix);
+        let mut solution = Solution::new(vec![0, 1, 2]);
+        problem.evaluate(&mut solution);
+
+        let formatted = problem.format_solution(&solution);
+
+        assert!(formatted.contains("topology=closed"));
+        assert!(formatted.contains("fixed_start=none"));
+        assert!(formatted.contains("valid=true"));
+        assert!(formatted.contains("route=[0 -> 1 -> 2 -> 0]"));
+        assert!(formatted.contains("distance=45.000"));
+        assert!(formatted.contains("quality=45.000"));
+    }
+
+    #[test]
+    fn format_solution_flags_invalid_route() {
+        let matrix = vec![vec![0.0, 1.0], vec![1.0, 0.0]];
+        let problem = TspProblem::with_distance_matrix(matrix).with_fixed_start_city(1);
+        let mut invalid = Solution::new(vec![0, 1]);
+        problem.evaluate(&mut invalid);
+
+        let formatted = problem.format_solution(&invalid);
+
+        assert!(formatted.contains("valid=false"));
+        assert!(formatted.contains("distance=invalid"));
+        assert!(formatted.contains("quality=inf"));
     }
 }

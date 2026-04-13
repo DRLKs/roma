@@ -4,8 +4,9 @@ use crate::algorithms::termination::{
 };
 use crate::algorithms::traits::Algorithm;
 use crate::observer::traits::AlgorithmObserver;
-use crate::observer::AlgorithmEvent;
+use crate::observer::{AlgorithmEvent, ObserverState};
 use crate::problem::traits::Problem;
+use crate::solution::Solution;
 use std::cell::RefCell;
 use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
@@ -52,6 +53,21 @@ where
     T: Clone + Send + 'static,
     Q: Clone + Send + 'static,
 {
+    fn next_snapshot_seq_id(&self) -> u64 {
+        let mut next = self.next_snapshot_seq.borrow_mut();
+        let id = *next;
+        *next = next.saturating_add(1);
+        id
+    }
+
+    fn snapshot_with_seq(
+        &self,
+        mut snapshot: ExecutionStateSnapshot<T, Q>,
+    ) -> ExecutionStateSnapshot<T, Q> {
+        snapshot.seq_id = self.next_snapshot_seq_id();
+        snapshot
+    }
+
     /// Creates a new execution context.
     fn new(
         sender: ObserverSender<T, Q>,
@@ -88,28 +104,21 @@ where
     }
 
     /// Applies one execution snapshot and emits events accordingly.
-    pub fn report_progress(&self, snapshot: ExecutionStateSnapshot<T, Q>) {
-        let seq_id = {
-            let mut next = self.next_snapshot_seq.borrow_mut();
-            let id = *next;
-            *next = next.saturating_add(1);
-            id
-        };
-
-        let snapshot = ExecutionStateSnapshot::new(
-            seq_id,
-            snapshot.iteration,
-            snapshot.evaluations,
-            snapshot.best_solution,
-            snapshot.best_fitness,
-            snapshot.average_fitness,
-            snapshot.worst_fitness,
-        );
+    pub fn report_progress(
+        &self,
+        snapshot: ExecutionStateSnapshot<T, Q>,
+        best_solution_presentation: String,
+    ) {
+        let snapshot = self.snapshot_with_seq(snapshot);
 
         self.termination.borrow_mut().on_snapshot(&snapshot);
+        let observer_state = ObserverState::from_snapshot(snapshot, best_solution_presentation);
+
         emit_event(
             &self.sender,
-            AlgorithmEvent::ExecutionStateUpdated { state: snapshot },
+            AlgorithmEvent::ExecutionStateUpdated {
+                state: observer_state,
+            },
         );
     }
 
@@ -277,7 +286,7 @@ where
 }
 
 /// Executes the common step-based algorithm lifecycle using runtime observers.
-pub(crate) fn run_algorithm<T, Q, S, R, Initialize, Step, Snapshot, Finalize>(
+pub(crate) fn run_algorithm<T, Q, S, R, Initialize, Step, Snapshot, Finalize, RenderSolution>(
     observers: &mut Vec<Box<dyn AlgorithmObserver<T, Q>>>,
     criteria: TerminationCriteria,
     direction: ImprovementDirection,
@@ -286,6 +295,7 @@ pub(crate) fn run_algorithm<T, Q, S, R, Initialize, Step, Snapshot, Finalize>(
     mut step: Step,
     snapshot: Snapshot,
     finalize: Finalize,
+    render_solution: RenderSolution,
 ) -> R
 where
     T: Clone + Send + 'static,
@@ -294,6 +304,7 @@ where
     Step: FnMut(&mut S, &ExecutionContext<T, Q>),
     Snapshot: Fn(&S) -> ExecutionStateSnapshot<T, Q>,
     Finalize: FnOnce(S) -> R,
+    RenderSolution: Fn(&Solution<T, Q>) -> String,
 {
     run_with_observer_runtime(
         observers,
@@ -304,17 +315,19 @@ where
             let mut state = initialize(context);
 
             let initial_snapshot = snapshot(&state);
+            let initial_presentation = render_solution(&initial_snapshot.best_solution);
             let mut last_iteration = initial_snapshot.iteration;
             let mut last_evaluations = initial_snapshot.evaluations;
-            context.report_progress(initial_snapshot);
+            context.report_progress(initial_snapshot, initial_presentation);
 
             while !context.should_terminate() {
                 step(&mut state, context);
 
                 let step_snapshot = snapshot(&state);
+                let step_presentation = render_solution(&step_snapshot.best_solution);
                 last_iteration = step_snapshot.iteration;
                 last_evaluations = step_snapshot.evaluations;
-                context.report_progress(step_snapshot);
+                context.report_progress(step_snapshot, step_presentation);
             }
 
             RuntimeExecutionOutput::new(finalize(state), last_iteration, last_evaluations)

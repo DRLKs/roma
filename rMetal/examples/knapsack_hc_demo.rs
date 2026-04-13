@@ -1,3 +1,4 @@
+use rmetal::HtmlReportObserver;
 use rmetal::algorithms::{
     Algorithm,
     HillClimbing,
@@ -31,6 +32,7 @@ fn main() {
 
     algorithm.add_observer(Box::new(ConsoleObserver::new(true)));
     algorithm.add_observer(Box::new(ChartObserver::new_default()));
+    algorithm.add_observer(Box::new(HtmlReportObserver::new_default()));
 
     let result = algorithm
         .run(&problem)

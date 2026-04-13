@@ -1,9 +1,6 @@
 use crate::algorithms::objective::{best_worst, is_better, ImprovementDirection};
 use crate::algorithms::runtime::ExecutionContext;
-use crate::algorithms::termination::{
-    ExecutionStateSnapshot,
-    TerminationCriteria,
-};
+use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
@@ -211,8 +208,7 @@ impl Algorithm<bool> for PSO {
         problem: &(impl Problem<bool> + Sync),
         _context: &ExecutionContext<bool>,
     ) -> Self::StepState {
-        let direction: ImprovementDirection =
-            problem.get_improvement_direction();
+        let direction: ImprovementDirection = problem.get_improvement_direction();
         let mut rng = Random::new(self.parameters.random_seed.unwrap_or_else(seed_from_time));
 
         let mut particles = Vec::with_capacity(self.parameters.swarm_size);
@@ -290,7 +286,8 @@ impl Algorithm<bool> for PSO {
                 } else {
                     0.0
                 };
-                let g = if *state.global_best
+                let g = if *state
+                    .global_best
                     .get_variable(d)
                     .expect("index must be valid within particle dimension")
                 {
@@ -312,16 +309,12 @@ impl Algorithm<bool> for PSO {
                 );
 
                 let flip_probability = Self::sigmoid(state.velocities[i][d]);
-                let _ = state.particles[i]
-                    .set_variable(d, state.rng.next_f64() < flip_probability);
+                let _ = state.particles[i].set_variable(d, state.rng.next_f64() < flip_probability);
             }
         }
 
-        state.particles = Self::evaluate_particles(
-            problem,
-            &state.particles,
-            self.parameters.num_threads,
-        );
+        state.particles =
+            Self::evaluate_particles(problem, &state.particles, self.parameters.num_threads);
         state.evaluations += state.particles.len();
 
         for i in 0..state.particles.len() {
@@ -406,7 +399,10 @@ where
                 "cognitive_coefficient",
                 format!("{:.6}", self.cognitive_coefficient),
             ),
-            CaseParameter::new("social_coefficient", format!("{:.6}", self.social_coefficient)),
+            CaseParameter::new(
+                "social_coefficient",
+                format!("{:.6}", self.social_coefficient),
+            ),
             CaseParameter::new("velocity_clamp", format!("{:.6}", self.velocity_clamp)),
             CaseParameter::new(
                 "termination_criteria",
@@ -425,8 +421,8 @@ where
 mod tests {
     use super::*;
     use crate::algorithms::termination::TerminationCriterion;
-    use crate::problem::traits::Problem;
     use crate::problem::implementations::knapsack_problem::KnapsackBuilder;
+    use crate::problem::traits::Problem;
     use crate::solution::Solution;
     use crate::utils::random::Random;
 
@@ -525,7 +521,10 @@ mod tests {
 
     #[test]
     fn pso_rejects_non_positive_velocity_clamp() {
-        let problem = KnapsackBuilder::new().with_capacity(20.0).add_item(5.0, 10.0).build();
+        let problem = KnapsackBuilder::new()
+            .with_capacity(20.0)
+            .add_item(5.0, 10.0)
+            .build();
 
         let params = PSOParameters::new(
             10,

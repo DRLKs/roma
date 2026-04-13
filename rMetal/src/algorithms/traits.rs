@@ -60,6 +60,7 @@ where
             |state, context| algorithm.step(problem, state, context),
             |state| algorithm.snapshot(state),
             |state| algorithm.finalize_step_state(state),
+            |solution| problem.format_solution(solution),
         );
         *self.observers_mut() = observers;
 

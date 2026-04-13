@@ -3,8 +3,8 @@ use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
-use crate::observer::Observable;
 use crate::observer::traits::AlgorithmObserver;
+use crate::observer::Observable;
 use crate::operator::traits::MutationOperator;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
@@ -62,8 +62,6 @@ where
     }
 }
 
-
-
 /// Hill Climbing optimization algorithm.
 ///
 /// This implementation keeps one current solution, mutates it to generate a
@@ -91,7 +89,6 @@ where
     T: Clone,
     M: MutationOperator<T>,
 {
-    
 }
 
 pub struct HillClimbingState<T>
@@ -254,8 +251,7 @@ where
     fn case_name(&self) -> String {
         format!(
             "{}(mutation_prob={:.4})",
-            "HillClimbing",
-            self.mutation_probability,
+            "HillClimbing", self.mutation_probability,
         )
     }
 

@@ -9,6 +9,59 @@ pub use implementations::console_observer::ConsoleObserver;
 pub use implementations::html_report_observer::HtmlReportObserver;
 pub use traits::{AlgorithmObserver, Observable};
 
+/// Observer-facing execution payload with only presentation-relevant fields.
+#[derive(Debug, Clone)]
+pub struct ObserverState {
+    pub seq_id: u64,
+    pub iteration: usize,
+    pub evaluations: usize,
+    pub best_fitness: f64,
+    pub average_fitness: f64,
+    pub worst_fitness: f64,
+    pub best_solution_presentation: String,
+}
+
+impl ObserverState {
+    pub fn new(
+        seq_id: u64,
+        iteration: usize,
+        evaluations: usize,
+        best_fitness: f64,
+        average_fitness: f64,
+        worst_fitness: f64,
+        best_solution_presentation: String,
+    ) -> Self {
+        Self {
+            seq_id,
+            iteration,
+            evaluations,
+            best_fitness,
+            average_fitness,
+            worst_fitness,
+            best_solution_presentation,
+        }
+    }
+
+    pub(crate) fn from_snapshot<T, Q>(
+        snapshot: ExecutionStateSnapshot<T, Q>,
+        best_solution_presentation: String,
+    ) -> Self
+    where
+        T: Clone,
+        Q: Clone,
+    {
+        Self::new(
+            snapshot.seq_id,
+            snapshot.iteration,
+            snapshot.evaluations,
+            snapshot.best_fitness,
+            snapshot.average_fitness,
+            snapshot.worst_fitness,
+            best_solution_presentation,
+        )
+    }
+}
+
 pub(crate) fn default_observers_output_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("target")
@@ -28,7 +81,7 @@ where
     },
     /// Shared execution snapshot update
     ExecutionStateUpdated {
-        state: ExecutionStateSnapshot<T, Q>,
+        state: ObserverState,
     },
     /// Algorithm has finished
     End {
@@ -36,5 +89,5 @@ where
         total_evaluations: usize,
         termination_reason: Option<TerminationReason>,
     },
-    _Phantom(std::marker::PhantomData<T>),
+    _Phantom(std::marker::PhantomData<(T, Q)>),
 }

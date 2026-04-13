@@ -1,9 +1,6 @@
 use crate::algorithms::objective::{is_better, non_improving_loss};
 use crate::algorithms::runtime::ExecutionContext;
-use crate::algorithms::termination::{
-    ExecutionStateSnapshot,
-    TerminationCriteria,
-};
+use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
@@ -329,14 +326,14 @@ mod tests {
         .with_seed(42);
 
         let mut algorithm = SimulatedAnnealing::new(params);
-        let result = algorithm.run(&problem).expect("simulated annealing should run");
+        let result = algorithm
+            .run(&problem)
+            .expect("simulated annealing should run");
         assert_eq!(result.size(), 1);
-        assert!(
-            result
-                .get(0)
-                .expect("expected one solution")
-                .quality_value()
-                .is_finite()
-        );
+        assert!(result
+            .get(0)
+            .expect("expected one solution")
+            .quality_value()
+            .is_finite());
     }
 }

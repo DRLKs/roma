@@ -189,6 +189,7 @@ impl TerminationState {
         }
     }
 
+    /// Checks if a given termination criterion is satisfied based on the current state.
     fn check_criterion(&self, criterion: &TerminationCriterion) -> bool {
         match criterion {
             TerminationCriterion::MaxIterations(max) => self.current_iterations >= *max,

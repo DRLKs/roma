@@ -354,7 +354,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::solution::Solution;
+    use crate::observer::ObserverState;
 
     #[test]
     fn creates_structured_run_directory_on_start() {
@@ -402,19 +402,7 @@ mod tests {
             algorithm_name: "NSGA-II".to_string(),
         });
         observer.update(&AlgorithmEvent::<bool>::ExecutionStateUpdated {
-            state: crate::algorithms::termination::ExecutionStateSnapshot::new(
-                0,
-                1,
-                10,
-                {
-                    let mut solution = Solution::<bool>::new(vec![true, false]);
-                    solution.set_quality(1.0);
-                    solution
-                },
-                1.0,
-                0.8,
-                0.5,
-            ),
+            state: ObserverState::new(0, 1, 10, 1.0, 0.8, 0.5, "selected=1/2".to_string()),
         });
         observer.update(&AlgorithmEvent::<bool>::End {
             total_generations: 1,

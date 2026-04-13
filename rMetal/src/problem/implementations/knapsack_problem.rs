@@ -115,6 +115,32 @@ impl Problem<bool> for KnapsackProblem {
     fn get_improvement_direction(&self) -> ImprovementDirection {
         ImprovementDirection::Maximize
     }
+
+    fn format_solution(&self, solution: &Solution<bool>) -> String {
+        let selected_items = solution
+            .variables()
+            .iter()
+            .filter(|&&selected| selected)
+            .count();
+        let total_weight = self.calculate_weight(solution);
+        let total_value = self.calculate_value(solution);
+        let feasible = total_weight <= self.capacity;
+        let quality_text = solution
+            .try_quality_value()
+            .map(|value| format!("{:.3}", value))
+            .unwrap_or_else(|| "not evaluated".to_string());
+
+        format!(
+            "selected={}/{}, weight={:.3}/{:.3}, value={:.3}, feasible={}, quality={}",
+            selected_items,
+            self.number_of_items,
+            total_weight,
+            self.capacity,
+            total_value,
+            feasible,
+            quality_text
+        )
+    }
 }
 
 pub struct KnapsackBuilder {
@@ -281,5 +307,26 @@ mod tests {
             problem.get_improvement_direction(),
             ImprovementDirection::Maximize
         );
+    }
+
+    #[test]
+    fn format_solution_reports_domain_summary() {
+        let problem = KnapsackBuilder::new()
+            .with_capacity(50.0)
+            .add_item(10.0, 100.0)
+            .add_item(20.0, 200.0)
+            .add_item(30.0, 300.0)
+            .build();
+
+        let mut solution = Solution::new(vec![true, false, true]);
+        problem.evaluate(&mut solution);
+
+        let formatted = problem.format_solution(&solution);
+
+        assert!(formatted.contains("selected=2/3"));
+        assert!(formatted.contains("weight=40.000/50.000"));
+        assert!(formatted.contains("value=400.000"));
+        assert!(formatted.contains("feasible=true"));
+        assert!(formatted.contains("quality=400.000"));
     }
 }

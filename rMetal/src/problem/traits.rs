@@ -26,4 +26,24 @@ where
     /// This is the single source of truth for scalar optimization direction
     /// in the framework. Algorithms and runtime termination consume this value
     fn get_improvement_direction(&self) -> ImprovementDirection;
+
+    /// Returns a human-friendly representation for one solution.
+    ///
+    /// Observers use this string to present best snapshots in CLI/HTML outputs.
+    /// Problem implementations can override this to provide domain-specific
+    /// formatting (for example routes, selected items, or compact objective
+    /// summaries).
+    fn format_solution(&self, solution: &Solution<T, Q>) -> String {
+        let quality_state = if solution.has_quality() {
+            "evaluated"
+        } else {
+            "not evaluated"
+        };
+
+        format!(
+            "variables={}, quality={}",
+            solution.num_variables(),
+            quality_state
+        )
+    }
 }

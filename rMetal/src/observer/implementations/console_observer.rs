@@ -1,5 +1,5 @@
 use crate::observer::traits::AlgorithmObserver;
-use crate::observer::AlgorithmEvent;
+use crate::observer::{AlgorithmEvent, ObserverState};
 
 /// Simple console observer that prints algorithm progress to stdout
 pub struct ConsoleObserver {
@@ -14,6 +14,26 @@ impl ConsoleObserver {
             name: "ConsoleObserver".to_string(),
             verbose,
             last_snapshot_seq: None,
+        }
+    }
+
+    fn format_progress_line(state: &ObserverState) -> String {
+        format!(
+            "Generation {}: Evaluations={}, Best={:.4}, Avg={:.4}, Worst={:.4}",
+            state.iteration,
+            state.evaluations,
+            state.best_fitness,
+            state.average_fitness,
+            state.worst_fitness
+        )
+    }
+
+    fn format_best_solution_line(state: &ObserverState) -> Option<String> {
+        let presentation = state.best_solution_presentation.trim();
+        if presentation.is_empty() {
+            None
+        } else {
+            Some(format!("Best solution: {}", presentation))
         }
     }
 }
@@ -38,14 +58,10 @@ where
 
                 self.last_snapshot_seq = Some(state.seq_id);
                 if self.verbose || state.iteration % 10 == 0 {
-                    println!(
-                        "Generation {}: Evaluations={}, Best={:.4}, Avg={:.4}, Worst={:.4}",
-                        state.iteration,
-                        state.evaluations,
-                        state.best_fitness,
-                        state.average_fitness,
-                        state.worst_fitness
-                    );
+                    println!("{}", Self::format_progress_line(state));
+                    if let Some(best_solution_line) = Self::format_best_solution_line(state) {
+                        println!("  {}", best_solution_line);
+                    }
                 }
             }
             AlgorithmEvent::End {
@@ -69,5 +85,32 @@ where
 
     fn name(&self) -> &str {
         &self.name
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ConsoleObserver;
+    use crate::observer::ObserverState;
+
+    fn best_solution(presentation: &str) -> ObserverState {
+        ObserverState::new(0, 5, 120, 2.0, 1.5, 0.5, presentation.to_string())
+    }
+
+    #[test]
+    fn formats_progress_line_with_metrics() {
+        let line = ConsoleObserver::format_progress_line(&best_solution("selected=2/3"));
+
+        assert_eq!(
+            line,
+            "Generation 5: Evaluations=120, Best=2.0000, Avg=1.5000, Worst=0.5000"
+        );
+    }
+
+    #[test]
+    fn formats_best_solution_line_with_problem_presentation() {
+        let line = ConsoleObserver::format_best_solution_line(&best_solution("selected=2/3"));
+
+        assert_eq!(line.as_deref(), Some("Best solution: selected=2/3"));
     }
 }

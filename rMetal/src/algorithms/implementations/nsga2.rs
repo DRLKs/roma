@@ -1,8 +1,8 @@
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
-use crate::observer::Observable;
 use crate::observer::traits::AlgorithmObserver;
+use crate::observer::Observable;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
 use crate::solution::ParetoCrowdingDistanceQuality;
@@ -301,7 +301,10 @@ where
     M: MutationOperator<f64, ParetoCrowdingDistanceQuality>,
     Sel: SelectionOperator<f64, ParetoCrowdingDistanceQuality>,
 {
-    fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<f64, ParetoCrowdingDistanceQuality>>) {
+    fn add_observer(
+        &mut self,
+        observer: Box<dyn AlgorithmObserver<f64, ParetoCrowdingDistanceQuality>>,
+    ) {
         self.observers.push(observer);
     }
 

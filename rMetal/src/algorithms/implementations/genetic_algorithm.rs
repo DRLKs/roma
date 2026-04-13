@@ -584,7 +584,6 @@ where
     }
 }
 
-
 impl<T, C, M, Sel, P> ExperimentalCase<T, f64, P> for GeneticAlgorithmParameters<T, C, M, Sel>
 where
     T: Clone + Send + Sync + 'static,
@@ -615,10 +614,7 @@ where
         };
 
         vec![
-            CaseParameter::new(
-                "population_size",
-                self.population_size.to_string(),
-            ),
+            CaseParameter::new("population_size", self.population_size.to_string()),
             CaseParameter::new(
                 "crossover_probability",
                 format!("{:.6}", self.crossover_probability),
@@ -629,18 +625,9 @@ where
             ),
             CaseParameter::new("elite_size", self.elite_size.to_string()),
             CaseParameter::new("threads", threads_text),
-            CaseParameter::new(
-                "crossover_operator",
-                self.crossover_operator.name(),
-            ),
-            CaseParameter::new(
-                "mutation_operator",
-                self.mutation_operator.name(),
-            ),
-            CaseParameter::new(
-                "selection_operator",
-                self.selection_operator.name(),
-            ),
+            CaseParameter::new("crossover_operator", self.crossover_operator.name()),
+            CaseParameter::new("mutation_operator", self.mutation_operator.name()),
+            CaseParameter::new("selection_operator", self.selection_operator.name()),
             CaseParameter::new(
                 "termination_criteria",
                 format!("{:?}", self.termination_criteria),

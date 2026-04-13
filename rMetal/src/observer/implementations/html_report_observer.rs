@@ -410,8 +410,7 @@ where
                     average: state.average_fitness,
                     worst: state.worst_fitness,
                 });
-                let preview =
-                    Self::truncate_preview(format!("{:?}", state.best_solution.variables()), 220);
+                let preview = Self::truncate_preview(state.best_solution_presentation.clone(), 220);
                 self.best_snapshots.push(BestSnapshot {
                     generation: state.iteration,
                     quality: state.best_fitness,
@@ -455,7 +454,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::solution::Solution;
+    use crate::observer::ObserverState;
 
     #[test]
     fn creates_html_report_with_summary_and_chart() {
@@ -472,19 +471,7 @@ mod tests {
             algorithm_name: "GeneticAlgorithm".to_string(),
         });
         observer.update(&AlgorithmEvent::<bool>::ExecutionStateUpdated {
-            state: crate::algorithms::termination::ExecutionStateSnapshot::new(
-                0,
-                1,
-                20,
-                {
-                    let mut solution = Solution::<bool>::new(vec![true, false, true]);
-                    solution.set_quality(10.0);
-                    solution
-                },
-                10.0,
-                7.0,
-                3.0,
-            ),
+            state: ObserverState::new(0, 1, 20, 10.0, 7.0, 3.0, "selected=2/3".to_string()),
         });
 
         observer.update(&AlgorithmEvent::<bool>::End {

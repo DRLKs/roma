@@ -94,6 +94,36 @@ impl Problem<f64, ParetoCrowdingDistanceQuality> for ZDT1Problem {
     fn get_improvement_direction(&self) -> ImprovementDirection {
         ImprovementDirection::Minimize
     }
+
+    fn format_solution(&self, solution: &Solution<f64, ParetoCrowdingDistanceQuality>) -> String {
+        let objectives = solution.get_objectives();
+        let objectives_text = match objectives {
+            Some(values) if !values.is_empty() => {
+                let rendered: Vec<String> =
+                    values.iter().map(|value| format!("{:.6}", value)).collect();
+                format!("[{}]", rendered.join(", "))
+            }
+            _ => "not evaluated".to_string(),
+        };
+
+        let rank_text = solution
+            .rank()
+            .map(|rank| rank.to_string())
+            .unwrap_or_else(|| "none".to_string());
+
+        let crowding_text = solution
+            .crowding_distance()
+            .map(|distance| format!("{:.6}", distance))
+            .unwrap_or_else(|| "none".to_string());
+
+        format!(
+            "variables={}, objectives={}, rank={}, crowding_distance={}",
+            solution.num_variables(),
+            objectives_text,
+            rank_text,
+            crowding_text
+        )
+    }
 }
 
 #[cfg(test)]
@@ -152,5 +182,35 @@ mod tests {
             problem.get_improvement_direction(),
             ImprovementDirection::Minimize
         );
+    }
+
+    #[test]
+    fn format_solution_reports_objective_metadata() {
+        let problem = ZDT1Problem::new(3);
+        let mut solution =
+            MultiObjectiveRealSolutionBuilder::from_variables(vec![0.2, 0.4, 0.6]).build();
+        problem.evaluate(&mut solution);
+        solution.set_rank(0);
+        solution.set_crowding_distance(1.25);
+
+        let formatted = problem.format_solution(&solution);
+
+        assert!(formatted.contains("variables=3"));
+        assert!(formatted.contains("objectives=[0.200000, "));
+        assert!(formatted.contains("rank=0"));
+        assert!(formatted.contains("crowding_distance=1.250000"));
+    }
+
+    #[test]
+    fn format_solution_marks_not_evaluated_when_objectives_missing() {
+        let problem = ZDT1Problem::new(3);
+        let solution =
+            MultiObjectiveRealSolutionBuilder::from_variables(vec![0.1, 0.2, 0.3]).build();
+
+        let formatted = problem.format_solution(&solution);
+
+        assert!(formatted.contains("objectives=not evaluated"));
+        assert!(formatted.contains("rank=none"));
+        assert!(formatted.contains("crowding_distance=none"));
     }
 }
