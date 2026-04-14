@@ -53,21 +53,6 @@ where
     T: Clone + Send + 'static,
     Q: Clone + Send + 'static,
 {
-    fn next_snapshot_seq_id(&self) -> u64 {
-        let mut next = self.next_snapshot_seq.borrow_mut();
-        let id = *next;
-        *next = next.saturating_add(1);
-        id
-    }
-
-    fn snapshot_with_seq(
-        &self,
-        mut snapshot: ExecutionStateSnapshot<T, Q>,
-    ) -> ExecutionStateSnapshot<T, Q> {
-        snapshot.seq_id = self.next_snapshot_seq_id();
-        snapshot
-    }
-
     /// Creates a new execution context.
     fn new(
         sender: ObserverSender<T, Q>,
@@ -106,20 +91,29 @@ where
     /// Applies one execution snapshot and emits events accordingly.
     pub fn report_progress(
         &self,
-        snapshot: ExecutionStateSnapshot<T, Q>,
-        best_solution_presentation: String,
+        observer_state: ObserverState,
     ) {
-        let snapshot = self.snapshot_with_seq(snapshot);
-
-        self.termination.borrow_mut().on_snapshot(&snapshot);
-        let observer_state = ObserverState::from_snapshot(snapshot, best_solution_presentation);
-
         emit_event(
             &self.sender,
             AlgorithmEvent::ExecutionStateUpdated {
                 state: observer_state,
             },
         );
+    }
+
+    fn next_snapshot_seq_id(&self) -> u64 {
+        let mut next = self.next_snapshot_seq.borrow_mut();
+        let id = *next;
+        *next = next.saturating_add(1);
+        id
+    }
+
+    pub fn snapshot_with_seq(
+        &self,
+        mut snapshot: ExecutionStateSnapshot<T, Q>,
+    ) -> ExecutionStateSnapshot<T, Q> {
+        snapshot.seq_id = self.next_snapshot_seq_id();
+        snapshot
     }
 
     /// Returns `true` when any configured termination criterion has been met.
@@ -314,20 +308,21 @@ where
         move |context| {
             let mut state = initialize(context);
 
-            let initial_snapshot = snapshot(&state);
+            let initial_snapshot = context.snapshot_with_seq(snapshot(&state));
             let initial_presentation = render_solution(&initial_snapshot.best_solution);
             let mut last_iteration = initial_snapshot.iteration;
             let mut last_evaluations = initial_snapshot.evaluations;
-            context.report_progress(initial_snapshot, initial_presentation);
+            context.report_progress(ObserverState::from_snapshot(initial_snapshot, initial_presentation));
 
             while !context.should_terminate() {
                 step(&mut state, context);
 
                 let step_snapshot = snapshot(&state);
+                let step_snapshot = context.snapshot_with_seq(step_snapshot);
                 let step_presentation = render_solution(&step_snapshot.best_solution);
                 last_iteration = step_snapshot.iteration;
                 last_evaluations = step_snapshot.evaluations;
-                context.report_progress(step_snapshot, step_presentation);
+                context.report_progress(ObserverState::from_snapshot(step_snapshot, step_presentation));
             }
 
             RuntimeExecutionOutput::new(finalize(state), last_iteration, last_evaluations)
