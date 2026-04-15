@@ -15,8 +15,6 @@ pub struct ChartObserver {
     generations: Vec<usize>,
     evaluations: Vec<usize>,
     best_fitness_history: Vec<f64>,
-    average_fitness_history: Vec<f64>,
-    worst_fitness_history: Vec<f64>,
     last_snapshot_seq: Option<u64>,
 
     // Configuration
@@ -41,8 +39,6 @@ impl ChartObserver {
             generations: Vec::new(),
             evaluations: Vec::new(),
             best_fitness_history: Vec::new(),
-            average_fitness_history: Vec::new(),
-            worst_fitness_history: Vec::new(),
             last_snapshot_seq: None,
             chart_width: 1200,
             chart_height: 800,
@@ -139,51 +135,59 @@ impl ChartObserver {
             .x_clamp_non_negative()
     }
 
-    /// Consolidate data from multiple threads by taking the best value for each generation
-    fn consolidate_data(&self) -> (Vec<usize>, Vec<f64>, Vec<f64>, Vec<f64>) {
-        use std::collections::HashMap;
+    fn max_render_points(&self) -> usize {
+        let based_on_width = (self.chart_width as usize).saturating_mul(2);
+        based_on_width.clamp(240, 1800)
+    }
 
-        let mut gen_map: HashMap<usize, (f64, Vec<f64>, Vec<f64>)> = HashMap::new();
+    fn downsample_points(&self, points: &[(f64, f64)]) -> Vec<(f64, f64)> {
+        let max_points = self.max_render_points().max(2);
+        if points.len() <= max_points {
+            return points.to_vec();
+        }
 
-        for i in 0..self.generations.len() {
-            let generation = self.generations[i];
-            let best = self.best_fitness_history[i];
-            let avg = self.average_fitness_history[i];
-            let worst = self.worst_fitness_history[i];
+        let last_index = points.len() - 1;
+        let step = last_index as f64 / (max_points - 1) as f64;
+        let mut sampled = Vec::with_capacity(max_points);
 
-            gen_map
+        for index in 0..max_points {
+            let point_index = (index as f64 * step).floor() as usize;
+            sampled.push(points[point_index.min(last_index)]);
+        }
+
+        if let Some(last) = sampled.last_mut() {
+            *last = points[last_index];
+        }
+
+        sampled
+    }
+
+    /// Consolidates duplicated snapshots by generation, keeping the best fitness.
+    fn consolidate_best_by_generation(&self) -> (Vec<usize>, Vec<f64>) {
+        use std::collections::BTreeMap;
+
+        let mut by_generation: BTreeMap<usize, f64> = BTreeMap::new();
+
+        for (generation, best) in self
+            .generations
+            .iter()
+            .copied()
+            .zip(self.best_fitness_history.iter().copied())
+        {
+            by_generation
                 .entry(generation)
-                .and_modify(|(b, avgs, worsts)| {
-                    *b = b.max(best);
-                    avgs.push(avg);
-                    worsts.push(worst);
-                })
-                .or_insert((best, vec![avg], vec![worst]));
+                .and_modify(|best_so_far| *best_so_far = best_so_far.max(best))
+                .or_insert(best);
         }
 
-        let mut generations: Vec<usize> = gen_map.keys().copied().collect();
-        generations.sort();
-
-        let mut best_fitness = Vec::new();
-        let mut avg_fitness = Vec::new();
-        let mut worst_fitness = Vec::new();
-
-        for generation in &generations {
-            if let Some((best, avgs, worsts)) = gen_map.get(generation) {
-                best_fitness.push(*best);
-                // Average of averages from all threads for this generation
-                avg_fitness.push(avgs.iter().sum::<f64>() / avgs.len() as f64);
-                // Worst of worsts
-                worst_fitness.push(
-                    *worsts
-                        .iter()
-                        .min_by(|a, b| a.partial_cmp(b).unwrap())
-                        .unwrap_or(&0.0),
-                );
-            }
+        let mut generations = Vec::with_capacity(by_generation.len());
+        let mut best_fitness = Vec::with_capacity(by_generation.len());
+        for (generation, best) in by_generation {
+            generations.push(generation);
+            best_fitness.push(best);
         }
 
-        (generations, best_fitness, avg_fitness, worst_fitness)
+        (generations, best_fitness)
     }
 
     /// Generates a convergence chart showing fitness evolution over generations
@@ -194,43 +198,23 @@ impl ChartObserver {
 
         let output_file = self.resolve_output_path().join("convergence.svg");
 
-        let (generations, best_fitness, avg_fitness, worst_fitness) = self.consolidate_data();
+        let (generations, best_fitness) = self.consolidate_best_by_generation();
 
-        let best_data: Vec<(f64, f64)> = generations
+        let best_data = generations
             .iter()
             .zip(best_fitness.iter())
             .map(|(generation, fitness)| (*generation as f64, *fitness))
-            .collect();
+            .collect::<Vec<(f64, f64)>>();
 
-        let avg_data: Vec<(f64, f64)> = generations
-            .iter()
-            .zip(avg_fitness.iter())
-            .map(|(generation, fitness)| (*generation as f64, *fitness))
-            .collect();
+        let downsampled_best_data = self.downsample_points(&best_data);
+        let best_series = Series::new("Best", downsampled_best_data).with_color("#2563eb");
 
-        let worst_data: Vec<(f64, f64)> = generations
-            .iter()
-            .zip(worst_fitness.iter())
-            .map(|(generation, fitness)| (*generation as f64, *fitness))
-            .collect();
-
-        let best_series = Series::new("Best", best_data).with_color("#2563eb");
-        let avg_series = Series::new("Average", avg_data).with_color("#10b981");
-        let worst_series = Series::new("Worst", worst_data).with_color("#dc2626");
-
-        let min_solution_value = best_fitness
-            .iter()
-            .copied()
-            .chain(avg_fitness.iter().copied())
-            .chain(worst_fitness.iter().copied())
-            .fold(f64::INFINITY, f64::min);
+        let min_solution_value = best_fitness.iter().copied().fold(f64::INFINITY, f64::min);
 
         let chart = self
             .base_chart_builder("Convergence", "Generation", "Fitness")
             .y_min(min_solution_value)
             .add_series(best_series)
-            .add_series(avg_series)
-            .add_series(worst_series)
             .build();
 
         chart.save(output_file)?;
@@ -246,32 +230,22 @@ impl ChartObserver {
             return Ok(());
         }
 
-        use std::collections::BTreeMap;
-
         let output_file = self.resolve_output_path().join("best_by_evaluations.svg");
 
-        // Keep one point per evaluation value. If repeated, keep the latest observed best.
-        let mut points_by_evaluations: BTreeMap<usize, f64> = BTreeMap::new();
-        for (evaluations, best) in self
-            .evaluations
-            .iter()
-            .copied()
-            .zip(self.best_fitness_history.iter().copied())
-        {
-            points_by_evaluations.insert(evaluations, best);
-        }
+        let data = self
+            .best_by_evaluations_points()
+            .into_iter()
+            .map(|(evaluations, best)| (evaluations as f64, best))
+            .collect::<Vec<(f64, f64)>>();
 
-        let data: Vec<(f64, f64)> = points_by_evaluations
-            .iter()
-            .map(|(evaluations, best)| (*evaluations as f64, *best))
-            .collect();
+        let downsampled_data = self.downsample_points(&data);
 
-        let min_solution_value = data
+        let min_solution_value = downsampled_data
             .iter()
             .map(|(_, best)| *best)
             .fold(f64::INFINITY, f64::min);
 
-        let series = Series::new("Best", data).with_color("#2563eb");
+        let series = Series::new("Best", downsampled_data).with_color("#2563eb");
 
         let chart = self
             .base_chart_builder("Best Fitness by Evaluations", "Evaluations", "Best Fitness")
@@ -281,6 +255,79 @@ impl ChartObserver {
 
         chart.save(output_file)?;
 
+        Ok(())
+    }
+
+    fn best_by_evaluations_points(&self) -> Vec<(usize, f64)> {
+        use std::collections::BTreeMap;
+
+        let mut points_by_evaluations: BTreeMap<usize, f64> = BTreeMap::new();
+        for (evaluations, best) in self
+            .evaluations
+            .iter()
+            .copied()
+            .zip(self.best_fitness_history.iter().copied())
+        {
+            points_by_evaluations
+                .entry(evaluations)
+                .and_modify(|best_so_far| *best_so_far = best_so_far.max(best))
+                .or_insert(best);
+        }
+
+        points_by_evaluations.into_iter().collect()
+    }
+
+    fn generate_metrics_json(&self) -> Result<(), Box<dyn std::error::Error>> {
+        if self.generations.is_empty() {
+            return Ok(());
+        }
+
+        let output_file = self.resolve_output_path().join("metrics.json");
+        let (generations, best_fitness) = self.consolidate_best_by_generation();
+        let best_by_evaluations = self.best_by_evaluations_points();
+
+        let convergence_points = generations
+            .iter()
+            .copied()
+            .zip(best_fitness.iter().copied())
+            .map(|(generation, best)| (generation as f64, best))
+            .collect::<Vec<(f64, f64)>>();
+        let convergence_points = self.downsample_points(&convergence_points);
+
+        let best_by_evaluations_points = best_by_evaluations
+            .iter()
+            .map(|(evaluations, best)| (*evaluations as f64, *best))
+            .collect::<Vec<(f64, f64)>>();
+        let best_by_evaluations_points = self.downsample_points(&best_by_evaluations_points);
+
+        let mut json = String::from("{\n  \"convergence\": [\n");
+        for (index, (generation, best)) in convergence_points.iter().enumerate() {
+            let comma = if index + 1 == convergence_points.len() {
+                ""
+            } else {
+                ","
+            };
+            json.push_str(&format!(
+                "    {{\"generation\":{},\"best\":{:.6}}}{}\n",
+                *generation as usize, best, comma
+            ));
+        }
+
+        json.push_str("  ],\n  \"best_by_evaluations\": [\n");
+        for (index, (evaluations, best)) in best_by_evaluations_points.iter().enumerate() {
+            let comma = if index + 1 == best_by_evaluations_points.len() {
+                ""
+            } else {
+                ","
+            };
+            json.push_str(&format!(
+                "    {{\"evaluations\":{},\"best\":{:.6}}}{}\n",
+                *evaluations as usize, best, comma
+            ));
+        }
+        json.push_str("  ]\n}\n");
+
+        std::fs::write(output_file, json)?;
         Ok(())
     }
 }
@@ -303,8 +350,6 @@ where
                 self.generations.clear();
                 self.evaluations.clear();
                 self.best_fitness_history.clear();
-                self.average_fitness_history.clear();
-                self.worst_fitness_history.clear();
                 self.last_snapshot_seq = None;
             }
             AlgorithmEvent::ExecutionStateUpdated { state } => {
@@ -318,8 +363,6 @@ where
                 self.generations.push(state.iteration);
                 self.evaluations.push(state.evaluations);
                 self.best_fitness_history.push(state.best_fitness);
-                self.average_fitness_history.push(state.average_fitness);
-                self.worst_fitness_history.push(state.worst_fitness);
             }
             AlgorithmEvent::End { .. } => {
                 println!("  Generating charts...");
@@ -330,6 +373,10 @@ where
 
                 if let Err(e) = self.generate_best_by_evaluations_chart() {
                     eprintln!("Error generating best-by-evaluations chart: {}", e);
+                }
+
+                if let Err(e) = self.generate_metrics_json() {
+                    eprintln!("Error generating metrics JSON: {}", e);
                 }
 
                 println!(
@@ -344,6 +391,7 @@ where
     fn finalize(&mut self) {
         self.generate_convergence_chart().ok();
         self.generate_best_by_evaluations_chart().ok();
+        self.generate_metrics_json().ok();
     }
 
     fn name(&self) -> &str {
@@ -417,5 +465,145 @@ mod tests {
 
         assert!(run_path.join("convergence.svg").exists());
         assert!(run_path.join("best_by_evaluations.svg").exists());
+    }
+
+    #[test]
+    fn writes_metrics_json_file_inside_run_directory() {
+        let base = std::env::temp_dir().join(format!(
+            "rmetal_chart_observer_metrics_test_{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+
+        let mut observer = ChartObserver::new(base);
+        observer.update(&AlgorithmEvent::<bool>::Start {
+            algorithm_name: "NSGA-II".to_string(),
+        });
+        observer.update(&AlgorithmEvent::<bool>::ExecutionStateUpdated {
+            state: ObserverState::new(0, 1, 10, 1.0, 0.8, 0.5, "selected=1/2".to_string()),
+        });
+        observer.update(&AlgorithmEvent::<bool>::ExecutionStateUpdated {
+            state: ObserverState::new(1, 2, 20, 1.3, 1.0, 0.7, "selected=2/2".to_string()),
+        });
+        observer.update(&AlgorithmEvent::<bool>::End {
+            total_generations: 2,
+            total_evaluations: 20,
+            termination_reason: None,
+        });
+
+        let run_path = observer
+            .run_output_path
+            .clone()
+            .expect("Run output path should exist");
+
+        let metrics_path = run_path.join("metrics.json");
+        assert!(metrics_path.exists());
+
+        let contents = std::fs::read_to_string(metrics_path).expect("metrics file should exist");
+        assert!(contents.contains("\"convergence\""));
+        assert!(contents.contains("\"best_by_evaluations\""));
+        assert!(!contents.contains("\"average\""));
+        assert!(!contents.contains("\"worst\""));
+    }
+
+    #[test]
+    fn convergence_chart_excludes_average_and_worst_series() {
+        let base = std::env::temp_dir().join(format!(
+            "rmetal_chart_observer_best_only_test_{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+
+        let mut observer = ChartObserver::new(base);
+        observer.update(&AlgorithmEvent::<bool>::Start {
+            algorithm_name: "NSGA-II".to_string(),
+        });
+
+        for generation in 0..20 {
+            observer.update(&AlgorithmEvent::<bool>::ExecutionStateUpdated {
+                state: ObserverState::new(
+                    generation as u64,
+                    generation,
+                    (generation + 1) * 10,
+                    generation as f64,
+                    generation as f64 * 0.7,
+                    generation as f64 * 0.2,
+                    "selected=1/2".to_string(),
+                ),
+            });
+        }
+
+        observer.update(&AlgorithmEvent::<bool>::End {
+            total_generations: 20,
+            total_evaluations: 200,
+            termination_reason: None,
+        });
+
+        let run_path = observer
+            .run_output_path
+            .clone()
+            .expect("Run output path should exist");
+        let convergence_svg =
+            std::fs::read_to_string(run_path.join("convergence.svg")).expect("svg should exist");
+
+        assert!(!convergence_svg.contains("Average"));
+        assert!(!convergence_svg.contains("Worst"));
+    }
+
+    #[test]
+    fn downsamples_convergence_chart_points() {
+        let base = std::env::temp_dir().join(format!(
+            "rmetal_chart_observer_downsample_test_{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+
+        let mut observer = ChartObserver::new(base).with_dimensions(300, 200);
+        let max_points = observer.max_render_points();
+
+        observer.update(&AlgorithmEvent::<bool>::Start {
+            algorithm_name: "HC".to_string(),
+        });
+
+        for generation in 0..(max_points + 1200) {
+            observer.update(&AlgorithmEvent::<bool>::ExecutionStateUpdated {
+                state: ObserverState::new(
+                    generation as u64,
+                    generation,
+                    generation + 1,
+                    generation as f64,
+                    generation as f64,
+                    generation as f64,
+                    "selected=1/2".to_string(),
+                ),
+            });
+        }
+
+        observer.update(&AlgorithmEvent::<bool>::End {
+            total_generations: max_points + 1200,
+            total_evaluations: max_points + 1200,
+            termination_reason: None,
+        });
+
+        let run_path = observer
+            .run_output_path
+            .clone()
+            .expect("Run output path should exist");
+        let convergence_svg =
+            std::fs::read_to_string(run_path.join("convergence.svg")).expect("svg should exist");
+        let circle_count = convergence_svg.matches("<circle").count();
+
+        assert!(
+            circle_count <= max_points,
+            "expected at most {} circles, got {}",
+            max_points,
+            circle_count
+        );
     }
 }

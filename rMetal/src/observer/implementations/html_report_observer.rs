@@ -32,6 +32,22 @@ struct BestSnapshot {
     variables_preview: String,
 }
 
+#[derive(Clone, Debug)]
+struct ReportModel {
+    algorithm_name: String,
+    status_text: String,
+    status_class: &'static str,
+    total_generations: usize,
+    total_evaluations: usize,
+    best_overall: f64,
+    report_path_short: String,
+    report_path_full: String,
+    error_message: Option<String>,
+    best_solution_row: String,
+    recent_generations_rows: String,
+    best_updates_rows: String,
+}
+
 /// Observer that generates an HTML execution report with metrics and charts.
 ///
 /// # Output layout
@@ -217,30 +233,279 @@ impl HtmlReportObserver {
             .generate_svg()
     }
 
-    fn generate_report(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let output_path = self.resolve_output_path();
-        std::fs::create_dir_all(&output_path)?;
-        let report_path = output_path.join("report.html");
+    fn render_css() -> &'static str {
+        r#"
+    :root {
+      --surface: #ffffff;
+      --surface-subtle: #f8fafc;
+      --background: #f3f4f6;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --border-soft: #e5e7eb;
+      --accent: #1d4ed8;
+      --accent-soft: #dbeafe;
+      --success: #15803d;
+      --error: #b91c1c;
+      --radius: 10px;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-6: 24px;
+      --space-8: 32px;
+    }
 
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--background);
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.45;
+    }
+
+    .page {
+      width: min(1200px, 100% - 32px);
+      margin: var(--space-6) auto;
+    }
+
+    .header {
+      margin-bottom: var(--space-6);
+      padding-bottom: var(--space-3);
+      border-bottom: 2px solid var(--border);
+    }
+
+    .header-title {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .header-meta {
+      margin-top: var(--space-2);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      margin-top: var(--space-3);
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 600;
+      background: var(--surface);
+    }
+
+    .status-completed {
+      color: var(--success);
+      border-color: #86efac;
+      background: #f0fdf4;
+    }
+
+    .status-error {
+      color: var(--error);
+      border-color: #fecaca;
+      background: #fef2f2;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: var(--space-3);
+      margin-bottom: var(--space-6);
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      padding: var(--space-3);
+    }
+
+    .card-label {
+      display: block;
+      margin-bottom: var(--space-1);
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .card-value {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+      overflow-wrap: anywhere;
+    }
+
+    .section {
+      margin-top: var(--space-6);
+      background: var(--surface);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      padding: var(--space-4);
+    }
+
+    .section-title {
+      margin: 0 0 var(--space-3) 0;
+      font-size: 18px;
+      font-weight: 650;
+      color: #0f172a;
+    }
+
+    .chart-wrap {
+      border: 1px solid var(--border-soft);
+      border-radius: 8px;
+      padding: var(--space-2);
+      background: #fcfcfd;
+      overflow-x: auto;
+    }
+
+    .chart-wrap svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border-soft);
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      background: var(--surface);
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--border-soft);
+      padding: var(--space-2) var(--space-3);
+      text-align: left;
+      font-size: 13px;
+      vertical-align: top;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--surface-subtle);
+      color: #111827;
+      font-weight: 650;
+    }
+
+    tr:nth-child(even) td {
+      background: #fbfcfe;
+    }
+
+    .numeric {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      color: #1f2937;
+    }
+
+    .error-box {
+      margin-top: var(--space-3);
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      background: #fef2f2;
+      color: #991b1b;
+      padding: var(--space-2) var(--space-3);
+      font-size: 13px;
+    }
+
+    .path-note {
+      margin-top: var(--space-6);
+      padding: var(--space-2) var(--space-3);
+      border-top: 1px dashed var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .path-note code {
+      font-size: 11px;
+      color: #475569;
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        width: calc(100% - 16px);
+        margin: var(--space-4) auto;
+      }
+
+      .section {
+        padding: var(--space-3);
+      }
+
+      .header-title {
+        font-size: 24px;
+      }
+
+      .card-value {
+        font-size: 18px;
+      }
+    }
+"#
+    }
+
+    fn summary_totals(&self) -> (usize, usize) {
+        self.finished_summary.unwrap_or_else(|| {
+            let last = self.generations.last();
+            (
+                last.map(|g| g.generation).unwrap_or(0),
+                last.map(|g| g.evaluations).unwrap_or(0),
+            )
+        })
+    }
+
+    fn compact_report_path(path: &str) -> String {
+        if path.len() <= 64 {
+            return path.to_string();
+        }
+
+        let keep = 26;
+        let start = &path[..keep.min(path.len())];
+        let end_index = path.len().saturating_sub(keep);
+        let end = &path[end_index..];
+        format!("{}...{}", start, end)
+    }
+
+    fn build_report_model(&self, report_path: &std::path::Path) -> ReportModel {
         let algorithm_name = self
             .algorithm_name
             .as_deref()
             .map(Self::escape_html)
             .unwrap_or_else(|| "Unknown".to_string());
 
-        let status = if let Some(message) = &self.error_message {
-            format!("Error: {}", Self::escape_html(message))
-        } else {
-            "Completed".to_string()
+        let (status_text, status_class, error_message) = match &self.error_message {
+            Some(message) => (
+                "Error".to_string(),
+                "status-error",
+                Some(Self::escape_html(message)),
+            ),
+            None => ("Completed".to_string(), "status-completed", None),
         };
 
-        let (total_generations, total_evaluations) = self.finished_summary.unwrap_or_else(|| {
-            let last = self.generations.last();
-            (
-                last.map(|g| g.generation).unwrap_or(0),
-                last.map(|g| g.evaluations).unwrap_or(0),
-            )
-        });
+        let (total_generations, total_evaluations) = self.summary_totals();
 
         let best_overall = self
             .generations
@@ -252,111 +517,186 @@ impl HtmlReportObserver {
         let best_solution_row = self
             .best_snapshots
             .last()
-            .map(|b| {
+            .map(|snapshot| {
                 format!(
-                    "<tr><td>{}</td><td>{:.6}</td><td><code>{}</code></td></tr>",
-                    b.generation,
-                    b.quality,
-                    Self::escape_html(&b.variables_preview)
+                    "<tr><td class=\"numeric\">{}</td><td class=\"numeric\">{:.6}</td><td><code>{}</code></td></tr>",
+                    snapshot.generation,
+                    snapshot.quality,
+                    Self::escape_html(&snapshot.variables_preview)
                 )
             })
             .unwrap_or_else(|| {
                 "<tr><td colspan=\"3\">No solution snapshot captured.</td></tr>".to_string()
             });
 
-        let recent_generations: String = self
-            .generations
-            .iter()
-            .rev()
-            .take(15)
-            .map(|g| {
+        let recent_generations_rows = if self.generations.is_empty() {
+            "<tr><td colspan=\"5\">No generation metrics captured.</td></tr>".to_string()
+        } else {
+            self.generations
+                .iter()
+                .rev()
+                .take(15)
+                .map(|g| {
+                    format!(
+                        "<tr><td class=\"numeric\">{}</td><td class=\"numeric\">{}</td><td class=\"numeric\">{:.6}</td><td class=\"numeric\">{:.6}</td><td class=\"numeric\">{:.6}</td></tr>",
+                        g.generation, g.evaluations, g.best, g.average, g.worst
+                    )
+                })
+                .collect::<String>()
+        };
+
+        let best_updates_rows = if self.best_snapshots.is_empty() {
+            "<tr><td colspan=\"3\">No best-solution snapshots captured.</td></tr>".to_string()
+        } else {
+            self.best_snapshots
+                .iter()
+                .rev()
+                .take(20)
+                .map(|snapshot| {
+                    format!(
+                        "<tr><td class=\"numeric\">{}</td><td class=\"numeric\">{:.6}</td><td><code>{}</code></td></tr>",
+                        snapshot.generation,
+                        snapshot.quality,
+                        Self::escape_html(&snapshot.variables_preview)
+                    )
+                })
+                .collect::<String>()
+        };
+
+        ReportModel {
+            algorithm_name,
+            status_text,
+            status_class,
+            total_generations,
+            total_evaluations,
+            best_overall,
+            report_path_short: Self::compact_report_path(&report_path.display().to_string()),
+            report_path_full: Self::escape_html(&report_path.display().to_string()),
+            error_message,
+            best_solution_row,
+            recent_generations_rows,
+            best_updates_rows,
+        }
+    }
+
+    fn render_summary_cards(model: &ReportModel) -> String {
+        format!(
+            "<div class=\"kpi-grid\">
+    <div class=\"card\"><span class=\"card-label\">Algorithm</span><p class=\"card-value\">{algorithm_name}</p></div>
+    <div class=\"card\"><span class=\"card-label\">Status</span><p class=\"card-value\">{status_text}</p></div>
+    <div class=\"card\"><span class=\"card-label\">Total generations</span><p class=\"card-value numeric\">{total_generations}</p></div>
+    <div class=\"card\"><span class=\"card-label\">Total evaluations</span><p class=\"card-value numeric\">{total_evaluations}</p></div>
+    <div class=\"card\"><span class=\"card-label\">Best fitness observed</span><p class=\"card-value numeric\">{best_overall:.6}</p></div>
+  </div>",
+            algorithm_name = model.algorithm_name,
+            status_text = model.status_text,
+            total_generations = model.total_generations,
+            total_evaluations = model.total_evaluations,
+            best_overall = model.best_overall,
+        )
+    }
+
+    fn render_html_document(&self, model: &ReportModel, chart_svg: &str) -> String {
+        let error_box = model
+            .error_message
+            .as_ref()
+            .map(|message| {
                 format!(
-                    "<tr><td>{}</td><td>{}</td><td>{:.6}</td><td>{:.6}</td><td>{:.6}</td></tr>",
-                    g.generation, g.evaluations, g.best, g.average, g.worst
+                    "<div class=\"error-box\"><strong>Execution error:</strong> {}</div>",
+                    message
                 )
             })
-            .collect();
+            .unwrap_or_default();
 
-        let best_updates_rows: String = self
-            .best_snapshots
-            .iter()
-            .rev()
-            .take(20)
-            .map(|b| {
-                format!(
-                    "<tr><td>{}</td><td>{:.6}</td><td><code>{}</code></td></tr>",
-                    b.generation,
-                    b.quality,
-                    Self::escape_html(&b.variables_preview)
-                )
-            })
-            .collect();
+        let summary_cards = Self::render_summary_cards(model);
+        let css = Self::render_css();
 
-        let chart_svg = self.build_convergence_svg();
-
-        let html = format!(
+        format!(
             r#"<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Algorithm report</title>
-  <style>
-    body {{ font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; color: #111827; }}
-    h1, h2 {{ margin: 0 0 12px 0; }}
-    .meta {{ display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; margin-bottom: 20px; }}
-    .card {{ border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; background: #fff; }}
-    table {{ border-collapse: collapse; width: 100%; margin-top: 8px; }}
-    th, td {{ border: 1px solid #e5e7eb; padding: 8px; font-size: 14px; text-align: left; }}
-    th {{ background: #f9fafb; }}
-    code {{ white-space: pre-wrap; word-break: break-word; }}
-    .section {{ margin-top: 24px; }}
-  </style>
+  <style>{css}</style>
 </head>
 <body>
-  <h1>Algorithm execution report</h1>
-  <div class="meta">
-    <div class="card"><strong>Algorithm</strong><br />{algorithm_name}</div>
-    <div class="card"><strong>Status</strong><br />{status}</div>
-    <div class="card"><strong>Total generations</strong><br />{total_generations}</div>
-    <div class="card"><strong>Total evaluations</strong><br />{total_evaluations}</div>
-    <div class="card"><strong>Best fitness observed</strong><br />{best_overall:.6}</div>
-    <div class="card"><strong>Report path</strong><br />{report_path}</div>
-  </div>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">Algorithm execution report</h1>
+      <div class="header-meta">Generated by rMetal HtmlReportObserver</div>
+      <span class="status-badge {status_class}">{status_text}</span>
+      {error_box}
+    </header>
 
-  <div class="section">
-    <h2>Best solution found</h2>
-    <table>
-      <thead><tr><th>Generation</th><th>Quality</th><th>Variables preview</th></tr></thead>
-      <tbody>{best_solution_row}</tbody>
-    </table>
-  </div>
+    {summary_cards}
 
-  <div class="section">
-    <h2>Fitness chart</h2>
-    {chart_svg}
-  </div>
+    <main>
+      <section class="section">
+        <h2 class="section-title">Best solution found</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Generation</th><th>Quality</th><th>Variables preview</th></tr></thead>
+            <tbody>{best_solution_row}</tbody>
+          </table>
+        </div>
+      </section>
 
-  <div class="section">
-    <h2>Recent generation metrics (latest 15)</h2>
-    <table>
-      <thead><tr><th>Generation</th><th>Evaluations</th><th>Best</th><th>Average</th><th>Worst</th></tr></thead>
-      <tbody>{recent_generations}</tbody>
-    </table>
-  </div>
+      <section class="section">
+        <h2 class="section-title">Fitness chart</h2>
+        <div class="chart-wrap">{chart_svg}</div>
+      </section>
 
-  <div class="section">
-        <h2>Best-solution snapshots (latest 20)</h2>
-    <table>
-      <thead><tr><th>Generation</th><th>Quality</th><th>Variables preview</th></tr></thead>
-      <tbody>{best_updates_rows}</tbody>
-    </table>
+      <section class="section">
+        <h2 class="section-title">Recent generation metrics (latest 15)</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Generation</th><th>Evaluations</th><th>Best</th><th>Average</th><th>Worst</th></tr></thead>
+            <tbody>{recent_generations_rows}</tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2 class="section-title">Best-solution snapshots (latest 20)</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Generation</th><th>Quality</th><th>Variables preview</th></tr></thead>
+            <tbody>{best_updates_rows}</tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="path-note">
+        <strong>Report file</strong>: <code>{report_path_short}</code><br />
+        <code>{report_path_full}</code>
+      </div>
+    </main>
   </div>
 </body>
 </html>
 "#,
-            report_path = Self::escape_html(&report_path.display().to_string()),
-        );
+            css = css,
+            status_class = model.status_class,
+            status_text = model.status_text,
+            error_box = error_box,
+            summary_cards = summary_cards,
+            best_solution_row = model.best_solution_row,
+            chart_svg = chart_svg,
+            recent_generations_rows = model.recent_generations_rows,
+            best_updates_rows = model.best_updates_rows,
+            report_path_short = model.report_path_short,
+            report_path_full = model.report_path_full,
+        )
+    }
+
+    fn generate_report(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let output_path = self.resolve_output_path();
+        std::fs::create_dir_all(&output_path)?;
+        let report_path = output_path.join("report.html");
+        let model = self.build_report_model(&report_path);
+        let chart_svg = self.build_convergence_svg();
+        let html = self.render_html_document(&model, &chart_svg);
 
         let mut file = File::create(report_path)?;
         file.write_all(html.as_bytes())?;
@@ -488,5 +828,37 @@ mod tests {
         assert!(contents.contains("GeneticAlgorithm"));
         assert!(contents.contains("Best solution found"));
         assert!(contents.contains("<svg"));
+    }
+
+    #[test]
+    fn report_uses_professional_css_and_semantic_sections() {
+        let base = std::env::temp_dir().join(format!(
+            "rmetal_html_report_style_test_{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+
+        let mut observer = HtmlReportObserver::new(base);
+        observer.update(&AlgorithmEvent::<bool>::Start {
+            algorithm_name: "StyleCheckAlgorithm".to_string(),
+        });
+        observer.update(&AlgorithmEvent::<bool>::ExecutionStateUpdated {
+            state: ObserverState::new(0, 1, 5, 3.0, 2.0, 1.0, "presentation=1".to_string()),
+        });
+        observer.update(&AlgorithmEvent::<bool>::End {
+            total_generations: 1,
+            total_evaluations: 5,
+            termination_reason: None,
+        });
+
+        let report_path = observer.resolve_output_path().join("report.html");
+        let contents = std::fs::read_to_string(report_path).expect("report should be readable");
+
+        assert!(contents.contains("--surface:"));
+        assert!(contents.contains("<header class=\"header\">"));
+        assert!(contents.contains("class=\"kpi-grid\""));
+        assert!(contents.contains("class=\"table-wrap\""));
     }
 }

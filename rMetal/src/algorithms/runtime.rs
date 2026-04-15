@@ -89,10 +89,7 @@ where
     }
 
     /// Applies one execution snapshot and emits events accordingly.
-    pub fn report_progress(
-        &self,
-        observer_state: ObserverState,
-    ) {
+    pub fn report_progress(&self, observer_state: ObserverState) {
         emit_event(
             &self.sender,
             AlgorithmEvent::ExecutionStateUpdated {
@@ -113,6 +110,7 @@ where
         mut snapshot: ExecutionStateSnapshot<T, Q>,
     ) -> ExecutionStateSnapshot<T, Q> {
         snapshot.seq_id = self.next_snapshot_seq_id();
+        self.termination.borrow_mut().on_snapshot(&snapshot);
         snapshot
     }
 
@@ -312,7 +310,10 @@ where
             let initial_presentation = render_solution(&initial_snapshot.best_solution);
             let mut last_iteration = initial_snapshot.iteration;
             let mut last_evaluations = initial_snapshot.evaluations;
-            context.report_progress(ObserverState::from_snapshot(initial_snapshot, initial_presentation));
+            context.report_progress(ObserverState::from_snapshot(
+                initial_snapshot,
+                initial_presentation,
+            ));
 
             while !context.should_terminate() {
                 step(&mut state, context);
@@ -322,10 +323,57 @@ where
                 let step_presentation = render_solution(&step_snapshot.best_solution);
                 last_iteration = step_snapshot.iteration;
                 last_evaluations = step_snapshot.evaluations;
-                context.report_progress(ObserverState::from_snapshot(step_snapshot, step_presentation));
+                context.report_progress(ObserverState::from_snapshot(
+                    step_snapshot,
+                    step_presentation,
+                ));
             }
 
             RuntimeExecutionOutput::new(finalize(state), last_iteration, last_evaluations)
         },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::algorithms::termination::TerminationCriterion;
+    use crate::solution::RealSolutionBuilder;
+
+    fn snapshot(
+        iteration: usize,
+        evaluations: usize,
+        best_fitness: f64,
+    ) -> ExecutionStateSnapshot<f64> {
+        let best_solution = RealSolutionBuilder::new(1)
+            .set_variable(0, 0.0)
+            .with_quality(best_fitness)
+            .build();
+
+        ExecutionStateSnapshot::new(
+            0,
+            iteration,
+            evaluations,
+            best_solution,
+            best_fitness,
+            best_fitness,
+            best_fitness,
+        )
+    }
+
+    #[test]
+    fn snapshot_with_seq_updates_termination_state() {
+        let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(2)]);
+        let context: ExecutionContext<f64> =
+            ExecutionContext::new(None, criteria, ImprovementDirection::Maximize);
+
+        let initial = context.snapshot_with_seq(snapshot(0, 1, 1.0));
+        assert_eq!(initial.seq_id, 0);
+        assert!(!context.should_terminate());
+
+        let progressed = context.snapshot_with_seq(snapshot(2, 3, 1.2));
+        assert_eq!(progressed.seq_id, 1);
+
+        assert!(context.should_terminate());
+    }
 }
