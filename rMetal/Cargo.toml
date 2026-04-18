@@ -12,6 +12,3 @@ documentation = "https://docs.rs/rmetal"
 readme = "README.md"
 keywords = ["optimization", "metaheuristics", "evolutionary", "genetic", "nsga2"]
 categories = ["algorithms", "science", "simulation"]
-
-[dependencies]
-rmetal_derive = { path = "../rmetal_derive" }

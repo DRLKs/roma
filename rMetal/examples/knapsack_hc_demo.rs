@@ -1,16 +1,19 @@
+use rmetal::HtmlReportObserver;
 use rmetal::algorithms::{
-    Algorithm, HillClimbing, HillClimbingParameters, TerminationCriteria, TerminationCriterion,
+    Algorithm,
+    HillClimbing,
+    HillClimbingParameters,
+    TerminationCriteria,
+    TerminationCriterion,
 };
 use rmetal::observer::{ChartObserver, ConsoleObserver, Observable};
 use rmetal::operator::BitFlipMutation;
 use rmetal::problem::KnapsackBuilder;
 use rmetal::solution_set::SolutionSet;
-use rmetal::utils::cli::{has_flag, seed_from_cli_or};
-use rmetal::HtmlReportObserver;
+use rmetal::utils::cli::seed_from_cli_or;
 
 fn main() {
     let seed = seed_from_cli_or(42);
-    let resume = has_flag("--resume");
 
     let problem = KnapsackBuilder::new()
         .with_capacity(90.0)
@@ -24,8 +27,7 @@ fn main() {
         0.10,
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
     )
-    .with_seed(seed)
-    .with_resume(resume);
+    .with_seed(seed);
     let mut algorithm = HillClimbing::new(parameters);
 
     algorithm.add_observer(Box::new(ConsoleObserver::new(true)));
@@ -34,7 +36,7 @@ fn main() {
 
     let result = algorithm
         .run(&problem)
-        .unwrap_or_else(|error| panic!("Hill Climbing run failed (resume={}): {}", resume, error));
+        .expect("Hill Climbing run failed");
 
     if let Some(best) = result.best_solution() {
         println!(

@@ -158,14 +158,6 @@ impl TerminationController {
     pub fn reason(&self) -> Option<&TerminationReason> {
         self.reason.as_ref()
     }
-
-    pub fn current_iterations(&self) -> usize {
-        self.state.current_iterations
-    }
-
-    pub fn current_evaluations(&self) -> usize {
-        self.state.current_evaluations
-    }
 }
 
 impl TerminationState {
