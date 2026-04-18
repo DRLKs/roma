@@ -384,6 +384,26 @@ where
                     self.resolve_output_path().display()
                 );
             }
+            AlgorithmEvent::Failed { .. } => {
+                println!("  Generating charts from partial run after failure...");
+
+                if let Err(e) = self.generate_convergence_chart() {
+                    eprintln!("Error generating convergence chart: {}", e);
+                }
+
+                if let Err(e) = self.generate_best_by_evaluations_chart() {
+                    eprintln!("Error generating best-by-evaluations chart: {}", e);
+                }
+
+                if let Err(e) = self.generate_metrics_json() {
+                    eprintln!("Error generating metrics JSON: {}", e);
+                }
+
+                println!(
+                    "  Partial charts saved to: {}",
+                    self.resolve_output_path().display()
+                );
+            }
             _ => {}
         }
     }

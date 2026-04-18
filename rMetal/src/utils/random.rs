@@ -19,6 +19,16 @@ impl Random {
     }
 
     #[inline]
+    pub fn state(&self) -> u64 {
+        self.state
+    }
+
+    #[inline]
+    pub fn set_state(&mut self, state: u64) {
+        self.state = state;
+    }
+
+    #[inline]
     pub fn next_u64(&mut self) -> u64 {
         self.state = self.state.wrapping_add(0x9E3779B97F4A7C15);
         let mut z = self.state;

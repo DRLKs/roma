@@ -37,6 +37,7 @@ struct ReportModel {
     algorithm_name: String,
     status_text: String,
     status_class: &'static str,
+    finished: bool,
     total_generations: usize,
     total_evaluations: usize,
     best_overall: f64,
@@ -496,13 +497,22 @@ impl HtmlReportObserver {
             .map(Self::escape_html)
             .unwrap_or_else(|| "Unknown".to_string());
 
-        let (status_text, status_class, error_message) = match &self.error_message {
-            Some(message) => (
-                "Error".to_string(),
+        let finished = self.finished_summary.is_some();
+        let (status_text, status_class, error_message) = match (&self.error_message, finished) {
+            (Some(message), _) => (
+                "Failed".to_string(),
                 "status-error",
                 Some(Self::escape_html(message)),
             ),
-            None => ("Completed".to_string(), "status-completed", None),
+            (None, false) => (
+                "Interrupted".to_string(),
+                "status-error",
+                Some(
+                    "Run did not reach End event; report generated from partial snapshots."
+                        .to_string(),
+                ),
+            ),
+            (None, true) => ("Completed".to_string(), "status-completed", None),
         };
 
         let (total_generations, total_evaluations) = self.summary_totals();
@@ -567,6 +577,7 @@ impl HtmlReportObserver {
             algorithm_name,
             status_text,
             status_class,
+            finished,
             total_generations,
             total_evaluations,
             best_overall,
@@ -584,12 +595,14 @@ impl HtmlReportObserver {
             "<div class=\"kpi-grid\">
     <div class=\"card\"><span class=\"card-label\">Algorithm</span><p class=\"card-value\">{algorithm_name}</p></div>
     <div class=\"card\"><span class=\"card-label\">Status</span><p class=\"card-value\">{status_text}</p></div>
+    <div class=\"card\"><span class=\"card-label\">Run completeness</span><p class=\"card-value\">{finished_label}</p></div>
     <div class=\"card\"><span class=\"card-label\">Total generations</span><p class=\"card-value numeric\">{total_generations}</p></div>
     <div class=\"card\"><span class=\"card-label\">Total evaluations</span><p class=\"card-value numeric\">{total_evaluations}</p></div>
     <div class=\"card\"><span class=\"card-label\">Best fitness observed</span><p class=\"card-value numeric\">{best_overall:.6}</p></div>
   </div>",
             algorithm_name = model.algorithm_name,
             status_text = model.status_text,
+            finished_label = if model.finished { "End event received" } else { "Partial (no End event)" },
             total_generations = model.total_generations,
             total_evaluations = model.total_evaluations,
             best_overall = model.best_overall,
@@ -773,6 +786,27 @@ where
                     );
                 }
             }
+            AlgorithmEvent::Failed {
+                total_generations,
+                total_evaluations,
+                error_message,
+                ..
+            } => {
+                self.error_message = Some(error_message.clone());
+                self.finished_summary = Some((*total_generations, *total_evaluations));
+                if let Err(error) = self.generate_report() {
+                    eprintln!(
+                        "HtmlReportObserver: failed to generate report after failure: {}",
+                        error
+                    );
+                } else {
+                    let report_url = self.report_file_url();
+                    println!(
+                        "  Open report: {}",
+                        Self::terminal_hyperlink(&report_url, "Open HTML report")
+                    );
+                }
+            }
             _ => {}
         }
     }
@@ -794,6 +828,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::observer::traits::AlgorithmObserver;
     use crate::observer::ObserverState;
 
     #[test]
@@ -860,5 +895,63 @@ mod tests {
         assert!(contents.contains("<header class=\"header\">"));
         assert!(contents.contains("class=\"kpi-grid\""));
         assert!(contents.contains("class=\"table-wrap\""));
+    }
+
+    #[test]
+    fn report_shows_failed_status_when_failure_event_is_received() {
+        let base = std::env::temp_dir().join(format!(
+            "rmetal_html_report_failure_test_{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+
+        let mut observer = HtmlReportObserver::new(base);
+        observer.update(&AlgorithmEvent::<bool>::Start {
+            algorithm_name: "FailureAlgorithm".to_string(),
+        });
+        observer.update(&AlgorithmEvent::<bool>::ExecutionStateUpdated {
+            state: ObserverState::new(0, 2, 10, 1.5, 1.0, 0.5, "selected=2/4".to_string()),
+        });
+        observer.update(&AlgorithmEvent::<bool>::Failed {
+            total_generations: 2,
+            total_evaluations: 10,
+            termination_reason: None,
+            error_message: "synthetic failure".to_string(),
+        });
+
+        let report_path = observer.resolve_output_path().join("report.html");
+        let contents = std::fs::read_to_string(report_path).expect("report should be readable");
+
+        assert!(contents.contains("status-badge status-error\">Failed<"));
+        assert!(contents.contains("synthetic failure"));
+    }
+
+    #[test]
+    fn report_shows_interrupted_status_when_finalize_runs_without_end() {
+        let base = std::env::temp_dir().join(format!(
+            "rmetal_html_report_interrupted_test_{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+
+        let mut observer = HtmlReportObserver::new(base);
+        observer.update(&AlgorithmEvent::<bool>::Start {
+            algorithm_name: "InterruptedAlgorithm".to_string(),
+        });
+        observer.update(&AlgorithmEvent::<bool>::ExecutionStateUpdated {
+            state: ObserverState::new(0, 1, 5, 1.0, 0.8, 0.6, "selected=1/4".to_string()),
+        });
+
+        <HtmlReportObserver as AlgorithmObserver<bool, f64>>::finalize(&mut observer);
+
+        let report_path = observer.resolve_output_path().join("report.html");
+        let contents = std::fs::read_to_string(report_path).expect("report should be readable");
+
+        assert!(contents.contains("Interrupted"));
+        assert!(contents.contains("Partial (no End event)"));
     }
 }

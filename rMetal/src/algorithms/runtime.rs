@@ -7,10 +7,18 @@ use crate::observer::traits::AlgorithmObserver;
 use crate::observer::{AlgorithmEvent, ObserverState};
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
+use crate::utils::checkpoint::{
+    checkpoint_file_path, initialize_checkpoint_dir, write_checkpoint_record, CheckpointInitMode,
+    CheckpointPathConfig, CheckpointRecord, CheckpointRunStatus,
+};
+use std::any::Any;
 use std::cell::RefCell;
+use std::panic::{self, AssertUnwindSafe};
+use std::path::PathBuf;
 use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 type ObserverSender<T, Q> = Option<Sender<AlgorithmEvent<T, Q>>>;
 
@@ -46,6 +54,12 @@ where
     sender: ObserverSender<T, Q>,
     termination: RefCell<TerminationController>,
     next_snapshot_seq: RefCell<u64>,
+    checkpoint_dir: Option<PathBuf>,
+    checkpoint_run_id: String,
+    checkpoint_algorithm_name: String,
+    checkpoint_problem_fingerprint: String,
+    checkpoint_state_payload: RefCell<Option<String>>,
+    last_observer_state: RefCell<Option<ObserverState>>,
 }
 
 impl<T, Q> ExecutionContext<T, Q>
@@ -58,11 +72,27 @@ where
         sender: ObserverSender<T, Q>,
         criteria: TerminationCriteria,
         direction: ImprovementDirection,
+        checkpoint_run_id: String,
+        checkpoint_algorithm_name: String,
+        checkpoint_problem_fingerprint: String,
     ) -> Self {
+        let checkpoint_dir = initialize_checkpoint_dir(
+            &CheckpointPathConfig::default(),
+            CheckpointInitMode::BestEffort,
+        )
+        .ok()
+        .and_then(|result| result.directory);
+
         Self {
             sender,
             termination: RefCell::new(TerminationController::new(criteria, direction)),
             next_snapshot_seq: RefCell::new(0),
+            checkpoint_dir,
+            checkpoint_run_id,
+            checkpoint_algorithm_name,
+            checkpoint_problem_fingerprint,
+            checkpoint_state_payload: RefCell::new(None),
+            last_observer_state: RefCell::new(None),
         }
     }
 
@@ -86,16 +116,68 @@ where
                 termination_reason: self.termination_reason(),
             },
         );
+
+        self.write_terminal_checkpoint(
+            total_generations,
+            total_evaluations,
+            CheckpointRunStatus::Completed,
+            None,
+        );
+    }
+
+    pub fn fail(
+        &self,
+        total_generations: usize,
+        total_evaluations: usize,
+        error_message: impl Into<String>,
+    ) {
+        let error_message = error_message.into();
+        emit_event(
+            &self.sender,
+            AlgorithmEvent::Failed {
+                total_generations,
+                total_evaluations,
+                termination_reason: self.termination_reason(),
+                error_message: error_message.clone(),
+            },
+        );
+
+        self.write_terminal_checkpoint(
+            total_generations,
+            total_evaluations,
+            CheckpointRunStatus::Failed,
+            Some(error_message),
+        );
+    }
+
+    pub fn interrupted(&self, total_generations: usize, total_evaluations: usize) {
+        self.write_terminal_checkpoint(
+            total_generations,
+            total_evaluations,
+            CheckpointRunStatus::Interrupted,
+            Some("run ended without explicit End event".to_string()),
+        );
     }
 
     /// Applies one execution snapshot and emits events accordingly.
     pub fn report_progress(&self, observer_state: ObserverState) {
+        self.last_observer_state
+            .borrow_mut()
+            .replace(observer_state.clone());
+        self.write_checkpoint(&observer_state, CheckpointRunStatus::Running, None);
+
         emit_event(
             &self.sender,
             AlgorithmEvent::ExecutionStateUpdated {
                 state: observer_state,
             },
         );
+    }
+
+    pub fn set_checkpoint_payload(&self, payload: Option<String>) {
+        self.checkpoint_state_payload
+            .borrow_mut()
+            .clone_from(&payload);
     }
 
     fn next_snapshot_seq_id(&self) -> u64 {
@@ -122,6 +204,70 @@ where
     /// Returns the terminal reason if a criterion has already been triggered.
     pub fn termination_reason(&self) -> Option<TerminationReason> {
         self.termination.borrow().reason().cloned()
+    }
+
+    pub fn current_progress(&self) -> (usize, usize) {
+        let termination = self.termination.borrow();
+        (
+            termination.current_iterations(),
+            termination.current_evaluations(),
+        )
+    }
+
+    fn write_terminal_checkpoint(
+        &self,
+        total_generations: usize,
+        total_evaluations: usize,
+        status: CheckpointRunStatus,
+        error_message: Option<String>,
+    ) {
+        let state = self
+            .last_observer_state
+            .borrow()
+            .clone()
+            .unwrap_or_else(|| {
+                ObserverState::new(
+                    0,
+                    total_generations,
+                    total_evaluations,
+                    0.0,
+                    0.0,
+                    0.0,
+                    String::new(),
+                )
+            });
+
+        self.write_checkpoint(&state, status, error_message);
+    }
+
+    fn write_checkpoint(
+        &self,
+        state: &ObserverState,
+        status: CheckpointRunStatus,
+        error_message: Option<String>,
+    ) {
+        let Some(checkpoint_dir) = &self.checkpoint_dir else {
+            return;
+        };
+
+        let path = checkpoint_file_path(checkpoint_dir, &self.checkpoint_run_id, state.seq_id);
+        let record = CheckpointRecord {
+            run_id: self.checkpoint_run_id.clone(),
+            algorithm_name: self.checkpoint_algorithm_name.clone(),
+            problem_fingerprint: self.checkpoint_problem_fingerprint.clone(),
+            seq_id: state.seq_id,
+            iteration: state.iteration,
+            evaluations: state.evaluations,
+            best_fitness: state.best_fitness,
+            average_fitness: state.average_fitness,
+            worst_fitness: state.worst_fitness,
+            best_solution_presentation: state.best_solution_presentation.clone(),
+            state_payload: self.checkpoint_state_payload.borrow().clone(),
+            status,
+            error_message,
+        };
+
+        let _ = write_checkpoint_record(&path, &record);
     }
 }
 
@@ -213,12 +359,14 @@ where
 ///
 /// Lifecycle emitted by this runtime:
 /// - `Start` before invoking task,
-/// - `End` on success.
+/// - `End` on success,
+/// - `Failed` if the task panics.
 pub fn run_with_observer_runtime<T, Q, R, F>(
     observers: &mut Vec<Box<dyn AlgorithmObserver<T, Q>>>,
     criteria: TerminationCriteria,
     direction: ImprovementDirection,
     algorithm_name: impl Into<String>,
+    problem_fingerprint: impl Into<String>,
     task: F,
 ) -> R
 where
@@ -227,21 +375,75 @@ where
     F: FnOnce(&ExecutionContext<T, Q>) -> RuntimeExecutionOutput<R>,
 {
     let algorithm_name = algorithm_name.into();
+    let problem_fingerprint = problem_fingerprint.into();
+    let checkpoint_run_id = format!(
+        "{}-{}-{}",
+        algorithm_name,
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_millis())
+            .unwrap_or(0)
+    );
 
     if observers.is_empty() {
-        let context = ExecutionContext::new(None, criteria, direction);
+        let context = ExecutionContext::new(
+            None,
+            criteria,
+            direction,
+            checkpoint_run_id,
+            algorithm_name.clone(),
+            problem_fingerprint.clone(),
+        );
         context.start(algorithm_name);
-        let output = task(&context);
-        context.end(output.total_generations, output.total_evaluations);
-        return output.result;
+
+        let task_result = panic::catch_unwind(AssertUnwindSafe(|| task(&context)));
+        match task_result {
+            Ok(output) => {
+                context.end(output.total_generations, output.total_evaluations);
+                return output.result;
+            }
+            Err(payload) => {
+                let (iterations, evaluations) = context.current_progress();
+                context.fail(
+                    iterations,
+                    evaluations,
+                    panic_payload_message(payload.as_ref()),
+                );
+                panic::resume_unwind(payload);
+            }
+        }
     }
 
     let runtime = ObserverRuntime::new(std::mem::take(observers));
-    let context = ExecutionContext::new(runtime.sender(), criteria, direction);
+    let context = ExecutionContext::new(
+        runtime.sender(),
+        criteria,
+        direction,
+        checkpoint_run_id,
+        algorithm_name.clone(),
+        problem_fingerprint,
+    );
     context.start(algorithm_name);
 
-    let output = task(&context);
-    context.end(output.total_generations, output.total_evaluations);
+    let task_result = panic::catch_unwind(AssertUnwindSafe(|| task(&context)));
+    let mut panic_payload: Option<Box<dyn Any + Send>> = None;
+    let result = match task_result {
+        Ok(output) => {
+            context.end(output.total_generations, output.total_evaluations);
+            Ok(output.result)
+        }
+        Err(payload) => {
+            let (iterations, evaluations) = context.current_progress();
+            context.fail(
+                iterations,
+                evaluations,
+                panic_payload_message(payload.as_ref()),
+            );
+            panic_payload = Some(payload);
+            Err(())
+        }
+    };
 
     // Must be dropped before joining runtime so the channel closes and observer
     // thread can drain and terminate.
@@ -250,7 +452,24 @@ where
     let observers_after = runtime.finish();
     *observers = observers_after;
 
-    output.result
+    if let Some(payload) = panic_payload {
+        panic::resume_unwind(payload);
+    }
+
+    match result {
+        Ok(value) => value,
+        Err(()) => unreachable!("panic payload should have been resumed"),
+    }
+}
+
+fn panic_payload_message(payload: &(dyn std::any::Any + Send)) -> String {
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        return (*message).to_string();
+    }
+    if let Some(message) = payload.downcast_ref::<String>() {
+        return message.clone();
+    }
+    "panic without message".to_string()
 }
 
 /// Spawns one algorithm execution in a dedicated thread.
@@ -278,15 +497,28 @@ where
 }
 
 /// Executes the common step-based algorithm lifecycle using runtime observers.
-pub(crate) fn run_algorithm<T, Q, S, R, Initialize, Step, Snapshot, Finalize, RenderSolution>(
+pub(crate) fn run_algorithm<
+    T,
+    Q,
+    S,
+    R,
+    Initialize,
+    Step,
+    Snapshot,
+    Finalize,
+    CheckpointPayload,
+    RenderSolution,
+>(
     observers: &mut Vec<Box<dyn AlgorithmObserver<T, Q>>>,
     criteria: TerminationCriteria,
     direction: ImprovementDirection,
     algorithm_name: impl Into<String>,
+    problem_fingerprint: impl Into<String>,
     initialize: Initialize,
     mut step: Step,
     snapshot: Snapshot,
     finalize: Finalize,
+    checkpoint_payload: CheckpointPayload,
     render_solution: RenderSolution,
 ) -> R
 where
@@ -296,6 +528,7 @@ where
     Step: FnMut(&mut S, &ExecutionContext<T, Q>),
     Snapshot: Fn(&S) -> ExecutionStateSnapshot<T, Q>,
     Finalize: FnOnce(S) -> R,
+    CheckpointPayload: Fn(&S) -> Option<String>,
     RenderSolution: Fn(&Solution<T, Q>) -> String,
 {
     run_with_observer_runtime(
@@ -303,6 +536,7 @@ where
         criteria,
         direction,
         algorithm_name,
+        problem_fingerprint,
         move |context| {
             let mut state = initialize(context);
 
@@ -310,6 +544,7 @@ where
             let initial_presentation = render_solution(&initial_snapshot.best_solution);
             let mut last_iteration = initial_snapshot.iteration;
             let mut last_evaluations = initial_snapshot.evaluations;
+            context.set_checkpoint_payload(checkpoint_payload(&state));
             context.report_progress(ObserverState::from_snapshot(
                 initial_snapshot,
                 initial_presentation,
@@ -323,6 +558,7 @@ where
                 let step_presentation = render_solution(&step_snapshot.best_solution);
                 last_iteration = step_snapshot.iteration;
                 last_evaluations = step_snapshot.evaluations;
+                context.set_checkpoint_payload(checkpoint_payload(&state));
                 context.report_progress(ObserverState::from_snapshot(
                     step_snapshot,
                     step_presentation,
@@ -338,7 +574,10 @@ where
 mod tests {
     use super::*;
     use crate::algorithms::termination::TerminationCriterion;
+    use crate::observer::traits::AlgorithmObserver;
+    use crate::observer::AlgorithmEvent;
     use crate::solution::RealSolutionBuilder;
+    use std::sync::{Arc, Mutex};
 
     fn snapshot(
         iteration: usize,
@@ -364,8 +603,14 @@ mod tests {
     #[test]
     fn snapshot_with_seq_updates_termination_state() {
         let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(2)]);
-        let context: ExecutionContext<f64> =
-            ExecutionContext::new(None, criteria, ImprovementDirection::Maximize);
+        let context: ExecutionContext<f64> = ExecutionContext::new(
+            None,
+            criteria,
+            ImprovementDirection::Maximize,
+            "runtime-test-run".to_string(),
+            "RuntimeTest".to_string(),
+            "runtime-problem".to_string(),
+        );
 
         let initial = context.snapshot_with_seq(snapshot(0, 1, 1.0));
         assert_eq!(initial.seq_id, 0);
@@ -375,5 +620,63 @@ mod tests {
         assert_eq!(progressed.seq_id, 1);
 
         assert!(context.should_terminate());
+    }
+
+    struct CaptureObserver {
+        events: Arc<Mutex<Vec<String>>>,
+    }
+
+    impl AlgorithmObserver<f64> for CaptureObserver {
+        fn update(&mut self, event: &AlgorithmEvent<f64>) {
+            let mut events = self.events.lock().expect("events lock should be available");
+            match event {
+                AlgorithmEvent::Start { .. } => events.push("Start".to_string()),
+                AlgorithmEvent::ExecutionStateUpdated { .. } => {
+                    events.push("ExecutionStateUpdated".to_string())
+                }
+                AlgorithmEvent::End { .. } => events.push("End".to_string()),
+                AlgorithmEvent::Failed { error_message, .. } => {
+                    events.push(format!("Failed:{}", error_message))
+                }
+                AlgorithmEvent::_Phantom(_) => {}
+            }
+        }
+
+        fn name(&self) -> &str {
+            "CaptureObserver"
+        }
+    }
+
+    #[test]
+    fn runtime_emits_failed_event_when_task_panics() {
+        let events = Arc::new(Mutex::new(Vec::<String>::new()));
+        let observer = CaptureObserver {
+            events: Arc::clone(&events),
+        };
+        let mut observers: Vec<Box<dyn AlgorithmObserver<f64>>> = vec![Box::new(observer)];
+
+        let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(10)]);
+
+        let result: Result<(), Box<dyn Any + Send>> = panic::catch_unwind(AssertUnwindSafe(|| {
+            run_with_observer_runtime::<f64, f64, (), _>(
+                &mut observers,
+                criteria,
+                ImprovementDirection::Maximize,
+                "PanickingDemo",
+                "runtime-test-problem",
+                |_context| -> RuntimeExecutionOutput<()> {
+                    panic!("injected panic for runtime failure event");
+                },
+            )
+        }));
+
+        assert!(result.is_err());
+
+        let events = events.lock().expect("events lock should be available");
+        assert!(events.iter().any(|event| event == "Start"));
+        assert!(events
+            .iter()
+            .any(|event| event.contains("Failed:injected panic for runtime failure event")));
+        assert!(!events.iter().any(|event| event == "End"));
     }
 }

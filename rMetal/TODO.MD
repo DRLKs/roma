@@ -79,3 +79,7 @@
 [ ] 21. Hacer representaciones de las soluciones dependientemente del problema
 
 [ ] 22. Desarrollar reportes sobre los experimentos
+
+
+
+Cambiar algorithm.run añadir el argumento resume

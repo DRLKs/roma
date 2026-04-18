@@ -3,7 +3,6 @@ use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
-use crate::Observable;
 use crate::observer::traits::AlgorithmObserver;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
@@ -13,6 +12,7 @@ use crate::solution_set::traits::SolutionSet;
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::random::{seed_from_time, Random};
 use crate::utils::statistics::calculate_statistics;
+use crate::Observable;
 
 #[derive(Clone)]
 pub struct GeneticAlgorithmParameters<T, C, M, Sel>

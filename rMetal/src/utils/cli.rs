@@ -52,6 +52,13 @@ pub fn argument_value(flag: &str) -> Option<String> {
     None
 }
 
+/// Returns true when a flag appears in CLI args.
+///
+/// Supports exact matches, for example `--resume`.
+pub fn has_flag(flag: &str) -> bool {
+    std::env::args().skip(1).any(|arg| arg == flag)
+}
+
 /// Resolves a path from a CLI flag. If the flag is missing, returns the provided default path.
 ///
 /// Relative paths are resolved against the current working directory.
