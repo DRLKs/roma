@@ -57,7 +57,7 @@ fn html_report_includes_problem_specific_best_solution_rendering() {
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_nanos())
         .unwrap_or(0);
-    let output_dir = std::env::temp_dir().join(format!("rmetal_html_rendering_test_{}", run_id));
+    let output_dir = std::env::temp_dir().join(format!("roma_html_rendering_test_{}", run_id));
 
     let observer = HtmlReportObserver::new(output_dir.clone()).with_flat_output();
     let parameters = HillClimbingParameters::new(

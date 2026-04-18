@@ -1,12 +1,12 @@
 ---
 name: rmetal-multiobjective-semantics
-description: Use when changing NSGA-II or Pareto quality logic in rMetal to preserve strict separation between Pareto dominance and rank-crowding selection metadata.
+description: Use when changing NSGA-II or Pareto quality logic in Roma to preserve strict separation between Pareto dominance and rank-crowding selection metadata.
 ---
 
-# rMetal Multiobjective Semantics
+# Roma Multiobjective Semantics
 
 ## Overview
-In rMetal, Pareto dominance and rank/crowding are different layers. Dominance defines partial order on objectives; rank and crowding only guide selection among non-dominated candidates.
+In Roma, Pareto dominance and rank/crowding are different layers. Dominance defines partial order on objectives; rank and crowding only guide selection among non-dominated candidates.
 
 ## Semantic Rules
 - Pareto dominance for `ParetoCrowdingDistanceQuality` compares objective vectors only.
@@ -18,9 +18,9 @@ In rMetal, Pareto dominance and rank/crowding are different layers. Dominance de
 - Scalar maximize/minimize decisions in single-objective paths: use `rmetal-objective-direction`.
 
 ## Implementation Anchors
-- Dominance semantics: `rMetal/src/solution/traits/dominance.rs`
-- Quality payload shape: `rMetal/src/solution/traits/pareto_crowding_distance_quality.rs`
-- NSGA-II ranking/crowding flow: `rMetal/src/algorithms/implementations/nsga2.rs`
+- Dominance semantics: `roma/src/solution/traits/dominance.rs`
+- Quality payload shape: `roma/src/solution/traits/pareto_crowding_distance_quality.rs`
+- NSGA-II ranking/crowding flow: `roma/src/algorithms/implementations/nsga2.rs`
 
 ## Do Not Do
 - Do not include rank or crowding in dominance checks.

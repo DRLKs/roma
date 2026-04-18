@@ -1,12 +1,12 @@
 ---
 name: rmetal-experiment-reporting
-description: Use when extending rMetal experiment cases, execution, or reporting so run aggregation, failures, and ranking remain internally consistent.
+description: Use when extending Roma experiment cases, execution, or reporting so run aggregation, failures, and ranking remain internally consistent.
 ---
 
-# rMetal Experiment Reporting
+# Roma Experiment Reporting
 
 ## Overview
-Experiment reporting in rMetal is a data pipeline: case metadata -> run outcomes -> summaries -> text output. Preserve this flow to avoid misleading comparisons.
+Experiment reporting in Roma is a data pipeline: case metadata -> run outcomes -> summaries -> text output. Preserve this flow to avoid misleading comparisons.
 
 ## When Not to Use
 - Pure algorithm runtime internals with no experiment or reporting impact.
@@ -18,10 +18,10 @@ Experiment reporting in rMetal is a data pipeline: case metadata -> run outcomes
 - Sort summaries according to `ImprovementDirection`.
 
 ## Key Components
-- Case interface: `rMetal/src/experiment/traits.rs`
-- Execution and aggregation: `rMetal/src/experiment/executor.rs`
-- Summary formatting: `rMetal/src/experiment/report.rs`
-- Parallel job partitioning: `rMetal/src/experiment/parallel.rs`
+- Case interface: `roma/src/experiment/traits.rs`
+- Execution and aggregation: `roma/src/experiment/executor.rs`
+- Summary formatting: `roma/src/experiment/report.rs`
+- Parallel job partitioning: `roma/src/experiment/parallel.rs`
 
 ## Required Checks When Editing
 1. Failure accounting remains separate from successful result aggregation.

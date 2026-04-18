@@ -1,9 +1,9 @@
 ---
 name: rmetal-solution-quality-cache
-description: Use when mutating Solution variables or quality payloads in rMetal to preserve cache invalidation and reevaluation invariants.
+description: Use when mutating Solution variables or quality payloads in Roma to preserve cache invalidation and reevaluation invariants.
 ---
 
-# rMetal Solution Quality Cache
+# Roma Solution Quality Cache
 
 ## Overview
 `Solution<T, Q>` treats quality as a cache. Any variable mutation must imply stale quality and force reevaluation before comparisons.
@@ -32,9 +32,9 @@ description: Use when mutating Solution variables or quality payloads in rMetal 
 - Bypass existing mutation APIs and forget invalidation.
 
 ## Key Paths
-- `rMetal/src/solution/mod.rs`
-- `rMetal/src/algorithms/implementations/genetic_algorithm.rs`
-- `rMetal/src/algorithms/implementations/nsga2.rs`
-- `rMetal/src/algorithms/implementations/hill_climbing.rs`
-- `rMetal/src/algorithms/implementations/simulated_annealing.rs`
-- `rMetal/src/algorithms/implementations/pso.rs`
+- `roma/src/solution/mod.rs`
+- `roma/src/algorithms/implementations/genetic_algorithm.rs`
+- `roma/src/algorithms/implementations/nsga2.rs`
+- `roma/src/algorithms/implementations/hill_climbing.rs`
+- `roma/src/algorithms/implementations/simulated_annealing.rs`
+- `roma/src/algorithms/implementations/pso.rs`

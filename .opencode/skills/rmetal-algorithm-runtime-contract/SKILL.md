@@ -1,12 +1,12 @@
 ---
 name: rmetal-algorithm-runtime-contract
-description: Use when adding, refactoring, or overriding Algorithm execution paths in rMetal to keep the shared initialize-step-snapshot-finalize runtime lifecycle intact.
+description: Use when adding, refactoring, or overriding Algorithm execution paths in Roma to keep the shared initialize-step-snapshot-finalize runtime lifecycle intact.
 ---
 
-# rMetal Algorithm Runtime Contract
+# Roma Algorithm Runtime Contract
 
 ## Overview
-All algorithms in rMetal implement one lifecycle through the `Algorithm` trait and runtime helpers. Keep behavior consistent so observers, termination, and reports stay correct.
+All algorithms in Roma implement one lifecycle through the `Algorithm` trait and runtime helpers. Keep behavior consistent so observers, termination, and reports stay correct.
 
 ## Contract
 - Implement `Algorithm<T, Q>` with coherent `StepState`.
@@ -32,6 +32,6 @@ All algorithms in rMetal implement one lifecycle through the `Algorithm` trait a
 - Confirm observer `Start` and `End` events are still emitted once per run.
 
 ## Relevant Files
-- `rMetal/src/algorithms/traits.rs`
-- `rMetal/src/algorithms/runtime.rs`
-- `rMetal/src/algorithms/termination.rs`
+- `roma/src/algorithms/traits.rs`
+- `roma/src/algorithms/runtime.rs`
+- `roma/src/algorithms/termination.rs`

@@ -427,7 +427,7 @@ mod tests {
     #[test]
     fn creates_structured_run_directory_on_start() {
         let base = std::env::temp_dir().join(format!(
-            "rmetal_chart_observer_test_{}",
+            "roma_chart_observer_test_{}",
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .map(|d| d.as_nanos())
@@ -458,7 +458,7 @@ mod tests {
     #[test]
     fn writes_chart_files_inside_run_directory() {
         let base = std::env::temp_dir().join(format!(
-            "rmetal_chart_observer_files_test_{}",
+            "roma_chart_observer_files_test_{}",
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .map(|d| d.as_nanos())
@@ -490,7 +490,7 @@ mod tests {
     #[test]
     fn writes_metrics_json_file_inside_run_directory() {
         let base = std::env::temp_dir().join(format!(
-            "rmetal_chart_observer_metrics_test_{}",
+            "roma_chart_observer_metrics_test_{}",
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .map(|d| d.as_nanos())
@@ -531,7 +531,7 @@ mod tests {
     #[test]
     fn convergence_chart_excludes_average_and_worst_series() {
         let base = std::env::temp_dir().join(format!(
-            "rmetal_chart_observer_best_only_test_{}",
+            "roma_chart_observer_best_only_test_{}",
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .map(|d| d.as_nanos())
@@ -577,7 +577,7 @@ mod tests {
     #[test]
     fn downsamples_convergence_chart_points() {
         let base = std::env::temp_dir().join(format!(
-            "rmetal_chart_observer_downsample_test_{}",
+            "roma_chart_observer_downsample_test_{}",
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .map(|d| d.as_nanos())

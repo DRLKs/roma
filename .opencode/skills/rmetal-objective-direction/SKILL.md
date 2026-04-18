@@ -1,9 +1,9 @@
 ---
 name: rmetal-objective-direction
-description: Use when implementing or refactoring scalar optimization comparisons in rMetal to preserve maximize versus minimize semantics across algorithms and reports.
+description: Use when implementing or refactoring scalar optimization comparisons in Roma to preserve maximize versus minimize semantics across algorithms and reports.
 ---
 
-# rMetal Objective Direction
+# Roma Objective Direction
 
 ## Overview
 Objective direction is framework-level behavior, not algorithm-local preference. Always derive comparison semantics from the problem direction.
@@ -13,13 +13,13 @@ Objective direction is framework-level behavior, not algorithm-local preference.
 
 ## Mandatory Rules
 - Use `problem.get_improvement_direction()` as the source of truth.
-- For scalar decisions, use `is_better(candidate, reference, direction)` from `rMetal/src/algorithms/objective.rs`.
+- For scalar decisions, use `is_better(candidate, reference, direction)` from `roma/src/algorithms/objective.rs`.
 - For loss-based acceptance (for example simulated annealing), use `non_improving_loss`.
 - Keep report ordering and best/worst derivation aligned with the same direction.
 
 ## Use This In
-- `rMetal/src/algorithms/implementations/*.rs` when selecting survivors or updating best solutions.
-- `rMetal/src/experiment/executor.rs` and related report summarization paths.
+- `roma/src/algorithms/implementations/*.rs` when selecting survivors or updating best solutions.
+- `roma/src/experiment/executor.rs` and related report summarization paths.
 - Any utility that computes best/worst scalar values.
 
 ## Do Not Do

@@ -1,9 +1,9 @@
 ---
 name: rmetal-skill-router
-description: Use when starting a rMetal coding task and you need to pick the most relevant project skill before changing code.
+description: Use when starting a Roma coding task and you need to pick the most relevant project skill before changing code.
 ---
 
-# rMetal Skill Router
+# Roma Skill Router
 
 ## Overview
 This skill is an index. Use it to choose one primary `rmetal-*` skill quickly, then load that skill before implementing changes.
@@ -23,4 +23,4 @@ This skill is an index. Use it to choose one primary `rmetal-*` skill quickly, t
 - Data ingestion benchmark flow: `rmetal-data-adapter-policy` + `rmetal-experiment-reporting`.
 
 ## When Not to Use
-- Tasks that do not modify rMetal source behavior (for example external docs-only edits).
+- Tasks that do not modify Roma source behavior (for example external docs-only edits).

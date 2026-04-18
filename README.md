@@ -1,31 +1,72 @@
-<img src="./images/rMetal_logo.png" alt="rMetal Logo" width="250"/>
-
+<img src="./images/rMetal_logo.png" alt="Roma logo" width="250"/>
 
 <p align="center">
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Made%20with-Rust-black?style=for-the-badge&logo=rust" alt="Made with Rust"></a>
-  <a href="https://crates.io/"><img src="https://img.shields.io/badge/crates.io-soon-red?style=for-the-badge&logo=rust" alt="Crates.io"></a>
-  <a href="https://docs.rs/"><img src="https://img.shields.io/badge/docs.rs-WIP-blue?style=for-the-badge&logo=rust" alt="Docs.rs"></a>
-  <img src="https://img.shields.io/badge/Status-Development-yellow?style=for-the-badge" alt="Build Status">
+  <a href="https://crates.io/crates/roma"><img src="https://img.shields.io/badge/crates.io-roma-orange?style=for-the-badge&logo=rust" alt="Crates.io"></a>
+  <a href="https://docs.rs/roma"><img src="https://img.shields.io/badge/docs.rs-roma-blue?style=for-the-badge&logo=readthedocs" alt="docs.rs"></a>
+  <a href="https://github.com/DRLKs/roma/actions/workflows/rust-tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/DRLKs/roma/rust-tests.yml?branch=main&style=for-the-badge" alt="CI"></a>
 </p>
 
----
+# Roma
 
-## Descripción y Motivación
+Roma is a Rust metaheuristics framework for optimization and experimentation.
 
-`rMetal` es una biblioteca de optimización metaheurística escrita íntegramente en Rust. Su objetivo principal es proporcionar un marco de trabajo (*framework*) potente, flexible e idiomático para resolver problemas de optimización complejos, tanto de un solo objetivo (mono-objetivo) como de múltiples objetivos (multiobjetivo).
+It provides a practical toolkit to model optimization problems, execute
+single-objective and multi-objective algorithms, observe runtime behavior, and
+compare experiments with repeatable settings.
 
-La motivación detrás de `rMetal` surge de la necesidad de aplicar la **seguridad de memoria y el alto rendimiento** de Rust al campo de la investigación operativa.
+## Highlights
 
-Este proyecto es el resultado de mi **TFG**, con el que termino mis estudios sobre la ingeniería del software.
+- Unified algorithm runtime with shared lifecycle and termination handling.
+- Built-in algorithms: Hill Climbing, Genetic Algorithm, Simulated Annealing,
+  PSO, and NSGA-II.
+- Generic `Problem<T, Q>` and `Solution<T, Q>` abstractions.
+- Observer system with console output, SVG charts, and HTML reports.
+- Experiment runner for repeated case execution and summary statistics.
 
----
-
-## Instalación
-
-`rMetal` está diseñado para ser integrado en proyectos Rust existentes. Una vez publicado en crates.io (actualmente en WIP), podrás añadirlo a tu `Cargo.toml`:
+## Installation
 
 ```toml
 [dependencies]
-rmetal = "0.1.0"
-# O directamente desde git mientras está en desarrollo
-# rMetal = { git = "[https://github.com/DRLKs/rMetal.git](https://github.com/DRLKs/rMetal.git)" }
+roma = "0.1.0"
+```
+
+While development is ongoing, you can also depend on Git:
+
+```toml
+[dependencies]
+roma = { git = "https://github.com/DRLKs/roma.git" }
+```
+
+## Documentation
+
+- Crate docs: <https://docs.rs/roma>
+- Crate README (docs.rs source): `rMetal/README.md`
+- API entry point: `rMetal/src/lib.rs`
+
+## Repository Layout
+
+- `rMetal/` - main Rust crate (`roma`)
+- `docs/` - project and architecture notes
+- `images/` - visual assets
+
+## Quick Start
+
+Run the crate tests locally:
+
+```bash
+cargo test --manifest-path rMetal/Cargo.toml
+```
+
+Build API documentation locally:
+
+```bash
+cargo doc --manifest-path rMetal/Cargo.toml --no-deps
+```
+
+## License
+
+Licensed under either of the following, at your option:
+
+- MIT License
+- Apache License, Version 2.0
