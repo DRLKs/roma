@@ -1,4 +1,4 @@
-use rmetal::{
+use roma::{
     BinaryTournamentSelection, BitFlipMutation, Experiment,
     GeneticAlgorithmParameters, HillClimbingParameters, KnapsackBuilder, SinglePointCrossover,
     TerminationCriteria, TerminationCriterion,

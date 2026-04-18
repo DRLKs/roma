@@ -1,7 +1,7 @@
-use rmetal::algorithms::ImprovementDirection;
-use rmetal::problem::Problem;
-use rmetal::solution::Solution;
-use rmetal::utils::Random;
+use roma::algorithms::ImprovementDirection;
+use roma::problem::Problem;
+use roma::solution::Solution;
+use roma::utils::Random;
 
 struct DefaultFormattingProblem {
     description: String,

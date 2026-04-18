@@ -1,3 +1,11 @@
+//! Problem definitions and built-in benchmark/problem implementations.
+//!
+//! The central abstraction is [`Problem`], which defines how to:
+//! - create random candidate solutions,
+//! - evaluate quality/fitness,
+//! - declare objective direction (minimize/maximize),
+//! - render domain-specific solution summaries for observers.
+
 pub(crate) mod implementations;
 pub(crate) mod traits;
 

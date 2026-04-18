@@ -1,16 +1,16 @@
-use rmetal::HtmlReportObserver;
-use rmetal::algorithms::{
+use roma::HtmlReportObserver;
+use roma::algorithms::{
     Algorithm,
     HillClimbing,
     HillClimbingParameters,
     TerminationCriteria,
     TerminationCriterion,
 };
-use rmetal::observer::{ChartObserver, ConsoleObserver, Observable};
-use rmetal::operator::BitFlipMutation;
-use rmetal::problem::KnapsackBuilder;
-use rmetal::solution_set::SolutionSet;
-use rmetal::utils::cli::seed_from_cli_or;
+use roma::observer::{ChartObserver, ConsoleObserver, Observable};
+use roma::operator::BitFlipMutation;
+use roma::problem::KnapsackBuilder;
+use roma::solution_set::SolutionSet;
+use roma::utils::cli::seed_from_cli_or;
 
 fn main() {
     let seed = seed_from_cli_or(42);

@@ -1,11 +1,11 @@
-use rmetal::TspProblem;
-use rmetal::algorithms::{
+use roma::TspProblem;
+use roma::algorithms::{
     HillClimbingParameters,
     TerminationCriteria,
     TerminationCriterion,
 };
-use rmetal::experiment::Experiment;
-use rmetal::operator::SwapMutation;
+use roma::experiment::Experiment;
+use roma::operator::SwapMutation;
 
 fn main() {
     let problem = TspProblem::with_distance_matrix(vec![

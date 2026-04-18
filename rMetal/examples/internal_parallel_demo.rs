@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use rmetal::algorithms::{
+use roma::algorithms::{
     Algorithm,
     GeneticAlgorithm,
     GeneticAlgorithmParameters,
@@ -10,11 +10,11 @@ use rmetal::algorithms::{
     TerminationCriteria,
     TerminationCriterion,
 };
-use rmetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
-use rmetal::problem::{KnapsackBuilder, KnapsackProblem};
-use rmetal::solution_set::SolutionSet;
-use rmetal::utils::{measure_result, speedup};
-use rmetal::utils::cli::seed_from_cli_or;
+use roma::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
+use roma::problem::{KnapsackBuilder, KnapsackProblem};
+use roma::solution_set::SolutionSet;
+use roma::utils::{measure_result, speedup};
+use roma::utils::cli::seed_from_cli_or;
 
 fn build_problem() -> KnapsackProblem {
     let items: Vec<(f64, f64)> = (0..90)

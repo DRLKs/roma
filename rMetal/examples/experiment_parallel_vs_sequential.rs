@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use rmetal::algorithms::{
+use roma::algorithms::{
     GeneticAlgorithmParameters,
     HillClimbingParameters,
     PSOParameters,
@@ -8,12 +8,12 @@ use rmetal::algorithms::{
     TerminationCriteria,
     TerminationCriterion,
 };
-use rmetal::experiment::{Experiment, ExperimentReport};
-use rmetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
-use rmetal::problem::KnapsackBuilder;
-use rmetal::utils::{measure_result, speedup};
+use roma::experiment::{Experiment, ExperimentReport};
+use roma::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
+use roma::problem::KnapsackBuilder;
+use roma::utils::{measure_result, speedup};
 
-fn build_problem() -> impl rmetal::problem::Problem<bool, f64> + Sync {
+fn build_problem() -> impl roma::problem::Problem<bool, f64> + Sync {
     KnapsackBuilder::new()
         .with_capacity(150.0)
         .add_item(1.0, 2.0)

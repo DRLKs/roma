@@ -3,7 +3,17 @@ use crate::solution::Solution;
 use crate::utils::random::Random;
 
 /// Trait that defines the basic interface for optimization problems.
-/// * `T` - Type of the solution variables
+///
+/// # Type Parameters
+/// - `T`: decision variable type.
+/// - `Q`: quality payload type (defaults to `f64`).
+///
+/// # Responsibilities
+/// Implementors provide:
+/// - random solution creation,
+/// - evaluation of candidate solutions,
+/// - objective direction (maximize or minimize),
+/// - optional domain-specific formatting used by observers/reports.
 pub trait Problem<T, Q = f64>
 where
     T: Clone,

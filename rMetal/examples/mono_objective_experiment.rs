@@ -1,4 +1,4 @@
-use rmetal::algorithms::{
+use roma::algorithms::{
     GeneticAlgorithmParameters,
     HillClimbingParameters,
     PSOParameters,
@@ -6,9 +6,9 @@ use rmetal::algorithms::{
     TerminationCriteria,
     TerminationCriterion,
 };
-use rmetal::experiment::Experiment;
-use rmetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
-use rmetal::problem::KnapsackBuilder;
+use roma::experiment::Experiment;
+use roma::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
+use roma::problem::KnapsackBuilder;
 
 fn main() {
     let problem = KnapsackBuilder::new()

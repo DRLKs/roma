@@ -1,11 +1,11 @@
-use rmetal::algorithms::{
+use roma::algorithms::{
     Algorithm, HillClimbing, HillClimbingParameters, TerminationCriteria, TerminationCriterion,
 };
-use rmetal::observer::{ChartObserver, ConsoleObserver, HtmlReportObserver, Observable};
-use rmetal::operator::{MutationOperator, Operator};
-use rmetal::problem::KnapsackBuilder;
-use rmetal::solution::Solution;
-use rmetal::utils::{
+use roma::observer::{ChartObserver, ConsoleObserver, HtmlReportObserver, Observable};
+use roma::operator::{MutationOperator, Operator};
+use roma::problem::KnapsackBuilder;
+use roma::solution::Solution;
+use roma::utils::{
     latest_checkpoint_record_for_algorithm, resolve_checkpoint_dir, CheckpointPathConfig,
     CheckpointRunStatus, Random,
 };

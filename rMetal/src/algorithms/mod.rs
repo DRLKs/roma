@@ -1,3 +1,14 @@
+//! Algorithm layer for optimization execution.
+//!
+//! This module exposes:
+//! - the [`Algorithm`] trait (shared runtime contract),
+//! - built-in algorithm implementations,
+//! - termination criteria and execution snapshots,
+//! - async helpers for running multiple algorithm instances.
+//!
+//! Typical users consume algorithm types through `roma::algorithms` or
+//! `roma::prelude`.
+
 pub(crate) mod async_runner;
 pub(crate) mod implementations;
 pub(crate) mod objective;

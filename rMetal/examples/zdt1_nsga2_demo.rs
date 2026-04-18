@@ -1,15 +1,15 @@
-use rmetal::algorithms::{
+use roma::algorithms::{
     Algorithm,
     NSGAII,
     NSGAIIParameters,
     TerminationCriteria,
     TerminationCriterion,
 };
-use rmetal::{ChartObserver, ConsoleObserver, Observable};
-use rmetal::operator::{MultiObjectiveTournamentSelection, PolynomialMutation, SBXCrossover};
-use rmetal::problem::ZDT1Problem;
-use rmetal::solution_set::SolutionSet;
-use rmetal::utils::cli::seed_from_cli_or;
+use roma::{ChartObserver, ConsoleObserver, Observable};
+use roma::operator::{MultiObjectiveTournamentSelection, PolynomialMutation, SBXCrossover};
+use roma::problem::ZDT1Problem;
+use roma::solution_set::SolutionSet;
+use roma::utils::cli::seed_from_cli_or;
 
 fn main() {
     let seed = seed_from_cli_or(42);

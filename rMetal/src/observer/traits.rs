@@ -1,9 +1,10 @@
 use crate::observer::AlgorithmEvent;
 
-/// Trait for observing algorithm execution
+/// Trait for observing algorithm execution.
 ///
-/// Observers can monitor the algorithm's progress and perform actions.
-/// Implementations are executed from a dedicated observer thread.
+/// Observers receive lifecycle and progress events emitted by the runtime.
+/// Typical use cases include console output, report generation, metrics export,
+/// and external integrations.
 pub trait AlgorithmObserver<T, Q = f64>: Send + 'static
 where
     T: Clone + Send + 'static,
@@ -19,7 +20,7 @@ where
     fn name(&self) -> &str;
 }
 
-/// Trait for objects that can be observed (algorithms)
+/// Trait for objects that can register and manage observers.
 pub trait Observable<T, Q = f64>
 where
     T: Clone + Send + 'static,

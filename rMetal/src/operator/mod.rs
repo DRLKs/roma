@@ -1,3 +1,11 @@
+//! Variation and selection operators used by algorithms.
+//!
+//! This module includes concrete mutation, crossover, and selection operators,
+//! plus trait interfaces for custom operator implementations.
+//!
+//! Convenience submodules [`mutation`], [`crossover`], and [`selection`] provide
+//! short access paths to commonly used operator types.
+
 pub(crate) mod crossover_operator_implementations;
 pub(crate) mod mutation_operator_implementations;
 pub(crate) mod selection_operator_implementations;

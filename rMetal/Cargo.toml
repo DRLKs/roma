@@ -1,14 +1,18 @@
 [package]
-name = "rmetal"
+name = "roma"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.90"
 authors = ["David Muñoz del Valle <tu@email.com>"]
 license = "MIT OR Apache-2.0"
 description = "A Rust metaheuristics framework inspired by jMetal for optimization and experimentation."
-repository = "https://github.com/DRLKs/rMetal"
-homepage = "https://github.com/DRLKs/rMetal"
-documentation = "https://docs.rs/rmetal"
+repository = "https://github.com/DRLKs/roma"
+homepage = "https://github.com/DRLKs/roma"
+documentation = "https://docs.rs/roma"
 readme = "README.md"
 keywords = ["optimization", "metaheuristics", "evolutionary", "genetic", "nsga2"]
 categories = ["algorithms", "science", "simulation"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

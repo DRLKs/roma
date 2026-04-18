@@ -1,18 +1,18 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use rmetal::{ChartObserver, HtmlReportObserver, Observable};
-use rmetal::algorithms::{
+use roma::{ChartObserver, HtmlReportObserver, Observable};
+use roma::algorithms::{
     Algorithm,
     GeneticAlgorithm,
     GeneticAlgorithmParameters,
     TerminationCriteria,
     TerminationCriterion,
 };
-use rmetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
-use rmetal::problem::build_knapsack_from_records;
-use rmetal::solution_set::SolutionSet;
-use rmetal::utils::cli::{
+use roma::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
+use roma::problem::build_knapsack_from_records;
+use roma::solution_set::SolutionSet;
+use roma::utils::cli::{
     argument_value,
     infer_format_from_extension,
     parse_f64_flag_or,
@@ -20,9 +20,9 @@ use rmetal::utils::cli::{
     resolve_path_from_flag_or_default,
     seed_from_cli_or,
 };
-use rmetal::utils::csv_adapter::read_csv_records;
-use rmetal::utils::json_adapter::{get_json_value, read_json_records};
-use rmetal::utils::yaml_adapter::{get_yaml_value, read_yaml_records};
+use roma::utils::csv_adapter::read_csv_records;
+use roma::utils::json_adapter::{get_json_value, read_json_records};
+use roma::utils::yaml_adapter::{get_yaml_value, read_yaml_records};
 
 #[derive(Debug, Clone, Copy)]
 enum InputFormat {

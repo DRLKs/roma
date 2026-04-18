@@ -1,3 +1,9 @@
+//! Observer system for algorithm execution events.
+//!
+//! Observers consume [`AlgorithmEvent`] values emitted by the shared runtime.
+//! Built-in observers include console output, SVG chart generation, and HTML
+//! summary reports.
+
 pub(crate) mod implementations;
 pub(crate) mod traits;
 

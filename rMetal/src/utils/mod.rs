@@ -1,3 +1,8 @@
+//! Utility modules used across Roma.
+//!
+//! This includes random utilities, benchmarking helpers, checkpoint management,
+//! file-format adapters (CSV/JSON/YAML), and chart/statistics support.
+
 pub mod benchmark;
 pub mod chart;
 pub mod checkpoint;

@@ -1,4 +1,4 @@
-use rmetal::{
+use roma::{
     Algorithm,
     HillClimbing,
     HillClimbingParameters,

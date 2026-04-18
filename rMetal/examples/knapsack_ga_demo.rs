@@ -1,15 +1,15 @@
-use rmetal::algorithms::{
+use roma::algorithms::{
     Algorithm,
     GeneticAlgorithm,
     GeneticAlgorithmParameters,
     TerminationCriteria,
     TerminationCriterion,
 };
-use rmetal::observer::{ChartObserver, ConsoleObserver, Observable};
-use rmetal::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
-use rmetal::problem::KnapsackBuilder;
-use rmetal::solution_set::SolutionSet;
-use rmetal::utils::cli::seed_from_cli_or;
+use roma::observer::{ChartObserver, ConsoleObserver, Observable};
+use roma::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
+use roma::problem::KnapsackBuilder;
+use roma::solution_set::SolutionSet;
+use roma::utils::cli::seed_from_cli_or;
 
 fn main() {
     let seed = seed_from_cli_or(42);

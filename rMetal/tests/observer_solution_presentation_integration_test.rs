@@ -1,12 +1,12 @@
-use rmetal::algorithms::{
+use roma::algorithms::{
     Algorithm, HillClimbing, HillClimbingParameters, ImprovementDirection, TerminationCriteria,
     TerminationCriterion,
 };
-use rmetal::observer::{AlgorithmEvent, AlgorithmObserver, Observable};
-use rmetal::operator::BitFlipMutation;
-use rmetal::problem::Problem;
-use rmetal::solution::Solution;
-use rmetal::utils::Random;
+use roma::observer::{AlgorithmEvent, AlgorithmObserver, Observable};
+use roma::operator::BitFlipMutation;
+use roma::problem::Problem;
+use roma::solution::Solution;
+use roma::utils::Random;
 use std::sync::{Arc, Mutex};
 
 struct CapturePresentationObserver {
