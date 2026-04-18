@@ -9,14 +9,15 @@ pub mod solution;
 pub mod solution_set;
 pub mod utils;
 
+pub use rmetal_derive::{rmetal_algorithm, rmetal_case, AlgorithmCase, Observable};
+
 // Top-level re-exports for ergonomic imports.
 pub use algorithms::{
     run_algorithm_instances_async, run_algorithms_async, spawn_algorithm_run, Algorithm,
-    ExecutionStateSnapshot, GeneticAlgorithm,
-    GeneticAlgorithmParameters, HillClimbing, HillClimbingParameters, ImprovementDirection,
-    NSGAIIParameters, PSOParameters, SimulatedAnnealing, SimulatedAnnealingParameters,
-    TerminationController, TerminationCriteria, TerminationCriterion, TerminationReason,
-    TerminationState, NSGAII, PSO,
+    ExecutionStateSnapshot, GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing,
+    HillClimbingParameters, ImprovementDirection, NSGAIIParameters, PSOParameters,
+    SimulatedAnnealing, SimulatedAnnealingParameters, TerminationController, TerminationCriteria,
+    TerminationCriterion, TerminationReason, TerminationState, NSGAII, PSO,
 };
 pub use experiment::Experiment;
 pub use observer::{
@@ -38,6 +39,14 @@ pub use solution::{
     PermutationSolutionBuilder, RealSolutionBuilder, Solution, StringSolutionBuilder,
 };
 pub use solution_set::{DequeSolutionSet, SolutionSet, VectorSolutionSet};
+pub use utils::{
+    checkpoint_dir_candidates, checkpoint_file_path, ensure_checkpoint_dir,
+    initialize_checkpoint_dir, latest_checkpoint_record, latest_checkpoint_record_for_algorithm,
+    latest_resumable_checkpoint_for, list_checkpoint_run_ids, list_checkpoints,
+    read_checkpoint_record, resolve_checkpoint_dir, write_checkpoint_record, CheckpointDirSource,
+    CheckpointInitMode, CheckpointInitResult, CheckpointPathConfig, CheckpointRecord,
+    CheckpointRunStatus,
+};
 
 /// Commonly used types and traits.
 ///
@@ -45,11 +54,10 @@ pub use solution_set::{DequeSolutionSet, SolutionSet, VectorSolutionSet};
 pub mod prelude {
     pub use crate::algorithms::{
         run_algorithm_instances_async, run_algorithms_async, spawn_algorithm_run, Algorithm,
-        ExecutionStateSnapshot, GeneticAlgorithm,
-        GeneticAlgorithmParameters, HillClimbing, HillClimbingParameters, ImprovementDirection,
-        NSGAIIParameters, PSOParameters, SimulatedAnnealing, SimulatedAnnealingParameters,
-        TerminationController, TerminationCriteria, TerminationCriterion, TerminationReason,
-        NSGAII, PSO,
+        ExecutionStateSnapshot, GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing,
+        HillClimbingParameters, ImprovementDirection, NSGAIIParameters, PSOParameters,
+        SimulatedAnnealing, SimulatedAnnealingParameters, TerminationController,
+        TerminationCriteria, TerminationCriterion, TerminationReason, NSGAII, PSO,
     };
 
     pub use crate::operator::{
@@ -78,5 +86,13 @@ pub mod prelude {
 
     pub use crate::solution_set::{DequeSolutionSet, SolutionSet, VectorSolutionSet};
 
-    pub use crate::utils::{seed_from_cli_or, seed_from_time, Random};
+    pub use crate::utils::{
+        checkpoint_dir_candidates, checkpoint_file_path, ensure_checkpoint_dir,
+        initialize_checkpoint_dir, latest_checkpoint_record,
+        latest_checkpoint_record_for_algorithm, latest_resumable_checkpoint_for,
+        list_checkpoint_run_ids, list_checkpoints, read_checkpoint_record, resolve_checkpoint_dir,
+        seed_from_cli_or, seed_from_time, write_checkpoint_record, CheckpointDirSource,
+        CheckpointInitMode, CheckpointInitResult, CheckpointPathConfig, CheckpointRecord,
+        CheckpointRunStatus, Random,
+    };
 }

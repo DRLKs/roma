@@ -79,6 +79,23 @@ where
                     }
                 }
             }
+            AlgorithmEvent::Failed {
+                total_generations,
+                total_evaluations,
+                termination_reason,
+                error_message,
+            } => {
+                println!(
+                    "  Algorithm failed after {} generations and {} evaluations",
+                    total_generations, total_evaluations
+                );
+                println!("  Failure reason: {}", error_message);
+                if self.verbose {
+                    if let Some(reason) = termination_reason {
+                        println!("  Last termination snapshot: {:?}", reason);
+                    }
+                }
+            }
             _ => {}
         }
     }

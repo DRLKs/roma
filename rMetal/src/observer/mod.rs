@@ -89,5 +89,12 @@ where
         total_evaluations: usize,
         termination_reason: Option<TerminationReason>,
     },
+    /// Algorithm has failed before finishing
+    Failed {
+        total_generations: usize,
+        total_evaluations: usize,
+        termination_reason: Option<TerminationReason>,
+        error_message: String,
+    },
     _Phantom(std::marker::PhantomData<(T, Q)>),
 }
