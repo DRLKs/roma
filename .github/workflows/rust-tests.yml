@@ -4,18 +4,18 @@ on:
   push:
     branches: [ "main", "master", "develop" ]
     paths:
-      - 'rMetal/src/**'
-      - 'rMetal/tests/**'
-      - 'rMetal/Cargo.toml'
-      - 'rMetal/Cargo.lock'
+      - 'roma/src/**'
+      - 'roma/tests/**'
+      - 'roma/Cargo.toml'
+      - 'roma/Cargo.lock'
       - '.github/workflows/rust-tests.yml'
   pull_request:
     branches: [ "main", "master", "develop" ]
     paths:
-      - 'rMetal/src/**'
-      - 'rMetal/tests/**'
-      - 'rMetal/Cargo.toml'
-      - 'rMetal/Cargo.lock'
+      - 'roma/src/**'
+      - 'roma/tests/**'
+      - 'roma/Cargo.toml'
+      - 'roma/Cargo.lock'
       - '.github/workflows/rust-tests.yml'
 
 env:
@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./rMetal
+        working-directory: ./roma
     
     steps:
     - name: Checkout repository
@@ -51,7 +51,7 @@ jobs:
     - name: Cache cargo build
       uses: actions/cache@v4
       with:
-        path: rMetal/target
+        path: roma/target
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
         
     - name: Run tests
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./rMetal
+        working-directory: ./roma
     
     steps:
     - name: Checkout repository
@@ -74,7 +74,7 @@ jobs:
     - name: Cache cargo build
       uses: actions/cache@v4
       with:
-        path: rMetal/target
+        path: roma/target
         key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
         
     - name: Build
