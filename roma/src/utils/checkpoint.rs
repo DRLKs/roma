@@ -1,10 +1,13 @@
 use std::env;
 use std::fs;
 use std::io;
+use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const DEFAULT_CHECKPOINT_ENV_VAR: &str = "ROMA_CHECKPOINT_DIR";
 pub const DEFAULT_APP_NAME: &str = "roma";
+pub const DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES: usize = 10;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CheckpointDirSource {
@@ -47,23 +50,18 @@ impl CheckpointRunStatus {
             CheckpointRunStatus::Interrupted => "interrupted",
         }
     }
-
-    fn from_str(value: &str) -> Option<Self> {
-        match value {
-            "running" => Some(CheckpointRunStatus::Running),
-            "completed" => Some(CheckpointRunStatus::Completed),
-            "failed" => Some(CheckpointRunStatus::Failed),
-            "interrupted" => Some(CheckpointRunStatus::Interrupted),
-            _ => None,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CheckpointRecord {
+    pub created_at_ms: u64,
     pub run_id: String,
     pub algorithm_name: String,
-    pub problem_fingerprint: String,
+    pub algorithm_parameters: String,
+    pub problem_name: String,
+    pub problem_parameters: String,
+    pub algorithm_signature_hash: u64,
+    pub problem_signature_hash: u64,
     pub seq_id: u64,
     pub iteration: usize,
     pub evaluations: usize,
@@ -72,9 +70,81 @@ pub struct CheckpointRecord {
     pub worst_fitness: f64,
     pub best_solution_presentation: String,
     pub state_payload: Option<String>,
+    pub termination_criteria_payload: Option<String>,
+    pub termination_state_payload: Option<String>,
+    pub elapsed_millis: Option<u64>,
     pub status: CheckpointRunStatus,
     pub error_message: Option<String>,
 }
+
+#[derive(Debug, Clone)]
+pub struct CheckpointEntry {
+    pub path: PathBuf,
+    pub record: CheckpointRecord,
+}
+
+const CHECKPOINT_BIN_MAGIC: [u8; 4] = *b"RCKP";
+
+/// Deterministic 64-bit FNV-1a hash used to build checkpoint signatures.
+pub(crate) fn stable_hash64(text: &str) -> u64 {
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for byte in text.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    hash
+}
+
+/// Computes algorithm/problem signature hashes from their names and parameters.
+pub(crate) fn checkpoint_signature_hashes(
+    algorithm_name: &str,
+    algorithm_parameters: &str,
+    problem_name: &str,
+    problem_parameters: &str,
+) -> (u64, u64) {
+    let algorithm_signature_hash =
+        stable_hash64(&format!("{}|{}", algorithm_name, algorithm_parameters));
+    let problem_signature_hash = stable_hash64(&format!("{}|{}", problem_name, problem_parameters));
+    (algorithm_signature_hash, problem_signature_hash)
+}
+
+/// Binary checkpoint file layout (little-endian):
+///
+/// Header:
+/// - magic: 4 bytes (`RCKP`)
+///
+/// Identity and matching metadata:
+/// - created_at_ms: u64 (UTC epoch millis when this checkpoint was produced)
+/// - run_id: string
+/// - algorithm_name: string
+/// - algorithm_parameters: string
+/// - problem_name: string
+/// - problem_parameters: string
+/// - algorithm_signature_hash: u64
+/// - problem_signature_hash: u64
+///
+/// Progress and quality:
+/// - seq_id: u64
+/// - iteration: usize encoded as u64
+/// - evaluations: usize encoded as u64
+/// - best_fitness, average_fitness, worst_fitness: f64
+/// - best_solution_presentation: string
+///
+/// Optional payloads:
+/// - state_payload: Option<string> (algorithm-defined UTF-8 payload; e.g. JSON text)
+/// - termination_criteria_payload: Option<string>
+/// - termination_state_payload: Option<string>
+/// - elapsed_millis: Option<u64>
+/// - status: u8
+/// - error_message: Option<string>
+///
+/// Example metadata values:
+/// - algorithm_name: `HillClimbing`
+/// - algorithm_parameters: `mutation_probability=0.20;termination=max_iterations:100`
+/// - problem_name: `roma::problem::implementations::tsp_problem::TspProblem`
+/// - problem_parameters: `cities=52;close_tour=true;fixed_start_city=none`
+/// - algorithm_signature_hash: `11399437687642648721`
+/// - problem_signature_hash: `7769642201919903012`
 
 /// Configures how checkpoint directories are resolved.
 ///
@@ -138,7 +208,7 @@ pub fn ensure_checkpoint_dir(config: &CheckpointPathConfig) -> io::Result<PathBu
 }
 
 /// Builds checkpoint directory candidates in priority order.
-pub fn checkpoint_dir_candidates(
+pub(crate) fn checkpoint_dir_candidates(
     config: &CheckpointPathConfig,
 ) -> Vec<(CheckpointDirSource, PathBuf)> {
     let mut candidates = Vec::new();
@@ -213,104 +283,113 @@ pub fn initialize_checkpoint_dir(
     }
 }
 
-/// Creates a stable checkpoint file path for a run sequence.
-pub fn checkpoint_file_path(base_dir: &Path, run_id: &str, seq_id: u64) -> PathBuf {
+/// Creates a stable checkpoint file path for a run.
+pub(crate) fn checkpoint_file_path(base_dir: &Path, run_id: &str) -> PathBuf {
     let run = sanitize_path_segment(run_id);
-    base_dir.join(format!("run-{}-seq-{:020}.ckpt", run, seq_id))
+    base_dir.join(format!("run-{}.ckpt", run))
 }
 
-/// Writes one checkpoint payload as key-value text.
-pub fn write_checkpoint_record(path: &Path, record: &CheckpointRecord) -> io::Result<()> {
-    let mut body = String::new();
-    body.push_str(&format!("run_id={}\n", sanitize_value(&record.run_id)));
-    body.push_str(&format!(
-        "algorithm_name={}\n",
-        sanitize_value(&record.algorithm_name)
-    ));
-    body.push_str(&format!(
-        "problem_fingerprint={}\n",
-        sanitize_value(&record.problem_fingerprint)
-    ));
-    body.push_str(&format!("seq_id={}\n", record.seq_id));
-    body.push_str(&format!("iteration={}\n", record.iteration));
-    body.push_str(&format!("evaluations={}\n", record.evaluations));
-    body.push_str(&format!("best_fitness={:.17}\n", record.best_fitness));
-    body.push_str(&format!("average_fitness={:.17}\n", record.average_fitness));
-    body.push_str(&format!("worst_fitness={:.17}\n", record.worst_fitness));
-    body.push_str(&format!(
-        "best_solution_presentation={}\n",
-        sanitize_value(&record.best_solution_presentation)
-    ));
-    if let Some(payload) = &record.state_payload {
-        body.push_str(&format!("state_payload={}\n", sanitize_value(payload)));
-    }
-    body.push_str(&format!("status={}\n", record.status.as_str()));
-    if let Some(message) = &record.error_message {
-        body.push_str(&format!("error_message={}\n", sanitize_value(message)));
-    }
+/// Writes one checkpoint payload in a compact binary format.
+///
+/// Note: the file format is always binary. Some fields inside it are UTF-8
+/// strings, including `state_payload`, which algorithms may encode as JSON.
+pub(crate) fn write_checkpoint_record(path: &Path, record: &CheckpointRecord) -> io::Result<()> {
+    let mut bytes = Vec::with_capacity(512);
+    bytes.extend_from_slice(&CHECKPOINT_BIN_MAGIC);
 
-    fs::write(path, body)
+    push_u64(&mut bytes, record.created_at_ms);
+    push_string(&mut bytes, &record.run_id)?;
+    push_string(&mut bytes, &record.algorithm_name)?;
+    push_string(&mut bytes, &record.algorithm_parameters)?;
+    push_string(&mut bytes, &record.problem_name)?;
+    push_string(&mut bytes, &record.problem_parameters)?;
+    push_u64(&mut bytes, record.algorithm_signature_hash);
+    push_u64(&mut bytes, record.problem_signature_hash);
+    push_u64(&mut bytes, record.seq_id);
+    push_usize(&mut bytes, record.iteration)?;
+    push_usize(&mut bytes, record.evaluations)?;
+    push_f64(&mut bytes, record.best_fitness);
+    push_f64(&mut bytes, record.average_fitness);
+    push_f64(&mut bytes, record.worst_fitness);
+    push_string(&mut bytes, &record.best_solution_presentation)?;
+    push_option_string(&mut bytes, &record.state_payload)?;
+    push_option_string(&mut bytes, &record.termination_criteria_payload)?;
+    push_option_string(&mut bytes, &record.termination_state_payload)?;
+    push_option_u64(&mut bytes, record.elapsed_millis);
+    push_u8(&mut bytes, status_to_byte(record.status));
+    push_option_string(&mut bytes, &record.error_message)?;
+
+    fs::write(path, bytes)
+}
+
+/// Writes one checkpoint record under `base_dir` using canonical naming.
+/// Returns the full file path used for persistence.
+pub fn write_execution_checkpoint(
+    base_dir: &Path,
+    record: &CheckpointRecord,
+) -> io::Result<PathBuf> {
+    let scope_dir = checkpoint_scope_dir(
+        base_dir,
+        &record.algorithm_name,
+        &record.problem_name,
+        record.algorithm_signature_hash,
+        record.problem_signature_hash,
+    );
+    fs::create_dir_all(&scope_dir)?;
+    let path = checkpoint_file_path(&scope_dir, &record.run_id);
+    write_checkpoint_record(&path, record)?;
+    Ok(path)
 }
 
 /// Reads one checkpoint payload from disk.
-pub fn read_checkpoint_record(path: &Path) -> io::Result<CheckpointRecord> {
-    let contents = fs::read_to_string(path)?;
-    parse_checkpoint_record(&contents)
-}
+pub(crate) fn read_checkpoint_record(path: &Path) -> io::Result<CheckpointRecord> {
+    let data = fs::read(path)?;
+    let mut cursor = io::Cursor::new(data.as_slice());
 
-/// Lists available checkpoints in ascending sequence order for one run id.
-pub fn list_checkpoints(base_dir: &Path, run_id: &str) -> io::Result<Vec<PathBuf>> {
-    let run = sanitize_path_segment(run_id);
-    let prefix = format!("run-{}-seq-", run);
-    let mut entries: Vec<(u64, PathBuf)> = Vec::new();
-
-    for entry in fs::read_dir(base_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.extension().and_then(|ext| ext.to_str()) != Some("ckpt") {
-            continue;
-        }
-
-        let file_name = match path.file_name().and_then(|name| name.to_str()) {
-            Some(name) => name,
-            None => continue,
-        };
-
-        if !file_name.starts_with(&prefix) {
-            continue;
-        }
-
-        if let Some(seq_id) = parse_seq_from_filename(file_name) {
-            entries.push((seq_id, path));
-        }
+    let mut magic = [0u8; 4];
+    cursor.read_exact(&mut magic)?;
+    if magic != CHECKPOINT_BIN_MAGIC {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "invalid checkpoint magic header",
+        ));
     }
 
-    entries.sort_by_key(|(seq_id, _)| *seq_id);
-    Ok(entries.into_iter().map(|(_, path)| path).collect())
+    let record = CheckpointRecord {
+        created_at_ms: read_u64(&mut cursor)?,
+        run_id: read_string(&mut cursor)?,
+        algorithm_name: read_string(&mut cursor)?,
+        algorithm_parameters: read_string(&mut cursor)?,
+        problem_name: read_string(&mut cursor)?,
+        problem_parameters: read_string(&mut cursor)?,
+        algorithm_signature_hash: read_u64(&mut cursor)?,
+        problem_signature_hash: read_u64(&mut cursor)?,
+        seq_id: read_u64(&mut cursor)?,
+        iteration: read_usize(&mut cursor)?,
+        evaluations: read_usize(&mut cursor)?,
+        best_fitness: read_f64(&mut cursor)?,
+        average_fitness: read_f64(&mut cursor)?,
+        worst_fitness: read_f64(&mut cursor)?,
+        best_solution_presentation: read_string(&mut cursor)?,
+        state_payload: read_option_string(&mut cursor)?,
+        termination_criteria_payload: read_option_string(&mut cursor)?,
+        termination_state_payload: read_option_string(&mut cursor)?,
+        elapsed_millis: read_option_u64(&mut cursor)?,
+        status: byte_to_status(read_u8(&mut cursor)?)?,
+        error_message: read_option_string(&mut cursor)?,
+    };
+
+    if (cursor.position() as usize) != data.len() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "trailing bytes found in checkpoint file",
+        ));
+    }
+
+    Ok(record)
 }
 
-/// Loads the latest checkpoint payload for one run id.
-pub fn latest_checkpoint_record(
-    base_dir: &Path,
-    run_id: &str,
-) -> io::Result<Option<CheckpointRecord>> {
-    let paths = list_checkpoints(base_dir, run_id)?;
-    match paths.last() {
-        Some(path) => read_checkpoint_record(path).map(Some),
-        None => Ok(None),
-    }
-}
 
-/// Lists unique run ids that have at least one checkpoint file.
-pub fn list_checkpoint_run_ids(base_dir: &Path) -> io::Result<Vec<String>> {
-    let mut run_ids = std::collections::BTreeSet::new();
-    for path in list_checkpoint_files(base_dir)? {
-        if let Ok(record) = read_checkpoint_record(&path) {
-            run_ids.insert(record.run_id);
-        }
-    }
-    Ok(run_ids.into_iter().collect())
-}
 
 /// Loads the latest checkpoint for an algorithm by matching run_id prefix.
 ///
@@ -341,14 +420,14 @@ pub fn latest_checkpoint_record_for_algorithm(
     Ok(best.map(|(_, record)| record))
 }
 
-/// Loads the latest checkpoint compatible with algorithm + problem fingerprint
-/// and resumable status (running/failed/interrupted).
-pub fn latest_resumable_checkpoint_for(
+/// Lists resumable checkpoints for one algorithm + problem pair ordered oldest->newest.
+pub(crate) fn list_resumable_checkpoint_entries_for(
     base_dir: &Path,
     algorithm_name: &str,
-    problem_fingerprint: &str,
-) -> io::Result<Option<CheckpointRecord>> {
-    let mut best: Option<((u128, String, u64), CheckpointRecord)> = None;
+    algorithm_signature_hash: u64,
+    problem_signature_hash: u64,
+) -> io::Result<Vec<CheckpointEntry>> {
+    let mut entries: Vec<((u128, String, u64), CheckpointEntry)> = Vec::new();
 
     for path in list_checkpoint_files(base_dir)? {
         let Ok(record) = read_checkpoint_record(&path) else {
@@ -358,7 +437,76 @@ pub fn latest_resumable_checkpoint_for(
         if record.algorithm_name != algorithm_name {
             continue;
         }
-        if record.problem_fingerprint != problem_fingerprint {
+        if record.algorithm_signature_hash != algorithm_signature_hash {
+            continue;
+        }
+        if record.problem_signature_hash != problem_signature_hash {
+            continue;
+        }
+        if !is_resumable_status(record.status) {
+            continue;
+        }
+
+        let timestamp_ms = run_id_timestamp_ms(&record.run_id).unwrap_or(0);
+        let key = (timestamp_ms, record.run_id.clone(), record.seq_id);
+        entries.push((
+            key,
+            CheckpointEntry {
+                path,
+                record,
+            },
+        ));
+    }
+
+    entries.sort_by(|(a, _), (b, _)| a.cmp(b));
+    Ok(entries.into_iter().map(|(_, entry)| entry).collect())
+}
+
+/// Lists resumable checkpoints for a specific algorithm+problem identity.
+///
+/// This helper is the high-level entrypoint when you have algorithm/problem
+/// metadata and want matching checkpoints quickly.
+pub fn list_resumable_checkpoint_entries_for_identity(
+    base_dir: &Path,
+    algorithm_name: &str,
+    algorithm_parameters: &str,
+    problem_name: &str,
+    problem_parameters: &str,
+) -> io::Result<Vec<CheckpointEntry>> {
+    let (algorithm_signature_hash, problem_signature_hash) = checkpoint_signature_hashes(
+        algorithm_name,
+        algorithm_parameters,
+        problem_name,
+        problem_parameters,
+    );
+
+    list_resumable_checkpoint_entries_for(
+        base_dir,
+        algorithm_name,
+        algorithm_signature_hash,
+        problem_signature_hash,
+    )
+}
+
+/// Loads the latest checkpoint compatible with algorithm + problem fingerprint
+/// and resumable status (running/failed/interrupted).
+#[cfg(test)]
+pub(crate) fn latest_resumable_checkpoint_for(
+    base_dir: &Path,
+    algorithm_signature_hash: u64,
+    problem_signature_hash: u64,
+) -> io::Result<Option<CheckpointRecord>> {
+    let mut best: Option<((u128, String, u64), CheckpointRecord)> = None;
+
+    for path in list_checkpoint_files(base_dir)? {
+        let Ok(record) = read_checkpoint_record(&path) else {
+            continue;
+        };
+
+        if record.algorithm_signature_hash != algorithm_signature_hash {
+            continue;
+        }
+        if record.problem_signature_hash != problem_signature_hash {
             continue;
         }
         if !is_resumable_status(record.status) {
@@ -377,16 +525,82 @@ pub fn latest_resumable_checkpoint_for(
     Ok(best.map(|(_, record)| record))
 }
 
+/// Removes checkpoints older than the provided UTC epoch milliseconds.
+///
+/// Returns number of files removed.
+pub fn purge_checkpoints_older_than(
+    base_dir: &Path,
+    older_than_ms: u64,
+) -> io::Result<usize> {
+    let mut removed = 0usize;
+    for path in list_checkpoint_files(base_dir)? {
+        let Ok(record) = read_checkpoint_record(&path) else {
+            continue;
+        };
+        if record.created_at_ms < older_than_ms {
+            fs::remove_file(&path)?;
+            removed += 1;
+        }
+    }
+    Ok(removed)
+}
+
+/// Removes checkpoints older than `max_age_ms` relative to current wall-clock time.
+///
+/// Returns number of files removed.
+pub fn purge_checkpoints_older_than_age(
+    base_dir: &Path,
+    max_age_ms: u64,
+) -> io::Result<usize> {
+    let now_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .ok()
+        .and_then(|ms| u64::try_from(ms).ok())
+        .unwrap_or(0);
+
+    let threshold = now_ms.saturating_sub(max_age_ms);
+    purge_checkpoints_older_than(base_dir, threshold)
+}
+
 fn list_checkpoint_files(base_dir: &Path) -> io::Result<Vec<PathBuf>> {
     let mut files = Vec::new();
-    for entry in fs::read_dir(base_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.extension().and_then(|ext| ext.to_str()) == Some("ckpt") {
-            files.push(path);
+    let mut pending = vec![base_dir.to_path_buf()];
+
+    while let Some(dir) = pending.pop() {
+        for entry in fs::read_dir(&dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                pending.push(path);
+                continue;
+            }
+            if path.extension().and_then(|ext| ext.to_str()) == Some("ckpt") {
+                files.push(path);
+            }
         }
     }
     Ok(files)
+}
+
+fn checkpoint_scope_dir(
+    base_dir: &Path,
+    algorithm_name: &str,
+    problem_name: &str,
+    algorithm_signature_hash: u64,
+    problem_signature_hash: u64,
+) -> PathBuf {
+    let algorithm_segment = format!(
+        "alg-{}-{:016x}",
+        sanitize_path_segment(algorithm_name),
+        algorithm_signature_hash
+    );
+    let problem_segment = format!(
+        "prob-{}-{:016x}",
+        sanitize_path_segment(problem_name),
+        problem_signature_hash
+    );
+    base_dir.join(algorithm_segment).join(problem_segment)
 }
 
 fn run_id_timestamp_ms(run_id: &str) -> Option<u128> {
@@ -403,176 +617,157 @@ fn is_resumable_status(status: CheckpointRunStatus) -> bool {
     )
 }
 
-fn parse_seq_from_filename(file_name: &str) -> Option<u64> {
-    let stem = file_name.strip_suffix(".ckpt")?;
-    let (_, seq) = stem.rsplit_once("-seq-")?;
-    seq.parse::<u64>().ok()
+fn push_u8(out: &mut Vec<u8>, value: u8) {
+    out.push(value);
 }
 
-fn parse_checkpoint_record(contents: &str) -> io::Result<CheckpointRecord> {
-    let mut run_id: Option<String> = None;
-    let mut algorithm_name: Option<String> = None;
-    let mut problem_fingerprint: Option<String> = None;
-    let mut seq_id: Option<u64> = None;
-    let mut iteration: Option<usize> = None;
-    let mut evaluations: Option<usize> = None;
-    let mut best_fitness: Option<f64> = None;
-    let mut average_fitness: Option<f64> = None;
-    let mut worst_fitness: Option<f64> = None;
-    let mut best_solution_presentation: Option<String> = None;
-    let mut state_payload: Option<String> = None;
-    let mut status: Option<CheckpointRunStatus> = None;
-    let mut error_message: Option<String> = None;
+fn push_u32(out: &mut Vec<u8>, value: u32) {
+    out.extend_from_slice(&value.to_le_bytes());
+}
 
-    for line in contents.lines() {
-        if line.trim().is_empty() {
-            continue;
+fn push_u64(out: &mut Vec<u8>, value: u64) {
+    out.extend_from_slice(&value.to_le_bytes());
+}
+
+fn push_f64(out: &mut Vec<u8>, value: f64) {
+    out.extend_from_slice(&value.to_le_bytes());
+}
+
+fn push_usize(out: &mut Vec<u8>, value: usize) -> io::Result<()> {
+    let value = u64::try_from(value).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "usize value too large to serialize into checkpoint",
+        )
+    })?;
+    push_u64(out, value);
+    Ok(())
+}
+
+fn push_string(out: &mut Vec<u8>, value: &str) -> io::Result<()> {
+    let bytes = value.as_bytes();
+    let len = u32::try_from(bytes.len()).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "string too large to serialize into checkpoint",
+        )
+    })?;
+    push_u32(out, len);
+    out.extend_from_slice(bytes);
+    Ok(())
+}
+
+fn push_option_string(out: &mut Vec<u8>, value: &Option<String>) -> io::Result<()> {
+    match value {
+        Some(text) => {
+            push_u8(out, 1);
+            push_string(out, text)
         }
-
-        let (key, value) = line.split_once('=').ok_or_else(|| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("invalid checkpoint line: {}", line),
-            )
-        })?;
-
-        match key {
-            "run_id" => run_id = Some(desanitize_value(value)),
-            "algorithm_name" => algorithm_name = Some(desanitize_value(value)),
-            "problem_fingerprint" => problem_fingerprint = Some(desanitize_value(value)),
-            "seq_id" => seq_id = Some(parse_u64_field("seq_id", value)?),
-            "iteration" => iteration = Some(parse_usize_field("iteration", value)?),
-            "evaluations" => evaluations = Some(parse_usize_field("evaluations", value)?),
-            "best_fitness" => best_fitness = Some(parse_f64_field("best_fitness", value)?),
-            "average_fitness" => average_fitness = Some(parse_f64_field("average_fitness", value)?),
-            "worst_fitness" => worst_fitness = Some(parse_f64_field("worst_fitness", value)?),
-            "best_solution_presentation" => {
-                best_solution_presentation = Some(desanitize_value(value))
-            }
-            "state_payload" => state_payload = Some(desanitize_value(value)),
-            "status" => {
-                status = CheckpointRunStatus::from_str(value);
-                if status.is_none() {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        format!("invalid status value: {}", value),
-                    ));
-                }
-            }
-            "error_message" => error_message = Some(desanitize_value(value)),
-            _ => {}
+        None => {
+            push_u8(out, 0);
+            Ok(())
         }
     }
-
-    let run_id = required_field("run_id", run_id)?;
-    let algorithm_name = algorithm_name
-        .or_else(|| derive_algorithm_name_from_run_id(&run_id))
-        .ok_or_else(|| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                "missing checkpoint field 'algorithm_name'",
-            )
-        })?;
-    let problem_fingerprint = problem_fingerprint.unwrap_or_default();
-
-    Ok(CheckpointRecord {
-        run_id,
-        algorithm_name,
-        problem_fingerprint,
-        seq_id: required_field("seq_id", seq_id)?,
-        iteration: required_field("iteration", iteration)?,
-        evaluations: required_field("evaluations", evaluations)?,
-        best_fitness: required_field("best_fitness", best_fitness)?,
-        average_fitness: required_field("average_fitness", average_fitness)?,
-        worst_fitness: required_field("worst_fitness", worst_fitness)?,
-        best_solution_presentation: required_field(
-            "best_solution_presentation",
-            best_solution_presentation,
-        )?,
-        state_payload,
-        status: required_field("status", status)?,
-        error_message,
-    })
 }
 
-fn derive_algorithm_name_from_run_id(run_id: &str) -> Option<String> {
-    let mut parts = run_id.rsplitn(3, '-');
-    let _timestamp = parts.next()?;
-    let _pid = parts.next()?;
-    let algorithm = parts.next()?;
-    if algorithm.is_empty() {
-        None
-    } else {
-        Some(algorithm.to_string())
+fn push_option_u64(out: &mut Vec<u8>, value: Option<u64>) {
+    match value {
+        Some(x) => {
+            push_u8(out, 1);
+            push_u64(out, x);
+        }
+        None => push_u8(out, 0),
     }
 }
 
-fn required_field<T>(name: &str, value: Option<T>) -> io::Result<T> {
-    value.ok_or_else(|| {
+fn read_u8(input: &mut impl Read) -> io::Result<u8> {
+    let mut bytes = [0u8; 1];
+    input.read_exact(&mut bytes)?;
+    Ok(bytes[0])
+}
+
+fn read_u32(input: &mut impl Read) -> io::Result<u32> {
+    let mut bytes = [0u8; 4];
+    input.read_exact(&mut bytes)?;
+    Ok(u32::from_le_bytes(bytes))
+}
+
+fn read_u64(input: &mut impl Read) -> io::Result<u64> {
+    let mut bytes = [0u8; 8];
+    input.read_exact(&mut bytes)?;
+    Ok(u64::from_le_bytes(bytes))
+}
+
+fn read_f64(input: &mut impl Read) -> io::Result<f64> {
+    let mut bytes = [0u8; 8];
+    input.read_exact(&mut bytes)?;
+    Ok(f64::from_le_bytes(bytes))
+}
+
+fn read_usize(input: &mut impl Read) -> io::Result<usize> {
+    let value = read_u64(input)?;
+    usize::try_from(value).map_err(|_| {
         io::Error::new(
             io::ErrorKind::InvalidData,
-            format!("missing checkpoint field '{}'", name),
+            "u64 value too large to deserialize into usize",
         )
     })
 }
 
-fn parse_usize_field(name: &str, value: &str) -> io::Result<usize> {
-    value.parse::<usize>().map_err(|_| {
+fn read_string(input: &mut impl Read) -> io::Result<String> {
+    let len = read_u32(input)? as usize;
+    let mut bytes = vec![0u8; len];
+    input.read_exact(&mut bytes)?;
+    String::from_utf8(bytes).map_err(|_| {
         io::Error::new(
             io::ErrorKind::InvalidData,
-            format!("invalid usize value for '{}': {}", name, value),
+            "invalid UTF-8 string in checkpoint",
         )
     })
 }
 
-fn parse_u64_field(name: &str, value: &str) -> io::Result<u64> {
-    value.parse::<u64>().map_err(|_| {
-        io::Error::new(
+fn read_option_string(input: &mut impl Read) -> io::Result<Option<String>> {
+    match read_u8(input)? {
+        0 => Ok(None),
+        1 => Ok(Some(read_string(input)?)),
+        flag => Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            format!("invalid u64 value for '{}': {}", name, value),
-        )
-    })
-}
-
-fn parse_f64_field(name: &str, value: &str) -> io::Result<f64> {
-    value.parse::<f64>().map_err(|_| {
-        io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("invalid f64 value for '{}': {}", name, value),
-        )
-    })
-}
-
-fn sanitize_value(value: &str) -> String {
-    value
-        .replace('\\', "\\\\")
-        .replace('\n', "\\n")
-        .replace('\r', "\\r")
-}
-
-fn desanitize_value(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
-    let mut chars = value.chars();
-
-    while let Some(ch) = chars.next() {
-        if ch != '\\' {
-            out.push(ch);
-            continue;
-        }
-
-        match chars.next() {
-            Some('n') => out.push('\n'),
-            Some('r') => out.push('\r'),
-            Some('\\') => out.push('\\'),
-            Some(other) => {
-                out.push('\\');
-                out.push(other);
-            }
-            None => out.push('\\'),
-        }
+            format!("invalid option flag for string: {}", flag),
+        )),
     }
+}
 
-    out
+fn read_option_u64(input: &mut impl Read) -> io::Result<Option<u64>> {
+    match read_u8(input)? {
+        0 => Ok(None),
+        1 => Ok(Some(read_u64(input)?)),
+        flag => Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("invalid option flag for u64: {}", flag),
+        )),
+    }
+}
+
+fn status_to_byte(status: CheckpointRunStatus) -> u8 {
+    match status {
+        CheckpointRunStatus::Running => 0,
+        CheckpointRunStatus::Completed => 1,
+        CheckpointRunStatus::Failed => 2,
+        CheckpointRunStatus::Interrupted => 3,
+    }
+}
+
+fn byte_to_status(value: u8) -> io::Result<CheckpointRunStatus> {
+    match value {
+        0 => Ok(CheckpointRunStatus::Running),
+        1 => Ok(CheckpointRunStatus::Completed),
+        2 => Ok(CheckpointRunStatus::Failed),
+        3 => Ok(CheckpointRunStatus::Interrupted),
+        _ => Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("invalid checkpoint status byte: {}", value),
+        )),
+    }
 }
 
 fn env_path(name: &str) -> Option<PathBuf> {
@@ -683,12 +878,12 @@ mod tests {
 
     #[test]
     fn checkpoint_file_path_uses_stable_name() {
-        let path = checkpoint_file_path(Path::new("/tmp/checkpoints"), "trial 7", 42);
+        let path = checkpoint_file_path(Path::new("/tmp/checkpoints"), "trial 7");
         let file_name = path
             .file_name()
             .and_then(|x| x.to_str())
             .unwrap_or_default();
-        assert_eq!(file_name, "run-trial_7-seq-00000000000000000042.ckpt");
+        assert_eq!(file_name, "run-trial_7.ckpt");
     }
 
     #[test]
@@ -723,9 +918,14 @@ mod tests {
         fs::create_dir_all(&base).expect("checkpoint test dir should be creatable");
 
         let record = CheckpointRecord {
+            created_at_ms: 123,
             run_id: "HillClimbing-1-123".to_string(),
             algorithm_name: "HillClimbing".to_string(),
-            problem_fingerprint: "demo-problem".to_string(),
+            algorithm_parameters: "mutation_probability=0.2".to_string(),
+            problem_name: "DemoProblem".to_string(),
+            problem_parameters: "items=10".to_string(),
+            algorithm_signature_hash: 111,
+            problem_signature_hash: 222,
             seq_id: 7,
             iteration: 12,
             evaluations: 44,
@@ -734,11 +934,17 @@ mod tests {
             worst_fitness: 3.1,
             best_solution_presentation: "selected=2/4".to_string(),
             state_payload: Some("seed=42".to_string()),
+            termination_criteria_payload: Some("max_iterations:100".to_string()),
+            termination_state_payload: Some(
+                "iter=12;eval=44;last_improvement=10;elapsed_ms=50;history=9.75,9.75"
+                    .to_string(),
+            ),
+            elapsed_millis: Some(50),
             status: CheckpointRunStatus::Failed,
             error_message: Some("synthetic error".to_string()),
         };
 
-        let path = checkpoint_file_path(&base, &record.run_id, record.seq_id);
+        let path = checkpoint_file_path(&base, &record.run_id);
         write_checkpoint_record(&path, &record).expect("checkpoint should be writable");
 
         let loaded = read_checkpoint_record(&path).expect("checkpoint should be readable");
@@ -753,11 +959,17 @@ mod tests {
         ));
         fs::create_dir_all(&base).expect("checkpoint test dir should be creatable");
 
-        let run_id = format!("HillClimbing-{}-{}", std::process::id(), 1000);
+        let run_id_a = format!("HillClimbing-{}-{}", std::process::id(), 1000);
+        let run_id_b = format!("HillClimbing-{}-{}", std::process::id(), 2000);
         let older = CheckpointRecord {
-            run_id: run_id.clone(),
+            created_at_ms: 1,
+            run_id: run_id_a,
             algorithm_name: "HillClimbing".to_string(),
-            problem_fingerprint: "demo-problem".to_string(),
+            algorithm_parameters: "mutation_probability=0.2".to_string(),
+            problem_name: "DemoProblem".to_string(),
+            problem_parameters: "items=10".to_string(),
+            algorithm_signature_hash: 111,
+            problem_signature_hash: 222,
             seq_id: 1,
             iteration: 1,
             evaluations: 2,
@@ -766,13 +978,21 @@ mod tests {
             worst_fitness: 1.0,
             best_solution_presentation: "old".to_string(),
             state_payload: Some("seed=10".to_string()),
+            termination_criteria_payload: None,
+            termination_state_payload: None,
+            elapsed_millis: None,
             status: CheckpointRunStatus::Running,
             error_message: None,
         };
         let newer = CheckpointRecord {
-            run_id,
+            created_at_ms: 2,
+            run_id: run_id_b,
             algorithm_name: "HillClimbing".to_string(),
-            problem_fingerprint: "demo-problem".to_string(),
+            algorithm_parameters: "mutation_probability=0.2".to_string(),
+            problem_name: "DemoProblem".to_string(),
+            problem_parameters: "items=10".to_string(),
+            algorithm_signature_hash: 111,
+            problem_signature_hash: 222,
             seq_id: 2,
             iteration: 2,
             evaluations: 3,
@@ -781,12 +1001,15 @@ mod tests {
             worst_fitness: 2.0,
             best_solution_presentation: "new".to_string(),
             state_payload: Some("seed=10".to_string()),
+            termination_criteria_payload: None,
+            termination_state_payload: None,
+            elapsed_millis: None,
             status: CheckpointRunStatus::Completed,
             error_message: None,
         };
 
-        let older_path = checkpoint_file_path(&base, &older.run_id, older.seq_id);
-        let newer_path = checkpoint_file_path(&base, &newer.run_id, newer.seq_id);
+        let older_path = checkpoint_file_path(&base, &older.run_id);
+        let newer_path = checkpoint_file_path(&base, &newer.run_id);
         write_checkpoint_record(&older_path, &older).expect("older checkpoint should be writable");
         std::thread::sleep(std::time::Duration::from_millis(5));
         write_checkpoint_record(&newer_path, &newer).expect("newer checkpoint should be writable");
@@ -811,9 +1034,14 @@ mod tests {
         let run_b = format!("HillClimbing-{}-{}", std::process::id(), 3000);
 
         let completed = CheckpointRecord {
+            created_at_ms: 3,
             run_id: run_a,
             algorithm_name: "HillClimbing".to_string(),
-            problem_fingerprint: "problem-a".to_string(),
+            algorithm_parameters: "mutation_probability=0.2".to_string(),
+            problem_name: "DemoProblem".to_string(),
+            problem_parameters: "dataset=a".to_string(),
+            algorithm_signature_hash: 111,
+            problem_signature_hash: 333,
             seq_id: 3,
             iteration: 3,
             evaluations: 4,
@@ -822,14 +1050,22 @@ mod tests {
             worst_fitness: 3.0,
             best_solution_presentation: "completed".to_string(),
             state_payload: Some("seed=33".to_string()),
+            termination_criteria_payload: None,
+            termination_state_payload: None,
+            elapsed_millis: None,
             status: CheckpointRunStatus::Completed,
             error_message: None,
         };
 
         let failed = CheckpointRecord {
+            created_at_ms: 4,
             run_id: run_b,
             algorithm_name: "HillClimbing".to_string(),
-            problem_fingerprint: "problem-a".to_string(),
+            algorithm_parameters: "mutation_probability=0.2".to_string(),
+            problem_name: "DemoProblem".to_string(),
+            problem_parameters: "dataset=a".to_string(),
+            algorithm_signature_hash: 111,
+            problem_signature_hash: 333,
             seq_id: 8,
             iteration: 8,
             evaluations: 9,
@@ -838,22 +1074,25 @@ mod tests {
             worst_fitness: 8.0,
             best_solution_presentation: "failed".to_string(),
             state_payload: Some("seed=44".to_string()),
+            termination_criteria_payload: None,
+            termination_state_payload: None,
+            elapsed_millis: None,
             status: CheckpointRunStatus::Failed,
             error_message: Some("x".to_string()),
         };
 
         write_checkpoint_record(
-            &checkpoint_file_path(&base, &completed.run_id, completed.seq_id),
+            &checkpoint_file_path(&base, &completed.run_id),
             &completed,
         )
         .expect("completed checkpoint should be writable");
         write_checkpoint_record(
-            &checkpoint_file_path(&base, &failed.run_id, failed.seq_id),
+            &checkpoint_file_path(&base, &failed.run_id),
             &failed,
         )
         .expect("failed checkpoint should be writable");
 
-        let latest = latest_resumable_checkpoint_for(&base, "HillClimbing", "problem-a")
+        let latest = latest_resumable_checkpoint_for(&base, 111, 333)
             .expect("latest resumable should be readable")
             .expect("one resumable checkpoint should exist");
 
