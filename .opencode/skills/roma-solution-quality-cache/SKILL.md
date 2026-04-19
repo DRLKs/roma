@@ -1,5 +1,5 @@
 ---
-name: rmetal-solution-quality-cache
+name: roma-solution-quality-cache
 description: Use when mutating Solution variables or quality payloads in Roma to preserve cache invalidation and reevaluation invariants.
 ---
 

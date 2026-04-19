@@ -41,12 +41,12 @@ roma = { git = "https://github.com/DRLKs/roma.git" }
 ## Documentation
 
 - Crate docs: <https://docs.rs/roma>
-- Crate README (docs.rs source): `rMetal/README.md`
-- API entry point: `rMetal/src/lib.rs`
+- Crate README (docs.rs source): `roma/README.md`
+- API entry point: `roma/src/lib.rs`
 
 ## Repository Layout
 
-- `rMetal/` - main Rust crate (`roma`)
+- `roma/` - main Rust crate (`roma`)
 - `docs/` - project and architecture notes
 - `images/` - visual assets
 
@@ -55,13 +55,13 @@ roma = { git = "https://github.com/DRLKs/roma.git" }
 Run the crate tests locally:
 
 ```bash
-cargo test --manifest-path rMetal/Cargo.toml
+cargo test --manifest-path roma/Cargo.toml
 ```
 
 Build API documentation locally:
 
 ```bash
-cargo doc --manifest-path rMetal/Cargo.toml --no-deps
+cargo doc --manifest-path roma/Cargo.toml --no-deps
 ```
 
 ## License

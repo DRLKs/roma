@@ -1,5 +1,5 @@
 ---
-name: rmetal-experiment-reporting
+name: roma-experiment-reporting
 description: Use when extending Roma experiment cases, execution, or reporting so run aggregation, failures, and ranking remain internally consistent.
 ---
 

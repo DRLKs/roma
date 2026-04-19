@@ -1,5 +1,5 @@
 ---
-name: rmetal-data-adapter-policy
+name: roma-data-adapter-policy
 description: Use when loading external CSV, JSON, or YAML records into Roma problems so key mapping, parsing, and error behavior remain consistent.
 ---
 

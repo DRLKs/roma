@@ -1,5 +1,5 @@
 ---
-name: rmetal-objective-direction
+name: roma-objective-direction
 description: Use when implementing or refactoring scalar optimization comparisons in Roma to preserve maximize versus minimize semantics across algorithms and reports.
 ---
 
@@ -9,7 +9,7 @@ description: Use when implementing or refactoring scalar optimization comparison
 Objective direction is framework-level behavior, not algorithm-local preference. Always derive comparison semantics from the problem direction.
 
 ## When Not to Use
-- Pareto dominance, rank, or crowding logic in multiobjective paths: use `rmetal-multiobjective-semantics`.
+- Pareto dominance, rank, or crowding logic in multiobjective paths: use `roma-multiobjective-semantics`.
 
 ## Mandatory Rules
 - Use `problem.get_improvement_direction()` as the source of truth.

@@ -1,5 +1,5 @@
 ---
-name: rmetal-module-map
+name: roma-module-map
 description: Use when introducing new modules, API surface, or cross-cutting refactors in Roma and you must choose the owning module before coding.
 ---
 
@@ -14,10 +14,10 @@ Roma keeps optimization concepts separated by module. Put changes where the abst
 - Reviewing a change that feels cross-cutting or hard to place.
 
 ## When Not to Use
-- Pure scalar comparison changes: use `rmetal-objective-direction`.
-- Pareto/rank/crowding behavior changes: use `rmetal-multiobjective-semantics`.
-- Quality invalidation or reevaluation changes: use `rmetal-solution-quality-cache`.
-- Experiment aggregation and summary changes: use `rmetal-experiment-reporting`.
+- Pure scalar comparison changes: use `roma-objective-direction`.
+- Pareto/rank/crowding behavior changes: use `roma-multiobjective-semantics`.
+- Quality invalidation or reevaluation changes: use `roma-solution-quality-cache`.
+- Experiment aggregation and summary changes: use `roma-experiment-reporting`.
 
 ## Module Placement Rules
 - `roma/src/algorithms`: algorithm trait contracts, runtime, termination, and concrete implementations.

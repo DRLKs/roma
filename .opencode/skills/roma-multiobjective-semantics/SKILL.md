@@ -1,5 +1,5 @@
 ---
-name: rmetal-multiobjective-semantics
+name: roma-multiobjective-semantics
 description: Use when changing NSGA-II or Pareto quality logic in Roma to preserve strict separation between Pareto dominance and rank-crowding selection metadata.
 ---
 
@@ -15,7 +15,7 @@ In Roma, Pareto dominance and rank/crowding are different layers. Dominance defi
 - Missing or inconsistent objective vectors must not produce false dominance.
 
 ## When Not to Use
-- Scalar maximize/minimize decisions in single-objective paths: use `rmetal-objective-direction`.
+- Scalar maximize/minimize decisions in single-objective paths: use `roma-objective-direction`.
 
 ## Implementation Anchors
 - Dominance semantics: `roma/src/solution/traits/dominance.rs`

@@ -1,5 +1,5 @@
 ---
-name: rmetal-algorithm-runtime-contract
+name: roma-algorithm-runtime-contract
 description: Use when adding, refactoring, or overriding Algorithm execution paths in Roma to keep the shared initialize-step-snapshot-finalize runtime lifecycle intact.
 ---
 

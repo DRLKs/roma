@@ -3,8 +3,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-pub const DEFAULT_CHECKPOINT_ENV_VAR: &str = "RMETAL_CHECKPOINT_DIR";
-pub const DEFAULT_APP_NAME: &str = "rmetal";
+pub const DEFAULT_CHECKPOINT_ENV_VAR: &str = "ROMA_CHECKPOINT_DIR";
+pub const DEFAULT_APP_NAME: &str = "roma";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CheckpointDirSource {
@@ -83,7 +83,7 @@ pub struct CheckpointRecord {
 /// 2. env var named by `env_var_name`
 /// 3. OS-specific default location
 /// 4. `project_fallback_dir`
-/// 5. `./.rmetal/checkpoints`
+/// 5. `./.roma/checkpoints`
 #[derive(Debug, Clone)]
 pub struct CheckpointPathConfig {
     pub app_name: String,
@@ -584,7 +584,7 @@ fn env_path(name: &str) -> Option<PathBuf> {
 }
 
 fn local_fallback_dir() -> PathBuf {
-    PathBuf::from(".").join(".rmetal").join("checkpoints")
+    PathBuf::from(".").join(".roma").join("checkpoints")
 }
 
 fn push_unique_candidate(
@@ -704,7 +704,7 @@ mod tests {
         let candidates = checkpoint_dir_candidates(&cfg);
         assert!(candidates.iter().any(|(source, path)| *source
             == CheckpointDirSource::LocalFallback
-            && *path == PathBuf::from("./.rmetal/checkpoints")));
+            && *path == PathBuf::from("./.roma/checkpoints")));
     }
 
     #[test]
@@ -717,7 +717,7 @@ mod tests {
     #[test]
     fn write_and_read_checkpoint_record_roundtrip() {
         let base = std::env::temp_dir().join(format!(
-            "rmetal_checkpoint_roundtrip_test_{}",
+            "roma_checkpoint_roundtrip_test_{}",
             std::process::id()
         ));
         fs::create_dir_all(&base).expect("checkpoint test dir should be creatable");
@@ -748,7 +748,7 @@ mod tests {
     #[test]
     fn latest_checkpoint_record_for_algorithm_uses_prefix_match() {
         let base = std::env::temp_dir().join(format!(
-            "rmetal_checkpoint_latest_algorithm_test_{}",
+            "roma_checkpoint_latest_algorithm_test_{}",
             std::process::id()
         ));
         fs::create_dir_all(&base).expect("checkpoint test dir should be creatable");
@@ -802,7 +802,7 @@ mod tests {
     #[test]
     fn latest_resumable_checkpoint_filters_by_problem_and_status() {
         let base = std::env::temp_dir().join(format!(
-            "rmetal_checkpoint_resumable_test_{}",
+            "roma_checkpoint_resumable_test_{}",
             std::process::id()
         ));
         fs::create_dir_all(&base).expect("checkpoint test dir should be creatable");
