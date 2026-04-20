@@ -415,6 +415,18 @@ fn parse_json_file(path: &Path) -> std::io::Result<JsonValue> {
         .map_err(|e| Error::new(ErrorKind::InvalidData, format!("Invalid JSON: {}", e)))
 }
 
+/// Reads a scalar value from a JSON string using a path expression.
+pub fn get_json_value_from_str(json: &str, key_path: &str) -> std::io::Result<Option<String>> {
+    let root = JsonParser::new(json)
+        .parse()
+        .map_err(|e| Error::new(ErrorKind::InvalidData, format!("Invalid JSON: {}", e)))?;
+
+    let value = resolve_path(&root, key_path)
+        .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("Invalid path: {}", e)))?;
+
+    Ok(value.and_then(scalar_to_string))
+}
+
 /// Reads a scalar value from JSON using a path expression like `config.algorithm.population` or `items[0].weight`.
 pub fn get_json_value(path: &Path, key_path: &str) -> std::io::Result<Option<String>> {
     let root = parse_json_file(path)?;

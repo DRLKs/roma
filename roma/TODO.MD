@@ -76,10 +76,26 @@
 [X] 20. Sin duda existen redundancias en la elección de que si el modelo es de minimización o de optimización. 
     [X]Quizás el compare solutions debería estar en problema, porque que una solución sea mejor que otra creo que depende más del problema que de la misma solución.
 
-[ ] 21. Hacer representaciones de las soluciones dependientemente del problema
+[X] 21. Hacer representaciones de las soluciones dependientemente del problema
 
 [ ] 22. Desarrollar reportes sobre los experimentos
 
+[ ] 23. Funcionamiento del almacenamiento de los checkpoints
 
+    - run_algorithm toma -> ExecutionStateSnapshot ( Se almacenará en el archivo)
+    - en vez de usar la seed del CLI o la estandar usar la almacenada 
+        o (quizás eliminar la reproducibilidad)
+    - EN caso de que el valor de la temrinación sea el tiempo deberemos hacer cálculos para obtener un nuevo tiempo de terminación que concuerde con el restante
+    - Debemos guardar la solución, stepState. Crear una función que en vez del inicializar normal, sea por checkpoint
+    - Cuando ocurre una ejecución, se van creando los checkpoints, pero cuando termine la ejecución y sea satisfactoria, el checkpoint debería borrarse
+    - Cuando se resuma un checkpoint, se podría crear un checkpoint a partir de ese, desde el cual seguir la ejecución pero sin modificar el checkpoint anterior
+
+
+    - En caso de los poblacionales
+
+    [ ] Que funcione para los de población
+    [ ] Que funcione para los experimentos
+
+[ ] 24. Limpiar los checkoints LRU
 
 Cambiar algorithm.run añadir el argumento resume

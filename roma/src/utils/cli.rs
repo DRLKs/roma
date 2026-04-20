@@ -1,4 +1,7 @@
 use std::path::{Path, PathBuf};
+use std::{io, io::Write};
+
+use crate::utils::checkpoint::CheckpointEntry;
 
 /// Reads a reproducibility seed from CLI arguments.
 ///
@@ -107,4 +110,56 @@ pub fn infer_format_from_extension(path: &Path) -> Option<String> {
         "yaml" | "yml" => Some("yaml".to_string()),
         _ => None,
     }
+}
+
+/// Prompts user to select one checkpoint entry by index.
+///
+/// Returns `Ok(None)` when user cancels.
+pub fn prompt_checkpoint_selection(entries: &[CheckpointEntry]) -> Result<Option<usize>, String> {
+    if entries.is_empty() {
+        return Ok(None);
+    }
+
+    println!("Found {} resumable checkpoints:", entries.len());
+    for (index, entry) in entries.iter().enumerate() {
+        println!(
+            "  [{}] run_id={} seq={} iter={} eval={} status={} file={}",
+            index + 1,
+            entry.record.run_id,
+            entry.record.seq_id,
+            entry.record.iteration,
+            entry.record.evaluations,
+            entry.record.status.as_str(),
+            entry.path.display()
+        );
+    }
+    println!("  [0] cancel");
+
+    print!("Select checkpoint index: ");
+    io::stdout()
+        .flush()
+        .map_err(|err| format!("failed to flush prompt: {}", err))?;
+
+    let mut input = String::new();
+    io::stdin()
+        .read_line(&mut input)
+        .map_err(|err| format!("failed to read checkpoint selection: {}", err))?;
+
+    let value = input
+        .trim()
+        .parse::<usize>()
+        .map_err(|_| "invalid checkpoint selection: expected integer index".to_string())?;
+
+    if value == 0 {
+        return Ok(None);
+    }
+
+    if value > entries.len() {
+        return Err(format!(
+            "invalid checkpoint selection: expected value in [0, {}]",
+            entries.len()
+        ));
+    }
+
+    Ok(Some(value - 1))
 }

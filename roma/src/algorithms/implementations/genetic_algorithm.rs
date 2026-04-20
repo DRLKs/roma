@@ -10,7 +10,8 @@ use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::parallel::parallel_map_indexed;
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::random::Random;
+use crate::utils::parallel::resolve_num_threads;
 use crate::utils::statistics::calculate_statistics;
 use crate::Observable;
 
@@ -149,7 +150,7 @@ where
         problem: &(impl Problem<T> + Sync),
         requested_threads: Option<usize>,
     ) -> Vec<Solution<T>> {
-        let thread_count = Self::resolve_num_threads(requested_threads);
+        let thread_count = resolve_num_threads(requested_threads);
 
         if thread_count <= 1 {
             let mut evaluated = population;
@@ -175,7 +176,7 @@ where
         run_seed: u64,
         evaluations: &mut usize,
     ) -> Vec<Solution<T>> {
-        let generation_seed = Self::derive_seed(run_seed, generation as u64);
+        let generation_seed = Random::derive_seed(run_seed, generation as u64);
         let mut offspring = Self::create_offspring(
             parameters,
             problem,
@@ -198,7 +199,7 @@ where
         generation_seed: u64,
         evaluations: &mut usize,
     ) -> Vec<Solution<T>> {
-        let requested_threads = Self::resolve_num_threads(parameters.num_threads);
+        let requested_threads = resolve_num_threads(parameters.num_threads);
         let thread_count = requested_threads.min(parameters.population_size.max(1));
 
         let (mut offspring_population, generation_evaluations) = if thread_count <= 1 {
@@ -297,7 +298,7 @@ where
                         return (Vec::new(), 0usize);
                     }
 
-                    let worker_seed = Self::derive_seed(generation_seed, worker_id as u64 + 1);
+                    let worker_seed = Random::derive_seed(generation_seed, worker_id as u64 + 1);
                     let mut local_rng = Random::new(worker_seed);
                     let mut local_offspring = Vec::with_capacity(worker_target);
                     let mut local_evaluations = 0usize;
@@ -352,26 +353,6 @@ where
         });
 
         (all_offspring, total_evaluations)
-    }
-
-    fn resolve_num_threads(num_threads: Option<usize>) -> usize {
-        match num_threads {
-            Some(n) => n.max(1),
-            None => std::thread::available_parallelism()
-                .map(|n| n.get())
-                .unwrap_or(1),
-        }
-    }
-
-    fn resolve_seed(parameters: &GeneticAlgorithmParameters<T, C, M, Sel>) -> u64 {
-        parameters.random_seed.unwrap_or_else(seed_from_time)
-    }
-
-    fn derive_seed(base_seed: u64, stream: u64) -> u64 {
-        let mut z = base_seed ^ stream.wrapping_mul(0x9E37_79B9_7F4A_7C15);
-        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-        z ^ (z >> 31)
     }
 
     fn apply_elitism(
@@ -516,8 +497,8 @@ where
         problem: &(impl Problem<T> + Sync),
         _context: &ExecutionContext<T>,
     ) -> Self::StepState {
-        let run_seed = Self::resolve_seed(&self.parameters);
-        let mut init_rng = Random::new(Self::derive_seed(run_seed, 0));
+        let run_seed = Random::resolve_seed(self.parameters.random_seed);
+        let mut init_rng = Random::new(Random::derive_seed(run_seed, 0));
         let population = Self::initialize_population(&self.parameters, problem, &mut init_rng);
         let direction = problem.get_improvement_direction();
 

@@ -104,14 +104,7 @@ pub use solution::{
     PermutationSolutionBuilder, RealSolutionBuilder, Solution, StringSolutionBuilder,
 };
 pub use solution_set::{DequeSolutionSet, SolutionSet, VectorSolutionSet};
-pub use utils::{
-    checkpoint_dir_candidates, checkpoint_file_path, ensure_checkpoint_dir,
-    initialize_checkpoint_dir, latest_checkpoint_record, latest_checkpoint_record_for_algorithm,
-    latest_resumable_checkpoint_for, list_checkpoint_run_ids, list_checkpoints,
-    read_checkpoint_record, resolve_checkpoint_dir, write_checkpoint_record, CheckpointDirSource,
-    CheckpointInitMode, CheckpointInitResult, CheckpointPathConfig, CheckpointRecord,
-    CheckpointRunStatus,
-};
+pub use utils::{delete_snapshot_on_success, read_snapshot, write_snapshot};
 
 /// Commonly used types and traits.
 ///
@@ -158,12 +151,7 @@ pub mod prelude {
     pub use crate::solution_set::{DequeSolutionSet, SolutionSet, VectorSolutionSet};
 
     pub use crate::utils::{
-        checkpoint_dir_candidates, checkpoint_file_path, ensure_checkpoint_dir,
-        initialize_checkpoint_dir, latest_checkpoint_record,
-        latest_checkpoint_record_for_algorithm, latest_resumable_checkpoint_for,
-        list_checkpoint_run_ids, list_checkpoints, read_checkpoint_record, resolve_checkpoint_dir,
-        seed_from_cli_or, seed_from_time, write_checkpoint_record, CheckpointDirSource,
-        CheckpointInitMode, CheckpointInitResult, CheckpointPathConfig, CheckpointRecord,
-        CheckpointRunStatus, Random,
+        delete_snapshot_on_success, read_snapshot, seed_from_cli_or, seed_from_time,
+        write_snapshot, Random,
     };
 }

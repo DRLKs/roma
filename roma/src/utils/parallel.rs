@@ -110,3 +110,12 @@ where
     }
     result
 }
+
+pub fn resolve_num_threads(num_threads: Option<usize>) -> usize {
+    match num_threads {
+        Some(n) => n.max(1),
+        None => std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1),
+    }
+}

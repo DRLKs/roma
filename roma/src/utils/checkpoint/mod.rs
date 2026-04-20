@@ -1,37 +1,36 @@
-use std::env;
 use std::fs;
 use std::io;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+mod binary;
+mod hash;
+mod path;
+
+use self::binary::{
+    byte_to_status, push_f64, push_option_string, push_option_u64, push_string, push_u64,
+    push_u8, push_usize, read_f64, read_option_string, read_option_u64, read_string, read_u64,
+    read_u8, read_usize, status_to_byte,
+};
+use self::hash::checkpoint_signature_hashes;
+use self::path::{
+    checkpoint_file_path, checkpoint_scope_dir, list_checkpoint_files, run_id_timestamp_ms,
+};
+
+pub use self::path::{
+    ensure_checkpoint_dir, initialize_checkpoint_dir, resolve_checkpoint_dir,
+    CheckpointDirSource, CheckpointInitMode, CheckpointInitResult, CheckpointPathConfig,
+};
+
 pub const DEFAULT_CHECKPOINT_ENV_VAR: &str = "ROMA_CHECKPOINT_DIR";
 pub const DEFAULT_APP_NAME: &str = "roma";
 pub const DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES: usize = 10;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CheckpointDirSource {
-    Explicit,
-    EnvVar,
-    OsDefault,
-    ProjectFallback,
-    LocalFallback,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CheckpointInitMode {
-    /// Any initialization error is returned to caller.
-    Required,
-    /// Initialization errors are tolerated; caller may skip checkpointing.
-    BestEffort,
-}
-
-#[derive(Debug, Clone)]
-pub struct CheckpointInitResult {
-    pub directory: Option<PathBuf>,
-    pub source: Option<CheckpointDirSource>,
-    pub attempts: Vec<(CheckpointDirSource, PathBuf, io::ErrorKind)>,
-}
+// Binary file signature used to validate checkpoint file integrity.
+const CHECKPOINT_BIN_MAGIC: [u8; 4] = *b"RCKP";
+const ERR_INVALID_CHECKPOINT_MAGIC: &str = "invalid checkpoint magic header";
+const ERR_TRAILING_BYTES: &str = "trailing bytes found in checkpoint file";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CheckpointRunStatus {
@@ -77,35 +76,63 @@ pub struct CheckpointRecord {
     pub error_message: Option<String>,
 }
 
+impl CheckpointRecord {
+
+    pub fn from_snapshot(
+        run_id: impl Into<String>,
+        algorithm_name: impl Into<String>,
+        algorithm_parameters: impl Into<String>,
+        problem_name: impl Into<String>,
+        problem_parameters: impl Into<String>,
+        algorithm_signature_hash: u64,
+        problem_signature_hash: u64,
+        seq_id: u64,
+        iteration: usize,
+        evaluations: usize,
+        best_fitness: f64,
+        average_fitness: f64,
+        worst_fitness: f64,
+        best_solution_presentation: impl Into<String>,
+        state_payload: Option<String>,
+        termination_criteria_payload: Option<String>,
+        termination_state_payload: Option<String>,
+        elapsed_millis: Option<u64>,
+    ) -> Self {
+        Self {
+            created_at_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_millis())
+                .ok()
+                .and_then(|ms| u64::try_from(ms).ok())
+                .unwrap_or(0),
+            run_id: run_id.into(),
+            algorithm_name: algorithm_name.into(),
+            algorithm_parameters: algorithm_parameters.into(),
+            problem_name: problem_name.into(),
+            problem_parameters: problem_parameters.into(),
+            algorithm_signature_hash,
+            problem_signature_hash,
+            seq_id,
+            iteration,
+            evaluations,
+            best_fitness,
+            average_fitness,
+            worst_fitness,
+            best_solution_presentation: best_solution_presentation.into(),
+            state_payload,
+            termination_criteria_payload,
+            termination_state_payload,
+            elapsed_millis,
+            status: CheckpointRunStatus::Running,
+            error_message: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct CheckpointEntry {
     pub path: PathBuf,
     pub record: CheckpointRecord,
-}
-
-const CHECKPOINT_BIN_MAGIC: [u8; 4] = *b"RCKP";
-
-/// Deterministic 64-bit FNV-1a hash used to build checkpoint signatures.
-pub(crate) fn stable_hash64(text: &str) -> u64 {
-    let mut hash: u64 = 0xcbf29ce484222325;
-    for byte in text.as_bytes() {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(0x100000001b3);
-    }
-    hash
-}
-
-/// Computes algorithm/problem signature hashes from their names and parameters.
-pub(crate) fn checkpoint_signature_hashes(
-    algorithm_name: &str,
-    algorithm_parameters: &str,
-    problem_name: &str,
-    problem_parameters: &str,
-) -> (u64, u64) {
-    let algorithm_signature_hash =
-        stable_hash64(&format!("{}|{}", algorithm_name, algorithm_parameters));
-    let problem_signature_hash = stable_hash64(&format!("{}|{}", problem_name, problem_parameters));
-    (algorithm_signature_hash, problem_signature_hash)
 }
 
 /// Binary checkpoint file layout (little-endian):
@@ -146,147 +173,28 @@ pub(crate) fn checkpoint_signature_hashes(
 /// - algorithm_signature_hash: `11399437687642648721`
 /// - problem_signature_hash: `7769642201919903012`
 
-/// Configures how checkpoint directories are resolved.
-///
-/// Priority order:
-/// 1. `explicit_dir`
-/// 2. env var named by `env_var_name`
-/// 3. OS-specific default location
-/// 4. `project_fallback_dir`
-/// 5. `./.roma/checkpoints`
-#[derive(Debug, Clone)]
-pub struct CheckpointPathConfig {
-    pub app_name: String,
-    pub env_var_name: &'static str,
-    pub explicit_dir: Option<PathBuf>,
-    pub project_fallback_dir: Option<PathBuf>,
+/// Writes a snapshot to the canonical checkpoint location for a run.
+pub fn write_snapshot(base_dir: &Path, record: &CheckpointRecord) -> io::Result<PathBuf> {
+    write_execution_checkpoint(base_dir, record)
 }
 
-impl Default for CheckpointPathConfig {
-    fn default() -> Self {
-        Self {
-            app_name: DEFAULT_APP_NAME.to_string(),
-            env_var_name: DEFAULT_CHECKPOINT_ENV_VAR,
-            explicit_dir: None,
-            project_fallback_dir: None,
-        }
-    }
-}
-
-impl CheckpointPathConfig {
-    pub fn with_app_name(mut self, app_name: impl Into<String>) -> Self {
-        self.app_name = app_name.into();
-        self
-    }
-
-    pub fn with_explicit_dir(mut self, dir: impl Into<PathBuf>) -> Self {
-        self.explicit_dir = Some(dir.into());
-        self
-    }
-
-    pub fn with_project_fallback_dir(mut self, dir: impl Into<PathBuf>) -> Self {
-        self.project_fallback_dir = Some(dir.into());
-        self
-    }
-}
-
-/// Resolves the checkpoint directory following `CheckpointPathConfig` priority.
-pub fn resolve_checkpoint_dir(config: &CheckpointPathConfig) -> PathBuf {
-    checkpoint_dir_candidates(config)
-        .into_iter()
-        .next()
-        .map(|(_, path)| path)
-        .unwrap_or_else(local_fallback_dir)
-}
-
-/// Resolves and creates the checkpoint directory if missing.
-pub fn ensure_checkpoint_dir(config: &CheckpointPathConfig) -> io::Result<PathBuf> {
-    let prepared = initialize_checkpoint_dir(config, CheckpointInitMode::Required)?;
-    prepared
-        .directory
-        .ok_or_else(|| io::Error::other("checkpoint directory unavailable in required mode"))
-}
-
-/// Builds checkpoint directory candidates in priority order.
-pub(crate) fn checkpoint_dir_candidates(
-    config: &CheckpointPathConfig,
-) -> Vec<(CheckpointDirSource, PathBuf)> {
-    let mut candidates = Vec::new();
-
-    if let Some(path) = &config.explicit_dir {
-        push_unique_candidate(&mut candidates, CheckpointDirSource::Explicit, path.clone());
-    }
-
-    if let Some(path) = env_path(config.env_var_name) {
-        push_unique_candidate(&mut candidates, CheckpointDirSource::EnvVar, path);
-    }
-
-    if let Some(path) = default_checkpoint_dir_for_current_os(&config.app_name) {
-        push_unique_candidate(&mut candidates, CheckpointDirSource::OsDefault, path);
-    }
-
-    if let Some(path) = &config.project_fallback_dir {
-        push_unique_candidate(
-            &mut candidates,
-            CheckpointDirSource::ProjectFallback,
-            path.clone(),
-        );
-    }
-
-    push_unique_candidate(
-        &mut candidates,
-        CheckpointDirSource::LocalFallback,
-        local_fallback_dir(),
+/// Writes one checkpoint record under `base_dir` using canonical naming.
+/// Returns the full file path used for persistence.
+pub(crate) fn write_execution_checkpoint(
+    base_dir: &Path,
+    record: &CheckpointRecord,
+) -> io::Result<PathBuf> {
+    let scope_dir = checkpoint_scope_dir(
+        base_dir,
+        &record.algorithm_name,
+        &record.problem_name,
+        record.algorithm_signature_hash,
+        record.problem_signature_hash,
     );
-
-    candidates
-}
-
-/// Tries candidates in order and returns the first writable directory.
-///
-/// In `BestEffort` mode, returns `Ok` with `directory = None` when all
-/// candidates fail, so callers can continue execution without snapshots.
-pub fn initialize_checkpoint_dir(
-    config: &CheckpointPathConfig,
-    mode: CheckpointInitMode,
-) -> io::Result<CheckpointInitResult> {
-    let mut attempts: Vec<(CheckpointDirSource, PathBuf, io::ErrorKind)> = Vec::new();
-
-    for (source, path) in checkpoint_dir_candidates(config) {
-        match fs::create_dir_all(&path) {
-            Ok(()) => {
-                return Ok(CheckpointInitResult {
-                    directory: Some(path),
-                    source: Some(source),
-                    attempts,
-                });
-            }
-            Err(err) => {
-                attempts.push((source, path, err.kind()));
-            }
-        }
-    }
-
-    match mode {
-        CheckpointInitMode::Required => Err(io::Error::new(
-            io::ErrorKind::PermissionDenied,
-            format!(
-                "unable to initialize checkpoint directory from any candidate ({} attempts)",
-                attempts.len()
-            ),
-        )),
-        CheckpointInitMode::BestEffort => Ok(CheckpointInitResult {
-            directory: None,
-            source: None,
-            attempts,
-        }),
-    }
-}
-
-/// Creates a stable checkpoint file path for a run.
-pub(crate) fn checkpoint_file_path(base_dir: &Path, run_id: &str) -> PathBuf {
-    let run = sanitize_path_segment(run_id);
-    base_dir.join(format!("run-{}.ckpt", run))
+    fs::create_dir_all(&scope_dir)?;
+    let path = checkpoint_file_path(&scope_dir, &record.run_id);
+    write_checkpoint_record(&path, record)?;
+    Ok(path)
 }
 
 /// Writes one checkpoint payload in a compact binary format.
@@ -322,23 +230,25 @@ pub(crate) fn write_checkpoint_record(path: &Path, record: &CheckpointRecord) ->
     fs::write(path, bytes)
 }
 
-/// Writes one checkpoint record under `base_dir` using canonical naming.
-/// Returns the full file path used for persistence.
-pub fn write_execution_checkpoint(
-    base_dir: &Path,
-    record: &CheckpointRecord,
-) -> io::Result<PathBuf> {
-    let scope_dir = checkpoint_scope_dir(
-        base_dir,
-        &record.algorithm_name,
-        &record.problem_name,
-        record.algorithm_signature_hash,
-        record.problem_signature_hash,
-    );
-    fs::create_dir_all(&scope_dir)?;
-    let path = checkpoint_file_path(&scope_dir, &record.run_id);
-    write_checkpoint_record(&path, record)?;
-    Ok(path)
+/// Reads one snapshot record from disk.
+pub fn read_snapshot(path: &Path) -> io::Result<CheckpointRecord> {
+    read_checkpoint_record(path)
+}
+
+/// Deletes a checkpoint file when an execution finishes successfully.
+///
+/// Runs can persist checkpoints while they are in progress to support resume.
+/// Once a run completes without errors, that checkpoint is no longer needed,
+/// and this function removes it.
+///
+/// Returns `Ok(true)` when the file was removed, `Ok(false)` when it did not
+/// exist, and `Err(...)` for any other filesystem error.
+pub fn delete_snapshot_on_success(path: &Path) -> io::Result<bool> {
+    match fs::remove_file(path) {
+        Ok(()) => Ok(true),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(err) => Err(err),
+    }
 }
 
 /// Reads one checkpoint payload from disk.
@@ -351,7 +261,7 @@ pub(crate) fn read_checkpoint_record(path: &Path) -> io::Result<CheckpointRecord
     if magic != CHECKPOINT_BIN_MAGIC {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            "invalid checkpoint magic header",
+            ERR_INVALID_CHECKPOINT_MAGIC,
         ));
     }
 
@@ -382,7 +292,7 @@ pub(crate) fn read_checkpoint_record(path: &Path) -> io::Result<CheckpointRecord
     if (cursor.position() as usize) != data.len() {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            "trailing bytes found in checkpoint file",
+            ERR_TRAILING_BYTES,
         ));
     }
 
@@ -563,51 +473,6 @@ pub fn purge_checkpoints_older_than_age(
     purge_checkpoints_older_than(base_dir, threshold)
 }
 
-fn list_checkpoint_files(base_dir: &Path) -> io::Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-    let mut pending = vec![base_dir.to_path_buf()];
-
-    while let Some(dir) = pending.pop() {
-        for entry in fs::read_dir(&dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                pending.push(path);
-                continue;
-            }
-            if path.extension().and_then(|ext| ext.to_str()) == Some("ckpt") {
-                files.push(path);
-            }
-        }
-    }
-    Ok(files)
-}
-
-fn checkpoint_scope_dir(
-    base_dir: &Path,
-    algorithm_name: &str,
-    problem_name: &str,
-    algorithm_signature_hash: u64,
-    problem_signature_hash: u64,
-) -> PathBuf {
-    let algorithm_segment = format!(
-        "alg-{}-{:016x}",
-        sanitize_path_segment(algorithm_name),
-        algorithm_signature_hash
-    );
-    let problem_segment = format!(
-        "prob-{}-{:016x}",
-        sanitize_path_segment(problem_name),
-        problem_signature_hash
-    );
-    base_dir.join(algorithm_segment).join(problem_segment)
-}
-
-fn run_id_timestamp_ms(run_id: &str) -> Option<u128> {
-    let (_, timestamp) = run_id.rsplit_once('-')?;
-    timestamp.parse::<u128>().ok()
-}
-
 fn is_resumable_status(status: CheckpointRunStatus) -> bool {
     matches!(
         status,
@@ -617,297 +482,9 @@ fn is_resumable_status(status: CheckpointRunStatus) -> bool {
     )
 }
 
-fn push_u8(out: &mut Vec<u8>, value: u8) {
-    out.push(value);
-}
-
-fn push_u32(out: &mut Vec<u8>, value: u32) {
-    out.extend_from_slice(&value.to_le_bytes());
-}
-
-fn push_u64(out: &mut Vec<u8>, value: u64) {
-    out.extend_from_slice(&value.to_le_bytes());
-}
-
-fn push_f64(out: &mut Vec<u8>, value: f64) {
-    out.extend_from_slice(&value.to_le_bytes());
-}
-
-fn push_usize(out: &mut Vec<u8>, value: usize) -> io::Result<()> {
-    let value = u64::try_from(value).map_err(|_| {
-        io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "usize value too large to serialize into checkpoint",
-        )
-    })?;
-    push_u64(out, value);
-    Ok(())
-}
-
-fn push_string(out: &mut Vec<u8>, value: &str) -> io::Result<()> {
-    let bytes = value.as_bytes();
-    let len = u32::try_from(bytes.len()).map_err(|_| {
-        io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "string too large to serialize into checkpoint",
-        )
-    })?;
-    push_u32(out, len);
-    out.extend_from_slice(bytes);
-    Ok(())
-}
-
-fn push_option_string(out: &mut Vec<u8>, value: &Option<String>) -> io::Result<()> {
-    match value {
-        Some(text) => {
-            push_u8(out, 1);
-            push_string(out, text)
-        }
-        None => {
-            push_u8(out, 0);
-            Ok(())
-        }
-    }
-}
-
-fn push_option_u64(out: &mut Vec<u8>, value: Option<u64>) {
-    match value {
-        Some(x) => {
-            push_u8(out, 1);
-            push_u64(out, x);
-        }
-        None => push_u8(out, 0),
-    }
-}
-
-fn read_u8(input: &mut impl Read) -> io::Result<u8> {
-    let mut bytes = [0u8; 1];
-    input.read_exact(&mut bytes)?;
-    Ok(bytes[0])
-}
-
-fn read_u32(input: &mut impl Read) -> io::Result<u32> {
-    let mut bytes = [0u8; 4];
-    input.read_exact(&mut bytes)?;
-    Ok(u32::from_le_bytes(bytes))
-}
-
-fn read_u64(input: &mut impl Read) -> io::Result<u64> {
-    let mut bytes = [0u8; 8];
-    input.read_exact(&mut bytes)?;
-    Ok(u64::from_le_bytes(bytes))
-}
-
-fn read_f64(input: &mut impl Read) -> io::Result<f64> {
-    let mut bytes = [0u8; 8];
-    input.read_exact(&mut bytes)?;
-    Ok(f64::from_le_bytes(bytes))
-}
-
-fn read_usize(input: &mut impl Read) -> io::Result<usize> {
-    let value = read_u64(input)?;
-    usize::try_from(value).map_err(|_| {
-        io::Error::new(
-            io::ErrorKind::InvalidData,
-            "u64 value too large to deserialize into usize",
-        )
-    })
-}
-
-fn read_string(input: &mut impl Read) -> io::Result<String> {
-    let len = read_u32(input)? as usize;
-    let mut bytes = vec![0u8; len];
-    input.read_exact(&mut bytes)?;
-    String::from_utf8(bytes).map_err(|_| {
-        io::Error::new(
-            io::ErrorKind::InvalidData,
-            "invalid UTF-8 string in checkpoint",
-        )
-    })
-}
-
-fn read_option_string(input: &mut impl Read) -> io::Result<Option<String>> {
-    match read_u8(input)? {
-        0 => Ok(None),
-        1 => Ok(Some(read_string(input)?)),
-        flag => Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("invalid option flag for string: {}", flag),
-        )),
-    }
-}
-
-fn read_option_u64(input: &mut impl Read) -> io::Result<Option<u64>> {
-    match read_u8(input)? {
-        0 => Ok(None),
-        1 => Ok(Some(read_u64(input)?)),
-        flag => Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("invalid option flag for u64: {}", flag),
-        )),
-    }
-}
-
-fn status_to_byte(status: CheckpointRunStatus) -> u8 {
-    match status {
-        CheckpointRunStatus::Running => 0,
-        CheckpointRunStatus::Completed => 1,
-        CheckpointRunStatus::Failed => 2,
-        CheckpointRunStatus::Interrupted => 3,
-    }
-}
-
-fn byte_to_status(value: u8) -> io::Result<CheckpointRunStatus> {
-    match value {
-        0 => Ok(CheckpointRunStatus::Running),
-        1 => Ok(CheckpointRunStatus::Completed),
-        2 => Ok(CheckpointRunStatus::Failed),
-        3 => Ok(CheckpointRunStatus::Interrupted),
-        _ => Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("invalid checkpoint status byte: {}", value),
-        )),
-    }
-}
-
-fn env_path(name: &str) -> Option<PathBuf> {
-    let value = env::var_os(name)?;
-    if value.as_os_str().is_empty() {
-        return None;
-    }
-    Some(PathBuf::from(value))
-}
-
-fn local_fallback_dir() -> PathBuf {
-    PathBuf::from(".").join(".roma").join("checkpoints")
-}
-
-fn push_unique_candidate(
-    candidates: &mut Vec<(CheckpointDirSource, PathBuf)>,
-    source: CheckpointDirSource,
-    path: PathBuf,
-) {
-    if candidates.iter().any(|(_, existing)| existing == &path) {
-        return;
-    }
-
-    candidates.push((source, path));
-}
-
-#[cfg(target_os = "linux")]
-fn default_checkpoint_dir_for_current_os(app_name: &str) -> Option<PathBuf> {
-    if let Some(base) = env_path("XDG_STATE_HOME") {
-        return Some(base.join(app_name).join("checkpoints"));
-    }
-
-    let home = env_path("HOME")?;
-    Some(
-        home.join(".local")
-            .join("state")
-            .join(app_name)
-            .join("checkpoints"),
-    )
-}
-
-#[cfg(target_os = "macos")]
-fn default_checkpoint_dir_for_current_os(app_name: &str) -> Option<PathBuf> {
-    let home = env_path("HOME")?;
-    Some(
-        home.join("Library")
-            .join("Application Support")
-            .join(app_name)
-            .join("checkpoints"),
-    )
-}
-
-#[cfg(target_os = "windows")]
-fn default_checkpoint_dir_for_current_os(app_name: &str) -> Option<PathBuf> {
-    if let Some(base) = env_path("LOCALAPPDATA") {
-        return Some(base.join(app_name).join("checkpoints"));
-    }
-
-    let roaming = env_path("APPDATA")?;
-    Some(roaming.join(app_name).join("checkpoints"))
-}
-
-#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
-fn default_checkpoint_dir_for_current_os(app_name: &str) -> Option<PathBuf> {
-    let home = env_path("HOME")?;
-    Some(home.join(format!(".{}", app_name)).join("checkpoints"))
-}
-
-fn sanitize_path_segment(value: &str) -> String {
-    let mut out = String::new();
-    for ch in value.chars() {
-        if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
-            out.push(ch);
-        } else {
-            out.push('_');
-        }
-    }
-
-    let trimmed = out.trim_matches('_');
-    if trimmed.is_empty() {
-        return "unnamed".to_string();
-    }
-
-    trimmed.to_string()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn sanitize_path_segment_keeps_safe_ascii() {
-        let sanitized = sanitize_path_segment("run-A_01");
-        assert_eq!(sanitized, "run-A_01");
-    }
-
-    #[test]
-    fn sanitize_path_segment_replaces_unsafe_chars() {
-        let sanitized = sanitize_path_segment("run:/ 01");
-        assert_eq!(sanitized, "run___01");
-    }
-
-    #[test]
-    fn sanitize_path_segment_defaults_when_empty_after_cleanup() {
-        let sanitized = sanitize_path_segment("@@@");
-        assert_eq!(sanitized, "unnamed");
-    }
-
-    #[test]
-    fn checkpoint_file_path_uses_stable_name() {
-        let path = checkpoint_file_path(Path::new("/tmp/checkpoints"), "trial 7");
-        let file_name = path
-            .file_name()
-            .and_then(|x| x.to_str())
-            .unwrap_or_default();
-        assert_eq!(file_name, "run-trial_7.ckpt");
-    }
-
-    #[test]
-    fn explicit_dir_has_priority() {
-        let cfg = CheckpointPathConfig::default().with_explicit_dir("/my/checkpoints");
-        let resolved = resolve_checkpoint_dir(&cfg);
-        assert_eq!(resolved, PathBuf::from("/my/checkpoints"));
-    }
-
-    #[test]
-    fn candidates_always_include_local_fallback() {
-        let cfg = CheckpointPathConfig::default();
-        let candidates = checkpoint_dir_candidates(&cfg);
-        assert!(candidates.iter().any(|(source, path)| *source
-            == CheckpointDirSource::LocalFallback
-            && *path == PathBuf::from("./.roma/checkpoints")));
-    }
-
-    #[test]
-    fn initialize_best_effort_can_succeed() {
-        let cfg = CheckpointPathConfig::default();
-        let result = initialize_checkpoint_dir(&cfg, CheckpointInitMode::BestEffort);
-        assert!(result.is_ok());
-    }
 
     #[test]
     fn write_and_read_checkpoint_record_roundtrip() {
@@ -1098,5 +675,49 @@ mod tests {
 
         assert_eq!(latest.status, CheckpointRunStatus::Failed);
         assert_eq!(latest.seq_id, 8);
+    }
+
+    #[test]
+    fn delete_snapshot_on_success_removes_checkpoint_file() {
+        let base = std::env::temp_dir().join(format!(
+            "roma_checkpoint_delete_test_{}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&base).expect("checkpoint test dir should be creatable");
+
+        let record = CheckpointRecord {
+            created_at_ms: 10,
+            run_id: "HillClimbing-1-10".to_string(),
+            algorithm_name: "HillClimbing".to_string(),
+            algorithm_parameters: "mutation_probability=0.2".to_string(),
+            problem_name: "DemoProblem".to_string(),
+            problem_parameters: "items=10".to_string(),
+            algorithm_signature_hash: 111,
+            problem_signature_hash: 222,
+            seq_id: 1,
+            iteration: 1,
+            evaluations: 2,
+            best_fitness: 1.0,
+            average_fitness: 1.0,
+            worst_fitness: 1.0,
+            best_solution_presentation: "ok".to_string(),
+            state_payload: None,
+            termination_criteria_payload: None,
+            termination_state_payload: None,
+            elapsed_millis: Some(10),
+            status: CheckpointRunStatus::Completed,
+            error_message: None,
+        };
+
+        let path = checkpoint_file_path(&base, &record.run_id);
+        write_checkpoint_record(&path, &record).expect("checkpoint should be writable");
+        assert!(path.exists());
+
+        let removed = delete_snapshot_on_success(&path).expect("delete should succeed");
+        assert!(removed);
+        assert!(!path.exists());
+
+        let removed_again = delete_snapshot_on_success(&path).expect("missing file is fine");
+        assert!(!removed_again);
     }
 }
