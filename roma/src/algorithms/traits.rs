@@ -1,10 +1,20 @@
 use crate::algorithms::objective::ImprovementDirection;
-use crate::algorithms::runtime::{run_algorithm, ExecutionContext};
+use crate::algorithms::runtime::{
+    run_with_observer_runtime, ExecutionContext, RuntimeExecutionOutput,
+};
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
+use crate::observer::ObserverState;
 use crate::observer::traits::AlgorithmObserver;
 use crate::problem::traits::Problem;
 use crate::solution::traits::Dominance;
 use crate::solution_set::traits::SolutionSet;
+use crate::utils::checkpoint::{
+    CheckpointPathConfig, CheckpointRecord, resolve_checkpoint_dir, select_resume_checkpoint,
+};
+use crate::utils::cli::{has_flag, resolve_path_from_flag_or_default};
+
+const RESUME_FLAG: &str = "--resume";
+const CHECKPOINT_DIR_FLAG: &str = "--checkpoint-dir";
 
 /// Basic interface for all optimization algorithms.
 ///
@@ -51,16 +61,53 @@ where
         let direction: ImprovementDirection = problem.get_improvement_direction();
         let algorithm = &*self;
 
-        let result = run_algorithm(
+        // Configuration for checkpoint resumption
+        let resume_checkpoint = self.get_resume_checkpoint(problem);
+
+        let result = run_with_observer_runtime(
             &mut observers,
             criteria,
             direction,
             algorithm_name,
-            |context| algorithm.initialize_step_state(problem, context),
-            |state, context| algorithm.step(problem, state, context),
-            |state| algorithm.snapshot(state),
-            |state| algorithm.finalize_step_state(state),
-            |solution| problem.format_solution(solution),
+            move |context| {
+                let mut state = if let Some(checkpoint) = resume_checkpoint.as_ref() {
+                    algorithm.initialize_step_state_with_resume(
+                        problem,
+                        checkpoint,
+                    )
+                } else {
+                    algorithm.initialize_step_state(problem)
+                };
+
+                let initial_snapshot = context.snapshot_with_seq(algorithm.snapshot(&state));
+                let initial_presentation = problem.format_solution(&initial_snapshot.best_solution);
+                let mut last_iteration = initial_snapshot.iteration;
+                let mut last_evaluations = initial_snapshot.evaluations;
+                context.report_progress(ObserverState::from_snapshot(
+                    initial_snapshot,
+                    initial_presentation,
+                ));
+
+                while !context.should_terminate() {
+                    algorithm.step(problem, &mut state, context);
+
+                    let step_snapshot = algorithm.snapshot(&state);
+                    let step_snapshot = context.snapshot_with_seq(step_snapshot);
+                    let step_presentation = problem.format_solution(&step_snapshot.best_solution);
+                    last_iteration = step_snapshot.iteration;
+                    last_evaluations = step_snapshot.evaluations;
+                    context.report_progress(ObserverState::from_snapshot(
+                        step_snapshot,
+                        step_presentation,
+                    ));
+                }
+
+                RuntimeExecutionOutput::new(
+                    algorithm.finalize_step_state(state),
+                    last_iteration,
+                    last_evaluations,
+                )
+            },
         );
         *self.observers_mut() = observers;
 
@@ -78,7 +125,6 @@ where
     fn initialize_step_state(
         &self,
         problem: &(impl Problem<T, Q> + Sync),
-        context: &ExecutionContext<T, Q>,
     ) -> Self::StepState;
 
     fn step(
@@ -91,4 +137,57 @@ where
     fn snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T, Q>;
 
     fn finalize_step_state(&self, state: Self::StepState) -> Self::SolutionSet;
+
+    fn initialize_step_state_with_resume(
+        &self,
+        problem: &(impl Problem<T, Q> + Sync),
+        _checkpoint: &CheckpointRecord,
+    ) -> Self::StepState {
+        self.initialize_step_state(problem)
+    }
+
+    /// Returns a string used to fingerprint algorithm checkpoint compatibility.
+    fn checkpoint_algorithm_parameters(&self) -> String {
+        String::new()
+    }
+
+    /// Resolves a resumable checkpoint when `--resume` is present.
+    ///
+    /// This method resolves the checkpoint directory, computes algorithm/problem
+    /// identity fingerprints and delegates checkpoint selection to the checkpoint
+    /// module. It returns `None` when resume is disabled, no compatible
+    /// checkpoint is found, or selection fails.
+    fn get_resume_checkpoint(&self, problem: &(impl Problem<T, Q> + Sync)) -> Option<CheckpointRecord> {
+        let resume = has_flag(RESUME_FLAG);
+        if !resume {
+            return None;
+        }
+        
+        let default_dir = resolve_checkpoint_dir(&CheckpointPathConfig::default());
+        let checkpoint_dir =
+                resolve_path_from_flag_or_default(CHECKPOINT_DIR_FLAG, default_dir.clone());
+
+        let algorithm_parameters = self.checkpoint_algorithm_parameters();
+        let problem_description = problem.get_problem_description();
+        let problem_parameters = problem.get_problem_description(); // TODO: Obtener parámetros específicos de cada problema
+
+        match select_resume_checkpoint(
+            checkpoint_dir.as_path(),
+            self.algorithm_name(),
+            &algorithm_parameters,
+            &problem_description,
+            &problem_parameters,
+        ){
+            Ok(Some(record)) => Some(record),
+            Ok(None) => {
+                eprintln!("No matching checkpoint found for resumption.");
+                None
+            }
+            Err(err) => {
+                eprintln!("Error while searching for checkpoint: {}", err);
+                None
+            }
+        }
+        
+    }
 }

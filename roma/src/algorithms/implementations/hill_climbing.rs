@@ -176,7 +176,6 @@ where
     fn initialize_step_state(
         &self,
         problem: &(impl Problem<T> + Sync),
-        _context: &ExecutionContext<T>,
     ) -> Self::StepState {
         let mut rng = Random::new(self.parameters.random_seed.unwrap_or_else(seed_from_time));
         let mut current = problem.create_solution(&mut rng);
@@ -235,6 +234,24 @@ where
         let mut result = VectorSolutionSet::new();
         result.add_solution(state.current);
         result
+    }
+
+    fn initialize_step_state_with_resume(
+            &self,
+            problem: &(impl Problem<T, f64> + Sync),
+            checkpoint: &crate::utils::checkpoint::CheckpointRecord,
+        ) -> Self::StepState {
+        let mut rng = Random::new(checkpoint.random_seed);
+        let mut current = problem.create_solution(&mut rng);
+        let _current_solution_payload = checkpoint.current_solution_payload.as_deref();
+        problem.evaluate(&mut current);
+
+        HillClimbingState {
+            current,
+            rng,
+            iteration: checkpoint.iteration,
+            evaluations: checkpoint.evaluations,
+        }
     }
 }
 

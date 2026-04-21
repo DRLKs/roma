@@ -4,6 +4,8 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::utils::cli::prompt_checkpoint_selection;
+
 mod binary;
 mod hash;
 mod path;
@@ -55,9 +57,10 @@ impl CheckpointRunStatus {
 pub struct CheckpointRecord {
     pub created_at_ms: u64,
     pub run_id: String,
+    pub random_seed: u64,
     pub algorithm_name: String,
     pub algorithm_parameters: String,
-    pub problem_name: String,
+    pub problem_description: String,
     pub problem_parameters: String,
     pub algorithm_signature_hash: u64,
     pub problem_signature_hash: u64,
@@ -68,6 +71,7 @@ pub struct CheckpointRecord {
     pub average_fitness: f64,
     pub worst_fitness: f64,
     pub best_solution_presentation: String,
+    pub current_solution_payload: Option<String>,
     pub state_payload: Option<String>,
     pub termination_criteria_payload: Option<String>,
     pub termination_state_payload: Option<String>,
@@ -80,9 +84,10 @@ impl CheckpointRecord {
 
     pub fn from_snapshot(
         run_id: impl Into<String>,
+        random_seed: u64,
         algorithm_name: impl Into<String>,
         algorithm_parameters: impl Into<String>,
-        problem_name: impl Into<String>,
+        problem_description: impl Into<String>,
         problem_parameters: impl Into<String>,
         algorithm_signature_hash: u64,
         problem_signature_hash: u64,
@@ -93,6 +98,7 @@ impl CheckpointRecord {
         average_fitness: f64,
         worst_fitness: f64,
         best_solution_presentation: impl Into<String>,
+        current_solution_payload: Option<String>,
         state_payload: Option<String>,
         termination_criteria_payload: Option<String>,
         termination_state_payload: Option<String>,
@@ -106,9 +112,10 @@ impl CheckpointRecord {
                 .and_then(|ms| u64::try_from(ms).ok())
                 .unwrap_or(0),
             run_id: run_id.into(),
+            random_seed,
             algorithm_name: algorithm_name.into(),
             algorithm_parameters: algorithm_parameters.into(),
-            problem_name: problem_name.into(),
+            problem_description: problem_description.into(),
             problem_parameters: problem_parameters.into(),
             algorithm_signature_hash,
             problem_signature_hash,
@@ -119,6 +126,7 @@ impl CheckpointRecord {
             average_fitness,
             worst_fitness,
             best_solution_presentation: best_solution_presentation.into(),
+            current_solution_payload,
             state_payload,
             termination_criteria_payload,
             termination_state_payload,
@@ -145,7 +153,7 @@ pub struct CheckpointEntry {
 /// - run_id: string
 /// - algorithm_name: string
 /// - algorithm_parameters: string
-/// - problem_name: string
+/// - problem_description: string
 /// - problem_parameters: string
 /// - algorithm_signature_hash: u64
 /// - problem_signature_hash: u64
@@ -156,6 +164,7 @@ pub struct CheckpointEntry {
 /// - evaluations: usize encoded as u64
 /// - best_fitness, average_fitness, worst_fitness: f64
 /// - best_solution_presentation: string
+/// - current_solution_payload: Option<string>
 ///
 /// Optional payloads:
 /// - state_payload: Option<string> (algorithm-defined UTF-8 payload; e.g. JSON text)
@@ -168,7 +177,7 @@ pub struct CheckpointEntry {
 /// Example metadata values:
 /// - algorithm_name: `HillClimbing`
 /// - algorithm_parameters: `mutation_probability=0.20;termination=max_iterations:100`
-/// - problem_name: `roma::problem::implementations::tsp_problem::TspProblem`
+/// - problem_description: `roma::problem::implementations::tsp_problem::TspProblem`
 /// - problem_parameters: `cities=52;close_tour=true;fixed_start_city=none`
 /// - algorithm_signature_hash: `11399437687642648721`
 /// - problem_signature_hash: `7769642201919903012`
@@ -187,7 +196,7 @@ pub(crate) fn write_execution_checkpoint(
     let scope_dir = checkpoint_scope_dir(
         base_dir,
         &record.algorithm_name,
-        &record.problem_name,
+        &record.problem_description,
         record.algorithm_signature_hash,
         record.problem_signature_hash,
     );
@@ -207,9 +216,10 @@ pub(crate) fn write_checkpoint_record(path: &Path, record: &CheckpointRecord) ->
 
     push_u64(&mut bytes, record.created_at_ms);
     push_string(&mut bytes, &record.run_id)?;
+    push_u64(&mut bytes, record.random_seed);
     push_string(&mut bytes, &record.algorithm_name)?;
     push_string(&mut bytes, &record.algorithm_parameters)?;
-    push_string(&mut bytes, &record.problem_name)?;
+    push_string(&mut bytes, &record.problem_description)?;
     push_string(&mut bytes, &record.problem_parameters)?;
     push_u64(&mut bytes, record.algorithm_signature_hash);
     push_u64(&mut bytes, record.problem_signature_hash);
@@ -220,6 +230,7 @@ pub(crate) fn write_checkpoint_record(path: &Path, record: &CheckpointRecord) ->
     push_f64(&mut bytes, record.average_fitness);
     push_f64(&mut bytes, record.worst_fitness);
     push_string(&mut bytes, &record.best_solution_presentation)?;
+    push_option_string(&mut bytes, &record.current_solution_payload)?;
     push_option_string(&mut bytes, &record.state_payload)?;
     push_option_string(&mut bytes, &record.termination_criteria_payload)?;
     push_option_string(&mut bytes, &record.termination_state_payload)?;
@@ -268,9 +279,10 @@ pub(crate) fn read_checkpoint_record(path: &Path) -> io::Result<CheckpointRecord
     let record = CheckpointRecord {
         created_at_ms: read_u64(&mut cursor)?,
         run_id: read_string(&mut cursor)?,
+        random_seed: read_u64(&mut cursor)?,
         algorithm_name: read_string(&mut cursor)?,
         algorithm_parameters: read_string(&mut cursor)?,
-        problem_name: read_string(&mut cursor)?,
+        problem_description: read_string(&mut cursor)?,
         problem_parameters: read_string(&mut cursor)?,
         algorithm_signature_hash: read_u64(&mut cursor)?,
         problem_signature_hash: read_u64(&mut cursor)?,
@@ -281,6 +293,7 @@ pub(crate) fn read_checkpoint_record(path: &Path) -> io::Result<CheckpointRecord
         average_fitness: read_f64(&mut cursor)?,
         worst_fitness: read_f64(&mut cursor)?,
         best_solution_presentation: read_string(&mut cursor)?,
+        current_solution_payload: read_option_string(&mut cursor)?,
         state_payload: read_option_string(&mut cursor)?,
         termination_criteria_payload: read_option_string(&mut cursor)?,
         termination_state_payload: read_option_string(&mut cursor)?,
@@ -380,13 +393,13 @@ pub fn list_resumable_checkpoint_entries_for_identity(
     base_dir: &Path,
     algorithm_name: &str,
     algorithm_parameters: &str,
-    problem_name: &str,
+    problem_description: &str,
     problem_parameters: &str,
 ) -> io::Result<Vec<CheckpointEntry>> {
     let (algorithm_signature_hash, problem_signature_hash) = checkpoint_signature_hashes(
         algorithm_name,
         algorithm_parameters,
-        problem_name,
+        problem_description,
         problem_parameters,
     );
 
@@ -396,6 +409,47 @@ pub fn list_resumable_checkpoint_entries_for_identity(
         algorithm_signature_hash,
         problem_signature_hash,
     )
+}
+
+/// Selects one resumable checkpoint for a specific algorithm+problem identity.
+///
+/// Selection behavior:
+/// - no matches: returns `Ok(None)`
+/// - one match: auto-selects it
+/// - multiple matches: prompts user to choose index
+pub fn select_resume_checkpoint(
+    base_dir: &Path,
+    algorithm_name: &str,
+    algorithm_parameters: &str,
+    problem_description: &str,
+    problem_parameters: &str,
+) -> Result<Option<CheckpointRecord>, String> {
+    let entries = list_resumable_checkpoint_entries_for_identity(
+        base_dir,
+        algorithm_name,
+        algorithm_parameters,
+        problem_description,
+        problem_parameters,
+    )
+    .map_err(|err| {
+        format!(
+            "failed to list resumable checkpoints in '{}': {}",
+            base_dir.display(),
+            err
+        )
+    })?;
+
+    if entries.is_empty() {
+        return Ok(None);
+    }
+
+    let selected_index = if entries.len() == 1 {
+        Some(0)
+    } else {
+        prompt_checkpoint_selection(&entries)?
+    };
+
+    Ok(selected_index.map(|index| entries[index].record.clone()))
 }
 
 /// Loads the latest checkpoint compatible with algorithm + problem fingerprint
@@ -497,9 +551,10 @@ mod tests {
         let record = CheckpointRecord {
             created_at_ms: 123,
             run_id: "HillClimbing-1-123".to_string(),
+            random_seed: 42,
             algorithm_name: "HillClimbing".to_string(),
             algorithm_parameters: "mutation_probability=0.2".to_string(),
-            problem_name: "DemoProblem".to_string(),
+            problem_description: "DemoProblem".to_string(),
             problem_parameters: "items=10".to_string(),
             algorithm_signature_hash: 111,
             problem_signature_hash: 222,
@@ -510,6 +565,7 @@ mod tests {
             average_fitness: 8.2,
             worst_fitness: 3.1,
             best_solution_presentation: "selected=2/4".to_string(),
+            current_solution_payload: Some("{\"kind\":\"best\"}".to_string()),
             state_payload: Some("seed=42".to_string()),
             termination_criteria_payload: Some("max_iterations:100".to_string()),
             termination_state_payload: Some(
@@ -541,9 +597,10 @@ mod tests {
         let older = CheckpointRecord {
             created_at_ms: 1,
             run_id: run_id_a,
+            random_seed: 10,
             algorithm_name: "HillClimbing".to_string(),
             algorithm_parameters: "mutation_probability=0.2".to_string(),
-            problem_name: "DemoProblem".to_string(),
+            problem_description: "DemoProblem".to_string(),
             problem_parameters: "items=10".to_string(),
             algorithm_signature_hash: 111,
             problem_signature_hash: 222,
@@ -554,6 +611,7 @@ mod tests {
             average_fitness: 1.0,
             worst_fitness: 1.0,
             best_solution_presentation: "old".to_string(),
+            current_solution_payload: None,
             state_payload: Some("seed=10".to_string()),
             termination_criteria_payload: None,
             termination_state_payload: None,
@@ -564,9 +622,10 @@ mod tests {
         let newer = CheckpointRecord {
             created_at_ms: 2,
             run_id: run_id_b,
+            random_seed: 10,
             algorithm_name: "HillClimbing".to_string(),
             algorithm_parameters: "mutation_probability=0.2".to_string(),
-            problem_name: "DemoProblem".to_string(),
+            problem_description: "DemoProblem".to_string(),
             problem_parameters: "items=10".to_string(),
             algorithm_signature_hash: 111,
             problem_signature_hash: 222,
@@ -577,6 +636,7 @@ mod tests {
             average_fitness: 2.0,
             worst_fitness: 2.0,
             best_solution_presentation: "new".to_string(),
+            current_solution_payload: None,
             state_payload: Some("seed=10".to_string()),
             termination_criteria_payload: None,
             termination_state_payload: None,
@@ -613,9 +673,10 @@ mod tests {
         let completed = CheckpointRecord {
             created_at_ms: 3,
             run_id: run_a,
+            random_seed: 10,
             algorithm_name: "HillClimbing".to_string(),
             algorithm_parameters: "mutation_probability=0.2".to_string(),
-            problem_name: "DemoProblem".to_string(),
+            problem_description: "DemoProblem".to_string(),
             problem_parameters: "dataset=a".to_string(),
             algorithm_signature_hash: 111,
             problem_signature_hash: 333,
@@ -626,6 +687,7 @@ mod tests {
             average_fitness: 3.0,
             worst_fitness: 3.0,
             best_solution_presentation: "completed".to_string(),
+            current_solution_payload: None,
             state_payload: Some("seed=33".to_string()),
             termination_criteria_payload: None,
             termination_state_payload: None,
@@ -637,9 +699,10 @@ mod tests {
         let failed = CheckpointRecord {
             created_at_ms: 4,
             run_id: run_b,
+            random_seed: 44,
             algorithm_name: "HillClimbing".to_string(),
             algorithm_parameters: "mutation_probability=0.2".to_string(),
-            problem_name: "DemoProblem".to_string(),
+            problem_description: "DemoProblem".to_string(),
             problem_parameters: "dataset=a".to_string(),
             algorithm_signature_hash: 111,
             problem_signature_hash: 333,
@@ -650,6 +713,7 @@ mod tests {
             average_fitness: 8.0,
             worst_fitness: 8.0,
             best_solution_presentation: "failed".to_string(),
+            current_solution_payload: None,
             state_payload: Some("seed=44".to_string()),
             termination_criteria_payload: None,
             termination_state_payload: None,
@@ -688,9 +752,10 @@ mod tests {
         let record = CheckpointRecord {
             created_at_ms: 10,
             run_id: "HillClimbing-1-10".to_string(),
+            random_seed: 42,
             algorithm_name: "HillClimbing".to_string(),
             algorithm_parameters: "mutation_probability=0.2".to_string(),
-            problem_name: "DemoProblem".to_string(),
+            problem_description: "DemoProblem".to_string(),
             problem_parameters: "items=10".to_string(),
             algorithm_signature_hash: 111,
             problem_signature_hash: 222,
@@ -701,6 +766,7 @@ mod tests {
             average_fitness: 1.0,
             worst_fitness: 1.0,
             best_solution_presentation: "ok".to_string(),
+            current_solution_payload: None,
             state_payload: None,
             termination_criteria_payload: None,
             termination_state_payload: None,

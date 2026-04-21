@@ -166,7 +166,6 @@ where
     fn initialize_step_state(
         &self,
         problem: &(impl Problem<T> + Sync),
-        _context: &ExecutionContext<T>,
     ) -> Self::StepState {
         let mut rng = Random::new(self.parameters.random_seed.unwrap_or_else(seed_from_time));
         let mut current = problem.create_solution(&mut rng);

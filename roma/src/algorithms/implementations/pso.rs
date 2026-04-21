@@ -206,7 +206,6 @@ impl Algorithm<bool> for PSO {
     fn initialize_step_state(
         &self,
         problem: &(impl Problem<bool> + Sync),
-        _context: &ExecutionContext<bool>,
     ) -> Self::StepState {
         let direction: ImprovementDirection = problem.get_improvement_direction();
         let mut rng = Random::new(self.parameters.random_seed.unwrap_or_else(seed_from_time));

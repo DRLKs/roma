@@ -495,7 +495,6 @@ where
     fn initialize_step_state(
         &self,
         problem: &(impl Problem<T> + Sync),
-        _context: &ExecutionContext<T>,
     ) -> Self::StepState {
         let run_seed = Random::resolve_seed(self.parameters.random_seed);
         let mut init_rng = Random::new(Random::derive_seed(run_seed, 0));

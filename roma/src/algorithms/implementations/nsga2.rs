@@ -376,7 +376,6 @@ where
     fn initialize_step_state(
         &self,
         problem: &(impl Problem<f64, ParetoCrowdingDistanceQuality> + Sync),
-        _context: &ExecutionContext<f64, ParetoCrowdingDistanceQuality>,
     ) -> Self::StepState {
         let mut rng = Random::new(self.parameters.random_seed.unwrap_or_else(seed_from_time));
 

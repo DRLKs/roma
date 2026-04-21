@@ -96,6 +96,8 @@
     [ ] Que funcione para los de población
     [ ] Que funcione para los experimentos
 
+    [ ] Obtener los parámetros de cada problema especificamente para identificar correctamente los checkpoints
+
 [ ] 24. Limpiar los checkoints LRU
 
 Cambiar algorithm.run añadir el argumento resume
