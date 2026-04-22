@@ -1,5 +1,6 @@
 use crate::algorithms::objective::ImprovementDirection;
 use crate::solution::Solution;
+use crate::solution::codec::SolutionCodec;
 use crate::utils::random::Random;
 
 /// Trait that defines the basic interface for optimization problems.
@@ -36,6 +37,13 @@ where
     /// This is the single source of truth for scalar optimization direction
     /// in the framework. Algorithms and runtime termination consume this value
     fn get_improvement_direction(&self) -> ImprovementDirection;
+
+    /// Returns an optional codec used to encode/decode solution payloads.
+    ///
+    /// Default implementation keeps codec support opt-in and lightweight.
+    fn solution_codec(&self) -> Option<&dyn SolutionCodec<T, Q>> {
+        None
+    }
 
     /// Returns a human-friendly representation for one solution.
     ///

@@ -5,6 +5,7 @@
 
 pub(crate) mod implementations;
 pub(crate) mod traits;
+pub mod codec;
 
 pub use implementations::binary_solution::BinarySolutionBuilder;
 pub use implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
@@ -12,6 +13,7 @@ pub use implementations::pareto_crowding_solution::MultiObjectiveVectorRealSolut
 pub use implementations::permutation_solution::PermutationSolutionBuilder;
 pub use implementations::real_solution::RealSolutionBuilder;
 pub use implementations::string_solution::StringSolutionBuilder;
+pub use codec::SolutionCodec;
 pub use traits::Dominance;
 pub use traits::ParetoCrowdingDistanceQuality;
 
@@ -163,6 +165,26 @@ impl<T, Q> Solution<T, Q> {
     /// re-evaluated by the problem.
     pub fn invalidate(&mut self) {
         self.quality = None;
+    }
+
+}
+
+impl<T, Q> Solution<T, Q>
+where
+    T: Clone,
+    Q: Clone + Default,
+{
+    /// Encodes this solution using a codec supplied by the problem/domain.
+    pub fn encode_with(&self, codec: &dyn codec::SolutionCodec<T, Q>) -> Result<String, String> {
+        codec.encode_solution(self)
+    }
+
+    /// Decodes one solution using a codec supplied by the problem/domain.
+    pub fn decode_with(
+        codec: &dyn codec::SolutionCodec<T, Q>,
+        payload: &str,
+    ) -> Result<Self, String> {
+        codec.decode_solution(payload)
     }
 }
 
