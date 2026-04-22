@@ -41,6 +41,7 @@ pub(crate) fn push_f64(out: &mut Vec<u8>, value: f64) {
     out.extend_from_slice(&value.to_le_bytes());
 }
 
+#[allow(dead_code)]
 pub(crate) fn push_usize(out: &mut Vec<u8>, value: usize) -> io::Result<()> {
     let value = u64::try_from(value).map_err(|_| {
         io::Error::new(io::ErrorKind::InvalidInput, ERR_USIZE_TOO_LARGE_TO_SERIALIZE)
@@ -106,6 +107,7 @@ pub(crate) fn read_f64(input: &mut impl Read) -> io::Result<f64> {
     Ok(f64::from_le_bytes(bytes))
 }
 
+#[allow(dead_code)]
 pub(crate) fn read_usize(input: &mut impl Read) -> io::Result<usize> {
     let value = read_u64(input)?;
     usize::try_from(value)

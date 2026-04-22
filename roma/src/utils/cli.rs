@@ -123,12 +123,10 @@ pub fn prompt_checkpoint_selection(entries: &[CheckpointEntry]) -> Result<Option
     println!("Found {} resumable checkpoints:", entries.len());
     for (index, entry) in entries.iter().enumerate() {
         println!(
-            "  [{}] run_id={} seq={} iter={} eval={} status={} file={}",
+            "  [{}] run_id={} seq={} status={} file={}",
             index + 1,
             entry.record.run_id,
             entry.record.seq_id,
-            entry.record.iteration,
-            entry.record.evaluations,
             entry.record.status.as_str(),
             entry.path.display()
         );
