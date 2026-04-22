@@ -102,7 +102,7 @@ where
         self.iteration
     }
 
-    fn to_payload(&self, solution_codec: &impl SolutionCodec<T>) -> String {
+    fn to_payload(&self, solution_codec: &dyn SolutionCodec<T>) -> String {
 
         let curr_encoded = solution_codec.encode_solution(&self.current).unwrap_or_default();
         let best_encoded = solution_codec.encode_solution(&self.best).unwrap_or_default();
@@ -118,7 +118,7 @@ where
         )
     }
 
-    fn from_payload(payload: &str, solution_codec: &impl SolutionCodec<T>) -> Self {
+    fn from_payload(payload: &str, solution_codec: &dyn SolutionCodec<T>) -> Self {
         let parts: std::collections::HashMap<&str, &str> = payload
             .split(';')
             .filter_map(|s| {

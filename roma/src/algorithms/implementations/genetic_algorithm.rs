@@ -144,7 +144,7 @@ where
         self.run_seed
     }
 
-    fn to_payload(&self, solution_codec: &impl SolutionCodec<T>) -> String {
+    fn to_payload(&self, solution_codec: &dyn SolutionCodec<T>) -> String {
 
         let encoded_pop = self.population
             .iter()
@@ -169,7 +169,7 @@ where
         )
     }
 
-    fn from_payload(payload: &str, solution_codec: &impl SolutionCodec<T>) -> Self {
+    fn from_payload(payload: &str, solution_codec: &dyn SolutionCodec<T>) -> Self {
         let parts: std::collections::HashMap<&str, &str> = payload
             .split(';')
             .filter_map(|s| {

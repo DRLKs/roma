@@ -62,23 +62,23 @@ where
 {
     fn random_seed(&self) -> u64;
 
-    fn to_payload(&self, solution_codec: &impl SolutionCodec<T, Q>) -> String;
+    fn to_payload(&self, solution_codec: &dyn  SolutionCodec<T, Q>) -> String;
 
-    fn from_payload(payload: &str,  solution_codec: &impl SolutionCodec<T, Q>) -> Self;
+    fn from_payload(payload: &str,  solution_codec: &dyn SolutionCodec<T, Q>) -> Self;
 
     fn iteration(&self) -> usize;
 
     fn evaluations(&self) -> usize;
 
     fn build_checkpoint_record(&self
-        , run_id: String
+        , run_id: &str
         , runtime_algorithm_name: &str
         , runtime_algorithm_parameters: &str
         , runtime_problem_description: &str
         , runtime_problem_parameters: &str
         , runtime_algorithm_signature_hash: u64
         , runtime_problem_signature_hash: u64
-        , codec: &impl SolutionCodec<T, Q>
+        , codec: &dyn SolutionCodec<T, Q>
     ) -> CheckpointRecord{
 
         CheckpointRecord {
@@ -88,7 +88,7 @@ where
                 .ok()
                 .and_then(|ms| u64::try_from(ms).ok())
                 .unwrap_or(0),
-            run_id,
+            run_id: run_id.to_string(),
             random_seed: self.random_seed(),
             algorithm_name: runtime_algorithm_name.to_string(),
             algorithm_parameters: runtime_algorithm_parameters.to_string(),

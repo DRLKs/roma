@@ -110,7 +110,7 @@ impl StepStateCheckpoint<bool, f64> for PSOState {
         self.iteration
     }
 
-    fn to_payload(&self, solution_codec: &impl SolutionCodec<bool, f64>) -> String {
+    fn to_payload(&self, solution_codec: &dyn SolutionCodec<bool, f64>) -> String {
 
         let encoded_particles = self.particles.iter()
             .map(|p| solution_codec.encode_solution(p).unwrap_or_default())
@@ -139,7 +139,7 @@ impl StepStateCheckpoint<bool, f64> for PSOState {
         )
     }
 
-    fn from_payload(payload: &str, solution_codec: &impl SolutionCodec<bool, f64>) -> Self {
+    fn from_payload(payload: &str, solution_codec: &dyn SolutionCodec<bool, f64>) -> Self {
         let parts: std::collections::HashMap<&str, &str> = payload
             .split(';')
             .filter_map(|s| {

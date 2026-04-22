@@ -109,7 +109,7 @@ impl StepStateCheckpoint<f64, ParetoCrowdingDistanceQuality> for NSGAIIState {
         self.generation
     }
 
-    fn from_payload(payload: &str, solution_codec: &impl crate::solution::SolutionCodec<f64, ParetoCrowdingDistanceQuality>) -> Self {
+    fn from_payload(payload: &str, solution_codec: &dyn crate::solution::SolutionCodec<f64, ParetoCrowdingDistanceQuality>) -> Self {
 
         let parts: std::collections::HashMap<&str, &str> = payload
             .split(';')
@@ -151,7 +151,7 @@ impl StepStateCheckpoint<f64, ParetoCrowdingDistanceQuality> for NSGAIIState {
     }
 }
 
-    fn to_payload(&self, solution_codec: &impl crate::solution::SolutionCodec<f64, ParetoCrowdingDistanceQuality>) -> String {
+    fn to_payload(&self, solution_codec: &dyn crate::solution::SolutionCodec<f64, ParetoCrowdingDistanceQuality>) -> String {
         let population_encoded = self.population
         .iter()
         .map(|sol| sol.encode_with(solution_codec).unwrap_or_else(|_| "err".to_string()))

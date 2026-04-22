@@ -113,7 +113,7 @@ where
         self.rng.state()
     }
 
-    fn to_payload(&self, solution_codec: &impl SolutionCodec<T>) -> String {
+    fn to_payload(&self, solution_codec: &dyn SolutionCodec<T>) -> String {
 
         let current_encoded = solution_codec
             .encode_solution(&self.current)
@@ -128,7 +128,7 @@ where
         )
     }
 
-    fn from_payload(payload: &str, solution_codec: &impl SolutionCodec<T>) -> Self {
+    fn from_payload(payload: &str, solution_codec: &dyn SolutionCodec<T>) -> Self {
         
         let parts: std::collections::HashMap<&str, &str> = payload
             .split(';')
@@ -303,35 +303,8 @@ where
             problem: &(impl Problem<T, f64> + Sync),
             checkpoint: &crate::utils::checkpoint::CheckpointRecord,
         ) -> Self::StepState {
-        let mut rng = Random::new(checkpoint.random_seed);
-        let mut current = match (
-            checkpoint.current_solution_payload.as_deref(),
-            problem.solution_codec(),
-        ) {
-            (Some(payload), Some(codec)) => {
-                Solution::decode_with(codec, payload).unwrap_or_else(|_| {
-                    let mut fallback = problem.create_solution(&mut rng);
-                    problem.evaluate(&mut fallback);
-                    fallback
-                })
-            }
-            _ => {
-                let mut fallback = problem.create_solution(&mut rng);
-                problem.evaluate(&mut fallback);
-                fallback
-            }
-        };
-
-        if !current.has_quality() {
-            problem.evaluate(&mut current);
-        }
-
-        HillClimbingState {
-            current,
-            rng,
-            iteration: checkpoint.iteration,
-            evaluations: checkpoint.evaluations,
-        }
+        
+            StepStateCheckpoint::from_payload(&checkpoint.step_state_payload, problem.solution_codec().unwrap())
     }
 }
 

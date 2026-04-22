@@ -39,11 +39,7 @@ where
     fn get_improvement_direction(&self) -> ImprovementDirection;
 
     /// Returns an optional codec used to encode/decode solution payloads.
-    ///
-    /// Default implementation keeps codec support opt-in and lightweight.
-    fn solution_codec(&self) -> Option<&dyn SolutionCodec<T, Q>> {
-        None
-    }
+    fn solution_codec(&self) -> Option<&dyn SolutionCodec<T, Q>>;
 
     /// Returns a human-friendly representation for one solution.
     ///
