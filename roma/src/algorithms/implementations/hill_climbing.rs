@@ -8,8 +8,12 @@ use crate::observer::Observable;
 use crate::operator::traits::MutationOperator;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
+use crate::solution::codec::SolutionCodec;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
+use crate::utils::checkpoint::{
+    StepStateCheckpoint,
+};
 use crate::utils::random::{seed_from_time, Random};
 
 /// Configuration parameters for the Hill Climbing algorithm.
@@ -99,6 +103,64 @@ where
     rng: Random,
     iteration: usize,
     evaluations: usize,
+}
+
+impl<T> StepStateCheckpoint<T, f64> for HillClimbingState<T>
+where
+    T: Clone,
+{
+    fn random_seed(&self) -> u64 {
+        self.rng.state()
+    }
+
+    fn to_payload(&self, solution_codec: &impl SolutionCodec<T>) -> String {
+
+        let current_encoded = solution_codec
+            .encode_solution(&self.current)
+            .unwrap_or_else(|_| "invalid".to_string());
+
+        format!(
+            "iter={};eval={};seed={};state={}",
+            self.iteration(),
+            self.evaluations(),
+            self.random_seed(),
+            current_encoded
+        )
+    }
+
+    fn from_payload(payload: &str, solution_codec: &impl SolutionCodec<T>) -> Self {
+        
+        let parts: std::collections::HashMap<&str, &str> = payload
+            .split(';')
+            .filter_map(|s| {
+                let mut kv = s.splitn(2, '=');
+                Some((kv.next()?, kv.next()?))
+            })
+            .collect();
+
+        let iteration = parts.get("iter").and_then(|s| s.parse().ok()).unwrap_or(0);
+        let evaluations = parts.get("eval").and_then(|s| s.parse().ok()).unwrap_or(0);
+        let random_seed = parts.get("seed").and_then(|s| s.parse().ok()).unwrap_or_else(seed_from_time);
+
+        let current = parts.get("state")
+            .and_then(|s| solution_codec.decode_solution(s).ok())
+            .expect("Critical error: Could not decode the current state from payload");
+
+        Self {
+            current,
+            rng: Random::new(random_seed),
+            iteration,
+            evaluations,
+        }
+    }
+
+    fn iteration(&self) -> usize {
+        self.iteration
+    }
+
+    fn evaluations(&self) -> usize {
+        self.evaluations
+    }
 }
 
 impl<T, M> Observable<T> for HillClimbing<T, M>
@@ -242,9 +304,27 @@ where
             checkpoint: &crate::utils::checkpoint::CheckpointRecord,
         ) -> Self::StepState {
         let mut rng = Random::new(checkpoint.random_seed);
-        let mut current = problem.create_solution(&mut rng);
-        let _current_solution_payload = checkpoint.current_solution_payload.as_deref();
-        problem.evaluate(&mut current);
+        let mut current = match (
+            checkpoint.current_solution_payload.as_deref(),
+            problem.solution_codec(),
+        ) {
+            (Some(payload), Some(codec)) => {
+                Solution::decode_with(codec, payload).unwrap_or_else(|_| {
+                    let mut fallback = problem.create_solution(&mut rng);
+                    problem.evaluate(&mut fallback);
+                    fallback
+                })
+            }
+            _ => {
+                let mut fallback = problem.create_solution(&mut rng);
+                problem.evaluate(&mut fallback);
+                fallback
+            }
+        };
+
+        if !current.has_quality() {
+            problem.evaluate(&mut current);
+        }
 
         HillClimbingState {
             current,

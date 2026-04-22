@@ -7,8 +7,9 @@ use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOper
 use crate::problem::traits::Problem;
 use crate::solution::ParetoCrowdingDistanceQuality;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
+use crate::utils::checkpoint::StepStateCheckpoint;
 use crate::utils::parallel::parallel_map_indexed;
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::random::{Random, seed_from_time};
 use std::cmp::Ordering;
 
 pub struct NSGAIIParameters<C, M, Sel>
@@ -93,6 +94,78 @@ pub struct NSGAIIState {
     rng: Random,
     generation: usize,
     evaluations: usize,
+}
+
+impl StepStateCheckpoint<f64, ParetoCrowdingDistanceQuality> for NSGAIIState {
+    fn random_seed(&self) -> u64 {
+        self.rng.state()
+    }
+
+    fn evaluations(&self) -> usize {
+        self.evaluations
+    }
+
+    fn iteration(&self) -> usize {
+        self.generation
+    }
+
+    fn from_payload(payload: &str, solution_codec: &impl crate::solution::SolutionCodec<f64, ParetoCrowdingDistanceQuality>) -> Self {
+
+        let parts: std::collections::HashMap<&str, &str> = payload
+            .split(';')
+            .filter_map(|s| {
+                let mut kv = s.splitn(2, '=');
+                Some((kv.next()?, kv.next()?))
+            })
+            .collect();
+
+
+        let generation = parts.get("iter")
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(0);
+
+        let evaluations = parts.get("eval")
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(0);
+
+        let random_seed = parts.get("seed")
+            .and_then(|s| s.parse::<u64>().ok())
+            .unwrap_or_else(seed_from_time);
+
+
+        let population = parts.get("pop")
+            .map(|pop_str| {
+                pop_str.trim_matches(|c| c == '[' || c == ']')
+                    .split(',')
+                    .filter(|s| !s.is_empty())
+                    .filter_map(|sol_str| solution_codec.decode_solution(sol_str).ok())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
+        Self {
+            population,
+            rng: Random::new(random_seed),
+            generation,
+            evaluations,
+    }
+}
+
+    fn to_payload(&self, solution_codec: &impl crate::solution::SolutionCodec<f64, ParetoCrowdingDistanceQuality>) -> String {
+        let population_encoded = self.population
+        .iter()
+        .map(|sol| sol.encode_with(solution_codec).unwrap_or_else(|_| "err".to_string()))
+        .collect::<Vec<String>>()
+        .join(","); 
+
+        format!(
+            "iter={};eval={};seed={};pop=[{}]",
+            self.iteration(),
+            self.evaluations(),
+            self.random_seed(),
+            population_encoded
+        )
+    }
 }
 
 impl<C, M, Sel> NSGAII<C, M, Sel>

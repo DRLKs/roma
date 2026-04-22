@@ -1,10 +1,46 @@
 use crate::algorithms::objective::ImprovementDirection;
 use crate::problem::traits::Problem;
+use crate::solution::codec::SolutionCodec;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 use std::collections::HashMap;
 
 const PENALTY: f64 = 0.5; // Heavy penalty for infeasible solutions
+
+struct KnapsackSolutionCodec;
+
+static KNAPSACK_SOLUTION_CODEC: KnapsackSolutionCodec = KnapsackSolutionCodec;
+
+impl SolutionCodec<bool> for KnapsackSolutionCodec {
+    fn codec_id(&self) -> &'static str {
+        "knapsack-bool-v1"
+    }
+
+    fn encode_solution(&self, solution: &Solution<bool>) -> Result<String, String> {
+        let mut payload = String::with_capacity(solution.num_variables());
+        for selected in solution.variables() {
+            payload.push(if *selected { '1' } else { '0' });
+        }
+        Ok(payload)
+    }
+
+    fn decode_solution(&self, payload: &str) -> Result<Solution<bool>, String> {
+        let mut variables = Vec::with_capacity(payload.len());
+        for ch in payload.chars() {
+            match ch {
+                '0' => variables.push(false),
+                '1' => variables.push(true),
+                _ => {
+                    return Err(format!(
+                        "invalid knapsack solution payload character '{}': expected 0 or 1",
+                        ch
+                    ));
+                }
+            }
+        }
+        Ok(Solution::new(variables))
+    }
+}
 
 /// Knapsack Problem: maximize the value of items in a knapsack without exceeding capacity
 #[derive(Clone)]
@@ -114,6 +150,10 @@ impl Problem<bool> for KnapsackProblem {
 
     fn get_improvement_direction(&self) -> ImprovementDirection {
         ImprovementDirection::Maximize
+    }
+
+    fn solution_codec(&self) -> Option<&dyn SolutionCodec<bool, f64>> {
+        Some(&KNAPSACK_SOLUTION_CODEC)
     }
 
     fn format_solution(&self, solution: &Solution<bool>) -> String {
@@ -251,6 +291,44 @@ mod tests {
         knapsack_problem.set_problem_description(description.clone());
 
         assert_eq!(knapsack_problem.description, description);
+    }
+
+    #[test]
+    fn knapsack_solution_codec_roundtrip() {
+        let problem = KnapsackBuilder::new()
+            .with_capacity(10.0)
+            .add_items(vec![(1.0, 2.0), (2.0, 3.0), (3.0, 5.0)])
+            .build();
+
+        let codec = problem
+            .solution_codec()
+            .expect("knapsack should expose a solution codec");
+
+        let solution = Solution::new(vec![true, false, true]);
+        let payload = codec
+            .encode_solution(&solution)
+            .expect("encoding should succeed");
+        let decoded = codec
+            .decode_solution(&payload)
+            .expect("decoding should succeed");
+
+        assert_eq!(decoded.variables(), solution.variables());
+    }
+
+    #[test]
+    fn knapsack_solution_codec_rejects_invalid_payload() {
+        let problem = KnapsackBuilder::new()
+            .with_capacity(10.0)
+            .add_items(vec![(1.0, 2.0)])
+            .build();
+        let codec = problem
+            .solution_codec()
+            .expect("knapsack should expose a solution codec");
+
+        let error = codec
+            .decode_solution("10x1")
+            .expect_err("invalid payload should fail");
+        assert!(error.contains("expected 0 or 1"));
     }
 
     #[test]

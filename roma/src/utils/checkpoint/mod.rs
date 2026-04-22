@@ -4,6 +4,8 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+//use crate::Solution; TODO  
+use crate::solution::codec::SolutionCodec;
 use crate::utils::cli::prompt_checkpoint_selection;
 
 mod binary;
@@ -12,8 +14,8 @@ mod path;
 
 use self::binary::{
     byte_to_status, push_f64, push_option_string, push_option_u64, push_string, push_u64,
-    push_u8, push_usize, read_f64, read_option_string, read_option_u64, read_string, read_u64,
-    read_u8, read_usize, status_to_byte,
+    push_u8, read_f64, read_option_string, read_option_u64, read_string, read_u64,
+    read_u8, status_to_byte,
 };
 use self::hash::checkpoint_signature_hashes;
 use self::path::{
@@ -53,6 +55,107 @@ impl CheckpointRunStatus {
     }
 }
 
+pub trait StepStateCheckpoint<T, Q = f64> 
+where 
+    T: Clone, 
+    Q: Clone + Default 
+{
+    fn random_seed(&self) -> u64;
+
+    fn to_payload(&self, solution_codec: &impl SolutionCodec<T, Q>) -> String;
+
+    fn from_payload(payload: &str,  solution_codec: &impl SolutionCodec<T, Q>) -> Self;
+
+    fn iteration(&self) -> usize;
+
+    fn evaluations(&self) -> usize;
+
+    fn build_checkpoint_record(&self
+        , run_id: String
+        , runtime_algorithm_name: &str
+        , runtime_algorithm_parameters: &str
+        , runtime_problem_description: &str
+        , runtime_problem_parameters: &str
+        , runtime_algorithm_signature_hash: u64
+        , runtime_problem_signature_hash: u64
+        , codec: &impl SolutionCodec<T, Q>
+    ) -> CheckpointRecord{
+
+        CheckpointRecord {
+            created_at_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_millis())
+                .ok()
+                .and_then(|ms| u64::try_from(ms).ok())
+                .unwrap_or(0),
+            run_id,
+            random_seed: self.random_seed(),
+            algorithm_name: runtime_algorithm_name.to_string(),
+            algorithm_parameters: runtime_algorithm_parameters.to_string(),
+            problem_description: runtime_problem_description.to_string(),
+            problem_parameters: runtime_problem_parameters.to_string(),
+            algorithm_signature_hash: runtime_algorithm_signature_hash,
+            problem_signature_hash: runtime_problem_signature_hash,
+            seq_id: 0, // to be filled by caller
+            step_state_payload: self.to_payload(codec),
+            best_fitness: 0.0, // to be filled by caller
+            average_fitness: 0.0, // to be filled by caller
+            worst_fitness: 0.0, // to be filled by caller
+            seed_payload: None,
+            elapsed_millis: None,
+            status: CheckpointRunStatus::Running,
+            error_message: None,
+        }
+    }
+
+    // TODO: consider adding a method here to return a candidate solution payload for the current state.
+    //fn current_candidate_solution(&self) -> Vec<Solution<T, Q>> {
+    //    None
+    //}
+}
+
+pub struct CheckpointRecordInput<'a> {
+    pub run_id: &'a str,
+    pub algorithm_name: &'a str,
+    pub algorithm_parameters: &'a str,
+    pub problem_description: &'a str,
+    pub problem_parameters: &'a str,
+    pub algorithm_signature_hash: u64,
+    pub problem_signature_hash: u64,
+    pub seq_id: u64,
+    pub step_state_payload: String,
+    pub best_fitness: f64,
+    pub average_fitness: f64,
+    pub worst_fitness: f64,
+    pub best_solution_presentation: &'a str,
+}
+
+/// Generates a stable run id format used by checkpoint persistence.
+pub fn generate_run_id(algorithm_name: &str) -> String {
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .ok()
+        .and_then(|ms| u64::try_from(ms).ok())
+        .unwrap_or(0);
+    format!("{}-{}-{}", algorithm_name, std::process::id(), timestamp)
+}
+
+/// Computes deterministic identity hashes used to scope checkpoint files.
+pub fn checkpoint_identity_hashes(
+    algorithm_name: &str,
+    algorithm_parameters: &str,
+    problem_description: &str,
+    problem_parameters: &str,
+) -> (u64, u64) {
+    checkpoint_signature_hashes(
+        algorithm_name,
+        algorithm_parameters,
+        problem_description,
+        problem_parameters,
+    )
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CheckpointRecord {
     pub created_at_ms: u64,
@@ -65,76 +168,14 @@ pub struct CheckpointRecord {
     pub algorithm_signature_hash: u64,
     pub problem_signature_hash: u64,
     pub seq_id: u64,
-    pub iteration: usize,
-    pub evaluations: usize,
+    pub step_state_payload: String,
     pub best_fitness: f64,
     pub average_fitness: f64,
     pub worst_fitness: f64,
-    pub best_solution_presentation: String,
-    pub current_solution_payload: Option<String>,
-    pub state_payload: Option<String>,
-    pub termination_criteria_payload: Option<String>,
-    pub termination_state_payload: Option<String>,
+    pub seed_payload: Option<String>,
     pub elapsed_millis: Option<u64>,
     pub status: CheckpointRunStatus,
     pub error_message: Option<String>,
-}
-
-impl CheckpointRecord {
-
-    pub fn from_snapshot(
-        run_id: impl Into<String>,
-        random_seed: u64,
-        algorithm_name: impl Into<String>,
-        algorithm_parameters: impl Into<String>,
-        problem_description: impl Into<String>,
-        problem_parameters: impl Into<String>,
-        algorithm_signature_hash: u64,
-        problem_signature_hash: u64,
-        seq_id: u64,
-        iteration: usize,
-        evaluations: usize,
-        best_fitness: f64,
-        average_fitness: f64,
-        worst_fitness: f64,
-        best_solution_presentation: impl Into<String>,
-        current_solution_payload: Option<String>,
-        state_payload: Option<String>,
-        termination_criteria_payload: Option<String>,
-        termination_state_payload: Option<String>,
-        elapsed_millis: Option<u64>,
-    ) -> Self {
-        Self {
-            created_at_ms: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map(|d| d.as_millis())
-                .ok()
-                .and_then(|ms| u64::try_from(ms).ok())
-                .unwrap_or(0),
-            run_id: run_id.into(),
-            random_seed,
-            algorithm_name: algorithm_name.into(),
-            algorithm_parameters: algorithm_parameters.into(),
-            problem_description: problem_description.into(),
-            problem_parameters: problem_parameters.into(),
-            algorithm_signature_hash,
-            problem_signature_hash,
-            seq_id,
-            iteration,
-            evaluations,
-            best_fitness,
-            average_fitness,
-            worst_fitness,
-            best_solution_presentation: best_solution_presentation.into(),
-            current_solution_payload,
-            state_payload,
-            termination_criteria_payload,
-            termination_state_payload,
-            elapsed_millis,
-            status: CheckpointRunStatus::Running,
-            error_message: None,
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -168,8 +209,6 @@ pub struct CheckpointEntry {
 ///
 /// Optional payloads:
 /// - state_payload: Option<string> (algorithm-defined UTF-8 payload; e.g. JSON text)
-/// - termination_criteria_payload: Option<string>
-/// - termination_state_payload: Option<string>
 /// - elapsed_millis: Option<u64>
 /// - status: u8
 /// - error_message: Option<string>
@@ -224,16 +263,11 @@ pub(crate) fn write_checkpoint_record(path: &Path, record: &CheckpointRecord) ->
     push_u64(&mut bytes, record.algorithm_signature_hash);
     push_u64(&mut bytes, record.problem_signature_hash);
     push_u64(&mut bytes, record.seq_id);
-    push_usize(&mut bytes, record.iteration)?;
-    push_usize(&mut bytes, record.evaluations)?;
+    push_string(&mut bytes, &record.step_state_payload)?;
     push_f64(&mut bytes, record.best_fitness);
     push_f64(&mut bytes, record.average_fitness);
     push_f64(&mut bytes, record.worst_fitness);
-    push_string(&mut bytes, &record.best_solution_presentation)?;
-    push_option_string(&mut bytes, &record.current_solution_payload)?;
-    push_option_string(&mut bytes, &record.state_payload)?;
-    push_option_string(&mut bytes, &record.termination_criteria_payload)?;
-    push_option_string(&mut bytes, &record.termination_state_payload)?;
+    push_option_string(&mut bytes, &record.seed_payload)?;
     push_option_u64(&mut bytes, record.elapsed_millis);
     push_u8(&mut bytes, status_to_byte(record.status));
     push_option_string(&mut bytes, &record.error_message)?;
@@ -287,16 +321,11 @@ pub(crate) fn read_checkpoint_record(path: &Path) -> io::Result<CheckpointRecord
         algorithm_signature_hash: read_u64(&mut cursor)?,
         problem_signature_hash: read_u64(&mut cursor)?,
         seq_id: read_u64(&mut cursor)?,
-        iteration: read_usize(&mut cursor)?,
-        evaluations: read_usize(&mut cursor)?,
+        step_state_payload: read_string(&mut cursor)?,
         best_fitness: read_f64(&mut cursor)?,
         average_fitness: read_f64(&mut cursor)?,
         worst_fitness: read_f64(&mut cursor)?,
-        best_solution_presentation: read_string(&mut cursor)?,
-        current_solution_payload: read_option_string(&mut cursor)?,
-        state_payload: read_option_string(&mut cursor)?,
-        termination_criteria_payload: read_option_string(&mut cursor)?,
-        termination_state_payload: read_option_string(&mut cursor)?,
+        seed_payload: read_option_string(&mut cursor)?,
         elapsed_millis: read_option_u64(&mut cursor)?,
         status: byte_to_status(read_u8(&mut cursor)?)?,
         error_message: read_option_string(&mut cursor)?,
@@ -559,19 +588,11 @@ mod tests {
             algorithm_signature_hash: 111,
             problem_signature_hash: 222,
             seq_id: 7,
-            iteration: 12,
-            evaluations: 44,
+            step_state_payload: "{\"iteration\":7,\"evaluations\":7,101010001}".to_string(),
             best_fitness: 9.75,
             average_fitness: 8.2,
             worst_fitness: 3.1,
-            best_solution_presentation: "selected=2/4".to_string(),
-            current_solution_payload: Some("{\"kind\":\"best\"}".to_string()),
-            state_payload: Some("seed=42".to_string()),
-            termination_criteria_payload: Some("max_iterations:100".to_string()),
-            termination_state_payload: Some(
-                "iter=12;eval=44;last_improvement=10;elapsed_ms=50;history=9.75,9.75"
-                    .to_string(),
-            ),
+            seed_payload: Some("seed=42".to_string()),
             elapsed_millis: Some(50),
             status: CheckpointRunStatus::Failed,
             error_message: Some("synthetic error".to_string()),
@@ -605,16 +626,11 @@ mod tests {
             algorithm_signature_hash: 111,
             problem_signature_hash: 222,
             seq_id: 1,
-            iteration: 1,
-            evaluations: 2,
+            step_state_payload: "{\"iteration\":7,\"evaluations\":7,101010001}".to_string(),
             best_fitness: 1.0,
             average_fitness: 1.0,
             worst_fitness: 1.0,
-            best_solution_presentation: "old".to_string(),
-            current_solution_payload: None,
-            state_payload: Some("seed=10".to_string()),
-            termination_criteria_payload: None,
-            termination_state_payload: None,
+            seed_payload: Some("seed=10".to_string()),
             elapsed_millis: None,
             status: CheckpointRunStatus::Running,
             error_message: None,
@@ -630,16 +646,11 @@ mod tests {
             algorithm_signature_hash: 111,
             problem_signature_hash: 222,
             seq_id: 2,
-            iteration: 2,
-            evaluations: 3,
+            step_state_payload: "{\"iteration\":7,\"evaluations\":7,101010001}".to_string(),
             best_fitness: 2.0,
             average_fitness: 2.0,
             worst_fitness: 2.0,
-            best_solution_presentation: "new".to_string(),
-            current_solution_payload: None,
-            state_payload: Some("seed=10".to_string()),
-            termination_criteria_payload: None,
-            termination_state_payload: None,
+            seed_payload: Some("seed=10".to_string()),
             elapsed_millis: None,
             status: CheckpointRunStatus::Completed,
             error_message: None,
@@ -656,7 +667,6 @@ mod tests {
             .expect("latest checkpoint should exist");
 
         assert_eq!(latest.seq_id, 2);
-        assert_eq!(latest.best_solution_presentation, "new");
     }
 
     #[test]
@@ -681,16 +691,11 @@ mod tests {
             algorithm_signature_hash: 111,
             problem_signature_hash: 333,
             seq_id: 3,
-            iteration: 3,
-            evaluations: 4,
+            step_state_payload: "{\"iteration\":3,\"evaluations\":4}".to_string(),
             best_fitness: 3.0,
             average_fitness: 3.0,
             worst_fitness: 3.0,
-            best_solution_presentation: "completed".to_string(),
-            current_solution_payload: None,
-            state_payload: Some("seed=33".to_string()),
-            termination_criteria_payload: None,
-            termination_state_payload: None,
+            seed_payload: Some("seed=33".to_string()),
             elapsed_millis: None,
             status: CheckpointRunStatus::Completed,
             error_message: None,
@@ -707,16 +712,11 @@ mod tests {
             algorithm_signature_hash: 111,
             problem_signature_hash: 333,
             seq_id: 8,
-            iteration: 8,
-            evaluations: 9,
+            step_state_payload: "{\"iteration\":7,\"evaluations\":7,101010001}".to_string(),
             best_fitness: 8.0,
             average_fitness: 8.0,
             worst_fitness: 8.0,
-            best_solution_presentation: "failed".to_string(),
-            current_solution_payload: None,
-            state_payload: Some("seed=44".to_string()),
-            termination_criteria_payload: None,
-            termination_state_payload: None,
+            seed_payload: Some("seed=44".to_string()),
             elapsed_millis: None,
             status: CheckpointRunStatus::Failed,
             error_message: Some("x".to_string()),
@@ -760,16 +760,11 @@ mod tests {
             algorithm_signature_hash: 111,
             problem_signature_hash: 222,
             seq_id: 1,
-            iteration: 1,
-            evaluations: 2,
+            step_state_payload: "{\"iteration\":1,\"evaluations\":2}".to_string(),
             best_fitness: 1.0,
             average_fitness: 1.0,
             worst_fitness: 1.0,
-            best_solution_presentation: "ok".to_string(),
-            current_solution_payload: None,
-            state_payload: None,
-            termination_criteria_payload: None,
-            termination_state_payload: None,
+            seed_payload: None,
             elapsed_millis: Some(10),
             status: CheckpointRunStatus::Completed,
             error_message: None,

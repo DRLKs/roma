@@ -8,6 +8,8 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
+use crate::solution::codec::SolutionCodec;
+use crate::utils::checkpoint::{StepStateCheckpoint};
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::random::{seed_from_time, Random};
 
@@ -93,6 +95,104 @@ pub struct PSOState {
     rng: Random,
     iteration: usize,
     evaluations: usize,
+}
+
+impl StepStateCheckpoint<bool, f64> for PSOState {
+    fn random_seed(&self) -> u64 {
+        self.rng.state()
+    }
+
+    fn evaluations(&self) -> usize {
+        self.evaluations
+    }
+
+    fn iteration(&self) -> usize {
+        self.iteration
+    }
+
+    fn to_payload(&self, solution_codec: &impl SolutionCodec<bool, f64>) -> String {
+
+        let encoded_particles = self.particles.iter()
+            .map(|p| solution_codec.encode_solution(p).unwrap_or_default())
+            .collect::<Vec<_>>().join(",");
+        
+        let encoded_velocities = self.velocities.iter()
+            .map(|v| v.iter().map(|f| f.to_string()).collect::<Vec<_>>().join("|"))
+            .collect::<Vec<_>>().join(",");
+
+
+        let encoded_p_bests = self.personal_best.iter()
+            .map(|p| solution_codec.encode_solution(p).unwrap_or_default())
+            .collect::<Vec<_>>().join(",");
+
+        let encoded_g_best = solution_codec.encode_solution(&self.global_best).unwrap_or_default();
+
+        format!(
+            "iter={};eval={};dir={};particles=[{}];vels=[{}];pbests=[{}];gbest={}",
+            self.iteration,
+            self.evaluations,
+            if matches!(self.direction, ImprovementDirection::Maximize) { "max" } else { "min" },
+            encoded_particles,
+            encoded_velocities,
+            encoded_p_bests,
+            encoded_g_best
+        )
+    }
+
+    fn from_payload(payload: &str, solution_codec: &impl SolutionCodec<bool, f64>) -> Self {
+        let parts: std::collections::HashMap<&str, &str> = payload
+            .split(';')
+            .filter_map(|s| {
+                let mut kv = s.splitn(2, '=');
+                Some((kv.next()?, kv.next()?))
+            })
+            .collect();
+
+        let split_list = |key: &str| {
+            parts.get(key)
+                .map(|s| s.trim_matches(|c| c == '[' || c == ']').split(','))
+                .into_iter().flatten().filter(|s| !s.is_empty())
+        };
+
+        let iteration = parts.get("iter").and_then(|s| s.parse().ok()).unwrap_or(0);
+        let evaluations = parts.get("eval").and_then(|s| s.parse().ok()).unwrap_or(0);
+        let direction = match parts.get("dir") {
+            Some(&"max") => ImprovementDirection::Maximize,
+            _ => ImprovementDirection::Minimize,
+        };
+
+        let particles = split_list("particles")
+            .filter_map(|s| solution_codec.decode_solution(s).ok())
+            .collect();
+
+        let personal_best = split_list("pbests")
+            .filter_map(|s| solution_codec.decode_solution(s).ok())
+            .collect();
+
+        let global_best = parts.get("gbest")
+            .and_then(|s| solution_codec.decode_solution(s).ok())
+            .expect("Error crítico: No se encontró el global_best en el payload");
+
+        let velocities = split_list("vels")
+            .map(|v_str| {
+                v_str.split('|')
+                    .filter_map(|f| f.parse::<f64>().ok())
+                    .collect::<Vec<f64>>()
+            })
+            .collect();
+
+        Self {
+            particles,
+            velocities,
+            personal_best,
+            global_best,
+            direction,
+            rng: Random::new(seed_from_time()),
+            iteration,
+            evaluations,
+        }
+    }
+
 }
 
 impl Observable<bool> for PSO {

@@ -9,8 +9,10 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
+use crate::solution::codec::SolutionCodec;
+use crate::utils::checkpoint::StepStateCheckpoint;
 use crate::utils::parallel::parallel_map_indexed;
-use crate::utils::random::Random;
+use crate::utils::random::{Random,seed_from_time};
 use crate::utils::parallel::resolve_num_threads;
 use crate::utils::statistics::calculate_statistics;
 use crate::Observable;
@@ -124,6 +126,88 @@ where
     generation: usize,
     evaluations: usize,
     run_seed: u64,
+}
+
+impl<T> StepStateCheckpoint<T> for GeneticAlgorithmState<T>
+where
+    T: Clone,
+{
+    fn iteration(&self) -> usize {
+        self.generation
+    }
+
+    fn evaluations(&self) -> usize {
+        self.evaluations
+    }
+
+    fn random_seed(&self) -> u64 {
+        self.run_seed
+    }
+
+    fn to_payload(&self, solution_codec: &impl SolutionCodec<T>) -> String {
+
+        let encoded_pop = self.population
+            .iter()
+            .map(|sol| solution_codec.encode_solution(sol).unwrap_or_else(|_| "err".to_string()))
+            .collect::<Vec<String>>()
+            .join(",");
+
+
+            let dir_str = match self.direction {
+            ImprovementDirection::Minimize => "min",
+            ImprovementDirection::Maximize => "max",
+        };
+
+
+        format!(
+            "iter={};eval={};seed={};dir={};pop=[{}]",
+            self.generation,
+            self.evaluations,
+            self.run_seed,
+            dir_str,
+            encoded_pop
+        )
+    }
+
+    fn from_payload(payload: &str, solution_codec: &impl SolutionCodec<T>) -> Self {
+        let parts: std::collections::HashMap<&str, &str> = payload
+            .split(';')
+            .filter_map(|s| {
+                let mut kv = s.splitn(2, '=');
+                Some((kv.next()?, kv.next()?))
+            })
+            .collect();
+
+
+        let generation = parts.get("iter").and_then(|s| s.parse().ok()).unwrap_or(0);
+        let evaluations = parts.get("eval").and_then(|s| s.parse().ok()).unwrap_or(0);
+        let run_seed = parts.get("seed").and_then(|s| s.parse().ok()).unwrap_or_else(seed_from_time);
+
+
+        let direction = match parts.get("dir") {
+            Some(&"max") => ImprovementDirection::Maximize,
+            _ => ImprovementDirection::Minimize, // Default o "min"
+        };
+
+
+        let population = parts.get("pop")
+            .map(|pop_str| {
+                pop_str.trim_matches(|c| c == '[' || c == ']')
+                    .split(',')
+                    .filter(|s| !s.is_empty())
+                    .filter_map(|sol_str| solution_codec.decode_solution(sol_str).ok())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
+        Self {
+            population,
+            direction,
+            generation,
+            evaluations,
+            run_seed,
+        }
+}
 }
 
 impl<T, C, M, Sel> GeneticAlgorithm<T, C, M, Sel>

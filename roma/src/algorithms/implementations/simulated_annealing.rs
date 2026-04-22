@@ -7,8 +7,10 @@ use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::operator::traits::MutationOperator;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
+use crate::solution::codec::SolutionCodec;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
+use crate::utils::checkpoint::StepStateCheckpoint;
 use crate::utils::random::{seed_from_time, Random};
 
 #[derive(Clone)]
@@ -82,6 +84,73 @@ where
     rng: Random,
     iteration: usize,
     evaluations: usize,
+}
+
+impl<T> StepStateCheckpoint<T, f64> for SimulatedAnnealingState<T>
+where
+    T: Clone,
+{
+    fn random_seed(&self) -> u64 {
+        self.rng.state()
+    }
+
+    fn evaluations(&self) -> usize {
+        self.evaluations
+    }
+
+    fn iteration(&self) -> usize {
+        self.iteration
+    }
+
+    fn to_payload(&self, solution_codec: &impl SolutionCodec<T>) -> String {
+
+        let curr_encoded = solution_codec.encode_solution(&self.current).unwrap_or_default();
+        let best_encoded = solution_codec.encode_solution(&self.best).unwrap_or_default();
+
+        format!(
+            "iter={};eval={};temp={};seed={};curr={};best={}",
+            self.iteration,
+            self.evaluations,
+            self.temperature,
+            self.rng.state(), 
+            curr_encoded,
+            best_encoded
+        )
+    }
+
+    fn from_payload(payload: &str, solution_codec: &impl SolutionCodec<T>) -> Self {
+        let parts: std::collections::HashMap<&str, &str> = payload
+            .split(';')
+            .filter_map(|s| {
+                let mut kv = s.splitn(2, '=');
+                Some((kv.next()?, kv.next()?))
+            })
+            .collect();
+
+        let iteration = parts.get("iter").and_then(|s| s.parse().ok()).unwrap_or(0);
+        let evaluations = parts.get("eval").and_then(|s| s.parse().ok()).unwrap_or(0);
+        let temperature = parts.get("temp").and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+        let seed = parts.get("seed").and_then(|s| s.parse().ok()).unwrap_or_else(seed_from_time);
+
+        let current = parts.get("curr")
+            .and_then(|s| solution_codec.decode_solution(s).ok())
+            .expect("Error: No se pudo decodificar la solución actual");
+
+        let best = parts.get("best")
+            .and_then(|s| solution_codec.decode_solution(s).ok())
+            .expect("Error: No se pudo decodificar la mejor solución (best)");
+
+        Self {
+            current,
+            best,
+            temperature,
+            rng: Random::new(seed),
+            iteration,
+            evaluations,
+        }
+    }
+
+    
 }
 
 impl<T, M> Observable<T> for SimulatedAnnealing<T, M>
