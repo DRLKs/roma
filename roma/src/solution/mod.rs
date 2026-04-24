@@ -5,7 +5,9 @@
 
 pub(crate) mod implementations;
 pub(crate) mod traits;
-pub mod codec;
+
+use std::fmt::Display;
+use std::str::FromStr;
 
 pub use implementations::binary_solution::BinarySolutionBuilder;
 pub use implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
@@ -13,7 +15,6 @@ pub use implementations::pareto_crowding_solution::MultiObjectiveVectorRealSolut
 pub use implementations::permutation_solution::PermutationSolutionBuilder;
 pub use implementations::real_solution::RealSolutionBuilder;
 pub use implementations::string_solution::StringSolutionBuilder;
-pub use codec::SolutionCodec;
 pub use traits::Dominance;
 pub use traits::ParetoCrowdingDistanceQuality;
 
@@ -42,7 +43,7 @@ pub struct Solution<T, Q = f64> {
     quality: Option<Q>,
 }
 
-impl<T, Q> Solution<T, Q> {
+impl<T: Display, Q: Display> Solution<T, Q> {
     /// Creates a solution with variables and no quality assigned.
     pub fn new(variables: Vec<T>) -> Self {
         Self {
@@ -167,24 +168,41 @@ impl<T, Q> Solution<T, Q> {
         self.quality = None;
     }
 
-}
-
-impl<T, Q> Solution<T, Q>
-where
-    T: Clone,
-    Q: Clone + Default,
-{
-    /// Encodes this solution using a codec supplied by the problem/domain.
-    pub fn encode_with(&self, codec: &dyn codec::SolutionCodec<T, Q>) -> Result<String, String> {
-        codec.encode_solution(self)
+    pub fn encode(&self) -> String {
+        let quality_string = match &self.quality {
+            Some(q) => q.to_string(),
+            None => "None".to_string(),
+        };
+        let genes: String = self.variables.iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<_>>()
+            .join("");
+        format!("{}|{}", genes, quality_string)
     }
 
-    /// Decodes one solution using a codec supplied by the problem/domain.
-    pub fn decode_with(
-        codec: &dyn codec::SolutionCodec<T, Q>,
-        payload: &str,
-    ) -> Result<Self, String> {
-        codec.decode_solution(payload)
+    pub fn decode(data: &str) -> Result<Self, String> 
+    where 
+        T: FromStr, 
+        Q: FromStr,
+    {
+        let parts: Vec<&str> = data.split('|').collect();
+        if parts.len() != 2 {
+            return Err("Formato inválido: se esperaba 'genes|calidad'".to_string());
+        }
+
+        let variables: Vec<T> = parts[0]
+            .split(',')
+            .filter(|s| !s.is_empty())
+            .map(|s| s.parse::<T>().map_err(|_| "Error parseando variable (T)".to_string()))
+            .collect::<Result<Vec<T>, String>>()?;
+
+        let quality = if parts[1] == "None" || parts[1].is_empty() {
+            None
+        } else {
+            Some(parts[1].parse::<Q>().map_err(|_| "Error parseando calidad (Q)".to_string())?)
+        };
+
+        Ok(Self { variables, quality })
     }
 }
 
@@ -224,7 +242,7 @@ impl<T> Solution<T, f64> {
     }
 }
 
-fn finalize_scalar_solution<T>(variables: Vec<T>, quality: Option<f64>) -> Solution<T> {
+fn finalize_scalar_solution<T: Display>(variables: Vec<T>, quality: Option<f64>) -> Solution<T> {
     let mut solution = Solution::new(variables);
     if let Some(quality) = quality {
         solution.set_quality(quality);

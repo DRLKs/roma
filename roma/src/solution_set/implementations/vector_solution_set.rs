@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::solution::traits::Dominance;
 use crate::solution::Solution;
 use crate::solution_set::traits::SolutionSet;
@@ -29,8 +31,8 @@ where
 
 impl<T, Q> SolutionSet<T, Q> for VectorSolutionSet<T, Q>
 where
-    T: Clone,
-    Q: Clone + Dominance,
+    T: Clone + Display,
+    Q: Clone + Dominance + Display,
 {
     fn iter(&self) -> Box<dyn Iterator<Item = &Solution<T, Q>> + '_> {
         Box::new(self.solutions.iter())

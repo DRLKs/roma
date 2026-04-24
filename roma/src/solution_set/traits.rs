@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::solution::traits::Dominance;
 use crate::solution::Solution;
 
@@ -7,7 +9,7 @@ use crate::solution::Solution;
 pub trait SolutionSet<T, Q = f64>
 where
     T: Clone,
-    Q: Clone + Dominance,
+    Q: Clone + Dominance + Display,
 {
     /// Returns an iterator over all solutions in the set.
     fn iter(&self) -> Box<dyn Iterator<Item = &Solution<T, Q>> + '_>;
@@ -77,16 +79,18 @@ where
     /// Returns the scalar value of the best solution, if any.
     fn best_solution_value(&self) -> Option<f64>
     where
-        Q: Copy + Into<f64>,
+        Q: Copy + Into<f64> + Display,
+        T: Display,
     {
         self.best_solution()
-            .and_then(|s| s.quality().copied().map(Into::into))
+        .and_then(|s| s.quality().map(|&q| q.into()))
     }
 
     /// Returns the scalar value of the best solution, or `default` when empty.
     fn best_solution_value_or(&self, default: f64) -> f64
     where
         Q: Copy + Into<f64>,
+        T: Display,
     {
         self.best_solution_value().unwrap_or(default)
     }

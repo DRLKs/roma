@@ -5,7 +5,6 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 //use crate::Solution; TODO  
-use crate::solution::codec::SolutionCodec;
 use crate::utils::cli::prompt_checkpoint_selection;
 
 mod binary;
@@ -62,9 +61,9 @@ where
 {
     fn random_seed(&self) -> u64;
 
-    fn to_payload(&self, solution_codec: &dyn  SolutionCodec<T, Q>) -> String;
+    fn to_payload(&self) -> String;
 
-    fn from_payload(payload: &str,  solution_codec: &dyn SolutionCodec<T, Q>) -> Self;
+    fn from_payload(payload: &str) -> Self;
 
     fn iteration(&self) -> usize;
 
@@ -78,7 +77,6 @@ where
         , runtime_problem_parameters: &str
         , runtime_algorithm_signature_hash: u64
         , runtime_problem_signature_hash: u64
-        , codec: &dyn SolutionCodec<T, Q>
     ) -> CheckpointRecord{
 
         CheckpointRecord {
@@ -97,7 +95,7 @@ where
             algorithm_signature_hash: runtime_algorithm_signature_hash,
             problem_signature_hash: runtime_problem_signature_hash,
             seq_id: 0, // to be filled by caller
-            step_state_payload: self.to_payload(codec),
+            step_state_payload: self.to_payload(),
             best_fitness: 0.0, // to be filled by caller
             average_fitness: 0.0, // to be filled by caller
             worst_fitness: 0.0, // to be filled by caller
