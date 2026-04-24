@@ -3,6 +3,7 @@ use crate::problem::traits::Problem;
 use crate::solution::traits::Dominance;
 use crate::ImprovementDirection;
 use std::cmp::Ordering;
+use std::fmt::Display;
 
 use super::parallel::{parallel_collect_by_range, ParallelConfig};
 use super::report::{ExperimentFailure, ExperimentReport, ExperimentRunResult, ExperimentSummary};
@@ -49,8 +50,8 @@ where
 
 impl<T, Q, P> Experiment<T, Q, P>
 where
-    T: Clone + Send + 'static,
-    Q: Clone + Default + Dominance + Send + 'static + Copy + Into<f64>,
+    T: Clone + Send + 'static + Display,
+    Q: Clone + Default + Dominance + Send + 'static + Copy + Into<f64> + Display,
     P: Problem<T, Q> + Sync,
 {
     /// Builds and caches textual metadata for each case.

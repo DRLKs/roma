@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::operator::traits::{MutationOperator, Operator};
 use crate::solution::Solution;
 use crate::utils::random::Random;
@@ -47,7 +49,7 @@ impl Operator for PolynomialMutation {
 
 impl<Q> MutationOperator<f64, Q> for PolynomialMutation
 where
-    Q: Clone,
+    Q: Clone + Display,
 {
     fn execute(&self, solution: &mut Solution<f64, Q>, probability: f64, rng: &mut Random) {
         for i in 0..solution.num_variables() {

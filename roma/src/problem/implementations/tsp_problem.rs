@@ -208,6 +208,7 @@ impl Problem<usize> for TspProblem {
             topology, fixed_start, valid, route_text, distance_text, quality_text
         )
     }
+
 }
 
 /// Builds a `TspProblem` from edge-like records.

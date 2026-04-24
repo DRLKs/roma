@@ -1,6 +1,7 @@
 use crate::algorithms::traits::Algorithm;
 use crate::problem::traits::Problem;
 use crate::solution::traits::Dominance;
+use std::fmt::Display;
 use std::sync::Arc;
 use std::thread;
 
@@ -44,8 +45,8 @@ pub fn run_algorithm_instances_async<A, T, Q, P>(
     algorithms: Vec<A>,
 ) -> Vec<(A, Result<A::SolutionSet, String>)>
 where
-    T: Clone + Send + 'static,
-    Q: Clone + Default + Dominance + Send + 'static,
+    T: Clone + Send + 'static + Display,
+    Q: Clone + Default + Dominance + Send + 'static + Display,
     A: Algorithm<T, Q> + Send + 'static,
     A::SolutionSet: Clone + Send + 'static,
     P: Problem<T, Q> + Sync + Send + 'static,
@@ -106,6 +107,7 @@ mod tests {
         fn get_improvement_direction(&self) -> ImprovementDirection {
             ImprovementDirection::Minimize
         }
+
     }
 
     #[test]

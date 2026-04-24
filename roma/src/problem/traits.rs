@@ -1,6 +1,7 @@
+use::std::fmt::Display;
+
 use crate::algorithms::objective::ImprovementDirection;
 use crate::solution::Solution;
-use crate::solution::codec::SolutionCodec;
 use crate::utils::random::Random;
 
 /// Trait that defines the basic interface for optimization problems.
@@ -38,16 +39,17 @@ where
     /// in the framework. Algorithms and runtime termination consume this value
     fn get_improvement_direction(&self) -> ImprovementDirection;
 
-    /// Returns an optional codec used to encode/decode solution payloads.
-    fn solution_codec(&self) -> Option<&dyn SolutionCodec<T, Q>>;
-
     /// Returns a human-friendly representation for one solution.
     ///
     /// Observers use this string to present best snapshots in CLI/HTML outputs.
     /// Problem implementations can override this to provide domain-specific
     /// formatting (for example routes, selected items, or compact objective
     /// summaries).
-    fn format_solution(&self, solution: &Solution<T, Q>) -> String {
+    fn format_solution(&self, solution: &Solution<T, Q>) -> String
+    where
+        T: Display,
+        Q: Display,
+    {
         let quality_state = if solution.has_quality() {
             "evaluated"
         } else {

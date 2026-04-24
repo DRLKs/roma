@@ -7,6 +7,7 @@ use crate::observer::traits::AlgorithmObserver;
 use crate::observer::{AlgorithmEvent, ObserverState};
 use crate::problem::traits::Problem;
 use std::cell::RefCell;
+use std::fmt::Display;
 use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
@@ -264,8 +265,8 @@ pub fn spawn_algorithm_run<A, T, Q, P>(
     problem: Arc<P>,
 ) -> JoinHandle<(A, Result<A::SolutionSet, String>)>
 where
-    T: Clone + Send + 'static,
-    Q: Clone + Default + crate::solution::traits::Dominance + Send + 'static,
+    T: Clone + Send + 'static + Display,
+    Q: Clone + Default + crate::solution::traits::Dominance + Send + 'static + Display,
     A: Algorithm<T, Q> + Send + 'static,
     A::SolutionSet: Clone + Send + 'static,
     P: Problem<T, Q> + Sync + Send + 'static,

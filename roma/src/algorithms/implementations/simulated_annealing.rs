@@ -1,3 +1,6 @@
+use std::fmt::Display;
+use std::str::FromStr;
+
 use crate::algorithms::objective::{is_better, non_improving_loss};
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
@@ -7,7 +10,6 @@ use crate::observer::traits::{AlgorithmObserver, Observable};
 use crate::operator::traits::MutationOperator;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
-use crate::solution::codec::SolutionCodec;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::checkpoint::StepStateCheckpoint;
@@ -88,7 +90,7 @@ where
 
 impl<T> StepStateCheckpoint<T, f64> for SimulatedAnnealingState<T>
 where
-    T: Clone,
+    T: Clone + Display + FromStr,
 {
     fn random_seed(&self) -> u64 {
         self.rng.state()
@@ -102,10 +104,10 @@ where
         self.iteration
     }
 
-    fn to_payload(&self, solution_codec: &dyn SolutionCodec<T>) -> String {
+    fn to_payload(&self) -> String {
 
-        let curr_encoded = solution_codec.encode_solution(&self.current).unwrap_or_default();
-        let best_encoded = solution_codec.encode_solution(&self.best).unwrap_or_default();
+        let curr_encoded = self.current.encode();
+        let best_encoded = self.best.encode();
 
         format!(
             "iter={};eval={};temp={};seed={};curr={};best={}",
@@ -118,7 +120,7 @@ where
         )
     }
 
-    fn from_payload(payload: &str, solution_codec: &dyn SolutionCodec<T>) -> Self {
+    fn from_payload(payload: &str) -> Self {
         let parts: std::collections::HashMap<&str, &str> = payload
             .split(';')
             .filter_map(|s| {
@@ -133,11 +135,11 @@ where
         let seed = parts.get("seed").and_then(|s| s.parse().ok()).unwrap_or_else(seed_from_time);
 
         let current = parts.get("curr")
-            .and_then(|s| solution_codec.decode_solution(s).ok())
+            .and_then(|s| Solution::decode(s).ok())
             .expect("Error: No se pudo decodificar la solución actual");
 
         let best = parts.get("best")
-            .and_then(|s| solution_codec.decode_solution(s).ok())
+            .and_then(|s| Solution::decode(s).ok())
             .expect("Error: No se pudo decodificar la mejor solución (best)");
 
         Self {
@@ -169,7 +171,7 @@ where
 
 impl<T, M> Algorithm<T> for SimulatedAnnealing<T, M>
 where
-    T: Clone + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static + Display + FromStr,
     M: MutationOperator<T> + Send + Sync,
 {
     type SolutionSet = VectorSolutionSet<T>;
@@ -319,7 +321,7 @@ where
 
 impl<T, M, P> ExperimentalCase<T, f64, P> for SimulatedAnnealingParameters<T, M>
 where
-    T: Clone + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static + Display + FromStr,
     M: MutationOperator<T> + Clone + Send + Sync + 'static,
     P: Problem<T, f64> + Sync,
 {

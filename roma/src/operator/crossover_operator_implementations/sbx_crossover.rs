@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::operator::traits::{CrossoverOperator, Operator};
 use crate::solution::Solution;
 use crate::utils::random::Random;
@@ -47,7 +49,7 @@ impl Operator for SBXCrossover {
 
 impl<Q> CrossoverOperator<f64, Q> for SBXCrossover
 where
-    Q: Clone,
+    Q: Clone + Display,
 {
     fn execute(
         &self,

@@ -5,7 +5,7 @@ use crate::observer::traits::AlgorithmObserver;
 use crate::observer::Observable;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
-use crate::solution::ParetoCrowdingDistanceQuality;
+use crate::solution::{Solution,ParetoCrowdingDistanceQuality};
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::utils::checkpoint::StepStateCheckpoint;
 use crate::utils::parallel::parallel_map_indexed;
@@ -109,7 +109,7 @@ impl StepStateCheckpoint<f64, ParetoCrowdingDistanceQuality> for NSGAIIState {
         self.generation
     }
 
-    fn from_payload(payload: &str, solution_codec: &dyn crate::solution::SolutionCodec<f64, ParetoCrowdingDistanceQuality>) -> Self {
+    fn from_payload(payload: &str) -> Self {
 
         let parts: std::collections::HashMap<&str, &str> = payload
             .split(';')
@@ -138,7 +138,7 @@ impl StepStateCheckpoint<f64, ParetoCrowdingDistanceQuality> for NSGAIIState {
                 pop_str.trim_matches(|c| c == '[' || c == ']')
                     .split(',')
                     .filter(|s| !s.is_empty())
-                    .filter_map(|sol_str| solution_codec.decode_solution(sol_str).ok())
+                    .filter_map(|sol_str| Solution::decode(sol_str).ok())
                     .collect::<Vec<_>>()
             })
             .unwrap_or_default();
@@ -151,10 +151,10 @@ impl StepStateCheckpoint<f64, ParetoCrowdingDistanceQuality> for NSGAIIState {
     }
 }
 
-    fn to_payload(&self, solution_codec: &dyn crate::solution::SolutionCodec<f64, ParetoCrowdingDistanceQuality>) -> String {
+    fn to_payload(&self) -> String {
         let population_encoded = self.population
         .iter()
-        .map(|sol| sol.encode_with(solution_codec).unwrap_or_else(|_| "err".to_string()))
+        .map(|sol| sol.encode())
         .collect::<Vec<String>>()
         .join(","); 
 

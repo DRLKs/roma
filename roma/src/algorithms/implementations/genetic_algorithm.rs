@@ -1,3 +1,6 @@
+use std::fmt::Display;
+use std::str::FromStr;
+
 use crate::algorithms::objective::{is_better, ImprovementDirection};
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
@@ -9,7 +12,6 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::solution::codec::SolutionCodec;
 use crate::utils::checkpoint::StepStateCheckpoint;
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::random::{Random,seed_from_time};
@@ -130,7 +132,7 @@ where
 
 impl<T> StepStateCheckpoint<T> for GeneticAlgorithmState<T>
 where
-    T: Clone,
+    T: Clone + Display + FromStr,
 {
     fn iteration(&self) -> usize {
         self.generation
@@ -144,11 +146,11 @@ where
         self.run_seed
     }
 
-    fn to_payload(&self, solution_codec: &dyn SolutionCodec<T>) -> String {
+    fn to_payload(&self) -> String {
 
         let encoded_pop = self.population
             .iter()
-            .map(|sol| solution_codec.encode_solution(sol).unwrap_or_else(|_| "err".to_string()))
+            .map(|sol| sol.encode())
             .collect::<Vec<String>>()
             .join(",");
 
@@ -169,7 +171,7 @@ where
         )
     }
 
-    fn from_payload(payload: &str, solution_codec: &dyn SolutionCodec<T>) -> Self {
+    fn from_payload(payload: &str) -> Self {
         let parts: std::collections::HashMap<&str, &str> = payload
             .split(';')
             .filter_map(|s| {
@@ -195,7 +197,7 @@ where
                 pop_str.trim_matches(|c| c == '[' || c == ']')
                     .split(',')
                     .filter(|s| !s.is_empty())
-                    .filter_map(|sol_str| solution_codec.decode_solution(sol_str).ok())
+                    .filter_map(|sol_str| Solution::decode(sol_str).ok())
                     .collect::<Vec<_>>()
             })
             .unwrap_or_default();
@@ -212,7 +214,7 @@ where
 
 impl<T, C, M, Sel> GeneticAlgorithm<T, C, M, Sel>
 where
-    T: Clone + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static + Display,
     C: CrossoverOperator<T> + Send + Sync,
     M: MutationOperator<T> + Send + Sync,
     Sel: SelectionOperator<T> + Send + Sync,
@@ -515,7 +517,7 @@ where
 
 impl<T, C, M, Sel> Algorithm<T> for GeneticAlgorithm<T, C, M, Sel>
 where
-    T: Clone + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static + Display + Display + FromStr,
     C: CrossoverOperator<T> + Send + Sync,
     M: MutationOperator<T> + Send + Sync,
     Sel: SelectionOperator<T> + Send + Sync,
@@ -650,7 +652,7 @@ where
 
 impl<T, C, M, Sel, P> ExperimentalCase<T, f64, P> for GeneticAlgorithmParameters<T, C, M, Sel>
 where
-    T: Clone + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static + Display + FromStr,
     C: CrossoverOperator<T> + Clone + Send + Sync + 'static,
     M: MutationOperator<T> + Clone + Send + Sync + 'static,
     Sel: SelectionOperator<T> + Clone + Send + Sync + 'static,

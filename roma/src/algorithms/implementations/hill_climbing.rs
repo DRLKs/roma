@@ -1,3 +1,6 @@
+use std::fmt::{Debug, Display};
+use std::str::FromStr;
+
 use crate::algorithms::objective::is_better;
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
@@ -8,7 +11,6 @@ use crate::observer::Observable;
 use crate::operator::traits::MutationOperator;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
-use crate::solution::codec::SolutionCodec;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::checkpoint::{
@@ -107,28 +109,24 @@ where
 
 impl<T> StepStateCheckpoint<T, f64> for HillClimbingState<T>
 where
-    T: Clone,
+    T: Clone + Display + FromStr + Debug,
 {
     fn random_seed(&self) -> u64 {
         self.rng.state()
     }
 
-    fn to_payload(&self, solution_codec: &dyn SolutionCodec<T>) -> String {
-
-        let current_encoded = solution_codec
-            .encode_solution(&self.current)
-            .unwrap_or_else(|_| "invalid".to_string());
+    fn to_payload(&self) -> String {            
 
         format!(
             "iter={};eval={};seed={};state={}",
             self.iteration(),
             self.evaluations(),
             self.random_seed(),
-            current_encoded
+            self.current.encode()
         )
     }
 
-    fn from_payload(payload: &str, solution_codec: &dyn SolutionCodec<T>) -> Self {
+    fn from_payload(payload: &str) -> Self {
         
         let parts: std::collections::HashMap<&str, &str> = payload
             .split(';')
@@ -142,8 +140,9 @@ where
         let evaluations = parts.get("eval").and_then(|s| s.parse().ok()).unwrap_or(0);
         let random_seed = parts.get("seed").and_then(|s| s.parse().ok()).unwrap_or_else(seed_from_time);
 
+
         let current = parts.get("state")
-            .and_then(|s| solution_codec.decode_solution(s).ok())
+            .and_then(|s| Solution::decode(s).ok())
             .expect("Critical error: Could not decode the current state from payload");
 
         Self {
@@ -179,7 +178,7 @@ where
 
 impl<T, M> Algorithm<T> for HillClimbing<T, M>
 where
-    T: Clone + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static + Display + FromStr + Debug,
     M: MutationOperator<T> + Send + Sync,
 {
     type SolutionSet = VectorSolutionSet<T>;
@@ -298,19 +297,11 @@ where
         result
     }
 
-    fn initialize_step_state_with_resume(
-            &self,
-            problem: &(impl Problem<T, f64> + Sync),
-            checkpoint: &crate::utils::checkpoint::CheckpointRecord,
-        ) -> Self::StepState {
-        
-            StepStateCheckpoint::from_payload(&checkpoint.step_state_payload, problem.solution_codec().unwrap())
-    }
 }
 
 impl<T, M, P> ExperimentalCase<T, f64, P> for HillClimbingParameters<T, M>
 where
-    T: Clone + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static + Display + FromStr + Debug,
     M: MutationOperator<T> + Clone + Send + Sync + 'static,
     P: Problem<T, f64> + Sync,
 {

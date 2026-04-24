@@ -8,7 +8,6 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::solution::codec::SolutionCodec;
 use crate::utils::checkpoint::{StepStateCheckpoint};
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::random::{seed_from_time, Random};
@@ -110,10 +109,10 @@ impl StepStateCheckpoint<bool, f64> for PSOState {
         self.iteration
     }
 
-    fn to_payload(&self, solution_codec: &dyn SolutionCodec<bool, f64>) -> String {
+    fn to_payload(&self) -> String {
 
         let encoded_particles = self.particles.iter()
-            .map(|p| solution_codec.encode_solution(p).unwrap_or_default())
+            .map(|p| p.encode())
             .collect::<Vec<_>>().join(",");
         
         let encoded_velocities = self.velocities.iter()
@@ -122,10 +121,10 @@ impl StepStateCheckpoint<bool, f64> for PSOState {
 
 
         let encoded_p_bests = self.personal_best.iter()
-            .map(|p| solution_codec.encode_solution(p).unwrap_or_default())
+            .map(|p| p.encode())
             .collect::<Vec<_>>().join(",");
 
-        let encoded_g_best = solution_codec.encode_solution(&self.global_best).unwrap_or_default();
+        let encoded_g_best = self.global_best.encode();
 
         format!(
             "iter={};eval={};dir={};particles=[{}];vels=[{}];pbests=[{}];gbest={}",
@@ -139,7 +138,7 @@ impl StepStateCheckpoint<bool, f64> for PSOState {
         )
     }
 
-    fn from_payload(payload: &str, solution_codec: &dyn SolutionCodec<bool, f64>) -> Self {
+    fn from_payload(payload: &str) -> Self {
         let parts: std::collections::HashMap<&str, &str> = payload
             .split(';')
             .filter_map(|s| {
@@ -162,15 +161,15 @@ impl StepStateCheckpoint<bool, f64> for PSOState {
         };
 
         let particles = split_list("particles")
-            .filter_map(|s| solution_codec.decode_solution(s).ok())
+            .filter_map(|s| Solution::decode(s).ok())
             .collect();
 
         let personal_best = split_list("pbests")
-            .filter_map(|s| solution_codec.decode_solution(s).ok())
+            .filter_map(|s| Solution::decode(s).ok())
             .collect();
 
         let global_best = parts.get("gbest")
-            .and_then(|s| solution_codec.decode_solution(s).ok())
+            .and_then(|s| Solution::decode(s).ok())
             .expect("Error crítico: No se encontró el global_best en el payload");
 
         let velocities = split_list("vels")
