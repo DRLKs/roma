@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::algorithms::objective::ImprovementDirection;
 use crate::algorithms::runtime::{
     run_with_observer_runtime, ExecutionContext, RuntimeExecutionOutput,
@@ -9,7 +11,10 @@ use crate::problem::traits::Problem;
 use crate::solution::traits::Dominance;
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::checkpoint::{
-    CheckpointPathConfig, CheckpointRecord, resolve_checkpoint_dir, select_resume_checkpoint,
+    checkpoint_identity_hashes, delete_snapshot_on_success, generate_run_id,
+    write_snapshot, StepStateCheckpoint, CheckpointPathConfig,
+    CheckpointRecord,
+    DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES, resolve_checkpoint_dir, select_resume_checkpoint,
 };
 use crate::utils::cli::{has_flag, resolve_path_from_flag_or_default};
 
@@ -23,12 +28,12 @@ const CHECKPOINT_DIR_FLAG: &str = "--checkpoint-dir";
 /// termination -> finalize to a solution set.
 pub trait Algorithm<T, Q = f64>
 where
-    T: Clone + Send + 'static,
-    Q: Clone + Default + Dominance + Send + 'static,
+    T: Clone + Send + 'static + Display,
+    Q: Clone + Default + Dominance + Send + 'static + Display,
 {
     type SolutionSet: SolutionSet<T, Q>;
     type Parameters;
-    type StepState;
+    type StepState: StepStateCheckpoint<T, Q>;
 
     fn new(parameters: Self::Parameters) -> Self;
 
@@ -56,25 +61,44 @@ where
         self.validate_parameters()?;
 
         let mut observers = std::mem::take(self.observers_mut());
+        
         let algorithm_name = self.algorithm_name().to_string();
+        let runtime_algorithm_name = algorithm_name.clone();
+        let algorithm_parameters = self.checkpoint_algorithm_parameters();
         let criteria = self.termination_criteria();
         let direction: ImprovementDirection = problem.get_improvement_direction();
         let algorithm = &*self;
+        let problem_description = problem.get_problem_description();
+        let problem_parameters = problem.get_problem_description(); // TODO: Obtener parámetros específicos de cada problema    
+        let (algorithm_signature_hash, problem_signature_hash) = checkpoint_identity_hashes(
+            &algorithm_name,
+            &algorithm_parameters,
+            &problem_description,
+            &problem_parameters,
+        );
 
         // Configuration for checkpoint resumption
-        let resume_checkpoint = self.get_resume_checkpoint(problem);
+        let default_dir = resolve_checkpoint_dir(&CheckpointPathConfig::default());
+        let checkpoint_dir =
+                resolve_path_from_flag_or_default(CHECKPOINT_DIR_FLAG, default_dir.clone());
+        let resume_checkpoint = self.get_resume_checkpoint(problem, &checkpoint_dir);
+        let run_id = resume_checkpoint
+            .as_ref()
+            .map(|record| record.run_id.clone())
+            .unwrap_or_else(|| generate_run_id(&algorithm_name));
+    
+    
+
+        let mut last_checkpoint_path: Option<std::path::PathBuf> = None;
 
         let result = run_with_observer_runtime(
             &mut observers,
             criteria,
             direction,
-            algorithm_name,
+            runtime_algorithm_name,
             move |context| {
                 let mut state = if let Some(checkpoint) = resume_checkpoint.as_ref() {
-                    algorithm.initialize_step_state_with_resume(
-                        problem,
-                        checkpoint,
-                    )
+                    StepStateCheckpoint::from_payload(&checkpoint.step_state_payload)
                 } else {
                     algorithm.initialize_step_state(problem)
                 };
@@ -83,6 +107,12 @@ where
                 let initial_presentation = problem.format_solution(&initial_snapshot.best_solution);
                 let mut last_iteration = initial_snapshot.iteration;
                 let mut last_evaluations = initial_snapshot.evaluations;
+
+                let initial_record = state.build_checkpoint_record(&run_id, &algorithm_name, &algorithm_parameters, &problem_description, &problem_parameters, algorithm_signature_hash, problem_signature_hash);
+                if let Ok(path) = write_snapshot(&checkpoint_dir, &initial_record) {
+                    last_checkpoint_path = Some(path);
+                }
+
                 context.report_progress(ObserverState::from_snapshot(
                     initial_snapshot,
                     initial_presentation,
@@ -96,10 +126,25 @@ where
                     let step_presentation = problem.format_solution(&step_snapshot.best_solution);
                     last_iteration = step_snapshot.iteration;
                     last_evaluations = step_snapshot.evaluations;
+
+                    if DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES > 0
+                        && step_snapshot.iteration % DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES == 0
+                    {
+                        let record = state.build_checkpoint_record(&run_id, &algorithm_name, &algorithm_parameters, &problem_description, &problem_parameters, algorithm_signature_hash, problem_signature_hash);
+
+                        if let Ok(path) = write_snapshot(&checkpoint_dir, &record) {
+                            last_checkpoint_path = Some(path);
+                        }
+                    }
+
                     context.report_progress(ObserverState::from_snapshot(
                         step_snapshot,
                         step_presentation,
                     ));
+                }
+
+                if let Some(path) = last_checkpoint_path.as_ref() {
+                    let _ = delete_snapshot_on_success(path);
                 }
 
                 RuntimeExecutionOutput::new(
@@ -138,14 +183,6 @@ where
 
     fn finalize_step_state(&self, state: Self::StepState) -> Self::SolutionSet;
 
-    fn initialize_step_state_with_resume(
-        &self,
-        problem: &(impl Problem<T, Q> + Sync),
-        _checkpoint: &CheckpointRecord,
-    ) -> Self::StepState {
-        self.initialize_step_state(problem)
-    }
-
     /// Returns a string used to fingerprint algorithm checkpoint compatibility.
     fn checkpoint_algorithm_parameters(&self) -> String {
         String::new()
@@ -157,15 +194,11 @@ where
     /// identity fingerprints and delegates checkpoint selection to the checkpoint
     /// module. It returns `None` when resume is disabled, no compatible
     /// checkpoint is found, or selection fails.
-    fn get_resume_checkpoint(&self, problem: &(impl Problem<T, Q> + Sync)) -> Option<CheckpointRecord> {
+    fn get_resume_checkpoint(&self, problem: &(impl Problem<T, Q> + Sync), checkpoint_dir: &std::path::PathBuf) -> Option<CheckpointRecord> {
         let resume = has_flag(RESUME_FLAG);
         if !resume {
             return None;
         }
-        
-        let default_dir = resolve_checkpoint_dir(&CheckpointPathConfig::default());
-        let checkpoint_dir =
-                resolve_path_from_flag_or_default(CHECKPOINT_DIR_FLAG, default_dir.clone());
 
         let algorithm_parameters = self.checkpoint_algorithm_parameters();
         let problem_description = problem.get_problem_description();

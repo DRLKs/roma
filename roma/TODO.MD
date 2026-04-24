@@ -100,4 +100,6 @@
 
 [ ] 24. Limpiar los checkoints LRU
 
+[ ] 25. Realizar test unitarios Solution decode, encode
+
 Cambiar algorithm.run añadir el argumento resume
