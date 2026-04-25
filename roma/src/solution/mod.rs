@@ -173,10 +173,12 @@ impl<T: Display, Q: Display> Solution<T, Q> {
             Some(q) => q.to_string(),
             None => "None".to_string(),
         };
+
         let genes: String = self.variables.iter()
             .map(|v| v.to_string())
             .collect::<Vec<_>>()
-            .join("");
+            .join(",");
+        
         format!("{}|{}", genes, quality_string)
     }
 
@@ -187,19 +189,19 @@ impl<T: Display, Q: Display> Solution<T, Q> {
     {
         let parts: Vec<&str> = data.split('|').collect();
         if parts.len() != 2 {
-            return Err("Formato inválido: se esperaba 'genes|calidad'".to_string());
+            return Err("Invalid format: 'genes|fitness' expected".to_string());
         }
 
         let variables: Vec<T> = parts[0]
             .split(',')
             .filter(|s| !s.is_empty())
-            .map(|s| s.parse::<T>().map_err(|_| "Error parseando variable (T)".to_string()))
+            .map(|s| s.parse::<T>().map_err(|_| "Error parsing variable (T)".to_string()))
             .collect::<Result<Vec<T>, String>>()?;
 
         let quality = if parts[1] == "None" || parts[1].is_empty() {
             None
         } else {
-            Some(parts[1].parse::<Q>().map_err(|_| "Error parseando calidad (Q)".to_string())?)
+            Some(parts[1].parse::<Q>().map_err(|_| "Error parsing quality (Q)".to_string())?)
         };
 
         Ok(Self { variables, quality })

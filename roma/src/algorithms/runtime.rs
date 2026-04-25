@@ -88,6 +88,10 @@ where
         );
     }
 
+    pub fn seq_id(&self) -> u64 {
+        *self.next_snapshot_seq.borrow()
+    }
+
     /// Applies one execution snapshot and emits events accordingly.
     pub fn report_progress(&self, observer_state: ObserverState) {
         emit_event(
@@ -105,13 +109,12 @@ where
         id
     }
 
-    pub fn snapshot_with_seq(
+    pub fn update_execution_state(
         &self,
-        mut snapshot: ExecutionStateSnapshot<T, Q>,
-    ) -> ExecutionStateSnapshot<T, Q> {
-        snapshot.seq_id = self.next_snapshot_seq_id();
-        self.termination.borrow_mut().on_snapshot(&snapshot);
-        snapshot
+        snapshot: &ExecutionStateSnapshot<T, Q>,
+    ) {
+        self.next_snapshot_seq_id();
+        self.termination.borrow_mut().on_snapshot(snapshot);
     }
 
     /// Returns `true` when any configured termination criterion has been met.
@@ -293,15 +296,14 @@ mod tests {
             .with_quality(best_fitness)
             .build();
 
-        ExecutionStateSnapshot::new(
-            0,
+        ExecutionStateSnapshot{
             iteration,
             evaluations,
             best_solution,
             best_fitness,
-            best_fitness,
-            best_fitness,
-        )
+            worst_fitness: best_fitness,
+            average_fitness: best_fitness,
+        }
     }
 
     #[test]
@@ -310,13 +312,13 @@ mod tests {
         let context: ExecutionContext<f64> =
             ExecutionContext::new(None, criteria, ImprovementDirection::Maximize);
 
-        let initial = context.snapshot_with_seq(snapshot(0, 1, 1.0));
-        assert_eq!(initial.seq_id, 0);
+        assert_eq!(*context.next_snapshot_seq.borrow(), 0);
+        context.update_execution_state(&snapshot(0, 1, 1.0));
+        assert_eq!(*context.next_snapshot_seq.borrow(), 1);
         assert!(!context.should_terminate());
 
-        let progressed = context.snapshot_with_seq(snapshot(2, 3, 1.2));
-        assert_eq!(progressed.seq_id, 1);
-
+        context.update_execution_state(&snapshot(2, 3, 1.2));
+        assert_eq!(*context.next_snapshot_seq.borrow(), 2);
         assert!(context.should_terminate());
     }
 }

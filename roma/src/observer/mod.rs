@@ -51,13 +51,14 @@ impl ObserverState {
     pub(crate) fn from_snapshot<T, Q>(
         snapshot: ExecutionStateSnapshot<T, Q>,
         best_solution_presentation: String,
+        seq_id: u64
     ) -> Self
     where
         T: Clone,
         Q: Clone,
     {
         Self::new(
-            snapshot.seq_id,
+            seq_id,
             snapshot.iteration,
             snapshot.evaluations,
             snapshot.best_fitness,

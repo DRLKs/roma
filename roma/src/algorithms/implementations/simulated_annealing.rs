@@ -299,17 +299,16 @@ where
             .max(self.parameters.minimum_temperature);
     }
 
-    fn snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T> {
+    fn build_snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T> {
         let fit = state.best.quality_value();
-        ExecutionStateSnapshot::new(
-            0,
-            state.iteration,
-            state.evaluations,
-            state.best.copy(),
-            fit,
-            fit,
-            fit,
-        )
+        ExecutionStateSnapshot{
+            iteration: state.iteration,
+            evaluations: state.evaluations,
+            best_solution: state.best.copy(),
+            best_fitness: fit,
+            worst_fitness: fit,
+            average_fitness: fit,
+        }
     }
 
     fn finalize_step_state(&self, state: Self::StepState) -> Self::SolutionSet {

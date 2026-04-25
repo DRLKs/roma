@@ -540,10 +540,7 @@ where
         state.population = next_population;
     }
 
-    fn snapshot(
-        &self,
-        state: &Self::StepState,
-    ) -> ExecutionStateSnapshot<f64, ParetoCrowdingDistanceQuality> {
+    fn build_snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<f64, ParetoCrowdingDistanceQuality> {
         let worst = state
             .population
             .iter()
@@ -574,15 +571,14 @@ where
             .expect("population should not be empty when reporting progress");
         let best = best_solution.get_objective(0).unwrap_or(0.0);
 
-        ExecutionStateSnapshot::new(
-            0,
-            state.generation,
-            state.evaluations,
+        ExecutionStateSnapshot{
+            iteration: state.generation,
+            evaluations: state.evaluations,
             best_solution,
-            best,
-            avg,
-            worst,
-        )
+            best_fitness: best,
+            average_fitness: avg,
+            worst_fitness: worst,
+        }
     }
 
     fn finalize_step_state(&self, state: Self::StepState) -> Self::SolutionSet {

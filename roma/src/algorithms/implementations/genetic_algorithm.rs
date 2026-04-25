@@ -614,7 +614,7 @@ where
         );
     }
 
-    fn snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T> {
+    fn build_snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T> {
         let (_best, avg, worst) = calculate_statistics(&state.population, state.direction);
         let best_solution = state
             .population
@@ -634,15 +634,14 @@ where
             .expect("population should not be empty when reporting progress");
 
         let best_fitness = best_solution.quality_value();
-        ExecutionStateSnapshot::new(
-            0,
-            state.generation,
-            state.evaluations,
+        ExecutionStateSnapshot{
+            iteration: state.generation,
+            evaluations: state.evaluations,
             best_solution,
             best_fitness,
-            avg,
-            worst,
-        )
+            average_fitness:avg,
+            worst_fitness: worst,
+        }
     }
 
     fn finalize_step_state(&self, state: Self::StepState) -> Self::SolutionSet {

@@ -53,7 +53,6 @@ where
     T: Clone,
     Q: Clone,
 {
-    pub seq_id: u64,
     pub iteration: usize,
     pub evaluations: usize,
     pub best_solution: Solution<T, Q>,
@@ -61,32 +60,6 @@ where
     pub best_fitness: f64,
     pub average_fitness: f64,
     pub worst_fitness: f64,
-}
-
-impl<T, Q> ExecutionStateSnapshot<T, Q>
-where
-    T: Clone,
-    Q: Clone,
-{
-    pub fn new(
-        seq_id: u64,
-        iteration: usize,
-        evaluations: usize,
-        best_solution: Solution<T, Q>,
-        best_fitness: f64,
-        average_fitness: f64,
-        worst_fitness: f64,
-    ) -> Self {
-        Self {
-            seq_id,
-            iteration,
-            evaluations,
-            best_solution,
-            best_fitness,
-            average_fitness,
-            worst_fitness,
-        }
-    }
 }
 
 /// Internal state used to track stopping-criteria progress.
@@ -241,15 +214,14 @@ mod tests {
             .with_quality(best_fitness)
             .build();
 
-        ExecutionStateSnapshot::new(
-            0,
+        ExecutionStateSnapshot{
             iteration,
             evaluations,
             best_solution,
             best_fitness,
-            best_fitness,
-            best_fitness,
-        )
+            average_fitness: best_fitness,
+            worst_fitness: best_fitness,
+        }
     }
 
     #[test]

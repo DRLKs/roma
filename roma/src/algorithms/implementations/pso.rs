@@ -434,17 +434,16 @@ impl Algorithm<bool> for PSO {
         }
     }
 
-    fn snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<bool> {
+    fn build_snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<bool> {
         if state.particles.is_empty() {
-            return ExecutionStateSnapshot::new(
-                0,
-                state.iteration,
-                state.evaluations,
-                state.global_best.copy(),
-                state.global_best.quality_value(),
-                0.0,
-                0.0,
-            );
+            return ExecutionStateSnapshot{
+                iteration: state.iteration,
+                evaluations: state.evaluations,
+                best_solution: state.global_best.copy(),
+                best_fitness: state.global_best.quality_value(),
+                worst_fitness: state.global_best.quality_value(),
+                average_fitness: state.global_best.quality_value(),
+            }
         }
 
         let values: Vec<f64> = state.particles.iter().map(|s| s.quality_value()).collect();
@@ -452,15 +451,14 @@ impl Algorithm<bool> for PSO {
 
         let (best_value, worst_value) = best_worst(&values, state.direction);
 
-        ExecutionStateSnapshot::new(
-            0,
-            state.iteration,
-            state.evaluations,
-            state.global_best.copy(),
-            best_value,
-            average,
-            worst_value,
-        )
+        ExecutionStateSnapshot{
+            iteration: state.iteration,
+            evaluations: state.evaluations,
+            best_solution: state.global_best.copy(),
+            best_fitness: best_value,
+            average_fitness: average,
+            worst_fitness: worst_value,
+        }
     }
 
     fn finalize_step_state(&self, state: Self::StepState) -> Self::SolutionSet {

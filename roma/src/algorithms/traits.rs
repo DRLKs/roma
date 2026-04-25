@@ -19,6 +19,8 @@ use crate::utils::checkpoint::{
 use crate::utils::cli::{has_flag, resolve_path_from_flag_or_default};
 
 const RESUME_FLAG: &str = "--resume";
+const NO_CHECKPOINT_FLAG: &str = "--no-checkpoint";
+const NO_CHECKPOINT_FLAG_SHORT: &str = "--nc";
 const CHECKPOINT_DIR_FLAG: &str = "--checkpoint-dir";
 
 /// Basic interface for all optimization algorithms.
@@ -62,8 +64,11 @@ where
 
         let mut observers = std::mem::take(self.observers_mut());
         
+        // let resume = has_flag(RESUME_FLAG);
+        let no_checkpoint = has_flag(NO_CHECKPOINT_FLAG) || has_flag(NO_CHECKPOINT_FLAG_SHORT);
+
+
         let algorithm_name = self.algorithm_name().to_string();
-        let runtime_algorithm_name = algorithm_name.clone();
         let algorithm_parameters = self.checkpoint_algorithm_parameters();
         let criteria = self.termination_criteria();
         let direction: ImprovementDirection = problem.get_improvement_direction();
@@ -75,7 +80,7 @@ where
             &algorithm_parameters,
             &problem_description,
             &problem_parameters,
-        );
+        );        
 
         // Configuration for checkpoint resumption
         let default_dir = resolve_checkpoint_dir(&CheckpointPathConfig::default());
@@ -95,34 +100,43 @@ where
             &mut observers,
             criteria,
             direction,
-            runtime_algorithm_name,
+            algorithm_name.clone(),
             move |context| {
-                let mut state = if let Some(checkpoint) = resume_checkpoint.as_ref() {
-                    StepStateCheckpoint::from_payload(&checkpoint.step_state_payload)
+                
+                let mut state: <Self as Algorithm<T, Q>>::StepState;
+
+                if let Some(checkpoint) = resume_checkpoint.as_ref() {
+                    state = StepStateCheckpoint::from_payload(&checkpoint.step_state_payload)
                 } else {
-                    algorithm.initialize_step_state(problem)
+                    state = algorithm.initialize_step_state(problem)
                 };
 
-                let initial_snapshot = context.snapshot_with_seq(algorithm.snapshot(&state));
-                let initial_presentation = problem.format_solution(&initial_snapshot.best_solution);
+                let initial_snapshot = algorithm.build_snapshot(&state);
+                context.update_execution_state(&initial_snapshot);
+
                 let mut last_iteration = initial_snapshot.iteration;
                 let mut last_evaluations = initial_snapshot.evaluations;
 
                 let initial_record = state.build_checkpoint_record(&run_id, &algorithm_name, &algorithm_parameters, &problem_description, &problem_parameters, algorithm_signature_hash, problem_signature_hash);
-                if let Ok(path) = write_snapshot(&checkpoint_dir, &initial_record) {
-                    last_checkpoint_path = Some(path);
+                if !no_checkpoint {
+                    if let Ok(path) = write_snapshot(&checkpoint_dir, &initial_record) {
+                        last_checkpoint_path = Some(path);
+                    }
                 }
 
+                // Report initial snapshot to observers before starting iterations
+                let initial_presentation = problem.format_solution(&initial_snapshot.best_solution);
                 context.report_progress(ObserverState::from_snapshot(
                     initial_snapshot,
                     initial_presentation,
+                    context.seq_id(),
                 ));
 
                 while !context.should_terminate() {
                     algorithm.step(problem, &mut state, context);
 
-                    let step_snapshot = algorithm.snapshot(&state);
-                    let step_snapshot = context.snapshot_with_seq(step_snapshot);
+                    let step_snapshot = algorithm.build_snapshot(&state );
+                    context.update_execution_state(&step_snapshot);
                     let step_presentation = problem.format_solution(&step_snapshot.best_solution);
                     last_iteration = step_snapshot.iteration;
                     last_evaluations = step_snapshot.evaluations;
@@ -132,14 +146,17 @@ where
                     {
                         let record = state.build_checkpoint_record(&run_id, &algorithm_name, &algorithm_parameters, &problem_description, &problem_parameters, algorithm_signature_hash, problem_signature_hash);
 
-                        if let Ok(path) = write_snapshot(&checkpoint_dir, &record) {
-                            last_checkpoint_path = Some(path);
+                        if !no_checkpoint {
+                            if let Ok(path) = write_snapshot(&checkpoint_dir, &record) {
+                                last_checkpoint_path = Some(path);
+                            }
                         }
                     }
 
                     context.report_progress(ObserverState::from_snapshot(
                         step_snapshot,
                         step_presentation,
+                        context.seq_id(),
                     ));
                 }
 
@@ -179,7 +196,7 @@ where
         context: &ExecutionContext<T, Q>,
     );
 
-    fn snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T, Q>;
+    fn build_snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T, Q>;
 
     fn finalize_step_state(&self, state: Self::StepState) -> Self::SolutionSet;
 
