@@ -102,4 +102,5 @@
 
 [ ] 25. Realizar test unitarios Solution decode, encode
 
+[ ] 26. Informar en los charts de que la ejecución se reaunudó
 Cambiar algorithm.run añadir el argumento resume

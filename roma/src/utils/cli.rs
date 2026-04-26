@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::{io, io::Write};
 
-use crate::utils::checkpoint::CheckpointEntry;
+use crate::utils::checkpoint::{CheckpointEntry, StepStateCheckpoint};
 
 /// Reads a reproducibility seed from CLI arguments.
 ///
@@ -112,52 +112,90 @@ pub fn infer_format_from_extension(path: &Path) -> Option<String> {
     }
 }
 
-/// Prompts user to select one checkpoint entry by index.
-///
-/// Returns `Ok(None)` when user cancels.
+use std::time::{SystemTime, UNIX_EPOCH};
+
+/// Converts milliseconds to a HH:MM:SS duration string.
+fn format_duration(ms: u64) -> String {
+    let secs = ms / 1000;
+    let h = secs / 3600;
+    let m = (secs % 3600) / 60;
+    let s = secs % 60;
+    format!("{:02}:{:02}:{:02}", h, m, s)
+}
+
+/// Calculates relative time from a millisecond timestamp.
+fn format_time_ago(created_ms: u64) -> String {
+    let now_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+
+    let diff_ms = now_ms.saturating_sub(created_ms);
+    let secs = diff_ms / 1000;
+
+    if secs < 60 {
+        format!("{}s ago", secs)
+    } else if secs < 3600 {
+        format!("{}m ago", secs / 60)
+    } else if secs < 86400 {
+        format!("{}h {}m ago", secs / 3600, (secs % 3600) / 60)
+    } else {
+        format!("{} days ago", secs / 86400)
+    }
+}
+
 pub fn prompt_checkpoint_selection(entries: &[CheckpointEntry]) -> Result<Option<usize>, String> {
     if entries.is_empty() {
         return Ok(None);
     }
 
-    println!("Found {} resumable checkpoints:", entries.len());
+    use crate::algorithms::traits::CONSOLE_LOCK;
+    let _lock = CONSOLE_LOCK.lock().map_err(|_| "Failed to acquire console lock".to_string())?;
+
+    // Professional Header
+    println!("\n{:^90}", "--- CHECKPOINT SELECTION ---");
+    println!("{:<4} | {:<15} | {:<12} | {:<12} | {:<10} | {:<20}", 
+             "ID", "AGE", "BEST FIT.", "ITERATION", "ELAPSED", "RUN ID");
+    println!("{:-<90}", "");
+
     for (index, entry) in entries.iter().enumerate() {
+        let rec = &entry.record;
+        
+        let age_str = format_time_ago(rec.created_at_ms);
+        let time_str = format_duration(rec.elapsed_millis.unwrap_or(0));
+        let status_icon = if rec.status.as_str() == "running" { ">" } else { "[]" };
+
         println!(
-            "  [{}] run_id={} seq={} status={} file={}",
+            "[{:>2}] | {:<15} | {:>12.4} | {:<12} | {:<10} | {} {}",
             index + 1,
-            entry.record.run_id,
-            entry.record.seq_id,
-            entry.record.status.as_str(),
-            entry.path.display()
+            age_str,
+            rec.best_fitness,
+            rec.seq_id,
+            time_str,
+            status_icon,
+            rec.run_id
         );
     }
-    println!("  [0] cancel");
 
-    print!("Select checkpoint index: ");
-    io::stdout()
-        .flush()
-        .map_err(|err| format!("failed to flush prompt: {}", err))?;
+    println!("{:-<90}", "");
+    println!(" [0] Start a new run (ignore existing)");
+    println!("{:^90}\n", "----------------------------");
+
+    print!("> Select checkpoint index: ");
+    io::stdout().flush().map_err(|e| e.to_string())?;
 
     let mut input = String::new();
-    io::stdin()
-        .read_line(&mut input)
-        .map_err(|err| format!("failed to read checkpoint selection: {}", err))?;
+    io::stdin().read_line(&mut input).map_err(|e| e.to_string())?;
 
-    let value = input
-        .trim()
-        .parse::<usize>()
-        .map_err(|_| "invalid checkpoint selection: expected integer index".to_string())?;
+    let selection = input.trim().parse::<usize>().map_err(|_| "Please enter a valid numeric index.")?;
 
-    if value == 0 {
+    if selection == 0 {
         return Ok(None);
     }
 
-    if value > entries.len() {
-        return Err(format!(
-            "invalid checkpoint selection: expected value in [0, {}]",
-            entries.len()
-        ));
+    if selection > entries.len() {
+        return Err(format!("Index {} is out of range.", selection));
     }
 
-    Ok(Some(value - 1))
+    Ok(Some(selection - 1))
 }

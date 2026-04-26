@@ -39,6 +39,10 @@ where
     /// in the framework. Algorithms and runtime termination consume this value
     fn get_improvement_direction(&self) -> ImprovementDirection;
 
+    fn get_problem_parameters_payload(&self) -> String {
+        String::new()
+    }
+
     /// Returns a human-friendly representation for one solution.
     ///
     /// Observers use this string to present best snapshots in CLI/HTML outputs.

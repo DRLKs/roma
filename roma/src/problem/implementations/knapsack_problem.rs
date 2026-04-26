@@ -142,6 +142,19 @@ impl Problem<bool> for KnapsackProblem {
             quality_text
         )
     }
+
+    fn get_problem_parameters_payload(&self) -> String {
+        format!(
+            "capacity={:.3}, items=[{}]",
+            self.capacity,
+            self.weights
+                .iter()
+                .zip(self.values.iter())
+                .map(|(w, v)| format!("(weight={:.3}, value={:.3})", w, v))
+                .collect::<Vec<String>>()
+                .join(", ")
+        )
+    }
 }
 
 pub struct KnapsackBuilder {
