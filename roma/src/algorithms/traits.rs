@@ -5,16 +5,16 @@ use crate::algorithms::runtime::{
     run_with_observer_runtime, ExecutionContext, RuntimeExecutionOutput,
 };
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
-use crate::observer::ObserverState;
 use crate::observer::traits::AlgorithmObserver;
+use crate::observer::ObserverState;
 use crate::problem::traits::Problem;
 use crate::solution::traits::Dominance;
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::checkpoint::{
     checkpoint_identity_hashes, delete_snapshot_on_success, generate_run_id,
-    write_snapshot, StepStateCheckpoint, CheckpointPathConfig,
-    CheckpointRecord,
-    DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES, resolve_checkpoint_dir, select_resume_checkpoint,
+    initialize_checkpoint_dir, resolve_checkpoint_dir, select_resume_checkpoint, write_snapshot,
+    CheckpointInitMode, CheckpointPathConfig, CheckpointRecord, StepStateCheckpoint,
+    DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES,
 };
 use crate::utils::cli::{has_flag, resolve_path_from_flag_or_default};
 
@@ -23,8 +23,20 @@ const NO_CHECKPOINT_FLAG: &str = "--no-checkpoint";
 const NO_CHECKPOINT_FLAG_SHORT: &str = "--nc";
 const CHECKPOINT_DIR_FLAG: &str = "--checkpoint-dir";
 
-use std::sync::{Mutex, LazyLock};
+use std::sync::{LazyLock, Mutex};
 pub static CONSOLE_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+
+fn resolve_checkpoint_dir_from_config_for_writes(
+    config: &CheckpointPathConfig,
+) -> Result<std::path::PathBuf, String> {
+    initialize_checkpoint_dir(config, CheckpointInitMode::BestEffort)
+        .map_err(|err| format!("failed to initialize checkpoint directory: {}", err))
+        .and_then(|result| {
+            result.directory.ok_or_else(|| {
+                "no writable checkpoint directory available; checkpoint writes disabled".to_string()
+            })
+        })
+}
 
 /// Basic interface for all optimization algorithms.
 ///
@@ -66,10 +78,9 @@ where
         self.validate_parameters()?;
 
         let mut observers = std::mem::take(self.observers_mut());
-        
+
         // let resume = has_flag(RESUME_FLAG);
         let no_checkpoint = has_flag(NO_CHECKPOINT_FLAG) || has_flag(NO_CHECKPOINT_FLAG_SHORT);
-
 
         let algorithm_name = self.algorithm_name().to_string();
         let algorithm_parameters = self.checkpoint_algorithm_parameters();
@@ -77,24 +88,29 @@ where
         let direction: ImprovementDirection = problem.get_improvement_direction();
         let algorithm = &*self;
         let problem_description = problem.get_problem_description();
-        let problem_parameters = problem.get_problem_parameters_payload(); 
+        let problem_parameters = problem.get_problem_parameters_payload();
         let (algorithm_signature_hash, problem_signature_hash) = checkpoint_identity_hashes(
             &algorithm_name,
             &algorithm_parameters,
             &problem_description,
             &problem_parameters,
-        );        
+        );
 
         // Configuration for checkpoint resumption
-        let default_dir = resolve_checkpoint_dir(&CheckpointPathConfig::default());
-        let checkpoint_dir =
-                resolve_path_from_flag_or_default(CHECKPOINT_DIR_FLAG, default_dir.clone());
+        let checkpoint_cfg = CheckpointPathConfig::default();
+        let default_dir = resolve_checkpoint_dir(&checkpoint_cfg);
+        let checkpoint_dir = resolve_path_from_flag_or_default(CHECKPOINT_DIR_FLAG, default_dir);
+        let checkpoint_writes_enabled = if has_flag(CHECKPOINT_DIR_FLAG) {
+            std::fs::create_dir_all(&checkpoint_dir).is_ok()
+        } else {
+            resolve_checkpoint_dir_from_config_for_writes(&checkpoint_cfg).is_ok()
+        };
         let resume_checkpoint = self.get_resume_checkpoint(problem, &checkpoint_dir);
         let run_id = resume_checkpoint
             .as_ref()
             .map(|record| record.run_id.clone())
             .unwrap_or_else(|| generate_run_id(&algorithm_name));
-    
+
         let mut state: <Self as Algorithm<T, Q>>::StepState;
 
         if let Some(checkpoint) = resume_checkpoint.as_ref() {
@@ -111,16 +127,23 @@ where
             direction,
             algorithm_name.clone(),
             move |context| {
-                
-                
                 let initial_snapshot = algorithm.build_snapshot(&state);
                 context.update_execution_state(&initial_snapshot);
 
                 let mut last_iteration = initial_snapshot.iteration;
                 let mut last_evaluations = initial_snapshot.evaluations;
 
-                let initial_record = state.build_checkpoint_record(&run_id, &algorithm_name, &algorithm_parameters, &problem_description, &problem_parameters, algorithm_signature_hash, problem_signature_hash, context.time_elapsed());
-                if !no_checkpoint {
+                let initial_record = state.build_checkpoint_record(
+                    &run_id,
+                    &algorithm_name,
+                    &algorithm_parameters,
+                    &problem_description,
+                    &problem_parameters,
+                    algorithm_signature_hash,
+                    problem_signature_hash,
+                    context.time_elapsed(),
+                );
+                if !no_checkpoint && checkpoint_writes_enabled {
                     if let Ok(path) = write_snapshot(&checkpoint_dir, &initial_record) {
                         last_checkpoint_path = Some(path);
                     }
@@ -137,7 +160,7 @@ where
                 while !context.should_terminate() {
                     algorithm.step(problem, &mut state, context);
 
-                    let step_snapshot = algorithm.build_snapshot(&state );
+                    let step_snapshot = algorithm.build_snapshot(&state);
                     context.update_execution_state(&step_snapshot);
                     let step_presentation = problem.format_solution(&step_snapshot.best_solution);
                     last_iteration = step_snapshot.iteration;
@@ -146,10 +169,18 @@ where
                     if DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES > 0
                         && step_snapshot.iteration % DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES == 0
                     {
+                        let record = state.build_checkpoint_record(
+                            &run_id,
+                            &algorithm_name,
+                            &algorithm_parameters,
+                            &problem_description,
+                            &problem_parameters,
+                            algorithm_signature_hash,
+                            problem_signature_hash,
+                            context.time_elapsed(),
+                        );
 
-                        let record = state.build_checkpoint_record(&run_id, &algorithm_name, &algorithm_parameters, &problem_description, &problem_parameters, algorithm_signature_hash, problem_signature_hash, context.time_elapsed());
-
-                        if !no_checkpoint {
+                        if !no_checkpoint && checkpoint_writes_enabled {
                             if let Ok(path) = write_snapshot(&checkpoint_dir, &record) {
                                 last_checkpoint_path = Some(path);
                             }
@@ -187,10 +218,7 @@ where
 
     fn get_solution_set(&self) -> Option<&Self::SolutionSet>;
 
-    fn initialize_step_state(
-        &self,
-        problem: &(impl Problem<T, Q> + Sync),
-    ) -> Self::StepState;
+    fn initialize_step_state(&self, problem: &(impl Problem<T, Q> + Sync)) -> Self::StepState;
 
     fn step(
         &self,
@@ -214,7 +242,11 @@ where
     /// identity fingerprints and delegates checkpoint selection to the checkpoint
     /// module. It returns `None` when resume is disabled, no compatible
     /// checkpoint is found, or selection fails.
-    fn get_resume_checkpoint(&self, problem: &(impl Problem<T, Q> + Sync), checkpoint_dir: &std::path::PathBuf) -> Option<CheckpointRecord> {
+    fn get_resume_checkpoint(
+        &self,
+        problem: &(impl Problem<T, Q> + Sync),
+        checkpoint_dir: &std::path::PathBuf,
+    ) -> Option<CheckpointRecord> {
         let resume = has_flag(RESUME_FLAG);
         if !resume {
             return None;
@@ -230,21 +262,55 @@ where
             &algorithm_parameters,
             &problem_description,
             &problem_parameters,
-        ){
+        ) {
             Ok(Some(record)) => Some(record),
             Ok(None) => {
-                if let Ok(_lock) = CONSOLE_LOCK.lock() {    // In parallel experiments, sometimes dont show this message (Dont a problem, just a UX detail)
+                if let Ok(_lock) = CONSOLE_LOCK.lock() {
+                    // In parallel experiments, sometimes dont show this message (Dont a problem, just a UX detail)
                     eprintln!("No resumable checkpoints found for this algorithm and problem.");
                 }
                 None
             }
             Err(err) => {
-                if let Ok(_lock) = CONSOLE_LOCK.lock() {    // In parallel experiments, sometimes dont show this message (Dont a problem, just a UX detail)
+                if let Ok(_lock) = CONSOLE_LOCK.lock() {
+                    // In parallel experiments, sometimes dont show this message (Dont a problem, just a UX detail)
                     eprintln!("Error while searching for checkpoint: {}", err);
                 }
                 None
             }
         }
-        
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_checkpoint_dir_for_writes_skips_unwritable_candidates() {
+        let base = std::env::temp_dir().join(format!(
+            "roma_traits_checkpoint_dir_test_{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        let fallback = base.join("fallback");
+
+        let config = CheckpointPathConfig {
+            app_name: "/dev/null".to_string(),
+            env_var_name: "ROMA_TEST_UNUSED_CHECKPOINT_ENV",
+            explicit_dir: Some(std::path::PathBuf::from("/dev/null/roma")),
+            project_fallback_dir: Some(fallback.clone()),
+        };
+
+        let resolved = resolve_checkpoint_dir_from_config_for_writes(&config)
+            .expect("a writable fallback directory should be resolved");
+
+        assert_eq!(resolved, fallback);
+        assert!(resolved.exists());
+
+        let _ = std::fs::remove_dir_all(base);
     }
 }

@@ -13,15 +13,12 @@ const STATUS_COMPLETED_BYTE: u8 = 1;
 const STATUS_FAILED_BYTE: u8 = 2;
 const STATUS_INTERRUPTED_BYTE: u8 = 3;
 
-const ERR_USIZE_TOO_LARGE_TO_SERIALIZE: &str =
-    "usize value too large to serialize into checkpoint";
-const ERR_STRING_TOO_LARGE_TO_SERIALIZE: &str =
-    "string too large to serialize into checkpoint";
+const ERR_USIZE_TOO_LARGE_TO_SERIALIZE: &str = "usize value too large to serialize into checkpoint";
+const ERR_STRING_TOO_LARGE_TO_SERIALIZE: &str = "string too large to serialize into checkpoint";
 const ERR_U64_TOO_LARGE_TO_DESERIALIZE_AS_USIZE: &str =
     "u64 value too large to deserialize into usize";
 const ERR_INVALID_UTF8_STRING: &str = "invalid UTF-8 string in checkpoint";
-const ERR_INVALID_OPTION_FLAG_FOR_STRING_PREFIX: &str =
-    "invalid option flag for string: ";
+const ERR_INVALID_OPTION_FLAG_FOR_STRING_PREFIX: &str = "invalid option flag for string: ";
 const ERR_INVALID_OPTION_FLAG_FOR_U64_PREFIX: &str = "invalid option flag for u64: ";
 const ERR_INVALID_STATUS_BYTE_PREFIX: &str = "invalid checkpoint status byte: ";
 
@@ -45,7 +42,10 @@ pub(crate) fn push_f64(out: &mut Vec<u8>, value: f64) {
 #[allow(dead_code)]
 pub(crate) fn push_usize(out: &mut Vec<u8>, value: usize) -> io::Result<()> {
     let value = u64::try_from(value).map_err(|_| {
-        io::Error::new(io::ErrorKind::InvalidInput, ERR_USIZE_TOO_LARGE_TO_SERIALIZE)
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            ERR_USIZE_TOO_LARGE_TO_SERIALIZE,
+        )
     })?;
     push_u64(out, value);
     Ok(())
@@ -54,7 +54,10 @@ pub(crate) fn push_usize(out: &mut Vec<u8>, value: usize) -> io::Result<()> {
 pub(crate) fn push_string(out: &mut Vec<u8>, value: &str) -> io::Result<()> {
     let bytes = value.as_bytes();
     let len = u32::try_from(bytes.len()).map_err(|_| {
-        io::Error::new(io::ErrorKind::InvalidInput, ERR_STRING_TOO_LARGE_TO_SERIALIZE)
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            ERR_STRING_TOO_LARGE_TO_SERIALIZE,
+        )
     })?;
     push_u32(out, len);
     out.extend_from_slice(bytes);
@@ -112,15 +115,20 @@ pub(crate) fn read_f64(input: &mut impl Read) -> io::Result<f64> {
 #[allow(dead_code)]
 pub(crate) fn read_usize(input: &mut impl Read) -> io::Result<usize> {
     let value = read_u64(input)?;
-    usize::try_from(value)
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, ERR_U64_TOO_LARGE_TO_DESERIALIZE_AS_USIZE))
+    usize::try_from(value).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            ERR_U64_TOO_LARGE_TO_DESERIALIZE_AS_USIZE,
+        )
+    })
 }
 
 pub(crate) fn read_string(input: &mut impl Read) -> io::Result<String> {
     let len = read_u32(input)? as usize;
     let mut bytes = vec![0u8; len];
     input.read_exact(&mut bytes)?;
-    String::from_utf8(bytes).map_err(|_| io::Error::new(io::ErrorKind::InvalidData, ERR_INVALID_UTF8_STRING))
+    String::from_utf8(bytes)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, ERR_INVALID_UTF8_STRING))
 }
 
 pub(crate) fn read_option_string(input: &mut impl Read) -> io::Result<Option<String>> {
