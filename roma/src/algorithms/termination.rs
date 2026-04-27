@@ -62,17 +62,6 @@ where
     pub worst_fitness: f64,
 }
 
-/// Internal state used to track stopping-criteria progress.
-#[derive(Clone, Debug)]
-pub struct TerminationState {
-    pub start_time: Instant,
-    pub current_iterations: usize,
-    pub current_evaluations: usize,
-    /// Best-quality history used by convergence and no-improvement criteria.
-    pub best_quality_history: Vec<f64>,
-    pub last_improvement_iteration: usize,
-}
-
 #[derive(Clone, Debug)]
 pub struct TerminationController {
     criteria: TerminationCriteria,
@@ -131,12 +120,27 @@ impl TerminationController {
     pub fn reason(&self) -> Option<&TerminationReason> {
         self.reason.as_ref()
     }
+
+    pub fn time_elapsed(&self) -> Duration {
+        self.state.time_elapsed()
+    }
+}
+
+/// Internal state used to track stopping-criteria progress.
+#[derive(Clone, Debug)]
+pub struct TerminationState {
+    pub baseline_time: Instant,
+    pub current_iterations: usize,
+    pub current_evaluations: usize,
+    /// Best-quality history used by convergence and no-improvement criteria.
+    pub best_quality_history: Vec<f64>,
+    pub last_improvement_iteration: usize,
 }
 
 impl TerminationState {
     pub fn new() -> Self {
         Self {
-            start_time: Instant::now(),
+            baseline_time: Instant::now(),
             current_iterations: 0,
             current_evaluations: 0,
             best_quality_history: Vec::new(),
@@ -167,7 +171,7 @@ impl TerminationState {
         match criterion {
             TerminationCriterion::MaxIterations(max) => self.current_iterations >= *max,
             TerminationCriterion::MaxEvaluations(max) => self.current_evaluations >= *max,
-            TerminationCriterion::TimeLimit(duration) => self.start_time.elapsed() >= *duration,
+            TerminationCriterion::TimeLimit(duration) => self.time_elapsed() >= *duration,
             TerminationCriterion::Convergence {
                 threshold,
                 patience,
@@ -195,6 +199,10 @@ impl TerminationState {
                     >= *patience
             }
         }
+    }
+
+    pub fn time_elapsed(&self) -> Duration {
+        self.baseline_time.elapsed()
     }
 }
 

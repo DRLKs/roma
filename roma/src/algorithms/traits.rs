@@ -23,6 +23,9 @@ const NO_CHECKPOINT_FLAG: &str = "--no-checkpoint";
 const NO_CHECKPOINT_FLAG_SHORT: &str = "--nc";
 const CHECKPOINT_DIR_FLAG: &str = "--checkpoint-dir";
 
+use std::sync::{Mutex, LazyLock};
+pub static CONSOLE_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+
 /// Basic interface for all optimization algorithms.
 ///
 /// All algorithms execute with the same step-based lifecycle:
@@ -74,7 +77,7 @@ where
         let direction: ImprovementDirection = problem.get_improvement_direction();
         let algorithm = &*self;
         let problem_description = problem.get_problem_description();
-        let problem_parameters = problem.get_problem_description(); // TODO: Obtener parámetros específicos de cada problema    
+        let problem_parameters = problem.get_problem_parameters_payload(); 
         let (algorithm_signature_hash, problem_signature_hash) = checkpoint_identity_hashes(
             &algorithm_name,
             &algorithm_parameters,
@@ -92,7 +95,13 @@ where
             .map(|record| record.run_id.clone())
             .unwrap_or_else(|| generate_run_id(&algorithm_name));
     
-    
+        let mut state: <Self as Algorithm<T, Q>>::StepState;
+
+        if let Some(checkpoint) = resume_checkpoint.as_ref() {
+            state = StepStateCheckpoint::from_payload(&checkpoint.step_state_payload)
+        } else {
+            state = algorithm.initialize_step_state(problem)
+        };
 
         let mut last_checkpoint_path: Option<std::path::PathBuf> = None;
 
@@ -103,21 +112,14 @@ where
             algorithm_name.clone(),
             move |context| {
                 
-                let mut state: <Self as Algorithm<T, Q>>::StepState;
-
-                if let Some(checkpoint) = resume_checkpoint.as_ref() {
-                    state = StepStateCheckpoint::from_payload(&checkpoint.step_state_payload)
-                } else {
-                    state = algorithm.initialize_step_state(problem)
-                };
-
+                
                 let initial_snapshot = algorithm.build_snapshot(&state);
                 context.update_execution_state(&initial_snapshot);
 
                 let mut last_iteration = initial_snapshot.iteration;
                 let mut last_evaluations = initial_snapshot.evaluations;
 
-                let initial_record = state.build_checkpoint_record(&run_id, &algorithm_name, &algorithm_parameters, &problem_description, &problem_parameters, algorithm_signature_hash, problem_signature_hash);
+                let initial_record = state.build_checkpoint_record(&run_id, &algorithm_name, &algorithm_parameters, &problem_description, &problem_parameters, algorithm_signature_hash, problem_signature_hash, context.time_elapsed());
                 if !no_checkpoint {
                     if let Ok(path) = write_snapshot(&checkpoint_dir, &initial_record) {
                         last_checkpoint_path = Some(path);
@@ -144,7 +146,8 @@ where
                     if DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES > 0
                         && step_snapshot.iteration % DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES == 0
                     {
-                        let record = state.build_checkpoint_record(&run_id, &algorithm_name, &algorithm_parameters, &problem_description, &problem_parameters, algorithm_signature_hash, problem_signature_hash);
+
+                        let record = state.build_checkpoint_record(&run_id, &algorithm_name, &algorithm_parameters, &problem_description, &problem_parameters, algorithm_signature_hash, problem_signature_hash, context.time_elapsed());
 
                         if !no_checkpoint {
                             if let Ok(path) = write_snapshot(&checkpoint_dir, &record) {
@@ -219,7 +222,7 @@ where
 
         let algorithm_parameters = self.checkpoint_algorithm_parameters();
         let problem_description = problem.get_problem_description();
-        let problem_parameters = problem.get_problem_description(); // TODO: Obtener parámetros específicos de cada problema
+        let problem_parameters = problem.get_problem_parameters_payload(); // TODO: Obtener parámetros específicos de cada problema
 
         match select_resume_checkpoint(
             checkpoint_dir.as_path(),
@@ -230,11 +233,15 @@ where
         ){
             Ok(Some(record)) => Some(record),
             Ok(None) => {
-                eprintln!("No matching checkpoint found for resumption.");
+                if let Ok(_lock) = CONSOLE_LOCK.lock() {    // In parallel experiments, sometimes dont show this message (Dont a problem, just a UX detail)
+                    eprintln!("No resumable checkpoints found for this algorithm and problem.");
+                }
                 None
             }
             Err(err) => {
-                eprintln!("Error while searching for checkpoint: {}", err);
+                if let Ok(_lock) = CONSOLE_LOCK.lock() {    // In parallel experiments, sometimes dont show this message (Dont a problem, just a UX detail)
+                    eprintln!("Error while searching for checkpoint: {}", err);
+                }
                 None
             }
         }

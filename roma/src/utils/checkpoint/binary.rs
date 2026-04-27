@@ -37,6 +37,7 @@ pub(crate) fn push_u64(out: &mut Vec<u8>, value: u64) {
     out.extend_from_slice(&value.to_le_bytes());
 }
 
+#[allow(dead_code)]
 pub(crate) fn push_f64(out: &mut Vec<u8>, value: f64) {
     out.extend_from_slice(&value.to_le_bytes());
 }
@@ -72,7 +73,7 @@ pub(crate) fn push_option_string(out: &mut Vec<u8>, value: &Option<String>) -> i
         }
     }
 }
-
+#[allow(dead_code)]
 pub(crate) fn push_option_u64(out: &mut Vec<u8>, value: Option<u64>) {
     match value {
         Some(x) => {
@@ -101,6 +102,7 @@ pub(crate) fn read_u64(input: &mut impl Read) -> io::Result<u64> {
     Ok(u64::from_le_bytes(bytes))
 }
 
+#[allow(dead_code)]
 pub(crate) fn read_f64(input: &mut impl Read) -> io::Result<f64> {
     let mut bytes = [0u8; 8];
     input.read_exact(&mut bytes)?;
@@ -131,7 +133,7 @@ pub(crate) fn read_option_string(input: &mut impl Read) -> io::Result<Option<Str
         )),
     }
 }
-
+#[allow(dead_code)]
 pub(crate) fn read_option_u64(input: &mut impl Read) -> io::Result<Option<u64>> {
     match read_u8(input)? {
         OPTION_NONE_FLAG => Ok(None),

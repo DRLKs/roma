@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::{io, io::Write};
 
-use crate::utils::checkpoint::{CheckpointEntry, StepStateCheckpoint};
+use crate::utils::checkpoint::CheckpointEntry;
 
 /// Reads a reproducibility seed from CLI arguments.
 ///
@@ -154,26 +154,24 @@ pub fn prompt_checkpoint_selection(entries: &[CheckpointEntry]) -> Result<Option
 
     // Professional Header
     println!("\n{:^90}", "--- CHECKPOINT SELECTION ---");
-    println!("{:<4} | {:<15} | {:<12} | {:<12} | {:<10} | {:<20}", 
-             "ID", "AGE", "BEST FIT.", "ITERATION", "ELAPSED", "RUN ID");
+    println!("{:<4} | {:<7} | {:<8} | {:<8}", 
+             "ID", "AGE", "ELAPSED.", "INFO");
     println!("{:-<90}", "");
 
     for (index, entry) in entries.iter().enumerate() {
         let rec = &entry.record;
         
         let age_str = format_time_ago(rec.created_at_ms);
-        let time_str = format_duration(rec.elapsed_millis.unwrap_or(0));
+        let time_str = format_duration(rec.elapsed_millis);
         let status_icon = if rec.status.as_str() == "running" { ">" } else { "[]" };
 
         println!(
-            "[{:>2}] | {:<15} | {:>12.4} | {:<12} | {:<10} | {} {}",
+            "[{:>2}] | {:<7} | {:>8} | {} {:<8.80}",
             index + 1,
             age_str,
-            rec.best_fitness,
-            rec.seq_id,
             time_str,
             status_icon,
-            rec.run_id
+            rec.step_state_payload,
         );
     }
 

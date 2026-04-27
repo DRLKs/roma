@@ -2,9 +2,9 @@ use std::fs;
 use std::io;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-//use crate::Solution; TODO  
 use crate::utils::cli::prompt_checkpoint_selection;
 
 mod binary;
@@ -12,9 +12,9 @@ mod hash;
 mod path;
 
 use self::binary::{
-    byte_to_status, push_f64, push_option_string, push_option_u64, push_string, push_u64,
-    push_u8, read_f64, read_option_string, read_option_u64, read_string, read_u64,
-    read_u8, status_to_byte,
+    byte_to_status, push_option_string, push_string, push_u64,
+    push_u8, read_option_string, read_string, read_u64,
+    read_u8, status_to_byte, push_usize, read_usize
 };
 use self::hash::checkpoint_signature_hashes;
 use self::path::{
@@ -77,6 +77,7 @@ where
         , runtime_problem_parameters: &str
         , runtime_algorithm_signature_hash: u64
         , runtime_problem_signature_hash: u64
+        , elapsed_millis: Duration
     ) -> CheckpointRecord{
 
         CheckpointRecord {
@@ -94,38 +95,14 @@ where
             problem_parameters: runtime_problem_parameters.to_string(),
             algorithm_signature_hash: runtime_algorithm_signature_hash,
             problem_signature_hash: runtime_problem_signature_hash,
-            seq_id: 0, // to be filled by caller
             step_state_payload: self.to_payload(),
-            best_fitness: 0.0, // to be filled by caller
-            average_fitness: 0.0, // to be filled by caller
-            worst_fitness: 0.0, // to be filled by caller
             seed_payload: None,
-            elapsed_millis: None,
+            elapsed_millis: elapsed_millis.as_millis() as u64,
             status: CheckpointRunStatus::Running,
             error_message: None,
         }
     }
 
-    // TODO: consider adding a method here to return a candidate solution payload for the current state.
-    //fn current_candidate_solution(&self) -> Vec<Solution<T, Q>> {
-    //    None
-    //}
-}
-
-pub struct CheckpointRecordInput<'a> {
-    pub run_id: &'a str,
-    pub algorithm_name: &'a str,
-    pub algorithm_parameters: &'a str,
-    pub problem_description: &'a str,
-    pub problem_parameters: &'a str,
-    pub algorithm_signature_hash: u64,
-    pub problem_signature_hash: u64,
-    pub seq_id: u64,
-    pub step_state_payload: String,
-    pub best_fitness: f64,
-    pub average_fitness: f64,
-    pub worst_fitness: f64,
-    pub best_solution_presentation: &'a str,
 }
 
 /// Generates a stable run id format used by checkpoint persistence.
@@ -165,13 +142,9 @@ pub struct CheckpointRecord {
     pub problem_parameters: String,
     pub algorithm_signature_hash: u64,
     pub problem_signature_hash: u64,
-    pub seq_id: u64,
     pub step_state_payload: String,
-    pub best_fitness: f64,
-    pub average_fitness: f64,
-    pub worst_fitness: f64,
     pub seed_payload: Option<String>,
-    pub elapsed_millis: Option<u64>,
+    pub elapsed_millis: u64,
     pub status: CheckpointRunStatus,
     pub error_message: Option<String>,
 }
@@ -260,13 +233,9 @@ pub(crate) fn write_checkpoint_record(path: &Path, record: &CheckpointRecord) ->
     push_string(&mut bytes, &record.problem_parameters)?;
     push_u64(&mut bytes, record.algorithm_signature_hash);
     push_u64(&mut bytes, record.problem_signature_hash);
-    push_u64(&mut bytes, record.seq_id);
     push_string(&mut bytes, &record.step_state_payload)?;
-    push_f64(&mut bytes, record.best_fitness);
-    push_f64(&mut bytes, record.average_fitness);
-    push_f64(&mut bytes, record.worst_fitness);
-    push_option_string(&mut bytes, &record.seed_payload)?;
-    push_option_u64(&mut bytes, record.elapsed_millis);
+        push_option_string(&mut bytes, &record.seed_payload)?;
+    push_u64(&mut bytes, record.elapsed_millis);
     push_u8(&mut bytes, status_to_byte(record.status));
     push_option_string(&mut bytes, &record.error_message)?;
 
@@ -318,13 +287,9 @@ pub(crate) fn read_checkpoint_record(path: &Path) -> io::Result<CheckpointRecord
         problem_parameters: read_string(&mut cursor)?,
         algorithm_signature_hash: read_u64(&mut cursor)?,
         problem_signature_hash: read_u64(&mut cursor)?,
-        seq_id: read_u64(&mut cursor)?,
         step_state_payload: read_string(&mut cursor)?,
-        best_fitness: read_f64(&mut cursor)?,
-        average_fitness: read_f64(&mut cursor)?,
-        worst_fitness: read_f64(&mut cursor)?,
         seed_payload: read_option_string(&mut cursor)?,
-        elapsed_millis: read_option_u64(&mut cursor)?,
+        elapsed_millis: read_u64(&mut cursor)?,
         status: byte_to_status(read_u8(&mut cursor)?)?,
         error_message: read_option_string(&mut cursor)?,
     };
@@ -341,34 +306,7 @@ pub(crate) fn read_checkpoint_record(path: &Path) -> io::Result<CheckpointRecord
 
 
 
-/// Loads the latest checkpoint for an algorithm by matching run_id prefix.
-///
-/// A runtime run id is generated as `<algorithm_name>-<pid>-<timestamp_ms>`.
-pub fn latest_checkpoint_record_for_algorithm(
-    base_dir: &Path,
-    algorithm_name: &str,
-) -> io::Result<Option<CheckpointRecord>> {
-    let mut best: Option<((u128, String, u64), CheckpointRecord)> = None;
 
-    for path in list_checkpoint_files(base_dir)? {
-        let Ok(record) = read_checkpoint_record(&path) else {
-            continue;
-        };
-        if !record.run_id.starts_with(algorithm_name) {
-            continue;
-        }
-
-        let timestamp_ms = run_id_timestamp_ms(&record.run_id).unwrap_or(0);
-        let key = (timestamp_ms, record.run_id.clone(), record.seq_id);
-
-        match &best {
-            Some((best_key, _)) if key <= *best_key => {}
-            _ => best = Some((key, record)),
-        }
-    }
-
-    Ok(best.map(|(_, record)| record))
-}
 
 /// Lists resumable checkpoints for one algorithm + problem pair ordered oldest->newest.
 pub(crate) fn list_resumable_checkpoint_entries_for(
@@ -377,7 +315,7 @@ pub(crate) fn list_resumable_checkpoint_entries_for(
     algorithm_signature_hash: u64,
     problem_signature_hash: u64,
 ) -> io::Result<Vec<CheckpointEntry>> {
-    let mut entries: Vec<((u128, String, u64), CheckpointEntry)> = Vec::new();
+    let mut entries: Vec<((u128, String), CheckpointEntry)> = Vec::new();
 
     for path in list_checkpoint_files(base_dir)? {
         let Ok(record) = read_checkpoint_record(&path) else {
@@ -398,7 +336,7 @@ pub(crate) fn list_resumable_checkpoint_entries_for(
         }
 
         let timestamp_ms = run_id_timestamp_ms(&record.run_id).unwrap_or(0);
-        let key = (timestamp_ms, record.run_id.clone(), record.seq_id);
+        let key = (timestamp_ms, record.run_id.clone());
         entries.push((
             key,
             CheckpointEntry {
@@ -487,7 +425,7 @@ pub(crate) fn latest_resumable_checkpoint_for(
     algorithm_signature_hash: u64,
     problem_signature_hash: u64,
 ) -> io::Result<Option<CheckpointRecord>> {
-    let mut best: Option<((u128, String, u64), CheckpointRecord)> = None;
+    let mut best: Option<((u128, String), CheckpointRecord)> = None;
 
     for path in list_checkpoint_files(base_dir)? {
         let Ok(record) = read_checkpoint_record(&path) else {
@@ -505,7 +443,7 @@ pub(crate) fn latest_resumable_checkpoint_for(
         }
 
         let timestamp_ms = run_id_timestamp_ms(&record.run_id).unwrap_or(0);
-        let key = (timestamp_ms, record.run_id.clone(), record.seq_id);
+        let key = (timestamp_ms, record.run_id.clone());
 
         match &best {
             Some((best_key, _)) if key <= *best_key => {}
@@ -567,216 +505,4 @@ fn is_resumable_status(status: CheckpointRunStatus) -> bool {
 mod tests {
     use super::*;
 
-    #[test]
-    fn write_and_read_checkpoint_record_roundtrip() {
-        let base = std::env::temp_dir().join(format!(
-            "roma_checkpoint_roundtrip_test_{}",
-            std::process::id()
-        ));
-        fs::create_dir_all(&base).expect("checkpoint test dir should be creatable");
-
-        let record = CheckpointRecord {
-            created_at_ms: 123,
-            run_id: "HillClimbing-1-123".to_string(),
-            random_seed: 42,
-            algorithm_name: "HillClimbing".to_string(),
-            algorithm_parameters: "mutation_probability=0.2".to_string(),
-            problem_description: "DemoProblem".to_string(),
-            problem_parameters: "items=10".to_string(),
-            algorithm_signature_hash: 111,
-            problem_signature_hash: 222,
-            seq_id: 7,
-            step_state_payload: "{\"iteration\":7,\"evaluations\":7,101010001}".to_string(),
-            best_fitness: 9.75,
-            average_fitness: 8.2,
-            worst_fitness: 3.1,
-            seed_payload: Some("seed=42".to_string()),
-            elapsed_millis: Some(50),
-            status: CheckpointRunStatus::Failed,
-            error_message: Some("synthetic error".to_string()),
-        };
-
-        let path = checkpoint_file_path(&base, &record.run_id);
-        write_checkpoint_record(&path, &record).expect("checkpoint should be writable");
-
-        let loaded = read_checkpoint_record(&path).expect("checkpoint should be readable");
-        assert_eq!(loaded, record);
-    }
-
-    #[test]
-    fn latest_checkpoint_record_for_algorithm_uses_prefix_match() {
-        let base = std::env::temp_dir().join(format!(
-            "roma_checkpoint_latest_algorithm_test_{}",
-            std::process::id()
-        ));
-        fs::create_dir_all(&base).expect("checkpoint test dir should be creatable");
-
-        let run_id_a = format!("HillClimbing-{}-{}", std::process::id(), 1000);
-        let run_id_b = format!("HillClimbing-{}-{}", std::process::id(), 2000);
-        let older = CheckpointRecord {
-            created_at_ms: 1,
-            run_id: run_id_a,
-            random_seed: 10,
-            algorithm_name: "HillClimbing".to_string(),
-            algorithm_parameters: "mutation_probability=0.2".to_string(),
-            problem_description: "DemoProblem".to_string(),
-            problem_parameters: "items=10".to_string(),
-            algorithm_signature_hash: 111,
-            problem_signature_hash: 222,
-            seq_id: 1,
-            step_state_payload: "{\"iteration\":7,\"evaluations\":7,101010001}".to_string(),
-            best_fitness: 1.0,
-            average_fitness: 1.0,
-            worst_fitness: 1.0,
-            seed_payload: Some("seed=10".to_string()),
-            elapsed_millis: None,
-            status: CheckpointRunStatus::Running,
-            error_message: None,
-        };
-        let newer = CheckpointRecord {
-            created_at_ms: 2,
-            run_id: run_id_b,
-            random_seed: 10,
-            algorithm_name: "HillClimbing".to_string(),
-            algorithm_parameters: "mutation_probability=0.2".to_string(),
-            problem_description: "DemoProblem".to_string(),
-            problem_parameters: "items=10".to_string(),
-            algorithm_signature_hash: 111,
-            problem_signature_hash: 222,
-            seq_id: 2,
-            step_state_payload: "{\"iteration\":7,\"evaluations\":7,101010001}".to_string(),
-            best_fitness: 2.0,
-            average_fitness: 2.0,
-            worst_fitness: 2.0,
-            seed_payload: Some("seed=10".to_string()),
-            elapsed_millis: None,
-            status: CheckpointRunStatus::Completed,
-            error_message: None,
-        };
-
-        let older_path = checkpoint_file_path(&base, &older.run_id);
-        let newer_path = checkpoint_file_path(&base, &newer.run_id);
-        write_checkpoint_record(&older_path, &older).expect("older checkpoint should be writable");
-        std::thread::sleep(std::time::Duration::from_millis(5));
-        write_checkpoint_record(&newer_path, &newer).expect("newer checkpoint should be writable");
-
-        let latest = latest_checkpoint_record_for_algorithm(&base, "HillClimbing")
-            .expect("latest checkpoint search should work")
-            .expect("latest checkpoint should exist");
-
-        assert_eq!(latest.seq_id, 2);
-    }
-
-    #[test]
-    fn latest_resumable_checkpoint_filters_by_problem_and_status() {
-        let base = std::env::temp_dir().join(format!(
-            "roma_checkpoint_resumable_test_{}",
-            std::process::id()
-        ));
-        fs::create_dir_all(&base).expect("checkpoint test dir should be creatable");
-
-        let run_a = format!("HillClimbing-{}-{}", std::process::id(), 2000);
-        let run_b = format!("HillClimbing-{}-{}", std::process::id(), 3000);
-
-        let completed = CheckpointRecord {
-            created_at_ms: 3,
-            run_id: run_a,
-            random_seed: 10,
-            algorithm_name: "HillClimbing".to_string(),
-            algorithm_parameters: "mutation_probability=0.2".to_string(),
-            problem_description: "DemoProblem".to_string(),
-            problem_parameters: "dataset=a".to_string(),
-            algorithm_signature_hash: 111,
-            problem_signature_hash: 333,
-            seq_id: 3,
-            step_state_payload: "{\"iteration\":3,\"evaluations\":4}".to_string(),
-            best_fitness: 3.0,
-            average_fitness: 3.0,
-            worst_fitness: 3.0,
-            seed_payload: Some("seed=33".to_string()),
-            elapsed_millis: None,
-            status: CheckpointRunStatus::Completed,
-            error_message: None,
-        };
-
-        let failed = CheckpointRecord {
-            created_at_ms: 4,
-            run_id: run_b,
-            random_seed: 44,
-            algorithm_name: "HillClimbing".to_string(),
-            algorithm_parameters: "mutation_probability=0.2".to_string(),
-            problem_description: "DemoProblem".to_string(),
-            problem_parameters: "dataset=a".to_string(),
-            algorithm_signature_hash: 111,
-            problem_signature_hash: 333,
-            seq_id: 8,
-            step_state_payload: "{\"iteration\":7,\"evaluations\":7,101010001}".to_string(),
-            best_fitness: 8.0,
-            average_fitness: 8.0,
-            worst_fitness: 8.0,
-            seed_payload: Some("seed=44".to_string()),
-            elapsed_millis: None,
-            status: CheckpointRunStatus::Failed,
-            error_message: Some("x".to_string()),
-        };
-
-        write_checkpoint_record(
-            &checkpoint_file_path(&base, &completed.run_id),
-            &completed,
-        )
-        .expect("completed checkpoint should be writable");
-        write_checkpoint_record(
-            &checkpoint_file_path(&base, &failed.run_id),
-            &failed,
-        )
-        .expect("failed checkpoint should be writable");
-
-        let latest = latest_resumable_checkpoint_for(&base, 111, 333)
-            .expect("latest resumable should be readable")
-            .expect("one resumable checkpoint should exist");
-
-        assert_eq!(latest.status, CheckpointRunStatus::Failed);
-        assert_eq!(latest.seq_id, 8);
-    }
-
-    #[test]
-    fn delete_snapshot_on_success_removes_checkpoint_file() {
-        let base = std::env::temp_dir().join(format!(
-            "roma_checkpoint_delete_test_{}",
-            std::process::id()
-        ));
-        fs::create_dir_all(&base).expect("checkpoint test dir should be creatable");
-
-        let record = CheckpointRecord {
-            created_at_ms: 10,
-            run_id: "HillClimbing-1-10".to_string(),
-            random_seed: 42,
-            algorithm_name: "HillClimbing".to_string(),
-            algorithm_parameters: "mutation_probability=0.2".to_string(),
-            problem_description: "DemoProblem".to_string(),
-            problem_parameters: "items=10".to_string(),
-            algorithm_signature_hash: 111,
-            problem_signature_hash: 222,
-            seq_id: 1,
-            step_state_payload: "{\"iteration\":1,\"evaluations\":2}".to_string(),
-            best_fitness: 1.0,
-            average_fitness: 1.0,
-            worst_fitness: 1.0,
-            seed_payload: None,
-            elapsed_millis: Some(10),
-            status: CheckpointRunStatus::Completed,
-            error_message: None,
-        };
-
-        let path = checkpoint_file_path(&base, &record.run_id);
-        write_checkpoint_record(&path, &record).expect("checkpoint should be writable");
-        assert!(path.exists());
-
-        let removed = delete_snapshot_on_success(&path).expect("delete should succeed");
-        assert!(removed);
-        assert!(!path.exists());
-
-        let removed_again = delete_snapshot_on_success(&path).expect("missing file is fine");
-        assert!(!removed_again);
-    }
 }

@@ -126,6 +126,10 @@ where
     pub fn termination_reason(&self) -> Option<TerminationReason> {
         self.termination.borrow().reason().cloned()
     }
+
+    pub fn time_elapsed(&self) -> std::time::Duration {
+        self.termination.borrow().time_elapsed()
+    }
 }
 
 /// Channel-based observer runtime.
