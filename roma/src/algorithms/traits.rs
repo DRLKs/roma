@@ -10,13 +10,13 @@ use crate::observer::ObserverState;
 use crate::problem::traits::Problem;
 use crate::solution::traits::Dominance;
 use crate::solution_set::traits::SolutionSet;
-use crate::utils::checkpoint::{
-    checkpoint_identity_hashes, delete_snapshot_on_success, generate_run_id,
-    initialize_checkpoint_dir, resolve_checkpoint_dir, select_resume_checkpoint, write_snapshot,
-    CheckpointInitMode, CheckpointPathConfig, CheckpointRecord, StepStateCheckpoint,
+use crate::algorithms::checkpoint::{
+    checkpoint_identity_hashes, generate_run_id, write_snapshot, delete_snapshot_on_success, select_resume_checkpoint,
+    CheckpointRecord, StepStateCheckpoint,
     DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES,
 };
 use crate::utils::cli::{has_flag, resolve_path_from_flag_or_default};
+use crate::utils::path::{resolve_checkpoint_dir, initialize_checkpoint_dir, CheckpointPathConfig, CheckpointInitMode};
 
 const RESUME_FLAG: &str = "--resume";
 const NO_CHECKPOINT_FLAG: &str = "--no-checkpoint";

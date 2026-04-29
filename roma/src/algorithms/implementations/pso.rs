@@ -8,7 +8,7 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::utils::checkpoint::{StepStateCheckpoint};
+use crate::algorithms::checkpoint::{StepStateCheckpoint};
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::random::{seed_from_time, Random};
 

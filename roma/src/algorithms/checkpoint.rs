@@ -8,26 +8,15 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::utils::cli::prompt_checkpoint_selection;
 
-mod binary;
-mod hash;
-mod path;
-
-use self::binary::{
+use crate::utils::binary::{
     byte_to_status, push_option_string, push_string, push_u64, push_u8, read_option_string,
     read_string, read_u64, read_u8, status_to_byte,
 };
-use self::hash::checkpoint_signature_hashes;
-use self::path::{
+use crate::utils::hash::checkpoint_signature_hashes;
+use crate::utils::path::{
     checkpoint_file_path, checkpoint_scope_dir, list_checkpoint_files, run_id_timestamp_ms,
 };
 
-pub use self::path::{
-    ensure_checkpoint_dir, initialize_checkpoint_dir, resolve_checkpoint_dir, CheckpointDirSource,
-    CheckpointInitMode, CheckpointInitResult, CheckpointPathConfig,
-};
-
-pub const DEFAULT_CHECKPOINT_ENV_VAR: &str = "ROMA_CHECKPOINT_DIR";
-pub const DEFAULT_APP_NAME: &str = "roma";
 pub const DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES: usize = 10;
 
 // Binary file signature used to validate checkpoint file integrity.

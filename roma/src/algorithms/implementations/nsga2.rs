@@ -7,7 +7,7 @@ use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOper
 use crate::problem::traits::Problem;
 use crate::solution::{Solution,ParetoCrowdingDistanceQuality};
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
-use crate::utils::checkpoint::StepStateCheckpoint;
+use crate::algorithms::checkpoint::StepStateCheckpoint;
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::random::{Random, seed_from_time};
 use std::cmp::Ordering;

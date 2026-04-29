@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::{io, io::Write};
 
-use crate::utils::checkpoint::CheckpointEntry;
+use crate::algorithms::checkpoint::CheckpointEntry;
 
 /// Reads a reproducibility seed from CLI arguments.
 ///

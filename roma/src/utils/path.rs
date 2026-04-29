@@ -3,7 +3,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use super::{DEFAULT_APP_NAME, DEFAULT_CHECKPOINT_ENV_VAR};
+pub const DEFAULT_CHECKPOINT_ENV_VAR: &str = "ROMA_CHECKPOINT_DIR";
+pub const DEFAULT_APP_NAME: &str = "roma";
 
 // Checkpoint files are stored with this extension under scoped directories.
 const CHECKPOINT_FILE_EXTENSION: &str = "ckpt";

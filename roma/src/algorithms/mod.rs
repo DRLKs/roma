@@ -10,6 +10,7 @@
 //! `roma::prelude`.
 
 pub(crate) mod async_runner;
+pub(crate) mod checkpoint;
 pub(crate) mod implementations;
 pub(crate) mod objective;
 pub(crate) mod runtime;
