@@ -51,7 +51,7 @@ impl ObserverState {
     pub(crate) fn from_snapshot<T, Q>(
         snapshot: ExecutionStateSnapshot<T, Q>,
         best_solution_presentation: String,
-        seq_id: u64
+        seq_id: u64,
     ) -> Self
     where
         T: Clone,

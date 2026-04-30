@@ -174,17 +174,19 @@ impl<T: Display, Q: Display> Solution<T, Q> {
             None => "None".to_string(),
         };
 
-        let genes: String = self.variables.iter()
+        let genes: String = self
+            .variables
+            .iter()
             .map(|v| v.to_string())
             .collect::<Vec<_>>()
             .join(",");
-        
+
         format!("{}|{}", genes, quality_string)
     }
 
-    pub fn decode(data: &str) -> Result<Self, String> 
-    where 
-        T: FromStr, 
+    pub fn decode(data: &str) -> Result<Self, String>
+    where
+        T: FromStr,
         Q: FromStr,
     {
         let parts: Vec<&str> = data.split('|').collect();
@@ -195,13 +197,20 @@ impl<T: Display, Q: Display> Solution<T, Q> {
         let variables: Vec<T> = parts[0]
             .split(',')
             .filter(|s| !s.is_empty())
-            .map(|s| s.parse::<T>().map_err(|_| "Error parsing variable (T)".to_string()))
+            .map(|s| {
+                s.parse::<T>()
+                    .map_err(|_| "Error parsing variable (T)".to_string())
+            })
             .collect::<Result<Vec<T>, String>>()?;
 
         let quality = if parts[1] == "None" || parts[1].is_empty() {
             None
         } else {
-            Some(parts[1].parse::<Q>().map_err(|_| "Error parsing quality (Q)".to_string())?)
+            Some(
+                parts[1]
+                    .parse::<Q>()
+                    .map_err(|_| "Error parsing quality (Q)".to_string())?,
+            )
         };
 
         Ok(Self { variables, quality })

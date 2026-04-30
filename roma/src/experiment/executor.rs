@@ -1,11 +1,11 @@
+use crate::ImprovementDirection;
 use crate::experiment::traits::ExperimentalCase;
 use crate::problem::traits::Problem;
 use crate::solution::traits::Dominance;
-use crate::ImprovementDirection;
 use std::cmp::Ordering;
 use std::fmt::Display;
 
-use super::parallel::{parallel_collect_by_range, ParallelConfig};
+use super::parallel::{ParallelConfig, parallel_collect_by_range};
 use super::report::{ExperimentFailure, ExperimentReport, ExperimentRunResult, ExperimentSummary};
 use super::utils::{best_and_worst, mean, variance};
 

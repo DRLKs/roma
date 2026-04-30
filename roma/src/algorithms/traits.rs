@@ -1,22 +1,24 @@
 use std::fmt::Display;
 
+use crate::algorithms::checkpoint::{
+    CheckpointRecord, DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES, StepStateCheckpoint,
+    checkpoint_identity_hashes, delete_snapshot_on_success, generate_run_id,
+    select_resume_checkpoint, write_snapshot,
+};
 use crate::algorithms::objective::ImprovementDirection;
 use crate::algorithms::runtime::{
-    run_with_observer_runtime, ExecutionContext, RuntimeExecutionOutput,
+    ExecutionContext, RuntimeExecutionOutput, run_with_observer_runtime,
 };
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
-use crate::observer::traits::AlgorithmObserver;
 use crate::observer::ObserverState;
+use crate::observer::traits::AlgorithmObserver;
 use crate::problem::traits::Problem;
 use crate::solution::traits::Dominance;
 use crate::solution_set::traits::SolutionSet;
-use crate::algorithms::checkpoint::{
-    checkpoint_identity_hashes, generate_run_id, write_snapshot, delete_snapshot_on_success, select_resume_checkpoint,
-    CheckpointRecord, StepStateCheckpoint,
-    DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES,
-};
 use crate::utils::cli::{has_flag, resolve_path_from_flag_or_default};
-use crate::utils::path::{resolve_checkpoint_dir, initialize_checkpoint_dir, CheckpointPathConfig, CheckpointInitMode};
+use crate::utils::path::{
+    CheckpointInitMode, CheckpointPathConfig, initialize_checkpoint_dir, resolve_checkpoint_dir,
+};
 
 const RESUME_FLAG: &str = "--resume";
 const NO_CHECKPOINT_FLAG: &str = "--no-checkpoint";

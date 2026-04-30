@@ -8,8 +8,8 @@ use crate::observer::{AlgorithmEvent, ObserverState};
 use crate::problem::traits::Problem;
 use std::cell::RefCell;
 use std::fmt::Display;
-use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
+use std::sync::mpsc::{self, Sender};
 use std::thread::{self, JoinHandle};
 
 type ObserverSender<T, Q> = Option<Sender<AlgorithmEvent<T, Q>>>;
@@ -109,10 +109,7 @@ where
         id
     }
 
-    pub fn update_execution_state(
-        &self,
-        snapshot: &ExecutionStateSnapshot<T, Q>,
-    ) {
+    pub fn update_execution_state(&self, snapshot: &ExecutionStateSnapshot<T, Q>) {
         self.next_snapshot_seq_id();
         self.termination.borrow_mut().on_snapshot(snapshot);
     }
@@ -300,7 +297,7 @@ mod tests {
             .with_quality(best_fitness)
             .build();
 
-        ExecutionStateSnapshot{
+        ExecutionStateSnapshot {
             iteration,
             evaluations,
             best_solution,

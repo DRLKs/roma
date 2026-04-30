@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 use std::fmt::Display;
 
-use crate::solution::traits::Dominance;
 use crate::solution::Solution;
+use crate::solution::traits::Dominance;
 use crate::solution_set::traits::SolutionSet;
 
 /// `SolutionSet` implementation backed by `VecDeque`.

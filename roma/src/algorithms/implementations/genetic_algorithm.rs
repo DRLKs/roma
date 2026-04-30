@@ -1,7 +1,9 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
-use crate::algorithms::objective::{is_better, ImprovementDirection};
+use crate::Observable;
+use crate::algorithms::checkpoint::StepStateCheckpoint;
+use crate::algorithms::objective::{ImprovementDirection, is_better};
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
@@ -12,12 +14,10 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::algorithms::checkpoint::StepStateCheckpoint;
 use crate::utils::parallel::parallel_map_indexed;
-use crate::utils::random::{Random,seed_from_time};
 use crate::utils::parallel::resolve_num_threads;
+use crate::utils::random::{Random, seed_from_time};
 use crate::utils::statistics::calculate_statistics;
-use crate::Observable;
 
 #[derive(Clone)]
 pub struct GeneticAlgorithmParameters<T, C, M, Sel>
@@ -147,27 +147,21 @@ where
     }
 
     fn to_payload(&self) -> String {
-
-        let encoded_pop = self.population
+        let encoded_pop = self
+            .population
             .iter()
             .map(|sol| sol.encode())
             .collect::<Vec<String>>()
             .join(",");
 
-
-            let dir_str = match self.direction {
+        let dir_str = match self.direction {
             ImprovementDirection::Minimize => "min",
             ImprovementDirection::Maximize => "max",
         };
 
-
         format!(
             "iter={};eval={};seed={};dir={};pop=[{}]",
-            self.generation,
-            self.evaluations,
-            self.run_seed,
-            dir_str,
-            encoded_pop
+            self.generation, self.evaluations, self.run_seed, dir_str, encoded_pop
         )
     }
 
@@ -180,21 +174,23 @@ where
             })
             .collect();
 
-
         let generation = parts.get("iter").and_then(|s| s.parse().ok()).unwrap_or(0);
         let evaluations = parts.get("eval").and_then(|s| s.parse().ok()).unwrap_or(0);
-        let run_seed = parts.get("seed").and_then(|s| s.parse().ok()).unwrap_or_else(seed_from_time);
-
+        let run_seed = parts
+            .get("seed")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or_else(seed_from_time);
 
         let direction = match parts.get("dir") {
             Some(&"max") => ImprovementDirection::Maximize,
             _ => ImprovementDirection::Minimize, // Default o "min"
         };
 
-
-        let population = parts.get("pop")
+        let population = parts
+            .get("pop")
             .map(|pop_str| {
-                pop_str.trim_matches(|c| c == '[' || c == ']')
+                pop_str
+                    .trim_matches(|c| c == '[' || c == ']')
                     .split(',')
                     .filter(|s| !s.is_empty())
                     .filter_map(|sol_str| Solution::decode(sol_str).ok())
@@ -209,7 +205,7 @@ where
             evaluations,
             run_seed,
         }
-}
+    }
 }
 
 impl<T, C, M, Sel> GeneticAlgorithm<T, C, M, Sel>
@@ -578,10 +574,7 @@ where
         self.solution_set.as_ref()
     }
 
-    fn initialize_step_state(
-        &self,
-        problem: &(impl Problem<T> + Sync),
-    ) -> Self::StepState {
+    fn initialize_step_state(&self, problem: &(impl Problem<T> + Sync)) -> Self::StepState {
         let run_seed = Random::resolve_seed(self.parameters.random_seed);
         let mut init_rng = Random::new(Random::derive_seed(run_seed, 0));
         let population = Self::initialize_population(&self.parameters, problem, &mut init_rng);
@@ -634,12 +627,12 @@ where
             .expect("population should not be empty when reporting progress");
 
         let best_fitness = best_solution.quality_value();
-        ExecutionStateSnapshot{
+        ExecutionStateSnapshot {
             iteration: state.generation,
             evaluations: state.evaluations,
             best_solution,
             best_fitness,
-            average_fitness:avg,
+            average_fitness: avg,
             worst_fitness: worst,
         }
     }

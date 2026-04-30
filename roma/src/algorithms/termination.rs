@@ -1,4 +1,4 @@
-use crate::algorithms::objective::{is_better, ImprovementDirection};
+use crate::algorithms::objective::{ImprovementDirection, is_better};
 use crate::solution::Solution;
 use std::time::{Duration, Instant};
 
@@ -222,7 +222,7 @@ mod tests {
             .with_quality(best_fitness)
             .build();
 
-        ExecutionStateSnapshot{
+        ExecutionStateSnapshot {
             iteration,
             evaluations,
             best_solution,

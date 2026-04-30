@@ -19,4 +19,4 @@ pub mod yaml_adapter;
 pub use benchmark::{measure, measure_result, speedup};
 pub use cli::seed_from_cli_or;
 pub use parallel::resolve_num_threads;
-pub use random::{seed_from_time, Random};
+pub use random::{Random, seed_from_time};

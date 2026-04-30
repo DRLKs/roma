@@ -1,22 +1,20 @@
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
+use crate::algorithms::checkpoint::StepStateCheckpoint;
 use crate::algorithms::objective::is_better;
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
-use crate::observer::traits::AlgorithmObserver;
 use crate::observer::Observable;
+use crate::observer::traits::AlgorithmObserver;
 use crate::operator::traits::MutationOperator;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::algorithms::checkpoint::{
-    StepStateCheckpoint,
-};
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::random::{Random, seed_from_time};
 
 /// Configuration parameters for the Hill Climbing algorithm.
 ///
@@ -115,8 +113,7 @@ where
         self.rng.state()
     }
 
-    fn to_payload(&self) -> String {            
-
+    fn to_payload(&self) -> String {
         format!(
             "iter={};eval={};seed={};state={}",
             self.iteration(),
@@ -127,7 +124,6 @@ where
     }
 
     fn from_payload(payload: &str) -> Self {
-        
         let parts: std::collections::HashMap<&str, &str> = payload
             .split(';')
             .filter_map(|s| {
@@ -138,10 +134,13 @@ where
 
         let iteration = parts.get("iter").and_then(|s| s.parse().ok()).unwrap_or(0);
         let evaluations = parts.get("eval").and_then(|s| s.parse().ok()).unwrap_or(0);
-        let random_seed = parts.get("seed").and_then(|s| s.parse().ok()).unwrap_or_else(seed_from_time);
+        let random_seed = parts
+            .get("seed")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or_else(seed_from_time);
 
-
-        let current = parts.get("state")
+        let current = parts
+            .get("state")
             .and_then(|s| Solution::decode(s).ok())
             .expect("Critical error: Could not decode the current state from payload");
 
@@ -234,10 +233,7 @@ where
         self.solution_set.as_ref()
     }
 
-    fn initialize_step_state(
-        &self,
-        problem: &(impl Problem<T> + Sync),
-    ) -> Self::StepState {
+    fn initialize_step_state(&self, problem: &(impl Problem<T> + Sync)) -> Self::StepState {
         let mut rng = Random::new(self.parameters.random_seed.unwrap_or_else(seed_from_time));
         let mut current = problem.create_solution(&mut rng);
         problem.evaluate(&mut current);
@@ -280,7 +276,7 @@ where
 
     fn build_snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T> {
         let fit = state.current.quality_value();
-        ExecutionStateSnapshot{
+        ExecutionStateSnapshot {
             iteration: state.iteration,
             evaluations: state.evaluations,
             best_solution: state.current.copy(),
@@ -295,7 +291,6 @@ where
         result.add_solution(state.current);
         result
     }
-
 }
 
 impl<T, M, P> ExperimentalCase<T, f64, P> for HillClimbingParameters<T, M>

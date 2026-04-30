@@ -20,11 +20,11 @@ pub(crate) mod traits;
 pub use async_runner::{run_algorithm_instances_async, run_algorithms_async};
 pub use implementations::genetic_algorithm::{GeneticAlgorithm, GeneticAlgorithmParameters};
 pub use implementations::hill_climbing::{HillClimbing, HillClimbingParameters};
-pub use implementations::nsga2::{NSGAIIParameters, NSGAII};
-pub use implementations::pso::{PSOParameters, PSO};
+pub use implementations::nsga2::{NSGAII, NSGAIIParameters};
+pub use implementations::pso::{PSO, PSOParameters};
 pub use implementations::simulated_annealing::{SimulatedAnnealing, SimulatedAnnealingParameters};
-pub use objective::{best_worst, is_better, non_improving_loss, ImprovementDirection};
-pub use runtime::{spawn_algorithm_run, ExecutionContext};
+pub use objective::{ImprovementDirection, best_worst, is_better, non_improving_loss};
+pub use runtime::{ExecutionContext, spawn_algorithm_run};
 pub use termination::{
     ExecutionStateSnapshot, TerminationController, TerminationCriteria, TerminationCriterion,
     TerminationReason, TerminationState,

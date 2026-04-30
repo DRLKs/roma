@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
-use crate::solution::traits::Dominance;
 use crate::solution::Solution;
+use crate::solution::traits::Dominance;
 
 /// Trait that defines the basic interface for sets of solutions.
 /// * `T` - Type of the solution variables
@@ -83,7 +83,7 @@ where
         T: Display,
     {
         self.best_solution()
-        .and_then(|s| s.quality().map(|&q| q.into()))
+            .and_then(|s| s.quality().map(|&q| q.into()))
     }
 
     /// Returns the scalar value of the best solution, or `default` when empty.

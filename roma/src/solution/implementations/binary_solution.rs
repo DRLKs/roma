@@ -1,5 +1,5 @@
-use crate::solution::{finalize_scalar_solution, Solution};
-use crate::utils::random::{seed_from_time, Random};
+use crate::solution::{Solution, finalize_scalar_solution};
+use crate::utils::random::{Random, seed_from_time};
 
 /// Builder for binary solutions (`Solution<bool>`).
 pub struct BinarySolutionBuilder {

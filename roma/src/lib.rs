@@ -78,11 +78,11 @@ pub mod utils;
 
 // Top-level re-exports for ergonomic imports.
 pub use algorithms::{
-    run_algorithm_instances_async, run_algorithms_async, spawn_algorithm_run, Algorithm,
-    ExecutionStateSnapshot, GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing,
-    HillClimbingParameters, ImprovementDirection, NSGAIIParameters, PSOParameters,
+    Algorithm, ExecutionStateSnapshot, GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing,
+    HillClimbingParameters, ImprovementDirection, NSGAII, NSGAIIParameters, PSO, PSOParameters,
     SimulatedAnnealing, SimulatedAnnealingParameters, TerminationController, TerminationCriteria,
-    TerminationCriterion, TerminationReason, TerminationState, NSGAII, PSO,
+    TerminationCriterion, TerminationReason, TerminationState, run_algorithm_instances_async,
+    run_algorithms_async, spawn_algorithm_run,
 };
 pub use experiment::Experiment;
 pub use observer::{
@@ -95,8 +95,8 @@ pub use operator::{
     SBXCrossover, SelectionOperator, SinglePointCrossover, SwapMutation,
 };
 pub use problem::{
-    build_knapsack_from_records, build_tsp_from_records, KnapsackBuilder, KnapsackProblem, Problem,
-    TspProblem, ZDT1Problem,
+    KnapsackBuilder, KnapsackProblem, Problem, TspProblem, ZDT1Problem,
+    build_knapsack_from_records, build_tsp_from_records,
 };
 pub use solution::{
     BinarySolutionBuilder, Dominance, MultiObjectiveRealSolutionBuilder,
@@ -117,11 +117,11 @@ pub use utils::{delete_snapshot_on_success, read_snapshot, write_snapshot};
 /// ```
 pub mod prelude {
     pub use crate::algorithms::{
-        run_algorithm_instances_async, run_algorithms_async, spawn_algorithm_run, Algorithm,
-        ExecutionStateSnapshot, GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing,
-        HillClimbingParameters, ImprovementDirection, NSGAIIParameters, PSOParameters,
-        SimulatedAnnealing, SimulatedAnnealingParameters, TerminationController,
-        TerminationCriteria, TerminationCriterion, TerminationReason, NSGAII, PSO,
+        Algorithm, ExecutionStateSnapshot, GeneticAlgorithm, GeneticAlgorithmParameters,
+        HillClimbing, HillClimbingParameters, ImprovementDirection, NSGAII, NSGAIIParameters, PSO,
+        PSOParameters, SimulatedAnnealing, SimulatedAnnealingParameters, TerminationController,
+        TerminationCriteria, TerminationCriterion, TerminationReason,
+        run_algorithm_instances_async, run_algorithms_async, spawn_algorithm_run,
     };
 
     pub use crate::operator::{
@@ -131,8 +131,8 @@ pub mod prelude {
     };
 
     pub use crate::problem::{
-        build_knapsack_from_records, build_tsp_from_records, KnapsackBuilder, KnapsackProblem,
-        Problem, TspProblem, ZDT1Problem,
+        KnapsackBuilder, KnapsackProblem, Problem, TspProblem, ZDT1Problem,
+        build_knapsack_from_records, build_tsp_from_records,
     };
 
     pub use crate::observer::{
@@ -151,7 +151,7 @@ pub mod prelude {
     pub use crate::solution_set::{DequeSolutionSet, SolutionSet, VectorSolutionSet};
 
     pub use crate::utils::{
-        delete_snapshot_on_success, read_snapshot, seed_from_cli_or, seed_from_time,
-        write_snapshot, Random,
+        Random, delete_snapshot_on_success, read_snapshot, seed_from_cli_or, seed_from_time,
+        write_snapshot,
     };
 }

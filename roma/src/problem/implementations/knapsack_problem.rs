@@ -6,7 +6,6 @@ use std::collections::HashMap;
 
 const PENALTY: f64 = 0.5; // Heavy penalty for infeasible solutions
 
-
 /// Knapsack Problem: maximize the value of items in a knapsack without exceeding capacity
 #[derive(Clone)]
 pub struct KnapsackProblem {
@@ -266,7 +265,6 @@ mod tests {
 
         assert_eq!(knapsack_problem.description, description);
     }
-    
 
     #[test]
     fn test_knapsack_creation_with_data() {
