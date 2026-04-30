@@ -9,14 +9,16 @@ pub(crate) mod traits;
 use std::fmt::Display;
 use std::str::FromStr;
 
-pub use implementations::binary_solution::BinarySolutionBuilder;
-pub use implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
-pub use implementations::pareto_crowding_solution::MultiObjectiveVectorRealSolutionBuilder;
-pub use implementations::permutation_solution::PermutationSolutionBuilder;
-pub use implementations::real_solution::RealSolutionBuilder;
-pub use implementations::string_solution::StringSolutionBuilder;
-pub use traits::Dominance;
-pub use traits::ParetoCrowdingDistanceQuality;
+pub use implementations::{
+    binary_solution::BinarySolutionBuilder,
+    pareto_crowding_solution::{
+        MultiObjectiveRealSolutionBuilder, MultiObjectiveVectorRealSolutionBuilder,
+    },
+    permutation_solution::PermutationSolutionBuilder,
+    real_solution::RealSolutionBuilder,
+    string_solution::StringSolutionBuilder,
+};
+pub use traits::{Dominance, ParetoCrowdingDistanceQuality};
 
 /// Generic optimization solution.
 ///
