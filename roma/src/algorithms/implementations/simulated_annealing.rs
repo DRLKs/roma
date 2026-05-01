@@ -1,6 +1,7 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
+use crate::algorithms::checkpoint::StepStateCheckpoint;
 use crate::algorithms::objective::{is_better, non_improving_loss};
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
@@ -12,8 +13,7 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::algorithms::checkpoint::StepStateCheckpoint;
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::random::{Random, seed_from_time};
 
 #[derive(Clone)]
 pub struct SimulatedAnnealingParameters<T, M>
@@ -105,7 +105,6 @@ where
     }
 
     fn to_payload(&self) -> String {
-
         let curr_encoded = self.current.encode();
         let best_encoded = self.best.encode();
 
@@ -114,7 +113,7 @@ where
             self.iteration,
             self.evaluations,
             self.temperature,
-            self.rng.state(), 
+            self.rng.state(),
             curr_encoded,
             best_encoded
         )
@@ -131,14 +130,22 @@ where
 
         let iteration = parts.get("iter").and_then(|s| s.parse().ok()).unwrap_or(0);
         let evaluations = parts.get("eval").and_then(|s| s.parse().ok()).unwrap_or(0);
-        let temperature = parts.get("temp").and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
-        let seed = parts.get("seed").and_then(|s| s.parse().ok()).unwrap_or_else(seed_from_time);
+        let temperature = parts
+            .get("temp")
+            .and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(0.0);
+        let seed = parts
+            .get("seed")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or_else(seed_from_time);
 
-        let current = parts.get("curr")
+        let current = parts
+            .get("curr")
             .and_then(|s| Solution::decode(s).ok())
             .expect("Error: No se pudo decodificar la solución actual");
 
-        let best = parts.get("best")
+        let best = parts
+            .get("best")
             .and_then(|s| Solution::decode(s).ok())
             .expect("Error: No se pudo decodificar la mejor solución (best)");
 
@@ -151,8 +158,6 @@ where
             evaluations,
         }
     }
-
-    
 }
 
 impl<T, M> Observable<T> for SimulatedAnnealing<T, M>
@@ -234,10 +239,7 @@ where
         self.solution_set.as_ref()
     }
 
-    fn initialize_step_state(
-        &self,
-        problem: &(impl Problem<T> + Sync),
-    ) -> Self::StepState {
+    fn initialize_step_state(&self, problem: &(impl Problem<T> + Sync)) -> Self::StepState {
         let mut rng = Random::new(self.parameters.random_seed.unwrap_or_else(seed_from_time));
         let mut current = problem.create_solution(&mut rng);
         problem.evaluate(&mut current);
@@ -301,7 +303,7 @@ where
 
     fn build_snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T> {
         let fit = state.best.quality_value();
-        ExecutionStateSnapshot{
+        ExecutionStateSnapshot {
             iteration: state.iteration,
             evaluations: state.evaluations,
             best_solution: state.best.copy(),
@@ -399,10 +401,12 @@ mod tests {
             .run(&problem)
             .expect("simulated annealing should run");
         assert_eq!(result.size(), 1);
-        assert!(result
-            .get(0)
-            .expect("expected one solution")
-            .quality_value()
-            .is_finite());
+        assert!(
+            result
+                .get(0)
+                .expect("expected one solution")
+                .quality_value()
+                .is_finite()
+        );
     }
 }

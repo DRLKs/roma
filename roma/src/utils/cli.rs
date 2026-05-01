@@ -150,20 +150,28 @@ pub fn prompt_checkpoint_selection(entries: &[CheckpointEntry]) -> Result<Option
     }
 
     use crate::algorithms::traits::CONSOLE_LOCK;
-    let _lock = CONSOLE_LOCK.lock().map_err(|_| "Failed to acquire console lock".to_string())?;
+    let _lock = CONSOLE_LOCK
+        .lock()
+        .map_err(|_| "Failed to acquire console lock".to_string())?;
 
     // Professional Header
     println!("\n{:^90}", "--- CHECKPOINT SELECTION ---");
-    println!("{:<4} | {:<7} | {:<8} | {:<8}", 
-             "ID", "AGE", "ELAPSED.", "INFO");
+    println!(
+        "{:<4} | {:<7} | {:<8} | {:<8}",
+        "ID", "AGE", "ELAPSED.", "INFO"
+    );
     println!("{:-<90}", "");
 
     for (index, entry) in entries.iter().enumerate() {
         let rec = &entry.record;
-        
+
         let age_str = format_time_ago(rec.created_at_ms);
         let time_str = format_duration(rec.elapsed_millis);
-        let status_icon = if rec.status.as_str() == "running" { ">" } else { "[]" };
+        let status_icon = if rec.status.as_str() == "running" {
+            ">"
+        } else {
+            "[]"
+        };
 
         println!(
             "[{:>2}] | {:<7} | {:>8} | {} {:<8.80}",
@@ -183,9 +191,14 @@ pub fn prompt_checkpoint_selection(entries: &[CheckpointEntry]) -> Result<Option
     io::stdout().flush().map_err(|e| e.to_string())?;
 
     let mut input = String::new();
-    io::stdin().read_line(&mut input).map_err(|e| e.to_string())?;
+    io::stdin()
+        .read_line(&mut input)
+        .map_err(|e| e.to_string())?;
 
-    let selection = input.trim().parse::<usize>().map_err(|_| "Please enter a valid numeric index.")?;
+    let selection = input
+        .trim()
+        .parse::<usize>()
+        .map_err(|_| "Please enter a valid numeric index.")?;
 
     if selection == 0 {
         return Ok(None);

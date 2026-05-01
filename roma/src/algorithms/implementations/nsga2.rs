@@ -1,13 +1,13 @@
+use crate::algorithms::checkpoint::StepStateCheckpoint;
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
-use crate::observer::traits::AlgorithmObserver;
 use crate::observer::Observable;
+use crate::observer::traits::AlgorithmObserver;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
-use crate::solution::{Solution,ParetoCrowdingDistanceQuality};
+use crate::solution::{ParetoCrowdingDistanceQuality, Solution};
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
-use crate::algorithms::checkpoint::StepStateCheckpoint;
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::random::{Random, seed_from_time};
 use std::cmp::Ordering;
@@ -110,7 +110,6 @@ impl StepStateCheckpoint<f64, ParetoCrowdingDistanceQuality> for NSGAIIState {
     }
 
     fn from_payload(payload: &str) -> Self {
-
         let parts: std::collections::HashMap<&str, &str> = payload
             .split(';')
             .filter_map(|s| {
@@ -119,23 +118,26 @@ impl StepStateCheckpoint<f64, ParetoCrowdingDistanceQuality> for NSGAIIState {
             })
             .collect();
 
-
-        let generation = parts.get("iter")
+        let generation = parts
+            .get("iter")
             .and_then(|s| s.parse::<usize>().ok())
             .unwrap_or(0);
 
-        let evaluations = parts.get("eval")
+        let evaluations = parts
+            .get("eval")
             .and_then(|s| s.parse::<usize>().ok())
             .unwrap_or(0);
 
-        let random_seed = parts.get("seed")
+        let random_seed = parts
+            .get("seed")
             .and_then(|s| s.parse::<u64>().ok())
             .unwrap_or_else(seed_from_time);
 
-
-        let population = parts.get("pop")
+        let population = parts
+            .get("pop")
             .map(|pop_str| {
-                pop_str.trim_matches(|c| c == '[' || c == ']')
+                pop_str
+                    .trim_matches(|c| c == '[' || c == ']')
                     .split(',')
                     .filter(|s| !s.is_empty())
                     .filter_map(|sol_str| Solution::decode(sol_str).ok())
@@ -148,15 +150,16 @@ impl StepStateCheckpoint<f64, ParetoCrowdingDistanceQuality> for NSGAIIState {
             rng: Random::new(random_seed),
             generation,
             evaluations,
+        }
     }
-}
 
     fn to_payload(&self) -> String {
-        let population_encoded = self.population
-        .iter()
-        .map(|sol| sol.encode())
-        .collect::<Vec<String>>()
-        .join(","); 
+        let population_encoded = self
+            .population
+            .iter()
+            .map(|sol| sol.encode())
+            .collect::<Vec<String>>()
+            .join(",");
 
         format!(
             "iter={};eval={};seed={};pop=[{}]",
@@ -540,7 +543,10 @@ where
         state.population = next_population;
     }
 
-    fn build_snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<f64, ParetoCrowdingDistanceQuality> {
+    fn build_snapshot(
+        &self,
+        state: &Self::StepState,
+    ) -> ExecutionStateSnapshot<f64, ParetoCrowdingDistanceQuality> {
         let worst = state
             .population
             .iter()
@@ -571,7 +577,7 @@ where
             .expect("population should not be empty when reporting progress");
         let best = best_solution.get_objective(0).unwrap_or(0.0);
 
-        ExecutionStateSnapshot{
+        ExecutionStateSnapshot {
             iteration: state.generation,
             evaluations: state.evaluations,
             best_solution,
@@ -640,14 +646,18 @@ mod tests {
         assert_eq!(fronts.len(), 1);
 
         // Boundary points should have infinite crowding distance.
-        assert!(population[0]
-            .crowding_distance()
-            .expect("crowding must be assigned")
-            .is_infinite());
-        assert!(population[2]
-            .crowding_distance()
-            .expect("crowding must be assigned")
-            .is_infinite());
+        assert!(
+            population[0]
+                .crowding_distance()
+                .expect("crowding must be assigned")
+                .is_infinite()
+        );
+        assert!(
+            population[2]
+                .crowding_distance()
+                .expect("crowding must be assigned")
+                .is_infinite()
+        );
 
         // Interior point should be finite and positive.
         let interior = population[1]

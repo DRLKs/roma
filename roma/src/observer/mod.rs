@@ -10,9 +10,10 @@ pub(crate) mod traits;
 use std::path::PathBuf;
 
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationReason};
-pub use implementations::chart_observer::ChartObserver;
-pub use implementations::console_observer::ConsoleObserver;
-pub use implementations::html_report_observer::HtmlReportObserver;
+pub use implementations::{
+    chart_observer::ChartObserver, console_observer::ConsoleObserver,
+    html_report_observer::HtmlReportObserver,
+};
 pub use traits::{AlgorithmObserver, Observable};
 
 /// Observer-facing execution payload with only presentation-relevant fields.
@@ -51,7 +52,7 @@ impl ObserverState {
     pub(crate) fn from_snapshot<T, Q>(
         snapshot: ExecutionStateSnapshot<T, Q>,
         best_solution_presentation: String,
-        seq_id: u64
+        seq_id: u64,
     ) -> Self
     where
         T: Clone,

@@ -9,14 +9,16 @@ pub(crate) mod traits;
 use std::fmt::Display;
 use std::str::FromStr;
 
-pub use implementations::binary_solution::BinarySolutionBuilder;
-pub use implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
-pub use implementations::pareto_crowding_solution::MultiObjectiveVectorRealSolutionBuilder;
-pub use implementations::permutation_solution::PermutationSolutionBuilder;
-pub use implementations::real_solution::RealSolutionBuilder;
-pub use implementations::string_solution::StringSolutionBuilder;
-pub use traits::Dominance;
-pub use traits::ParetoCrowdingDistanceQuality;
+pub use implementations::{
+    binary_solution::BinarySolutionBuilder,
+    pareto_crowding_solution::{
+        MultiObjectiveRealSolutionBuilder, MultiObjectiveVectorRealSolutionBuilder,
+    },
+    permutation_solution::PermutationSolutionBuilder,
+    real_solution::RealSolutionBuilder,
+    string_solution::StringSolutionBuilder,
+};
+pub use traits::{Dominance, ParetoCrowdingDistanceQuality};
 
 /// Generic optimization solution.
 ///
@@ -174,17 +176,19 @@ impl<T: Display, Q: Display> Solution<T, Q> {
             None => "None".to_string(),
         };
 
-        let genes: String = self.variables.iter()
+        let genes: String = self
+            .variables
+            .iter()
             .map(|v| v.to_string())
             .collect::<Vec<_>>()
             .join(",");
-        
+
         format!("{}|{}", genes, quality_string)
     }
 
-    pub fn decode(data: &str) -> Result<Self, String> 
-    where 
-        T: FromStr, 
+    pub fn decode(data: &str) -> Result<Self, String>
+    where
+        T: FromStr,
         Q: FromStr,
     {
         let parts: Vec<&str> = data.split('|').collect();
@@ -195,13 +199,20 @@ impl<T: Display, Q: Display> Solution<T, Q> {
         let variables: Vec<T> = parts[0]
             .split(',')
             .filter(|s| !s.is_empty())
-            .map(|s| s.parse::<T>().map_err(|_| "Error parsing variable (T)".to_string()))
+            .map(|s| {
+                s.parse::<T>()
+                    .map_err(|_| "Error parsing variable (T)".to_string())
+            })
             .collect::<Result<Vec<T>, String>>()?;
 
         let quality = if parts[1] == "None" || parts[1].is_empty() {
             None
         } else {
-            Some(parts[1].parse::<Q>().map_err(|_| "Error parsing quality (Q)".to_string())?)
+            Some(
+                parts[1]
+                    .parse::<Q>()
+                    .map_err(|_| "Error parsing quality (Q)".to_string())?,
+            )
         };
 
         Ok(Self { variables, quality })

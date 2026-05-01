@@ -107,7 +107,6 @@ mod tests {
         fn get_improvement_direction(&self) -> ImprovementDirection {
             ImprovementDirection::Minimize
         }
-
     }
 
     #[test]

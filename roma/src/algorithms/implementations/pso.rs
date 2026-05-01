@@ -1,4 +1,5 @@
-use crate::algorithms::objective::{best_worst, is_better, ImprovementDirection};
+use crate::algorithms::checkpoint::StepStateCheckpoint;
+use crate::algorithms::objective::{ImprovementDirection, best_worst, is_better};
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
@@ -8,9 +9,8 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::algorithms::checkpoint::{StepStateCheckpoint};
 use crate::utils::parallel::parallel_map_indexed;
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::random::{Random, seed_from_time};
 
 /// Configuration parameters for Binary PSO.
 ///
@@ -110,19 +110,31 @@ impl StepStateCheckpoint<bool, f64> for PSOState {
     }
 
     fn to_payload(&self) -> String {
-
-        let encoded_particles = self.particles.iter()
+        let encoded_particles = self
+            .particles
+            .iter()
             .map(|p| p.encode())
-            .collect::<Vec<_>>().join(",");
-        
-        let encoded_velocities = self.velocities.iter()
-            .map(|v| v.iter().map(|f| f.to_string()).collect::<Vec<_>>().join("|"))
-            .collect::<Vec<_>>().join(",");
+            .collect::<Vec<_>>()
+            .join(",");
 
+        let encoded_velocities = self
+            .velocities
+            .iter()
+            .map(|v| {
+                v.iter()
+                    .map(|f| f.to_string())
+                    .collect::<Vec<_>>()
+                    .join("|")
+            })
+            .collect::<Vec<_>>()
+            .join(",");
 
-        let encoded_p_bests = self.personal_best.iter()
+        let encoded_p_bests = self
+            .personal_best
+            .iter()
             .map(|p| p.encode())
-            .collect::<Vec<_>>().join(",");
+            .collect::<Vec<_>>()
+            .join(",");
 
         let encoded_g_best = self.global_best.encode();
 
@@ -130,7 +142,11 @@ impl StepStateCheckpoint<bool, f64> for PSOState {
             "iter={};eval={};dir={};particles=[{}];vels=[{}];pbests=[{}];gbest={}",
             self.iteration,
             self.evaluations,
-            if matches!(self.direction, ImprovementDirection::Maximize) { "max" } else { "min" },
+            if matches!(self.direction, ImprovementDirection::Maximize) {
+                "max"
+            } else {
+                "min"
+            },
             encoded_particles,
             encoded_velocities,
             encoded_p_bests,
@@ -148,9 +164,12 @@ impl StepStateCheckpoint<bool, f64> for PSOState {
             .collect();
 
         let split_list = |key: &str| {
-            parts.get(key)
+            parts
+                .get(key)
                 .map(|s| s.trim_matches(|c| c == '[' || c == ']').split(','))
-                .into_iter().flatten().filter(|s| !s.is_empty())
+                .into_iter()
+                .flatten()
+                .filter(|s| !s.is_empty())
         };
 
         let iteration = parts.get("iter").and_then(|s| s.parse().ok()).unwrap_or(0);
@@ -168,13 +187,15 @@ impl StepStateCheckpoint<bool, f64> for PSOState {
             .filter_map(|s| Solution::decode(s).ok())
             .collect();
 
-        let global_best = parts.get("gbest")
+        let global_best = parts
+            .get("gbest")
             .and_then(|s| Solution::decode(s).ok())
             .expect("Error crítico: No se encontró el global_best en el payload");
 
         let velocities = split_list("vels")
             .map(|v_str| {
-                v_str.split('|')
+                v_str
+                    .split('|')
                     .filter_map(|f| f.parse::<f64>().ok())
                     .collect::<Vec<f64>>()
             })
@@ -191,7 +212,6 @@ impl StepStateCheckpoint<bool, f64> for PSOState {
             evaluations,
         }
     }
-
 }
 
 impl Observable<bool> for PSO {
@@ -302,10 +322,7 @@ impl Algorithm<bool> for PSO {
         self.solution_set.as_ref()
     }
 
-    fn initialize_step_state(
-        &self,
-        problem: &(impl Problem<bool> + Sync),
-    ) -> Self::StepState {
+    fn initialize_step_state(&self, problem: &(impl Problem<bool> + Sync)) -> Self::StepState {
         let direction: ImprovementDirection = problem.get_improvement_direction();
         let mut rng = Random::new(self.parameters.random_seed.unwrap_or_else(seed_from_time));
 
@@ -436,14 +453,14 @@ impl Algorithm<bool> for PSO {
 
     fn build_snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<bool> {
         if state.particles.is_empty() {
-            return ExecutionStateSnapshot{
+            return ExecutionStateSnapshot {
                 iteration: state.iteration,
                 evaluations: state.evaluations,
                 best_solution: state.global_best.copy(),
                 best_fitness: state.global_best.quality_value(),
                 worst_fitness: state.global_best.quality_value(),
                 average_fitness: state.global_best.quality_value(),
-            }
+            };
         }
 
         let values: Vec<f64> = state.particles.iter().map(|s| s.quality_value()).collect();
@@ -451,7 +468,7 @@ impl Algorithm<bool> for PSO {
 
         let (best_value, worst_value) = best_worst(&values, state.direction);
 
-        ExecutionStateSnapshot{
+        ExecutionStateSnapshot {
             iteration: state.iteration,
             evaluations: state.evaluations,
             best_solution: state.global_best.copy(),

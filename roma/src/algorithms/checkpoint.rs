@@ -9,8 +9,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::utils::cli::prompt_checkpoint_selection;
 
 use crate::utils::binary::{
-    byte_to_status, push_option_string, push_string, push_u64, push_u8, read_option_string,
-    read_string, read_u64, read_u8, status_to_byte,
+    byte_to_status, push_option_string, push_string, push_u8, push_u64, read_option_string,
+    read_string, read_u8, read_u64, status_to_byte,
 };
 use crate::utils::hash::checkpoint_signature_hashes;
 use crate::utils::path::{
