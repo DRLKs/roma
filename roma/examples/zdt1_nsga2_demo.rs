@@ -1,15 +1,15 @@
-use roma::algorithms::{
+use roma_lib::algorithms::{
     Algorithm,
     NSGAII,
     NSGAIIParameters,
     TerminationCriteria,
     TerminationCriterion,
 };
-use roma::{ChartObserver, ConsoleObserver, Observable};
-use roma::operator::{MultiObjectiveTournamentSelection, PolynomialMutation, SBXCrossover};
-use roma::problem::ZDT1Problem;
-use roma::solution_set::SolutionSet;
-use roma::utils::cli::seed_from_cli_or;
+use roma_lib::{ChartObserver, ConsoleObserver, Observable};
+use roma_lib::operator::{MultiObjectiveTournamentSelection, PolynomialMutation, SBXCrossover};
+use roma_lib::problem::ZDT1Problem;
+use roma_lib::solution_set::SolutionSet;
+use roma_lib::utils::cli::seed_from_cli_or;
 
 fn main() {
     let seed = seed_from_cli_or(42);

@@ -1,16 +1,16 @@
-use roma::HtmlReportObserver;
-use roma::algorithms::{
+use roma_lib::HtmlReportObserver;
+use roma_lib::algorithms::{
     Algorithm,
     HillClimbing,
     HillClimbingParameters,
     TerminationCriteria,
     TerminationCriterion,
 };
-use roma::observer::{ChartObserver, ConsoleObserver, Observable};
-use roma::operator::BitFlipMutation;
-use roma::problem::KnapsackBuilder;
-use roma::solution_set::SolutionSet;
-use roma::utils::cli::seed_from_cli_or;
+use roma_lib::observer::{ChartObserver, ConsoleObserver, Observable};
+use roma_lib::operator::BitFlipMutation;
+use roma_lib::problem::KnapsackBuilder;
+use roma_lib::solution_set::SolutionSet;
+use roma_lib::utils::cli::seed_from_cli_or;
 
 fn main() {
     let seed = seed_from_cli_or(42);

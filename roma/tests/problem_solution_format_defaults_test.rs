@@ -1,7 +1,7 @@
-use roma::algorithms::ImprovementDirection;
-use roma::problem::Problem;
-use roma::solution::Solution;
-use roma::utils::Random;
+use roma_lib::algorithms::ImprovementDirection;
+use roma_lib::problem::Problem;
+use roma_lib::solution::Solution;
+use roma_lib::utils::Random;
 
 struct DefaultFormattingProblem {
     description: String,

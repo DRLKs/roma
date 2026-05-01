@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use roma::algorithms::{
+use roma_lib::algorithms::{
     GeneticAlgorithmParameters,
     HillClimbingParameters,
     PSOParameters,
@@ -8,12 +8,12 @@ use roma::algorithms::{
     TerminationCriteria,
     TerminationCriterion,
 };
-use roma::experiment::{Experiment, ExperimentReport};
-use roma::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
-use roma::problem::KnapsackBuilder;
-use roma::utils::{measure_result, speedup};
+use roma_lib::experiment::{Experiment, ExperimentReport};
+use roma_lib::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
+use roma_lib::problem::{KnapsackBuilder, Problem};
+use roma_lib::utils::{measure_result, speedup};
 
-fn build_problem() -> impl roma::problem::Problem<bool, f64> + Sync {
+fn build_problem() -> impl Problem<bool, f64> + Sync {
     KnapsackBuilder::new()
         .with_capacity(150.0)
         .add_item(1.0, 2.0)

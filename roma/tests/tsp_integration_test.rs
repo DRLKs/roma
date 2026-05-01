@@ -1,4 +1,4 @@
-use roma::{
+use roma_lib::{
     Algorithm,
     HillClimbing,
     HillClimbingParameters,

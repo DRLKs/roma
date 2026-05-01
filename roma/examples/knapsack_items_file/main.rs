@@ -1,18 +1,18 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use roma::{ChartObserver, HtmlReportObserver, Observable};
-use roma::algorithms::{
+use roma_lib::{ChartObserver, HtmlReportObserver, Observable};
+use roma_lib::algorithms::{
     Algorithm,
     GeneticAlgorithm,
     GeneticAlgorithmParameters,
     TerminationCriteria,
     TerminationCriterion,
 };
-use roma::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
-use roma::problem::build_knapsack_from_records;
-use roma::solution_set::SolutionSet;
-use roma::utils::cli::{
+use roma_lib::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
+use roma_lib::problem::build_knapsack_from_records;
+use roma_lib::solution_set::SolutionSet;
+use roma_lib::utils::cli::{
     argument_value,
     infer_format_from_extension,
     parse_f64_flag_or,
@@ -20,9 +20,9 @@ use roma::utils::cli::{
     resolve_path_from_flag_or_default,
     seed_from_cli_or,
 };
-use roma::utils::csv_adapter::read_csv_records;
-use roma::utils::json_adapter::{get_json_value, read_json_records};
-use roma::utils::yaml_adapter::{get_yaml_value, read_yaml_records};
+use roma_lib::utils::csv_adapter::read_csv_records;
+use roma_lib::utils::json_adapter::{get_json_value, read_json_records};
+use roma_lib::utils::yaml_adapter::{get_yaml_value, read_yaml_records};
 
 #[derive(Debug, Clone, Copy)]
 enum InputFormat {

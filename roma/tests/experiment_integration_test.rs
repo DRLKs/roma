@@ -1,4 +1,4 @@
-use roma::{
+use roma_lib::{
     BinaryTournamentSelection, BitFlipMutation, Experiment,
     GeneticAlgorithmParameters, HillClimbingParameters, KnapsackBuilder, SinglePointCrossover,
     TerminationCriteria, TerminationCriterion,

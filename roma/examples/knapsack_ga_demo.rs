@@ -1,15 +1,15 @@
-use roma::algorithms::{
+use roma_lib::algorithms::{
     Algorithm,
     GeneticAlgorithm,
     GeneticAlgorithmParameters,
     TerminationCriteria,
     TerminationCriterion,
 };
-use roma::observer::{ChartObserver, ConsoleObserver, Observable};
-use roma::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
-use roma::problem::KnapsackBuilder;
-use roma::solution_set::SolutionSet;
-use roma::utils::cli::seed_from_cli_or;
+use roma_lib::observer::{ChartObserver, ConsoleObserver, Observable};
+use roma_lib::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
+use roma_lib::problem::KnapsackBuilder;
+use roma_lib::solution_set::SolutionSet;
+use roma_lib::utils::cli::seed_from_cli_or;
 
 fn main() {
     let seed = seed_from_cli_or(42);

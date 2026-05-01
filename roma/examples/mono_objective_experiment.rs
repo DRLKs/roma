@@ -1,4 +1,4 @@
-use roma::algorithms::{
+use roma_lib::algorithms::{
     GeneticAlgorithmParameters,
     HillClimbingParameters,
     PSOParameters,
@@ -6,9 +6,9 @@ use roma::algorithms::{
     TerminationCriteria,
     TerminationCriterion,
 };
-use roma::experiment::Experiment;
-use roma::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
-use roma::problem::KnapsackBuilder;
+use roma_lib::experiment::Experiment;
+use roma_lib::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
+use roma_lib::problem::KnapsackBuilder;
 
 fn main() {
     let problem = KnapsackBuilder::new()

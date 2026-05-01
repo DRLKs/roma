@@ -1,12 +1,12 @@
-use roma::algorithms::{
+use roma_lib::algorithms::{
     Algorithm, HillClimbing, HillClimbingParameters, ImprovementDirection, TerminationCriteria,
     TerminationCriterion,
 };
-use roma::observer::{HtmlReportObserver, Observable};
-use roma::operator::BitFlipMutation;
-use roma::problem::Problem;
-use roma::solution::Solution;
-use roma::utils::Random;
+use roma_lib::observer::{HtmlReportObserver, Observable};
+use roma_lib::operator::BitFlipMutation;
+use roma_lib::problem::Problem;
+use roma_lib::solution::Solution;
+use roma_lib::utils::Random;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 struct HtmlFormattingProblem {
