@@ -13,7 +13,7 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::utils::random::{Random, seed_from_time};
+use crate::utils::random::{seed_from_time, Random};
 
 #[derive(Clone)]
 pub struct SimulatedAnnealingParameters<T, M>
@@ -401,12 +401,10 @@ mod tests {
             .run(&problem)
             .expect("simulated annealing should run");
         assert_eq!(result.size(), 1);
-        assert!(
-            result
-                .get(0)
-                .expect("expected one solution")
-                .quality_value()
-                .is_finite()
-        );
+        assert!(result
+            .get(0)
+            .expect("expected one solution")
+            .quality_value()
+            .is_finite());
     }
 }

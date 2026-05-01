@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
-use crate::solution::Solution;
 use crate::solution::traits::Dominance;
+use crate::solution::Solution;
 
 /// Trait that defines the basic interface for sets of solutions.
 /// * `T` - Type of the solution variables

@@ -92,7 +92,7 @@ impl Random {
 #[cfg(test)]
 mod test {
 
-    use crate::utils::random::{Random, seed_from_time};
+    use crate::utils::random::{seed_from_time, Random};
 
     #[test]
     fn range_between_test() {

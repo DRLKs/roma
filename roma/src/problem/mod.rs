@@ -10,8 +10,8 @@ pub(crate) mod implementations;
 pub(crate) mod traits;
 
 pub use implementations::{
-    knapsack_problem::{KnapsackBuilder, KnapsackProblem, build_knapsack_from_records},
-    tsp_problem::{TspProblem, build_tsp_from_records},
+    knapsack_problem::{build_knapsack_from_records, KnapsackBuilder, KnapsackProblem},
+    tsp_problem::{build_tsp_from_records, TspProblem},
     zdt1_problem::ZDT1Problem,
 };
 pub use traits::Problem;

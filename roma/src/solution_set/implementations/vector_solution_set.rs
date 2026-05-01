@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
-use crate::solution::Solution;
 use crate::solution::traits::Dominance;
+use crate::solution::Solution;
 use crate::solution_set::traits::SolutionSet;
 
 #[derive(Clone)]

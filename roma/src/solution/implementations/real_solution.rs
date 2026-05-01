@@ -1,4 +1,4 @@
-use crate::solution::{Solution, apply_bounds, finalize_scalar_solution};
+use crate::solution::{apply_bounds, finalize_scalar_solution, Solution};
 
 /// Builder for real-valued single-objective solutions (`Solution<f64>`).
 pub struct RealSolutionBuilder {

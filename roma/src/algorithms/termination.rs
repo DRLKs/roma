@@ -1,4 +1,4 @@
-use crate::algorithms::objective::{ImprovementDirection, is_better};
+use crate::algorithms::objective::{is_better, ImprovementDirection};
 use crate::solution::Solution;
 use std::time::{Duration, Instant};
 

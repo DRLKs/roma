@@ -1,4 +1,4 @@
-use crate::algorithms::objective::{ImprovementDirection, best_worst};
+use crate::algorithms::objective::{best_worst, ImprovementDirection};
 use crate::solution::Solution;
 
 /// Calculates fitness statistics from a population
@@ -33,8 +33,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::solution::Solution;
     use crate::solution::implementations::binary_solution::BinarySolutionBuilder;
+    use crate::solution::Solution;
 
     #[test]
     fn test_calculate_statistics_empty() {

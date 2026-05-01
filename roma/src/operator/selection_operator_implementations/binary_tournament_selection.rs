@@ -1,4 +1,4 @@
-use crate::algorithms::objective::{ImprovementDirection, is_better};
+use crate::algorithms::objective::{is_better, ImprovementDirection};
 use crate::operator::traits::{Operator, SelectionOperator};
 use crate::solution::Solution;
 use crate::utils::random::Random;

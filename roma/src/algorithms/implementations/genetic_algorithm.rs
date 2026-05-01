@@ -1,9 +1,8 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
-use crate::Observable;
 use crate::algorithms::checkpoint::StepStateCheckpoint;
-use crate::algorithms::objective::{ImprovementDirection, is_better};
+use crate::algorithms::objective::{is_better, ImprovementDirection};
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
@@ -16,8 +15,9 @@ use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::parallel::resolve_num_threads;
-use crate::utils::random::{Random, seed_from_time};
+use crate::utils::random::{seed_from_time, Random};
 use crate::utils::statistics::calculate_statistics;
+use crate::Observable;
 
 #[derive(Clone)]
 pub struct GeneticAlgorithmParameters<T, C, M, Sel>

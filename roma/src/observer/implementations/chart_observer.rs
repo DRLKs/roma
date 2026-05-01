@@ -1,5 +1,5 @@
-use crate::observer::AlgorithmEvent;
 use crate::observer::traits::AlgorithmObserver;
+use crate::observer::AlgorithmEvent;
 use crate::utils::chart::{ChartBuilder, Series};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};

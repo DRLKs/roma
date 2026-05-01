@@ -8,8 +8,8 @@ use crate::observer::{AlgorithmEvent, ObserverState};
 use crate::problem::traits::Problem;
 use std::cell::RefCell;
 use std::fmt::Display;
-use std::sync::Arc;
 use std::sync::mpsc::{self, Sender};
+use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
 type ObserverSender<T, Q> = Option<Sender<AlgorithmEvent<T, Q>>>;

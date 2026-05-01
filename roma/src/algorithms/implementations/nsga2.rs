@@ -2,14 +2,14 @@ use crate::algorithms::checkpoint::StepStateCheckpoint;
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
-use crate::observer::Observable;
 use crate::observer::traits::AlgorithmObserver;
+use crate::observer::Observable;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
 use crate::solution::{ParetoCrowdingDistanceQuality, Solution};
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::utils::parallel::parallel_map_indexed;
-use crate::utils::random::{Random, seed_from_time};
+use crate::utils::random::{seed_from_time, Random};
 use std::cmp::Ordering;
 
 pub struct NSGAIIParameters<C, M, Sel>
@@ -646,18 +646,14 @@ mod tests {
         assert_eq!(fronts.len(), 1);
 
         // Boundary points should have infinite crowding distance.
-        assert!(
-            population[0]
-                .crowding_distance()
-                .expect("crowding must be assigned")
-                .is_infinite()
-        );
-        assert!(
-            population[2]
-                .crowding_distance()
-                .expect("crowding must be assigned")
-                .is_infinite()
-        );
+        assert!(population[0]
+            .crowding_distance()
+            .expect("crowding must be assigned")
+            .is_infinite());
+        assert!(population[2]
+            .crowding_distance()
+            .expect("crowding must be assigned")
+            .is_infinite());
 
         // Interior point should be finite and positive.
         let interior = population[1]
