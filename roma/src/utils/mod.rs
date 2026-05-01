@@ -16,7 +16,10 @@ pub mod random;
 pub mod statistics;
 pub mod yaml_adapter;
 
+pub use crate::algorithms::checkpoint::{
+    delete_snapshot_on_success, read_snapshot, write_snapshot,
+};
 pub use benchmark::{measure, measure_result, speedup};
 pub use cli::seed_from_cli_or;
 pub use parallel::resolve_num_threads;
-pub use random::{Random, seed_from_time};
+pub use random::{seed_from_time, Random};
