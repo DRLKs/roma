@@ -172,13 +172,13 @@ pub struct CheckpointEntry {
 /// - evaluations: usize encoded as u64
 /// - best_fitness, average_fitness, worst_fitness: f64
 /// - best_solution_presentation: string
-/// - current_solution_payload: Option<string>
+/// - current_solution_payload: `Option<String>`
 ///
 /// Optional payloads:
-/// - state_payload: Option<string> (algorithm-defined UTF-8 payload; e.g. JSON text)
-/// - elapsed_millis: Option<u64>
+/// - state_payload: `Option<String>` (algorithm-defined UTF-8 payload; e.g. JSON text)
+/// - elapsed_millis: `Option<u64>`
 /// - status: u8
-/// - error_message: Option<string>
+/// - error_message: `Option<String>`
 ///
 /// Example metadata values:
 /// - algorithm_name: `HillClimbing`
@@ -406,6 +406,7 @@ pub fn select_resume_checkpoint(
 /// Removes checkpoints older than the provided UTC epoch milliseconds.
 ///
 /// Returns number of files removed.
+#[allow(dead_code)]
 pub fn purge_checkpoints_older_than(base_dir: &Path, older_than_ms: u64) -> io::Result<usize> {
     let mut removed = 0usize;
     for path in list_checkpoint_files(base_dir)? {
@@ -423,6 +424,7 @@ pub fn purge_checkpoints_older_than(base_dir: &Path, older_than_ms: u64) -> io::
 /// Removes checkpoints older than `max_age_ms` relative to current wall-clock time.
 ///
 /// Returns number of files removed.
+#[allow(dead_code)]
 pub fn purge_checkpoints_older_than_age(base_dir: &Path, max_age_ms: u64) -> io::Result<usize> {
     let now_ms = SystemTime::now()
         .duration_since(UNIX_EPOCH)

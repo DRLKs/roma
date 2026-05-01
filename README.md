@@ -1,9 +1,7 @@
-<img src="./images/rMetal_logo.png" alt="Roma logo" width="250"/>
-
 <p align="center">
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Made%20with-Rust-black?style=for-the-badge&logo=rust" alt="Made with Rust"></a>
-  <a href="https://crates.io/crates/roma"><img src="https://img.shields.io/badge/crates.io-roma-orange?style=for-the-badge&logo=rust" alt="Crates.io"></a>
-  <a href="https://docs.rs/roma"><img src="https://img.shields.io/badge/docs.rs-roma-blue?style=for-the-badge&logo=readthedocs" alt="docs.rs"></a>
+  <a href="https://crates.io/crates/roma_lib"><img src="https://img.shields.io/badge/crates.io-roma-orange?style=for-the-badge&logo=rust" alt="Crates.io"></a>
+  <a href="https://docs.rs/roma_lib"><img src="https://img.shields.io/badge/docs.rs-roma-blue?style=for-the-badge&logo=readthedocs" alt="docs.rs"></a>
   <a href="https://github.com/DRLKs/roma/actions/workflows/rust-tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/DRLKs/roma/rust-tests.yml?branch=main&style=for-the-badge" alt="CI"></a>
 </p>
 
