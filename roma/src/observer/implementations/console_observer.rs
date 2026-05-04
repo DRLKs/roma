@@ -1,6 +1,8 @@
 use crate::observer::traits::AlgorithmObserver;
 use crate::observer::{AlgorithmEvent, ObserverState};
 
+const HOW_ITERATIONS_TO_PRINT: usize = 150;
+
 /// Simple console observer that prints algorithm progress to stdout
 pub struct ConsoleObserver {
     name: String,
@@ -57,7 +59,7 @@ where
                 }
 
                 self.last_snapshot_seq = Some(state.seq_id);
-                if self.verbose || state.iteration % 10 == 0 {
+                if self.verbose || state.iteration % HOW_ITERATIONS_TO_PRINT == 0 {
                     println!("{}", Self::format_progress_line(state));
                     if let Some(best_solution_line) = Self::format_best_solution_line(state) {
                         println!("  {}", best_solution_line);

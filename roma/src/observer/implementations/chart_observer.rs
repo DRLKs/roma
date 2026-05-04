@@ -4,6 +4,8 @@ use crate::utils::chart::{ChartBuilder, Series};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+const ITERATIONS_BETWEEN_CHART_UPDATES: usize = 15;
+
 /// Observer that generates charts showing algorithm progress
 pub struct ChartObserver {
     name: String,
@@ -140,6 +142,7 @@ impl ChartObserver {
         based_on_width.clamp(240, 1800)
     }
 
+    /// Downsamples a series of points to a maximum number, preserving the first and last points.
     fn downsample_points(&self, points: &[(f64, f64)]) -> Vec<(f64, f64)> {
         let max_points = self.max_render_points().max(2);
         if points.len() <= max_points {
@@ -354,7 +357,7 @@ where
             }
             AlgorithmEvent::ExecutionStateUpdated { state } => {
                 if let Some(last_seq) = self.last_snapshot_seq {
-                    if state.seq_id <= last_seq {
+                    if state.seq_id <= last_seq || state.iteration % ITERATIONS_BETWEEN_CHART_UPDATES != 0 {
                         return;
                     }
                 }
