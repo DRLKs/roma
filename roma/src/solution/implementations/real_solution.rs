@@ -77,8 +77,14 @@ impl RealSolutionBuilder {
 
     /// Builds the final single-objective real solution.
     pub fn build(self) -> Solution<f64> {
+        let lower_bounds = self.lower_bounds.clone();
+        let upper_bounds = self.upper_bounds.clone();
         let variables = apply_bounds(self.variables, &self.lower_bounds, &self.upper_bounds);
-        finalize_scalar_solution(variables, self.quality)
+        let mut solution = finalize_scalar_solution(variables, self.quality);
+        if let (Some(lower_bounds), Some(upper_bounds)) = (lower_bounds, upper_bounds) {
+            solution.set_bounds(lower_bounds, upper_bounds);
+        }
+        solution
     }
 }
 
@@ -93,6 +99,7 @@ mod tests {
             .with_bounds(0.0, 1.0)
             .build();
         assert_eq!(solution.variables(), &[1.0, 1.0, 1.0]);
+        assert_eq!(solution.bounds_at(0), Some((0.0, 1.0)));
     }
 
     #[test]

@@ -27,16 +27,16 @@
 //! ## Quick Start
 //!
 //! ```rust
-//! use roma::algorithms::{
+//! use roma_lib::algorithms::{
 //!     Algorithm,
 //!     HillClimbing,
 //!     HillClimbingParameters,
 //!     TerminationCriteria,
 //!     TerminationCriterion,
 //! };
-//! use roma::operator::BitFlipMutation;
-//! use roma::problem::KnapsackBuilder;
-//! use roma::solution_set::SolutionSet;
+//! use roma_lib::operator::BitFlipMutation;
+//! use roma_lib::problem::KnapsackBuilder;
+//! use roma_lib::solution_set::SolutionSet;
 //!
 //! let problem = KnapsackBuilder::new()
 //!     .with_capacity(30.0)
@@ -65,7 +65,7 @@
 //! - Use [`observer::ConsoleObserver`], [`observer::ChartObserver`], or
 //!   [`observer::HtmlReportObserver`] for runtime visibility.
 
-extern crate self as roma;
+extern crate self as roma_lib;
 
 pub mod algorithms;
 pub mod experiment;
@@ -111,7 +111,7 @@ pub use utils::{delete_snapshot_on_success, read_snapshot, write_snapshot};
 /// Import this module to quickly access the most frequently used Roma APIs.
 ///
 /// ```rust
-/// use roma::prelude::*;
+/// use roma_lib::prelude::*;
 ///
 /// let _criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(10)]);
 /// ```

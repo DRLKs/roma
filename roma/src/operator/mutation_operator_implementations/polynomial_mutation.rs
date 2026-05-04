@@ -28,15 +28,26 @@ impl PolynomialMutation {
         Self::new(20.0)
     }
 
-    /// Calculate the delta value for mutation
-    fn calculate_delta(&self, u: f64) -> f64 {
+    /// Calculate the bounded polynomial mutation delta in the normalized domain.
+    fn calculate_delta_q(&self, x: f64, lower: f64, upper: f64, u: f64) -> f64 {
         let eta = self.distribution_index;
-        if u < 0.5 {
-            let val = 2.0 * u;
-            val.powf(1.0 / (eta + 1.0)) - 1.0
+        let span = upper - lower;
+        if span <= f64::EPSILON {
+            return 0.0;
+        }
+
+        let delta1 = (x - lower) / span;
+        let delta2 = (upper - x) / span;
+        let mut_pow = 1.0 / (eta + 1.0);
+
+        if u <= 0.5 {
+            let xy = 1.0 - delta1;
+            let value = 2.0 * u + (1.0 - 2.0 * u) * xy.powf(eta + 1.0);
+            value.powf(mut_pow) - 1.0
         } else {
-            let val = 2.0 * (1.0 - u);
-            1.0 - val.powf(1.0 / (eta + 1.0))
+            let xy = 1.0 - delta2;
+            let value = 2.0 * (1.0 - u) + 2.0 * (u - 0.5) * xy.powf(eta + 1.0);
+            1.0 - value.powf(mut_pow)
         }
     }
 }
@@ -54,18 +65,22 @@ where
     fn execute(&self, solution: &mut Solution<f64, Q>, probability: f64, rng: &mut Random) {
         for i in 0..solution.num_variables() {
             if rng.next_f64() < probability {
-                let u = rng.next_f64();
-                let delta = self.calculate_delta(u);
+                let (lower, upper) = solution.bounds_at(i).unwrap_or((0.0, 1.0));
+                if upper <= lower {
+                    continue;
+                }
 
-                // Apply mutation
+                let u = rng.next_f64();
+
                 let x = solution
                     .get_variable(i)
                     .copied()
                     .expect("index must be valid within num_variables loop");
-                let mutated = x + delta;
+                let bounded_x = x.clamp(lower, upper);
+                let delta_q = self.calculate_delta_q(bounded_x, lower, upper, u);
+                let mutated = bounded_x + delta_q * (upper - lower);
 
-                // Ensure mutated value is in valid range [0, 1]
-                solution.set_variable(i, mutated.clamp(0.0, 1.0));
+                solution.set_variable(i, mutated.clamp(lower, upper));
             }
         }
     }
@@ -110,6 +125,26 @@ mod tests {
             mutation.execute(&mut solution, 1.0, &mut rng);
             for &var in solution.variables() {
                 assert!(var >= 0.0 && var <= 1.0, "Variable out of bounds: {}", var);
+            }
+        }
+    }
+
+    #[test]
+    fn test_polynomial_mutation_respects_custom_bounds() {
+        let mutation = PolynomialMutation::new(20.0);
+        let mut solution = RealSolutionBuilder::from_variables(vec![-5.0, 0.0, 5.0])
+            .with_bounds(-5.12, 5.12)
+            .build();
+        let mut rng = Random::new(42);
+
+        for _ in 0..20 {
+            mutation.execute(&mut solution, 1.0, &mut rng);
+            for &var in solution.variables() {
+                assert!(
+                    (-5.12..=5.12).contains(&var),
+                    "Variable out of bounds: {}",
+                    var
+                );
             }
         }
     }

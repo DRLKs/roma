@@ -35,6 +35,8 @@ pub use traits::{Dominance, ParetoCrowdingDistanceQuality};
 #[derive(Clone, Debug)]
 pub struct Solution<T, Q = f64> {
     variables: Vec<T>,
+    real_lower_bounds: Option<Vec<f64>>,
+    real_upper_bounds: Option<Vec<f64>>,
     /// Optional cached quality payload.
     ///
     /// This value is expected to be updated by problem evaluation and invalidated
@@ -50,6 +52,8 @@ impl<T: Display, Q: Display> Solution<T, Q> {
     pub fn new(variables: Vec<T>) -> Self {
         Self {
             variables,
+            real_lower_bounds: None,
+            real_upper_bounds: None,
             quality: None,
         }
     }
@@ -75,6 +79,18 @@ impl<T: Display, Q: Display> Solution<T, Q> {
     /// After this call, quality is cleared because decision data changed.
     /// The solution must be re-evaluated.
     pub fn set_variables(&mut self, variables: Vec<T>) {
+        if self
+            .real_lower_bounds
+            .as_ref()
+            .is_some_and(|bounds| bounds.len() != variables.len())
+            || self
+                .real_upper_bounds
+                .as_ref()
+                .is_some_and(|bounds| bounds.len() != variables.len())
+        {
+            self.real_lower_bounds = None;
+            self.real_upper_bounds = None;
+        }
         self.variables = variables;
         self.invalidate();
     }
@@ -215,7 +231,53 @@ impl<T: Display, Q: Display> Solution<T, Q> {
             )
         };
 
-        Ok(Self { variables, quality })
+        Ok(Self {
+            variables,
+            real_lower_bounds: None,
+            real_upper_bounds: None,
+            quality,
+        })
+    }
+}
+
+impl<Q> Solution<f64, Q> {
+    /// Returns the per-variable lower bounds when available.
+    pub fn lower_bounds(&self) -> Option<&[f64]> {
+        self.real_lower_bounds.as_deref()
+    }
+
+    /// Returns the per-variable upper bounds when available.
+    pub fn upper_bounds(&self) -> Option<&[f64]> {
+        self.real_upper_bounds.as_deref()
+    }
+
+    /// Returns the lower and upper bound for one variable when available.
+    pub fn bounds_at(&self, index: usize) -> Option<(f64, f64)> {
+        let lower = self.real_lower_bounds.as_ref()?.get(index).copied()?;
+        let upper = self.real_upper_bounds.as_ref()?.get(index).copied()?;
+        Some((lower, upper))
+    }
+
+    /// Sets per-variable bounds for real-valued solutions.
+    pub fn set_bounds(&mut self, lower_bounds: Vec<f64>, upper_bounds: Vec<f64>) {
+        debug_assert_eq!(
+            lower_bounds.len(),
+            self.variables.len(),
+            "lower_bounds length should match variables length"
+        );
+        debug_assert_eq!(
+            upper_bounds.len(),
+            self.variables.len(),
+            "upper_bounds length should match variables length"
+        );
+        self.real_lower_bounds = Some(lower_bounds);
+        self.real_upper_bounds = Some(upper_bounds);
+    }
+
+    /// Sets uniform bounds for all variables of a real-valued solution.
+    pub fn set_uniform_bounds(&mut self, lower: f64, upper: f64) {
+        let size = self.variables.len();
+        self.set_bounds(vec![lower; size], vec![upper; size]);
     }
 }
 

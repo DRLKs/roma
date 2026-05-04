@@ -17,22 +17,22 @@ run reproducible executions, and observe progress through console or file-based 
 
 ```toml
 [dependencies]
-roma = "0.1.0"
+roma_lib = "0.1.0"
 ```
 
 ## Quick Start
 
 ```rust
-use roma::algorithms::{
+use roma_lib::algorithms::{
     Algorithm,
     HillClimbing,
     HillClimbingParameters,
     TerminationCriteria,
     TerminationCriterion,
 };
-use roma::operator::BitFlipMutation;
-use roma::problem::KnapsackBuilder;
-use roma::solution_set::SolutionSet;
+use roma_lib::operator::BitFlipMutation;
+use roma_lib::problem::KnapsackBuilder;
+use roma_lib::solution_set::SolutionSet;
 
 fn main() {
     let problem = KnapsackBuilder::new()
