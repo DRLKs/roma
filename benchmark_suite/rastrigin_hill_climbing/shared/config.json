@@ -1,0 +1,32 @@
+{
+  "benchmark_id": "rastrigin_hill_climbing",
+  "algorithm_family": "local_search",
+  "runs": 5,
+  "budget": {
+    "type": "evaluations",
+    "value": 5000
+  },
+  "seeds": [42, 43, 44, 45, 46],
+  "roma": {
+    "mutation_rate": 0.18,
+    "distribution_index": 20.0
+  },
+  "jmetal_java": {
+    "version": "5.11",
+    "mutation_rate": 0.18,
+    "distribution_index": 20.0
+  },
+  "jmetalpy": {
+    "mutation_rate": 0.18,
+    "distribution_index": 20.0
+  },
+  "deap": {
+    "mutation_rate": 0.18,
+    "sigma": 0.35
+  },
+  "pagmo2_cpp": {
+    "start_range": 0.2,
+    "stop_range": 0.00001,
+    "reduction_coeff": 0.5
+  }
+}

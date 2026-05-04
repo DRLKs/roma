@@ -1,0 +1,8 @@
+{
+  "benchmark_id": "rastrigin_hill_climbing",
+  "problem": "rastrigin",
+  "instance_id": "rastrigin_dim_30",
+  "dimension": 30,
+  "lower_bound": -5.12,
+  "upper_bound": 5.12
+}

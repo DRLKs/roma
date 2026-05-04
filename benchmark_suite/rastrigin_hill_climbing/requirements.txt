@@ -1,0 +1,8 @@
+# The default Rastrigin benchmark now uses stdlib Python wrappers around:
+# - jMetal Java
+# - pagmo C++
+# - DEAP
+#
+# jMetalPy is available as an optional direct Python runner.
+deap==1.4.3
+jmetalpy==1.9.0

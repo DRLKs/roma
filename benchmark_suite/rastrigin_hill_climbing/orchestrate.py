@@ -1,0 +1,291 @@
+import json
+import math
+import os
+import statistics
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent
+REPO_ROOT = ROOT.parent.parent
+RUNNERS_DIR = ROOT / "runners"
+RESULTS_DIR = ROOT / "results"
+RAW_DIR = RESULTS_DIR / "raw"
+SUMMARY_PATH = RESULTS_DIR / "summary.json"
+IN_CONTAINER_ENV = "ROMA_RASTRIGIN_IN_CONTAINER"
+DOCKER_IMAGE = "roma-rastrigin-hill-climbing:latest"
+CONTAINER_RESULTS_DIR = "/workspace/benchmark_suite/rastrigin_hill_climbing/results"
+INSTANCE_PATH = ROOT / "shared" / "instance.json"
+CONFIG_PATH = ROOT / "shared" / "config.json"
+
+
+def load_json(path):
+    with path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+INSTANCE = load_json(INSTANCE_PATH)
+CONFIG = load_json(CONFIG_PATH)
+
+
+def run_command(command, cwd=ROOT):
+    completed = subprocess.run(
+        command,
+        cwd=cwd,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    return completed.returncode, completed.stdout, completed.stderr
+
+
+def build_runners():
+    if os.environ.get(IN_CONTAINER_ENV) == "1":
+        roma_command = ["/usr/local/bin/roma_rastrigin_hill_climbing_benchmark"]
+    else:
+        roma_manifest = REPO_ROOT / "roma" / "Cargo.toml"
+        roma_command = [
+            "cargo",
+            "run",
+            "--quiet",
+            "--example",
+            "rastrigin_hill_climbing_benchmark",
+            "--manifest-path",
+            str(roma_manifest),
+        ]
+
+    return {
+        "roma": roma_command,
+        "deap": [sys.executable, str(RUNNERS_DIR / "python" / "deap_runner.py")],
+        "jmetalpy": [sys.executable, str(RUNNERS_DIR / "python" / "jmetalpy_runner.py")],
+        "jmetal_java": [sys.executable, str(RUNNERS_DIR / "python" / "jmetal_java_runner.py")],
+        "pagmo2_cpp": [sys.executable, str(RUNNERS_DIR / "python" / "pagmo_cpp_runner.py")],
+    }
+
+
+def run_containerized_orchestration():
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    build_command = [
+        "docker",
+        "build",
+        "-f",
+        str(ROOT / "Dockerfile"),
+        "-t",
+        DOCKER_IMAGE,
+        str(REPO_ROOT),
+    ]
+    build_code, build_stdout, build_stderr = run_command(build_command, cwd=REPO_ROOT)
+    if build_code != 0:
+        sys.stderr.write(build_stderr or build_stdout)
+        raise SystemExit(build_code)
+
+    run_command_args = [
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        f"{RESULTS_DIR}:{CONTAINER_RESULTS_DIR}",
+        DOCKER_IMAGE,
+    ]
+    run_code, run_stdout, run_stderr = run_command(run_command_args, cwd=REPO_ROOT)
+    if run_code != 0:
+        sys.stderr.write(run_stderr or run_stdout)
+        raise SystemExit(run_code)
+
+    print(run_stdout, end="")
+
+
+def save_json(path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2)
+
+
+def summarize_results(results):
+    ok_results = [result for result in results if result.get("status") == "ok"]
+    fitness_values = [result["best_fitness"] for result in ok_results]
+    wall_values = [result["wall_time_ms"] for result in ok_results]
+    cpu_values = [
+        result["cpu_time_ms"]
+        for result in ok_results
+        if result.get("cpu_time_ms") is not None
+    ]
+
+    if not ok_results:
+        return {
+            "runs": len(results),
+            "ok_runs": 0,
+            "failed_runs": len(results),
+            "best_fitness": None,
+            "mean_fitness": None,
+            "worst_fitness": None,
+            "stddev_fitness": None,
+            "mean_wall_time_ms": None,
+            "mean_cpu_time_ms": None,
+        }
+
+    return {
+        "runs": len(results),
+        "ok_runs": len(ok_results),
+        "failed_runs": len(results) - len(ok_results),
+        "best_fitness": min(fitness_values),
+        "mean_fitness": statistics.fmean(fitness_values),
+        "worst_fitness": max(fitness_values),
+        "stddev_fitness": statistics.pstdev(fitness_values) if len(fitness_values) > 1 else 0.0,
+        "mean_wall_time_ms": statistics.fmean(wall_values),
+        "mean_cpu_time_ms": statistics.fmean(cpu_values) if cpu_values else None,
+    }
+
+
+def rastrigin_value(variables):
+    return 10.0 * len(variables) + sum(
+        value * value - 10.0 * math.cos(2.0 * math.pi * value) for value in variables
+    )
+
+
+def validate_results(results):
+    expected_problem = INSTANCE["problem"]
+    expected_instance_id = INSTANCE["instance_id"]
+    expected_budget_type = CONFIG["budget"]["type"]
+    expected_budget_value = int(CONFIG["budget"]["value"])
+    expected_dimension = int(INSTANCE["dimension"])
+    lower_bound = float(INSTANCE["lower_bound"])
+    upper_bound = float(INSTANCE["upper_bound"])
+
+    max_fitness_abs_error = 0.0
+    invalid_runs = 0
+    out_of_bounds_runs = 0
+    errors = []
+
+    for index, result in enumerate(results):
+        if result.get("status") != "ok":
+            continue
+
+        if result.get("problem") != expected_problem:
+            invalid_runs += 1
+            errors.append(f"run {index}: unexpected problem '{result.get('problem')}'")
+
+        if result.get("instance_id") != expected_instance_id:
+            invalid_runs += 1
+            errors.append(
+                f"run {index}: unexpected instance_id '{result.get('instance_id')}'"
+            )
+
+        if result.get("budget_type") != expected_budget_type:
+            invalid_runs += 1
+            errors.append(
+                f"run {index}: unexpected budget_type '{result.get('budget_type')}'"
+            )
+
+        if int(result.get("budget_value", -1)) != expected_budget_value:
+            invalid_runs += 1
+            errors.append(
+                f"run {index}: unexpected budget_value '{result.get('budget_value')}'"
+            )
+
+        solution = result.get("best_solution", [])
+        if len(solution) != expected_dimension:
+            invalid_runs += 1
+            errors.append(
+                f"run {index}: expected solution dimension {expected_dimension}, got {len(solution)}"
+            )
+            continue
+
+        if any(value < lower_bound - 1e-9 or value > upper_bound + 1e-9 for value in solution):
+            out_of_bounds_runs += 1
+            invalid_runs += 1
+            errors.append(f"run {index}: solution contains values outside declared bounds")
+
+        recomputed = rastrigin_value(solution)
+        fitness_abs_error = abs(float(result["best_fitness"]) - recomputed)
+        max_fitness_abs_error = max(max_fitness_abs_error, fitness_abs_error)
+        if fitness_abs_error > 1e-6:
+            invalid_runs += 1
+            errors.append(
+                f"run {index}: reported fitness {result['best_fitness']} does not match recomputed value {recomputed}"
+            )
+
+    return {
+        "valid": invalid_runs == 0,
+        "invalid_runs": invalid_runs,
+        "out_of_bounds_runs": out_of_bounds_runs,
+        "max_abs_fitness_error": max_fitness_abs_error,
+        "errors": errors,
+    }
+
+
+def main():
+    if os.environ.get(IN_CONTAINER_ENV) != "1":
+        run_containerized_orchestration()
+        return
+
+    runners = build_runners()
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    summary = {
+        "benchmark_id": "rastrigin_hill_climbing",
+        "executed_at_utc": timestamp,
+        "libraries": {},
+    }
+
+    for library, command in runners.items():
+        returncode, stdout, stderr = run_command(command)
+        mode = "container"
+
+        raw_path = RAW_DIR / f"{timestamp}_{library}.json"
+
+        if returncode != 0:
+            payload = {
+                "library": library,
+                "status": "error",
+                "execution_mode": mode,
+                "returncode": returncode,
+                "stdout": stdout,
+                "stderr": stderr,
+            }
+            save_json(raw_path, payload)
+            summary["libraries"][library] = {
+                "status": "error",
+                "execution_mode": mode,
+                "returncode": returncode,
+                "raw_output": str(raw_path.relative_to(ROOT)),
+            }
+            continue
+
+        results = json.loads(stdout)
+        if isinstance(results, dict) and results.get("status") == "skipped":
+            save_json(raw_path, results)
+            summary["libraries"][library] = {
+                "status": "skipped",
+                "execution_mode": mode,
+                "reason": results.get("reason"),
+                "raw_output": str(raw_path.relative_to(ROOT)),
+            }
+            continue
+
+        validation = validate_results(results)
+        save_json(raw_path, results)
+        if validation["valid"]:
+            summary["libraries"][library] = {
+                "status": "ok",
+                "execution_mode": mode,
+                "raw_output": str(raw_path.relative_to(ROOT)),
+                "aggregate": summarize_results(results),
+                "validation": validation,
+            }
+        else:
+            summary["libraries"][library] = {
+                "status": "error",
+                "execution_mode": mode,
+                "raw_output": str(raw_path.relative_to(ROOT)),
+                "validation": validation,
+            }
+
+    save_json(SUMMARY_PATH, summary)
+    print(json.dumps(summary, indent=2))
+
+
+if __name__ == "__main__":
+    main()
