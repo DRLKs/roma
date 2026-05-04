@@ -19,7 +19,7 @@ pub mod yaml_adapter;
 pub use crate::algorithms::checkpoint::{
     delete_snapshot_on_success, read_snapshot, write_snapshot,
 };
-pub use benchmark::{measure, measure_result, speedup};
+pub use benchmark::{measure, measure_result, process_cpu_time_ms, speedup};
 pub use cli::seed_from_cli_or;
 pub use parallel::resolve_num_threads;
 pub use random::{seed_from_time, Random};

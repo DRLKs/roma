@@ -31,9 +31,29 @@ pub fn speedup(base: Duration, candidate: Duration) -> f64 {
     base.as_secs_f64() / candidate_secs
 }
 
+/// Returns process CPU time in milliseconds when the current platform exposes
+/// it through a standard file interface.
+///
+/// This keeps the crate dependency-free. On Linux it reads `/proc/self/schedstat`,
+/// whose first field is the CPU time spent on the processor in nanoseconds.
+/// On unsupported platforms or parse failures it returns `None`.
+pub fn process_cpu_time_ms() -> Option<f64> {
+    #[cfg(target_os = "linux")]
+    {
+        let contents = std::fs::read_to_string("/proc/self/schedstat").ok()?;
+        let cpu_time_ns = contents.split_whitespace().next()?.parse::<f64>().ok()?;
+        return Some(cpu_time_ns / 1_000_000.0);
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{measure, measure_result, speedup};
+    use super::{measure, measure_result, process_cpu_time_ms, speedup};
     use std::time::Duration;
 
     #[test]
@@ -64,5 +84,11 @@ mod tests {
 
         let inf = speedup(Duration::from_secs(1), Duration::ZERO);
         assert!(inf.is_infinite());
+    }
+
+    #[test]
+    fn process_cpu_time_is_optional_and_non_negative() {
+        let value = process_cpu_time_ms();
+        assert!(value.map(|x| x >= 0.0).unwrap_or(true));
     }
 }

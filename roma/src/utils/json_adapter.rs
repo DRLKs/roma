@@ -436,6 +436,158 @@ pub fn get_json_value(path: &Path, key_path: &str) -> std::io::Result<Option<Str
     Ok(value.and_then(scalar_to_string))
 }
 
+fn array_values_to_strings(items: &[JsonValue]) -> std::io::Result<Vec<String>> {
+    let mut values = Vec::with_capacity(items.len());
+    for item in items {
+        let Some(text) = scalar_to_string(item) else {
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                "JSON array must contain only scalar values",
+            ));
+        };
+        values.push(text);
+    }
+
+    Ok(values)
+}
+
+fn number_from_json_value(value: &JsonValue) -> std::io::Result<f64> {
+    let Some(text) = scalar_to_string(value) else {
+        return Err(Error::new(
+            ErrorKind::InvalidData,
+            "JSON value must be a scalar number",
+        ));
+    };
+
+    text.parse::<f64>().map_err(|_| {
+        Error::new(
+            ErrorKind::InvalidData,
+            format!("JSON value '{}' is not a valid f64", text),
+        )
+    })
+}
+ 
+/// Reads a scalar array from a JSON string using a path expression.
+pub fn get_json_array_values_from_str(json: &str, key_path: &str) -> std::io::Result<Vec<String>> {
+    let root = JsonParser::new(json)
+        .parse()
+        .map_err(|e| Error::new(ErrorKind::InvalidData, format!("Invalid JSON: {}", e)))?;
+
+    let value = resolve_path(&root, key_path)
+        .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("Invalid path: {}", e)))?;
+
+    let Some(value) = value else {
+        return Ok(Vec::new());
+    };
+
+    let JsonValue::Array(items) = value else {
+        return Err(Error::new(
+            ErrorKind::InvalidData,
+            "JSON path must point to an array",
+        ));
+    };
+
+    array_values_to_strings(items)
+}
+
+/// Reads a scalar array from a JSON file using a path expression.
+pub fn get_json_array_values(path: &Path, key_path: &str) -> std::io::Result<Vec<String>> {
+    let root = parse_json_file(path)?;
+    let value = resolve_path(&root, key_path)
+        .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("Invalid path: {}", e)))?;
+
+    let Some(value) = value else {
+        return Ok(Vec::new());
+    };
+
+    let JsonValue::Array(items) = value else {
+        return Err(Error::new(
+            ErrorKind::InvalidData,
+            "JSON path must point to an array",
+        ));
+    };
+
+    array_values_to_strings(items)
+}
+
+/// Reads an array-of-arrays numeric matrix from a JSON string using a path expression.
+pub fn get_json_number_matrix_from_str(
+    json: &str,
+    key_path: &str,
+) -> std::io::Result<Vec<Vec<f64>>> {
+    let root = JsonParser::new(json)
+        .parse()
+        .map_err(|e| Error::new(ErrorKind::InvalidData, format!("Invalid JSON: {}", e)))?;
+
+    let value = resolve_path(&root, key_path)
+        .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("Invalid path: {}", e)))?;
+
+    let Some(value) = value else {
+        return Ok(Vec::new());
+    };
+
+    let JsonValue::Array(rows) = value else {
+        return Err(Error::new(
+            ErrorKind::InvalidData,
+            "JSON path must point to an array of arrays",
+        ));
+    };
+
+    let mut matrix = Vec::with_capacity(rows.len());
+    for row in rows {
+        let JsonValue::Array(cells) = row else {
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                "JSON matrix rows must be arrays",
+            ));
+        };
+
+        let mut parsed_row = Vec::with_capacity(cells.len());
+        for cell in cells {
+            parsed_row.push(number_from_json_value(cell)?);
+        }
+        matrix.push(parsed_row);
+    }
+
+    Ok(matrix)
+}
+
+/// Reads an array-of-arrays numeric matrix from a JSON file using a path expression.
+pub fn get_json_number_matrix(path: &Path, key_path: &str) -> std::io::Result<Vec<Vec<f64>>> {
+    let root = parse_json_file(path)?;
+    let value = resolve_path(&root, key_path)
+        .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("Invalid path: {}", e)))?;
+
+    let Some(value) = value else {
+        return Ok(Vec::new());
+    };
+
+    let JsonValue::Array(rows) = value else {
+        return Err(Error::new(
+            ErrorKind::InvalidData,
+            "JSON path must point to an array of arrays",
+        ));
+    };
+
+    let mut matrix = Vec::with_capacity(rows.len());
+    for row in rows {
+        let JsonValue::Array(cells) = row else {
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                "JSON matrix rows must be arrays",
+            ));
+        };
+
+        let mut parsed_row = Vec::with_capacity(cells.len());
+        for cell in cells {
+            parsed_row.push(number_from_json_value(cell)?);
+        }
+        matrix.push(parsed_row);
+    }
+
+    Ok(matrix)
+}
+
 /// Reads an array of JSON objects and flattens each object into a map.
 ///
 /// If `records_path` is empty, the root value is expected to be an array.
@@ -474,4 +626,41 @@ pub fn read_json_records(
     }
 
     Ok(records)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        get_json_array_values_from_str, get_json_number_matrix_from_str, get_json_value_from_str,
+    };
+
+    #[test]
+    fn reads_scalar_value_from_json_path() {
+        let json = r#"{"config":{"budget":{"type":"iterations","value":120}}}"#;
+
+        let value = get_json_value_from_str(json, "config.budget.type")
+            .expect("json path lookup should succeed");
+
+        assert_eq!(value.as_deref(), Some("iterations"));
+    }
+
+    #[test]
+    fn reads_scalar_array_values_from_json_path() {
+        let json = r#"{"seeds":[42,43,44]}"#;
+
+        let values = get_json_array_values_from_str(json, "seeds")
+            .expect("json array lookup should succeed");
+
+        assert_eq!(values, vec!["42", "43", "44"]);
+    }
+
+    #[test]
+    fn reads_number_matrix_from_json_path() {
+        let json = r#"{"distance_matrix":[[0.0,1.5],[1.5,0.0]]}"#;
+
+        let matrix = get_json_number_matrix_from_str(json, "distance_matrix")
+            .expect("json matrix lookup should succeed");
+
+        assert_eq!(matrix, vec![vec![0.0, 1.5], vec![1.5, 0.0]]);
+    }
 }
