@@ -1,9 +1,11 @@
 import json
 import math
 import os
+import platform
 import statistics
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -41,9 +43,30 @@ def run_command(command, cwd=ROOT):
     return completed.returncode, completed.stdout, completed.stderr
 
 
+def command_to_string(command):
+    return " ".join(command)
+
+
+def percentile(values, p):
+    if not values:
+        return None
+    ordered = sorted(values)
+    if len(ordered) == 1:
+        return ordered[0]
+    rank = (len(ordered) - 1) * p
+    lower_idx = int(math.floor(rank))
+    upper_idx = int(math.ceil(rank))
+    if lower_idx == upper_idx:
+        return ordered[lower_idx]
+    lower = ordered[lower_idx]
+    upper = ordered[upper_idx]
+    return lower + (upper - lower) * (rank - lower_idx)
+
+
 def build_runners():
     if os.environ.get(IN_CONTAINER_ENV) == "1":
         roma_command = ["/usr/local/bin/roma_rastrigin_hill_climbing_benchmark"]
+        mealpy_python = "/opt/mealpy-venv/bin/python"
     else:
         roma_manifest = REPO_ROOT / "roma" / "Cargo.toml"
         roma_command = [
@@ -55,11 +78,13 @@ def build_runners():
             "--manifest-path",
             str(roma_manifest),
         ]
+        mealpy_python = sys.executable
 
     return {
         "roma": roma_command,
         "deap": [sys.executable, str(RUNNERS_DIR / "python" / "deap_runner.py")],
         "jmetalpy": [sys.executable, str(RUNNERS_DIR / "python" / "jmetalpy_runner.py")],
+        "mealpy": [mealpy_python, str(RUNNERS_DIR / "python" / "mealpy_runner.py")],
         "jmetal_java": [sys.executable, str(RUNNERS_DIR / "python" / "jmetal_java_runner.py")],
         "pagmo2_cpp": [sys.executable, str(RUNNERS_DIR / "python" / "pagmo_cpp_runner.py")],
     }
@@ -106,6 +131,8 @@ def save_json(path, payload):
 
 def summarize_results(results):
     ok_results = [result for result in results if result.get("status") == "ok"]
+    error_results = [result for result in results if result.get("status") == "error"]
+    skipped_results = [result for result in results if result.get("status") == "skipped"]
     fitness_values = [result["best_fitness"] for result in ok_results]
     wall_values = [result["wall_time_ms"] for result in ok_results]
     cpu_values = [
@@ -119,6 +146,8 @@ def summarize_results(results):
             "runs": len(results),
             "ok_runs": 0,
             "failed_runs": len(results),
+            "error_runs": len(error_results),
+            "skipped_runs": len(skipped_results),
             "best_fitness": None,
             "mean_fitness": None,
             "worst_fitness": None,
@@ -131,11 +160,17 @@ def summarize_results(results):
         "runs": len(results),
         "ok_runs": len(ok_results),
         "failed_runs": len(results) - len(ok_results),
+        "error_runs": len(error_results),
+        "skipped_runs": len(skipped_results),
         "best_fitness": min(fitness_values),
         "mean_fitness": statistics.fmean(fitness_values),
+        "median_fitness": statistics.median(fitness_values),
         "worst_fitness": max(fitness_values),
         "stddev_fitness": statistics.pstdev(fitness_values) if len(fitness_values) > 1 else 0.0,
+        "p90_fitness": percentile(fitness_values, 0.90),
         "mean_wall_time_ms": statistics.fmean(wall_values),
+        "median_wall_time_ms": statistics.median(wall_values),
+        "p90_wall_time_ms": percentile(wall_values, 0.90),
         "mean_cpu_time_ms": statistics.fmean(cpu_values) if cpu_values else None,
     }
 
@@ -224,14 +259,33 @@ def main():
 
     runners = build_runners()
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    start_ts = time.perf_counter()
     summary = {
         "benchmark_id": "rastrigin_hill_climbing",
         "executed_at_utc": timestamp,
+        "environment": {
+            "orchestrator_python": platform.python_version(),
+            "platform": platform.platform(),
+            "in_container": os.environ.get(IN_CONTAINER_ENV) == "1",
+            "docker_image": DOCKER_IMAGE,
+        },
+        "instance": {
+            "problem": INSTANCE["problem"],
+            "instance_id": INSTANCE["instance_id"],
+            "dimension": INSTANCE["dimension"],
+            "lower_bound": INSTANCE["lower_bound"],
+            "upper_bound": INSTANCE["upper_bound"],
+        },
+        "budget": CONFIG["budget"],
+        "runs": int(CONFIG["runs"]),
+        "seeds": list(CONFIG.get("seeds", []))[: int(CONFIG["runs"])],
         "libraries": {},
     }
 
     for library, command in runners.items():
+        runner_start_ts = time.perf_counter()
         returncode, stdout, stderr = run_command(command)
+        runner_elapsed_ms = (time.perf_counter() - runner_start_ts) * 1000.0
         mode = "container"
 
         raw_path = RAW_DIR / f"{timestamp}_{library}.json"
@@ -241,7 +295,9 @@ def main():
                 "library": library,
                 "status": "error",
                 "execution_mode": mode,
+                "runner_command": command,
                 "returncode": returncode,
+                "runner_wall_time_ms": runner_elapsed_ms,
                 "stdout": stdout,
                 "stderr": stderr,
             }
@@ -249,7 +305,9 @@ def main():
             summary["libraries"][library] = {
                 "status": "error",
                 "execution_mode": mode,
+                "runner_command": command_to_string(command),
                 "returncode": returncode,
+                "runner_wall_time_ms": runner_elapsed_ms,
                 "raw_output": str(raw_path.relative_to(ROOT)),
             }
             continue
@@ -260,29 +318,40 @@ def main():
             summary["libraries"][library] = {
                 "status": "skipped",
                 "execution_mode": mode,
+                "runner_command": command_to_string(command),
+                "runner_wall_time_ms": runner_elapsed_ms,
                 "reason": results.get("reason"),
                 "raw_output": str(raw_path.relative_to(ROOT)),
             }
             continue
 
         validation = validate_results(results)
+        aggregate = summarize_results(results)
         save_json(raw_path, results)
-        if validation["valid"]:
+        if validation["valid"] and aggregate["ok_runs"] > 0:
             summary["libraries"][library] = {
                 "status": "ok",
                 "execution_mode": mode,
+                "runner_command": command_to_string(command),
+                "runner_wall_time_ms": runner_elapsed_ms,
+                "completed_runs": len(results),
                 "raw_output": str(raw_path.relative_to(ROOT)),
-                "aggregate": summarize_results(results),
+                "aggregate": aggregate,
                 "validation": validation,
             }
         else:
             summary["libraries"][library] = {
                 "status": "error",
                 "execution_mode": mode,
+                "runner_command": command_to_string(command),
+                "runner_wall_time_ms": runner_elapsed_ms,
+                "completed_runs": len(results),
                 "raw_output": str(raw_path.relative_to(ROOT)),
+                "aggregate": aggregate,
                 "validation": validation,
             }
 
+    summary["total_wall_time_ms"] = (time.perf_counter() - start_ts) * 1000.0
     save_json(SUMMARY_PATH, summary)
     print(json.dumps(summary, indent=2))
 

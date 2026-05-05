@@ -28,4 +28,6 @@ From the repository root:
 /home/drlk/roma/.venv/bin/python benchmark_suite/rastrigin_hill_climbing/orchestrate.py
 ```
 
-That command builds the local Docker image for this benchmark and runs Roma, DEAP, jMetal Java, and pagmo2 C++ inside the same container.
+That command builds the local Docker image for this benchmark and runs Roma, DEAP, jMetalPy, jMetal Java, pagmo2 C++, and mealpy inside the same container.
+
+Note: mealpy is executed from a dedicated virtual environment inside the image because it requires a different NumPy major version than jMetalPy.

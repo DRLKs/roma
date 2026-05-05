@@ -88,5 +88,14 @@ build/
 # MiKTeX / texmf local state
 /texmf-var/
 
+# ---------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------
+.cache/
+__pycache__/
+
 # Archivos generados por los observadores 
 observers_outputs/
+
+# Benchmark suite results
+results/

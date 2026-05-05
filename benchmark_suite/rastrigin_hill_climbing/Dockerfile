@@ -19,6 +19,7 @@ RUN apt-get update \
 		libpagmo-dev \
 		openjdk-21-jdk-headless \
 		pkg-config \
+		python3-venv \
 		python3-pip \
 		python3 \
 	&& rm -rf /var/lib/apt/lists/*
@@ -29,6 +30,10 @@ COPY roma ./roma
 COPY benchmark_suite/rastrigin_hill_climbing ./benchmark_suite/rastrigin_hill_climbing
 
 RUN python3 -m pip install --break-system-packages --no-cache-dir -r /workspace/benchmark_suite/rastrigin_hill_climbing/requirements.txt
+
+RUN python3 -m venv /opt/mealpy-venv \
+	&& /opt/mealpy-venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel \
+	&& /opt/mealpy-venv/bin/pip install --no-cache-dir -r /workspace/benchmark_suite/rastrigin_hill_climbing/requirements-mealpy.txt
 
 RUN cargo build --release --example rastrigin_hill_climbing_benchmark --manifest-path /workspace/roma/Cargo.toml \
 	&& cp /workspace/roma/target/release/examples/rastrigin_hill_climbing_benchmark /usr/local/bin/roma_rastrigin_hill_climbing_benchmark

@@ -1,0 +1,4 @@
+# Dedicated environment for mealpy because mealpy 3.0.3 requires numpy<=1.26,
+# while jmetalpy 1.9.0 requires numpy>=2.2.5.
+numpy==1.26.0
+mealpy==3.0.3

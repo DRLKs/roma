@@ -28,5 +28,10 @@
     "start_range": 0.2,
     "stop_range": 0.00001,
     "reduction_coeff": 0.5
+  },
+  "mealpy": {
+    "pop_size": 2,
+    "temp_init": 100.0,
+    "step_size": 0.1
   }
 }
