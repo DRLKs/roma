@@ -1,5 +1,4 @@
 use crate::problem::traits::Problem;
-use crate::solution::traits::Dominance;
 use crate::solution_set::traits::SolutionSet;
 use std::fmt;
 
@@ -34,7 +33,7 @@ impl fmt::Display for CaseParameter {
 pub trait ExperimentalCase<T, Q, P>: Send + Sync
 where
     T: Clone + Send + 'static,
-    Q: Clone + Default + Dominance + Send + 'static + Copy + Into<f64>,
+    Q: Clone + Default + Send + 'static + Copy + Into<f64>,
     P: Problem<T, Q> + Sync,
 {
     fn algorithm_name(&self) -> &str;

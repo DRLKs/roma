@@ -53,7 +53,9 @@
 //! let mut algorithm = HillClimbing::new(parameters);
 //! let result = algorithm.run(&problem)?;
 //!
-//! let best = result.best_solution().expect("solution set should not be empty");
+//! let best = result
+//!     .best_solution(&problem)
+//!     .expect("solution set should not be empty");
 //! assert!(best.quality_value().is_finite());
 //! # Ok::<(), String>(())
 //! ```
@@ -80,8 +82,8 @@ pub mod utils;
 pub use algorithms::{
     run_algorithm_instances_async, run_algorithms_async, spawn_algorithm_run, Algorithm,
     ExecutionStateSnapshot, GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing,
-    HillClimbingParameters, ImprovementDirection, NSGAIIParameters, PSOParameters,
-    SimulatedAnnealing, SimulatedAnnealingParameters, TerminationController, TerminationCriteria,
+    HillClimbingParameters, NSGAIIParameters, PSOParameters, SimulatedAnnealing,
+    SimulatedAnnealingParameters, TerminationController, TerminationCriteria,
     TerminationCriterion, TerminationReason, TerminationState, NSGAII, PSO,
 };
 pub use experiment::Experiment;
@@ -91,15 +93,15 @@ pub use observer::{
 };
 pub use operator::{
     BinaryTournamentSelection, BitFlipMutation, CrossoverOperator,
-    MultiObjectiveTournamentSelection, MutationOperator, Operator, PolynomialMutation,
-    SBXCrossover, SelectionOperator, SinglePointCrossover, SwapMutation,
+    MultiObjectiveTournamentSelection, MutationOperator, Operator, OrderCrossover,
+    PolynomialMutation, SBXCrossover, SelectionOperator, SinglePointCrossover, SwapMutation,
 };
 pub use problem::{
     build_knapsack_from_records, build_tsp_from_records, KnapsackBuilder, KnapsackProblem, Problem,
     TspProblem, ZDT1Problem,
 };
 pub use solution::{
-    BinarySolutionBuilder, Dominance, MultiObjectiveRealSolutionBuilder,
+    BinarySolutionBuilder, MultiObjectiveRealSolutionBuilder,
     MultiObjectiveVectorRealSolutionBuilder, ParetoCrowdingDistanceQuality,
     PermutationSolutionBuilder, RealSolutionBuilder, Solution, StringSolutionBuilder,
 };
@@ -119,15 +121,16 @@ pub mod prelude {
     pub use crate::algorithms::{
         run_algorithm_instances_async, run_algorithms_async, spawn_algorithm_run, Algorithm,
         ExecutionStateSnapshot, GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing,
-        HillClimbingParameters, ImprovementDirection, NSGAIIParameters, PSOParameters,
-        SimulatedAnnealing, SimulatedAnnealingParameters, TerminationController,
-        TerminationCriteria, TerminationCriterion, TerminationReason, NSGAII, PSO,
+        HillClimbingParameters, NSGAIIParameters, PSOParameters, SimulatedAnnealing,
+        SimulatedAnnealingParameters, TerminationController, TerminationCriteria,
+        TerminationCriterion, TerminationReason, NSGAII, PSO,
     };
 
     pub use crate::operator::{
         BinaryTournamentSelection, BitFlipMutation, CrossoverOperator,
-        MultiObjectiveTournamentSelection, MutationOperator, Operator, PolynomialMutation,
-        SBXCrossover, SelectionOperator, SinglePointCrossover, SwapMutation,
+        MultiObjectiveTournamentSelection, MutationOperator, Operator, OrderCrossover,
+        PolynomialMutation, SBXCrossover, SelectionOperator, SinglePointCrossover,
+        SwapMutation,
     };
 
     pub use crate::problem::{
@@ -143,7 +146,7 @@ pub mod prelude {
     pub use crate::experiment::Experiment;
 
     pub use crate::solution::{
-        BinarySolutionBuilder, Dominance, MultiObjectiveRealSolutionBuilder,
+        BinarySolutionBuilder, MultiObjectiveRealSolutionBuilder,
         MultiObjectiveVectorRealSolutionBuilder, ParetoCrowdingDistanceQuality,
         PermutationSolutionBuilder, RealSolutionBuilder, Solution, StringSolutionBuilder,
     };

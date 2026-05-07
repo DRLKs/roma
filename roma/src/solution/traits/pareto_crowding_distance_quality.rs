@@ -9,7 +9,60 @@ pub struct ParetoCrowdingDistanceQuality {
     pub crowding_distance: Option<f64>,
 }
 
+impl ParetoCrowdingDistanceQuality {
+    /// Pareto dominance based on objective vectors (minimization semantics).
+    ///
+    /// Rules:
+    /// - `self` dominates `other` iff all objectives are <= and at least one
+    ///   objective is strictly <,
+    /// - rank and crowding-distance are **not** part of Pareto dominance;
+    ///   they are selection metadata used as tie-breakers in algorithms
+    ///   (e.g., NSGA-II tournament/replacement).
+    /// - if objective vectors are missing, empty, or mismatched in length,
+    ///   dominance is undefined and this returns `false`.
+    ///
+    /// In Pareto optimization, it is common that two solutions are
+    /// non-dominated with respect to each other. In that case this method must
+    /// return `false` in both directions.
+    fn dominates(&self, other: &Self) -> bool {
+        if self.objectives.is_empty()
+            || other.objectives.is_empty()
+            || self.objectives.len() != other.objectives.len()
+        {
+            return false;
+        }
+
+        let mut strictly_better_in_any = false;
+        for (&a, &b) in self.objectives.iter().zip(other.objectives.iter()) {
+            if a > b {
+                return false;
+            }
+            if a < b {
+                strictly_better_in_any = true;
+            }
+        }
+
+        strictly_better_in_any
+    }
+}
+
 use std::fmt;
+
+impl Solution<f64, ParetoCrowdingDistanceQuality> {
+    /// Returns the first objective if present.
+    pub fn objective(&self) -> Option<f64> {
+        self.value
+            .as_ref()
+            .and_then(|info| info.objectives.first().copied())
+    }
+
+    pub fn dominates(&self, other: &Self) -> bool {
+        match (&self.value, &other.value) {
+            (Some(a), Some(b)) => a.dominates(b),
+            _ => false,
+        }
+    }
+}
 
 impl fmt::Display for ParetoCrowdingDistanceQuality {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -39,6 +92,8 @@ impl fmt::Display for ParetoCrowdingDistanceQuality {
 }
 
 use std::str::FromStr;
+
+use crate::Solution;
 
 impl FromStr for ParetoCrowdingDistanceQuality {
     type Err = String;

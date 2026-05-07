@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use crate::solution::traits::Dominance;
 use crate::solution::Solution;
 use crate::solution_set::traits::SolutionSet;
 
@@ -32,7 +31,7 @@ where
 impl<T, Q> SolutionSet<T, Q> for VectorSolutionSet<T, Q>
 where
     T: Clone + Display,
-    Q: Clone + Dominance + Display,
+    Q: Clone + Display,
 {
     fn iter(&self) -> Box<dyn Iterator<Item = &Solution<T, Q>> + '_> {
         Box::new(self.solutions.iter())
@@ -65,10 +64,79 @@ where
 
 #[cfg(test)]
 mod test {
+    use crate::problem::traits::{maximizing_fitness, minimizing_fitness, Problem};
     use crate::solution::implementations::real_solution::RealSolutionBuilder;
     use crate::solution::implementations::string_solution::StringSolutionBuilder;
+    use crate::solution::Solution;
     use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
     use crate::solution_set::traits::SolutionSet;
+    use crate::utils::random::Random;
+
+    struct MaxProblem;
+
+    impl<T> Problem<T, f64> for MaxProblem
+    where
+        T: Clone + std::fmt::Display,
+        f64: Default,
+    {
+        fn new() -> Self {
+            Self
+        }
+
+        fn evaluate(&self, _solution: &mut Solution<T, f64>) {}
+
+        fn create_solution(&self, _rng: &mut Random) -> Solution<T, f64> {
+            panic!("not needed in tests")
+        }
+
+        fn set_problem_description(&mut self, _description: String) {}
+
+        fn get_problem_description(&self) -> String {
+            "max".to_string()
+        }
+
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+            maximizing_fitness
+        }
+
+        fn dominates(&self, solution_a: &Solution<T, f64>, solution_b: &Solution<T, f64>) -> bool {
+            solution_a.quality().copied().unwrap_or(f64::NEG_INFINITY)
+                > solution_b.quality().copied().unwrap_or(f64::NEG_INFINITY)
+        }
+    }
+
+    struct MinProblem;
+
+    impl<T> Problem<T, f64> for MinProblem
+    where
+        T: Clone + std::fmt::Display,
+        f64: Default,
+    {
+        fn new() -> Self {
+            Self
+        }
+
+        fn evaluate(&self, _solution: &mut Solution<T, f64>) {}
+
+        fn create_solution(&self, _rng: &mut Random) -> Solution<T, f64> {
+            panic!("not needed in tests")
+        }
+
+        fn set_problem_description(&mut self, _description: String) {}
+
+        fn get_problem_description(&self) -> String {
+            "min".to_string()
+        }
+
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+            minimizing_fitness
+        }
+
+        fn dominates(&self, solution_a: &Solution<T, f64>, solution_b: &Solution<T, f64>) -> bool {
+            solution_a.quality().copied().unwrap_or(f64::INFINITY)
+                < solution_b.quality().copied().unwrap_or(f64::INFINITY)
+        }
+    }
 
     #[test]
     fn get_best_solution_test() {
@@ -81,7 +149,7 @@ mod test {
         solution_set.add_solution(worst_solution);
         solution_set.add_solution(best_solution);
 
-        let best = solution_set.best_solution().unwrap();
+        let best = solution_set.best_solution(&MaxProblem).unwrap();
         assert_eq!(best.quality().copied(), Some(10.0));
     }
 
@@ -109,13 +177,26 @@ mod test {
 
         assert!(!solution_set.is_empty());
         assert_eq!(solution_set.size(), 1);
-        assert_eq!(solution_set.best_solution().unwrap().quality(), Some(&10.0));
+        assert_eq!(solution_set.best_solution(&MaxProblem).unwrap().quality(), Some(&10.0));
     }
 
     #[test]
     fn best_solution_value_or_uses_default_for_empty_set() {
         let solution_set: VectorSolutionSet<f64> = VectorSolutionSet::new();
-        assert_eq!(solution_set.best_solution_value_or(-1.0), -1.0);
+        assert_eq!(solution_set.best_solution_value_or(&MaxProblem, -1.0), -1.0);
+    }
+
+    #[test]
+    fn best_solution_supports_minimization() {
+        let mut solution_set: VectorSolutionSet<f64> = VectorSolutionSet::new();
+
+        solution_set.add_solution(RealSolutionBuilder::new(2).with_quality(10.0).build());
+        solution_set.add_solution(RealSolutionBuilder::new(2).with_quality(3.0).build());
+
+        let best = solution_set.best_solution(&MinProblem).unwrap();
+
+        assert_eq!(best.quality().copied(), Some(3.0));
+        assert_eq!(solution_set.best_solution_value_or(&MinProblem, -1.0), 3.0);
     }
 
     #[test]

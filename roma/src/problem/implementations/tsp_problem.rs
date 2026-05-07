@@ -1,5 +1,4 @@
-use crate::algorithms::objective::ImprovementDirection;
-use crate::problem::traits::Problem;
+use crate::problem::traits::{minimizing_fitness, Problem};
 use crate::solution::Solution;
 use crate::utils::random::Random;
 use std::collections::{BTreeMap, HashMap};
@@ -128,6 +127,12 @@ impl Problem<usize> for TspProblem {
         solution.set_quality(fitness);
     }
 
+    fn dominates(&self, solution_a: &Solution<usize, f64>, solution_b: &Solution<usize, f64>) -> bool {
+        let fitness_a = solution_a.quality().copied().unwrap_or(f64::INFINITY);
+        let fitness_b = solution_b.quality().copied().unwrap_or(f64::INFINITY);
+        fitness_a < fitness_b
+    }
+
     fn create_solution(&self, rng: &mut Random) -> Solution<usize> {
         let n = self.number_of_cities();
         let route: Vec<usize> = match self.fixed_start_city {
@@ -169,8 +174,8 @@ impl Problem<usize> for TspProblem {
         self.description.clone()
     }
 
-    fn get_improvement_direction(&self) -> ImprovementDirection {
-        ImprovementDirection::Minimize
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+        minimizing_fitness
     }
 
     fn format_solution(&self, solution: &Solution<usize>) -> String {
@@ -360,12 +365,10 @@ mod tests {
     }
 
     #[test]
-    fn tsp_improvement_direction_is_minimize() {
+    fn tsp_uses_minimizing_fitness() {
         let problem = TspProblem::with_distance_matrix(vec![vec![0.0]]);
-        assert_eq!(
-            problem.get_improvement_direction(),
-            ImprovementDirection::Minimize
-        );
+        assert!(problem.is_better_fitness(2.0, 3.0));
+        assert!(!problem.is_better_fitness(3.0, 2.0));
     }
 
     #[test]

@@ -1,14 +1,16 @@
-use crate::algorithms::objective::{best_worst, ImprovementDirection};
+use crate::problem::traits::Problem;
 use crate::solution::Solution;
 
 /// Calculates fitness statistics from a population
 ///
 /// Returns a tuple (best_fitness, average_fitness, worst_fitness)
-pub fn calculate_statistics<T>(
+pub fn calculate_statistics<T, P>(
     population: &[Solution<T>],
-    direction: ImprovementDirection,
+    problem: &P,
 ) -> (f64, f64, f64)
 where
+    T: Clone,
+    P: Problem<T>,
 {
     if population.is_empty() {
         return (0.0, 0.0, 0.0);
@@ -23,7 +25,17 @@ where
         sum_fitness += fitness;
     }
 
-    let (best_fitness, worst_fitness) = best_worst(&values, direction);
+    let mut best_fitness = values[0];
+    let mut worst_fitness = values[0];
+
+    for &value in values.iter().skip(1) {
+        if problem.is_better_fitness(value, best_fitness) {
+            best_fitness = value;
+        }
+        if problem.is_better_fitness(worst_fitness, value) {
+            worst_fitness = value;
+        }
+    }
 
     let average_fitness = sum_fitness / population.len() as f64;
 
@@ -33,13 +45,42 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::problem::traits::{maximizing_fitness, minimizing_fitness, Problem};
     use crate::solution::implementations::binary_solution::BinarySolutionBuilder;
     use crate::solution::Solution;
+    use crate::utils::random::Random;
+
+    struct MaxProblem;
+    struct MinProblem;
+
+    impl Problem<bool> for MaxProblem {
+        fn new() -> Self where Self: Sized { Self }
+        fn evaluate(&self, _solution: &mut Solution<bool>) {}
+        fn create_solution(&self, _rng: &mut Random) -> Solution<bool> { panic!("not needed") }
+        fn set_problem_description(&mut self, _description: String) {}
+        fn get_problem_description(&self) -> String { "max".to_string() }
+        fn dominates(&self, solution_a: &Solution<bool>, solution_b: &Solution<bool>) -> bool {
+            solution_a.quality_value() > solution_b.quality_value()
+        }
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool { maximizing_fitness }
+    }
+
+    impl Problem<bool> for MinProblem {
+        fn new() -> Self where Self: Sized { Self }
+        fn evaluate(&self, _solution: &mut Solution<bool>) {}
+        fn create_solution(&self, _rng: &mut Random) -> Solution<bool> { panic!("not needed") }
+        fn set_problem_description(&mut self, _description: String) {}
+        fn get_problem_description(&self) -> String { "min".to_string() }
+        fn dominates(&self, solution_a: &Solution<bool>, solution_b: &Solution<bool>) -> bool {
+            solution_a.quality_value() < solution_b.quality_value()
+        }
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool { minimizing_fitness }
+    }
 
     #[test]
     fn test_calculate_statistics_empty() {
         let population: Vec<Solution<bool>> = vec![];
-        let (best, avg, worst) = calculate_statistics(&population, ImprovementDirection::Maximize);
+        let (best, avg, worst) = calculate_statistics(&population, &MaxProblem);
         assert_eq!(best, 0.0);
         assert_eq!(avg, 0.0);
         assert_eq!(worst, 0.0);
@@ -52,7 +93,7 @@ mod tests {
         solution.set_quality(_fitness);
 
         let population = vec![solution];
-        let (best, avg, worst) = calculate_statistics(&population, ImprovementDirection::Maximize);
+        let (best, avg, worst) = calculate_statistics(&population, &MaxProblem);
 
         assert_eq!(best, _fitness);
         assert_eq!(avg, _fitness);
@@ -76,7 +117,7 @@ mod tests {
             .build();
 
         let population = vec![s1, s2, s3];
-        let (best, avg, worst) = calculate_statistics(&population, ImprovementDirection::Maximize);
+        let (best, avg, worst) = calculate_statistics(&population, &MaxProblem);
 
         assert_eq!(best, 20.0);
         assert_eq!(avg, 15.0);
@@ -92,7 +133,7 @@ mod tests {
             .build();
 
         let population = vec![s1, s2, s3];
-        let (best, avg, worst) = calculate_statistics(&population, ImprovementDirection::Minimize);
+        let (best, avg, worst) = calculate_statistics(&population, &MinProblem);
 
         assert_eq!(best, 10.0);
         assert_eq!(avg, 15.0);

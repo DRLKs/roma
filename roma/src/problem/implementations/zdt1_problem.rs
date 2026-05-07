@@ -1,5 +1,4 @@
-use crate::algorithms::objective::ImprovementDirection;
-use crate::problem::traits::Problem;
+use crate::problem::traits::{minimizing_fitness, Problem};
 use crate::solution::implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
 use crate::solution::traits::ParetoCrowdingDistanceQuality;
 use crate::solution::Solution;
@@ -73,6 +72,10 @@ impl Problem<f64, ParetoCrowdingDistanceQuality> for ZDT1Problem {
         solution.set_objectives(objectives);
     }
 
+    fn dominates(&self, solution_a: &Solution<f64, ParetoCrowdingDistanceQuality>, solution_b: &Solution<f64, ParetoCrowdingDistanceQuality>) -> bool {
+        solution_a.dominates(solution_b)
+    }
+
     fn set_problem_description(&mut self, description: String) {
         self.description = description;
     }
@@ -91,8 +94,8 @@ impl Problem<f64, ParetoCrowdingDistanceQuality> for ZDT1Problem {
             .build()
     }
 
-    fn get_improvement_direction(&self) -> ImprovementDirection {
-        ImprovementDirection::Minimize
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+        minimizing_fitness
     }
 
     fn format_solution(&self, solution: &Solution<f64, ParetoCrowdingDistanceQuality>) -> String {
@@ -129,7 +132,6 @@ impl Problem<f64, ParetoCrowdingDistanceQuality> for ZDT1Problem {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algorithms::objective::ImprovementDirection;
 
     #[test]
     fn test_zdt1_creation() {
@@ -176,12 +178,10 @@ mod tests {
     }
 
     #[test]
-    fn zdt1_improvement_direction_is_minimize() {
+    fn zdt1_uses_minimizing_fitness() {
         let problem = ZDT1Problem::new(30);
-        assert_eq!(
-            problem.get_improvement_direction(),
-            ImprovementDirection::Minimize
-        );
+        assert!(problem.is_better_fitness(0.25, 0.75));
+        assert!(!problem.is_better_fitness(0.75, 0.25));
     }
 
     #[test]

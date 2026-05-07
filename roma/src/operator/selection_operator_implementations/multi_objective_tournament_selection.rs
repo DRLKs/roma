@@ -1,5 +1,5 @@
-use crate::algorithms::objective::ImprovementDirection;
 use crate::operator::traits::{Operator, SelectionOperator};
+use crate::problem::traits::Problem;
 use crate::solution::ParetoCrowdingDistanceQuality;
 use crate::solution::Solution;
 use crate::utils::random::Random;
@@ -36,7 +36,7 @@ impl SelectionOperator<f64, ParetoCrowdingDistanceQuality> for MultiObjectiveTou
         &self,
         population: &'a [Solution<f64, ParetoCrowdingDistanceQuality>],
         rng: &mut Random,
-        _direction: ImprovementDirection,
+        problem: &(impl Problem<f64, ParetoCrowdingDistanceQuality> + Sync),
     ) -> &'a Solution<f64, ParetoCrowdingDistanceQuality> {
         if population.is_empty() {
             panic!("Cannot select from empty population");
@@ -78,9 +78,9 @@ impl SelectionOperator<f64, ParetoCrowdingDistanceQuality> for MultiObjectiveTou
             return solution2;
         }
 
-        if solution1.dominates(solution2) {
+        if problem.dominates(solution1, solution2) {
             solution1
-        } else if solution2.dominates(solution1) {
+        } else if problem.dominates(solution2, solution1) {
             solution2
         } else {
             // In multi-objective optimization, incomparability is common.
@@ -97,6 +97,7 @@ impl SelectionOperator<f64, ParetoCrowdingDistanceQuality> for MultiObjectiveTou
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::problem::implementations::zdt1_problem::ZDT1Problem;
     use crate::solution::MultiObjectiveRealSolutionBuilder;
 
     #[test]
@@ -108,8 +109,9 @@ mod tests {
             .with_rank(0)
             .build();
         let population = vec![solution];
+        let problem = ZDT1Problem::new(2);
 
-        let selected = selection.execute(&population, &mut rng, ImprovementDirection::Minimize);
+        let selected = selection.execute(&population, &mut rng, &problem);
         assert_eq!(selected.variables(), &[1.0]);
     }
 
@@ -119,7 +121,8 @@ mod tests {
         let selection = MultiObjectiveTournamentSelection::new();
         let mut rng = Random::new(42);
         let population: Vec<Solution<f64, ParetoCrowdingDistanceQuality>> = vec![];
-        selection.execute(&population, &mut rng, ImprovementDirection::Minimize);
+        let problem = ZDT1Problem::new(2);
+        selection.execute(&population, &mut rng, &problem);
     }
 
     #[test]
@@ -138,9 +141,10 @@ mod tests {
             .build();
 
         let population = vec![solution1, solution2];
+        let problem = ZDT1Problem::new(2);
 
         for _ in 0..10 {
-            let selected = selection.execute(&population, &mut rng, ImprovementDirection::Minimize);
+            let selected = selection.execute(&population, &mut rng, &problem);
             assert_eq!(selected.rank(), Some(0));
         }
     }
@@ -163,9 +167,10 @@ mod tests {
             .build();
 
         let population = vec![solution1, solution2];
+        let problem = ZDT1Problem::new(2);
 
         for _ in 0..10 {
-            let selected = selection.execute(&population, &mut rng, ImprovementDirection::Minimize);
+            let selected = selection.execute(&population, &mut rng, &problem);
             assert_eq!(selected.crowding_distance(), Some(2.0));
         }
     }
@@ -197,9 +202,10 @@ mod tests {
         let population = vec![solution1, solution2];
         let mut picked_first = 0usize;
         let mut picked_second = 0usize;
+        let problem = ZDT1Problem::new(2);
 
         for _ in 0..100 {
-            let selected = selection.execute(&population, &mut rng, ImprovementDirection::Minimize);
+            let selected = selection.execute(&population, &mut rng, &problem);
             if selected.variables() == &[1.0] {
                 picked_first += 1;
             } else {

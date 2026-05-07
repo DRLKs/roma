@@ -1,6 +1,3 @@
-/// Optimization direction used to sort experiment comparisons.
-use crate::ImprovementDirection;
-
 #[derive(Debug, Clone)]
 pub struct ExperimentRunResult {
     pub algorithm_name: String,
@@ -32,7 +29,7 @@ pub struct ExperimentSummary {
 
 #[derive(Debug, Clone)]
 pub struct ExperimentReport {
-    pub objective: ImprovementDirection,
+    pub objective_description: String,
     pub runs_per_case: usize,
     pub run_results: Vec<ExperimentRunResult>,
     pub failures: Vec<ExperimentFailure>,
@@ -47,7 +44,7 @@ impl ExperimentReport {
         let mut out = String::new();
 
         let _ = writeln!(out, "=== Experiment Report ===");
-        let _ = writeln!(out, "Objective: {:?}", self.objective);
+        let _ = writeln!(out, "Objective: {}", self.objective_description);
         let _ = writeln!(out, "Runs per case: {}", self.runs_per_case);
         let _ = writeln!(out, "Successful runs: {}", self.run_results.len());
         let _ = writeln!(out, "Failed runs: {}", self.failures.len());

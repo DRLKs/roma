@@ -42,9 +42,11 @@ fn ga_solves_knapsack_end_to_end_with_observer() {
     assert_eq!(result.size(), 20);
     assert!(algorithm.get_solution_set().is_some());
 
-    let best = result.best_solution().expect("Population should not be empty");
+    let best = result
+        .best_solution(&problem)
+        .expect("Population should not be empty");
     assert!(best.quality().is_some());
-    assert!(result.best_solution_value_or(f64::NEG_INFINITY).is_finite());
+    assert!(result.best_solution_value_or(&problem, f64::NEG_INFINITY).is_finite());
 }
 
 #[test]

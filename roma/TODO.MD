@@ -106,3 +106,5 @@
 Cambiar algorithm.run añadir el argumento resume
 
 [ ] 27. Creo que ExecutionStateSnapshot se puede eliminar
+
+[ ] 28. Buscar el error que tiene que tener TSP. Muy mal resultado muy poco tiempo de wall, no tiene que estar haciendo algo. Le faltan pasos seguro

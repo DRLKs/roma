@@ -1,4 +1,3 @@
-use roma_lib::algorithms::ImprovementDirection;
 use roma_lib::problem::Problem;
 use roma_lib::solution::Solution;
 use roma_lib::utils::Random;
@@ -31,8 +30,13 @@ impl Problem<i32> for DefaultFormattingProblem {
         self.description.clone()
     }
 
-    fn get_improvement_direction(&self) -> ImprovementDirection {
-        ImprovementDirection::Maximize
+    fn dominates(&self, solution_a: &Solution<i32>, solution_b: &Solution<i32>) -> bool {
+        solution_a.quality().copied().unwrap_or(f64::NEG_INFINITY)
+            > solution_b.quality().copied().unwrap_or(f64::NEG_INFINITY)
+    }
+
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+        roma_lib::problem::maximizing_fitness
     }
 }
 

@@ -1,4 +1,5 @@
-use crate::algorithms::objective::{is_better, ImprovementDirection};
+#[cfg(test)]
+use crate::problem::traits::maximizing_fitness;
 use crate::solution::Solution;
 use std::time::{Duration, Instant};
 
@@ -65,16 +66,16 @@ where
 #[derive(Clone, Debug)]
 pub struct TerminationController {
     criteria: TerminationCriteria,
-    direction: ImprovementDirection,
+    better_fitness: fn(f64, f64) -> bool,
     state: TerminationState,
     reason: Option<TerminationReason>,
 }
 
 impl TerminationController {
-    pub fn new(criteria: TerminationCriteria, direction: ImprovementDirection) -> Self {
+    pub fn new(criteria: TerminationCriteria, better_fitness: fn(f64, f64) -> bool) -> Self {
         Self {
             criteria,
-            direction,
+            better_fitness,
             state: TerminationState::new(),
             reason: None,
         }
@@ -94,7 +95,7 @@ impl TerminationController {
 
     pub fn on_best_quality(&mut self, quality: f64, iteration: usize) {
         self.state
-            .update_best_quality(quality, iteration, self.direction);
+            .update_best_quality(quality, iteration, self.better_fitness);
     }
 
     pub fn on_snapshot<T, Q>(&mut self, snapshot: &ExecutionStateSnapshot<T, Q>)
@@ -153,12 +154,12 @@ impl TerminationState {
         &mut self,
         new_quality: f64,
         iteration: usize,
-        direction: ImprovementDirection,
+        better_fitness: fn(f64, f64) -> bool,
     ) {
         self.best_quality_history.push(new_quality);
         if self.best_quality_history.len() > 1 {
             let prev = self.best_quality_history[self.best_quality_history.len() - 2];
-            let improved = is_better(new_quality, prev, direction);
+            let improved = better_fitness(new_quality, prev);
 
             if improved {
                 self.last_improvement_iteration = iteration;
@@ -235,7 +236,7 @@ mod tests {
     #[test]
     fn max_iterations_termination_triggers() {
         let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(3)]);
-        let mut controller = TerminationController::new(criteria, ImprovementDirection::Maximize);
+        let mut controller = TerminationController::new(criteria, maximizing_fitness);
 
         controller.on_snapshot(&snapshot(0, 1, 1.0));
         assert!(!controller.should_terminate());
@@ -256,7 +257,7 @@ mod tests {
     #[test]
     fn max_evaluations_termination_triggers() {
         let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxEvaluations(5)]);
-        let mut controller = TerminationController::new(criteria, ImprovementDirection::Maximize);
+        let mut controller = TerminationController::new(criteria, maximizing_fitness);
 
         controller.on_snapshot(&snapshot(0, 2, 1.0));
         assert!(!controller.should_terminate());
@@ -277,7 +278,7 @@ mod tests {
             threshold: 1e-9,
             patience: 3,
         }]);
-        let mut controller = TerminationController::new(criteria, ImprovementDirection::Maximize);
+        let mut controller = TerminationController::new(criteria, maximizing_fitness);
 
         controller.on_snapshot(&snapshot(0, 1, 10.0));
         assert!(!controller.should_terminate());
@@ -300,7 +301,7 @@ mod tests {
         let criteria = TerminationCriteria::new(vec![TerminationCriterion::TimeLimit(
             Duration::from_millis(5),
         )]);
-        let mut controller = TerminationController::new(criteria, ImprovementDirection::Maximize);
+        let mut controller = TerminationController::new(criteria, maximizing_fitness);
 
         thread::sleep(Duration::from_millis(10));
 
@@ -317,7 +318,7 @@ mod tests {
     fn no_improvement_termination_triggers() {
         let criteria =
             TerminationCriteria::new(vec![TerminationCriterion::NoImprovement { patience: 3 }]);
-        let mut controller = TerminationController::new(criteria, ImprovementDirection::Maximize);
+        let mut controller = TerminationController::new(criteria, maximizing_fitness);
 
         controller.on_snapshot(&snapshot(0, 1, 1.0));
         assert!(!controller.should_terminate());

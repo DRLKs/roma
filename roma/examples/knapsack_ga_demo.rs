@@ -45,7 +45,7 @@ fn main() {
         .run(&problem)
         .expect("GA run failed");
 
-    if let Some(best) = result.best_solution() {
+    if let Some(best) = result.best_solution(&problem) {
         println!(
             "GA finished (seed={}). Best fitness={:.4}",
             seed,

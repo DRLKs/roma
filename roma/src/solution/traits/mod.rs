@@ -6,5 +6,4 @@
 mod dominance;
 mod pareto_crowding_distance_quality;
 
-pub use dominance::Dominance;
 pub use pareto_crowding_distance_quality::ParetoCrowdingDistanceQuality;

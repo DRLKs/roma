@@ -50,7 +50,7 @@ fn main() {
     let mut algorithm = HillClimbing::new(params);
     let solutions = algorithm.run(&problem).expect("run should succeed");
 
-    if let Some(best) = solutions.best_solution() {
+    if let Some(best) = solutions.best_solution(&problem) {
         println!("best quality: {}", best.quality_value());
     }
 }

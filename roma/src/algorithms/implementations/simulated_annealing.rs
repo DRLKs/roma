@@ -2,7 +2,6 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 use crate::algorithms::checkpoint::StepStateCheckpoint;
-use crate::algorithms::objective::{is_better, non_improving_loss};
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
@@ -273,13 +272,12 @@ where
 
         let current_quality = state.current.quality_value();
         let candidate_quality = candidate.quality_value();
-        let direction = problem.get_improvement_direction();
-        let candidate_is_better = is_better(candidate_quality, current_quality, direction);
+        let candidate_is_better = problem.is_better_fitness(candidate_quality, current_quality);
 
         if candidate_is_better {
             state.current = candidate;
         } else {
-            let loss = non_improving_loss(current_quality, candidate_quality, direction);
+            let loss = problem.non_improving_fitness_loss(current_quality, candidate_quality);
 
             if state.temperature > 0.0 {
                 let acceptance_probability = (-loss / state.temperature).exp().clamp(0.0, 1.0);
@@ -291,7 +289,7 @@ where
 
         let current_best = state.best.quality_value();
         let current_value = state.current.quality_value();
-        let improved_best = is_better(current_value, current_best, direction);
+        let improved_best = problem.is_better_fitness(current_value, current_best);
 
         if improved_best {
             state.best = state.current.copy();
@@ -301,7 +299,11 @@ where
             .max(self.parameters.minimum_temperature);
     }
 
-    fn build_snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T> {
+    fn build_snapshot(
+        &self,
+        _problem: &(impl Problem<T> + Sync),
+        state: &Self::StepState,
+    ) -> ExecutionStateSnapshot<T> {
         let fit = state.best.quality_value();
         ExecutionStateSnapshot {
             iteration: state.iteration,

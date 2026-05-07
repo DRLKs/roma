@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 use std::fmt::Display;
 
-use crate::solution::traits::Dominance;
 use crate::solution::Solution;
 use crate::solution_set::traits::SolutionSet;
 
@@ -36,7 +35,7 @@ where
 impl<T, Q> SolutionSet<T, Q> for DequeSolutionSet<T, Q>
 where
     T: Clone + Display,
-    Q: Clone + Dominance + Display,
+    Q: Clone + Display,
 {
     fn iter(&self) -> Box<dyn Iterator<Item = &Solution<T, Q>> + '_> {
         Box::new(self.solutions.iter())
@@ -69,9 +68,45 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::problem::traits::{maximizing_fitness, Problem};
     use crate::solution::implementations::real_solution::RealSolutionBuilder;
+    use crate::solution::Solution;
     use crate::solution_set::implementations::deque_solution_set::DequeSolutionSet;
     use crate::solution_set::traits::SolutionSet;
+    use crate::utils::random::Random;
+
+    struct MaxProblem;
+
+    impl<T> Problem<T, f64> for MaxProblem
+    where
+        T: Clone + std::fmt::Display,
+        f64: Default,
+    {
+        fn new() -> Self {
+            Self
+        }
+
+        fn evaluate(&self, _solution: &mut Solution<T, f64>) {}
+
+        fn create_solution(&self, _rng: &mut Random) -> Solution<T, f64> {
+            panic!("not needed in tests")
+        }
+
+        fn set_problem_description(&mut self, _description: String) {}
+
+        fn get_problem_description(&self) -> String {
+            "max".to_string()
+        }
+
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+            maximizing_fitness
+        }
+
+        fn dominates(&self, solution_a: &Solution<T, f64>, solution_b: &Solution<T, f64>) -> bool {
+            solution_a.quality().copied().unwrap_or(f64::NEG_INFINITY)
+                > solution_b.quality().copied().unwrap_or(f64::NEG_INFINITY)
+        }
+    }
 
     #[test]
     fn deque_solution_set_selects_best_solution() {
@@ -79,7 +114,7 @@ mod tests {
         set.add_solution(RealSolutionBuilder::new(2).with_quality(1.0).build());
         set.add_solution(RealSolutionBuilder::new(2).with_quality(5.0).build());
 
-        let best = set.best_solution().expect("expected best solution");
+        let best = set.best_solution(&MaxProblem).expect("expected best solution");
         assert_eq!(best.quality().copied(), Some(5.0));
     }
 

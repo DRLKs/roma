@@ -1,5 +1,3 @@
-use crate::ImprovementDirection;
-
 #[inline(always)]
 pub(crate) fn mean(values: &[f64]) -> f64 {
     if values.is_empty() {
@@ -23,21 +21,4 @@ pub(crate) fn variance(values: &[f64], mean: f64) -> f64 {
         })
         .sum::<f64>()
         / values.len() as f64
-}
-
-/// Extrae el mejor y peor valor desde una lista ordenada según el objetivo.
-#[inline(always)]
-pub(crate) fn best_and_worst(sorted_values: &[f64], objective: ImprovementDirection) -> (f64, f64) {
-    debug_assert!(!sorted_values.is_empty());
-
-    match objective {
-        ImprovementDirection::Maximize => (
-            *sorted_values.last().unwrap_or(&0.0),
-            *sorted_values.first().unwrap_or(&0.0),
-        ),
-        ImprovementDirection::Minimize => (
-            *sorted_values.first().unwrap_or(&0.0),
-            *sorted_values.last().unwrap_or(&0.0),
-        ),
-    }
 }

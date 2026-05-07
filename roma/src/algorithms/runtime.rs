@@ -1,4 +1,3 @@
-use crate::algorithms::objective::ImprovementDirection;
 use crate::algorithms::termination::{
     ExecutionStateSnapshot, TerminationController, TerminationCriteria, TerminationReason,
 };
@@ -57,11 +56,11 @@ where
     fn new(
         sender: ObserverSender<T, Q>,
         criteria: TerminationCriteria,
-        direction: ImprovementDirection,
+        better_fitness: fn(f64, f64) -> bool,
     ) -> Self {
         Self {
             sender,
-            termination: RefCell::new(TerminationController::new(criteria, direction)),
+            termination: RefCell::new(TerminationController::new(criteria, better_fitness)),
             next_snapshot_seq: RefCell::new(0),
         }
     }
@@ -221,7 +220,7 @@ where
 pub fn run_with_observer_runtime<T, Q, R, F>(
     observers: &mut Vec<Box<dyn AlgorithmObserver<T, Q>>>,
     criteria: TerminationCriteria,
-    direction: ImprovementDirection,
+    better_fitness: fn(f64, f64) -> bool,
     algorithm_name: impl Into<String>,
     task: F,
 ) -> R
@@ -233,7 +232,7 @@ where
     let algorithm_name = algorithm_name.into();
 
     if observers.is_empty() {
-        let context = ExecutionContext::new(None, criteria, direction);
+        let context = ExecutionContext::new(None, criteria, better_fitness);
         context.start(algorithm_name);
         let output = task(&context);
         context.end(output.total_generations, output.total_evaluations);
@@ -241,7 +240,7 @@ where
     }
 
     let runtime = ObserverRuntime::new(std::mem::take(observers));
-    let context = ExecutionContext::new(runtime.sender(), criteria, direction);
+    let context = ExecutionContext::new(runtime.sender(), criteria, better_fitness);
     context.start(algorithm_name);
 
     let output = task(&context);
@@ -270,7 +269,7 @@ pub fn spawn_algorithm_run<A, T, Q, P>(
 ) -> JoinHandle<(A, Result<A::SolutionSet, String>)>
 where
     T: Clone + Send + 'static + Display,
-    Q: Clone + Default + crate::solution::traits::Dominance + Send + 'static + Display,
+    Q: Clone + Default + Send + 'static + Display,
     A: Algorithm<T, Q> + Send + 'static,
     A::SolutionSet: Clone + Send + 'static,
     P: Problem<T, Q> + Sync + Send + 'static,
@@ -285,6 +284,7 @@ where
 mod tests {
     use super::*;
     use crate::algorithms::termination::TerminationCriterion;
+    use crate::problem::traits::maximizing_fitness;
     use crate::solution::RealSolutionBuilder;
 
     fn snapshot(
@@ -310,8 +310,7 @@ mod tests {
     #[test]
     fn snapshot_with_seq_updates_termination_state() {
         let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(2)]);
-        let context: ExecutionContext<f64> =
-            ExecutionContext::new(None, criteria, ImprovementDirection::Maximize);
+        let context: ExecutionContext<f64> = ExecutionContext::new(None, criteria, maximizing_fitness);
 
         assert_eq!(*context.next_snapshot_seq.borrow(), 0);
         context.update_execution_state(&snapshot(0, 1, 1.0));

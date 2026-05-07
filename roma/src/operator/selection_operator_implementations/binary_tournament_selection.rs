@@ -1,5 +1,5 @@
-use crate::algorithms::objective::{is_better, ImprovementDirection};
 use crate::operator::traits::{Operator, SelectionOperator};
+use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 
@@ -38,7 +38,7 @@ where
         &self,
         population: &'a [Solution<T>],
         rng: &mut Random,
-        direction: ImprovementDirection,
+        problem: &(impl Problem<T> + Sync),
     ) -> &'a Solution<T> {
         if population.is_empty() {
             panic!("Cannot select from empty population");
@@ -59,11 +59,7 @@ where
         let individual1 = &population[index1];
         let individual2 = &population[index2];
 
-        if is_better(
-            individual2.quality_value(),
-            individual1.quality_value(),
-            direction,
-        ) {
+        if problem.dominates(individual2, individual1) {
             individual2
         } else {
             individual1
@@ -74,8 +70,63 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algorithms::objective::ImprovementDirection;
+    use crate::problem::traits::{maximizing_fitness, minimizing_fitness, Problem};
     use crate::solution::BinarySolutionBuilder;
+
+    struct MaxProblem;
+    struct MinProblem;
+
+    impl Problem<bool> for MaxProblem {
+        fn new() -> Self {
+            Self
+        }
+
+        fn evaluate(&self, _solution: &mut Solution<bool>) {}
+
+        fn create_solution(&self, _rng: &mut Random) -> Solution<bool> {
+            panic!("not needed in tests")
+        }
+
+        fn set_problem_description(&mut self, _description: String) {}
+
+        fn get_problem_description(&self) -> String {
+            "max".to_string()
+        }
+
+        fn dominates(&self, solution_a: &Solution<bool>, solution_b: &Solution<bool>) -> bool {
+            solution_a.quality_value() > solution_b.quality_value()
+        }
+
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+            maximizing_fitness
+        }
+    }
+
+    impl Problem<bool> for MinProblem {
+        fn new() -> Self {
+            Self
+        }
+
+        fn evaluate(&self, _solution: &mut Solution<bool>) {}
+
+        fn create_solution(&self, _rng: &mut Random) -> Solution<bool> {
+            panic!("not needed in tests")
+        }
+
+        fn set_problem_description(&mut self, _description: String) {}
+
+        fn get_problem_description(&self) -> String {
+            "min".to_string()
+        }
+
+        fn dominates(&self, solution_a: &Solution<bool>, solution_b: &Solution<bool>) -> bool {
+            solution_a.quality_value() < solution_b.quality_value()
+        }
+
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+            minimizing_fitness
+        }
+    }
 
     #[test]
     fn test_binary_tournament_name() {
@@ -95,7 +146,7 @@ mod tests {
 
         let population = vec![solution1, solution2];
 
-        let selected = selection.execute(&population, &mut rng, ImprovementDirection::Maximize);
+        let selected = selection.execute(&population, &mut rng, &MaxProblem);
 
         // Should consistently select the better solution
         assert_eq!(selected.quality_value(), 10.0);
@@ -109,7 +160,7 @@ mod tests {
 
         let population: Vec<Solution<bool>> = vec![];
 
-        let _selected = selection.execute(&population, &mut rng, ImprovementDirection::Maximize);
+        let _selected = selection.execute(&population, &mut rng, &MaxProblem);
     }
 
     #[test]
@@ -124,7 +175,7 @@ mod tests {
 
         let population = vec![solution];
 
-        let selected = selection.execute(&population, &mut rng, ImprovementDirection::Maximize);
+        let selected = selection.execute(&population, &mut rng, &MaxProblem);
 
         assert_eq!(selected.quality_value(), fitness);
     }
@@ -139,7 +190,7 @@ mod tests {
 
         let population = vec![solution1, solution2];
 
-        let selected = selection.execute(&population, &mut rng, ImprovementDirection::Minimize);
+        let selected = selection.execute(&population, &mut rng, &MinProblem);
         assert_eq!(selected.quality_value(), 5.0);
     }
 }

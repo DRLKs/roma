@@ -1,4 +1,4 @@
-use crate::algorithms::objective::ImprovementDirection;
+use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 
@@ -100,7 +100,7 @@ where
         &self,
         population: &'a [Solution<T, Q>],
         rng: &mut Random,
-        direction: ImprovementDirection,
+        problem: &(impl Problem<T, Q> + Sync),
     ) -> &'a Solution<T, Q>;
 
     /// Selects multiple solutions from a population.
@@ -117,10 +117,10 @@ where
         population: &'a [Solution<T, Q>],
         count: usize,
         rng: &mut Random,
-        direction: ImprovementDirection,
+        problem: &(impl Problem<T, Q> + Sync),
     ) -> Vec<&'a Solution<T, Q>> {
         (0..count)
-            .map(|_| self.execute(population, rng, direction))
+            .map(|_| self.execute(population, rng, problem))
             .collect()
     }
 }

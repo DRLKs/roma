@@ -1,7 +1,6 @@
 use std::f64::consts::PI;
 
-use crate::algorithms::objective::ImprovementDirection;
-use crate::problem::traits::Problem;
+use crate::problem::traits::{minimizing_fitness, Problem};
 use crate::solution::{RealSolutionBuilder, Solution};
 use crate::utils::random::Random;
 
@@ -83,6 +82,13 @@ impl Problem<f64> for RastriginProblem {
         solution.set_quality(value);
     }
 
+    /// The solution that dominates is the one who is near to zero
+    fn dominates(&self, solution_a: &Solution<f64, f64>, solution_b: &Solution<f64, f64>) -> bool {
+        let quality_a = solution_a.quality().copied().unwrap_or(f64::INFINITY);
+        let quality_b = solution_b.quality().copied().unwrap_or(f64::INFINITY);
+        quality_a.abs() < quality_b.abs()
+    }
+
     fn create_solution(&self, rng: &mut Random) -> Solution<f64> {
         let span = self.upper_bound - self.lower_bound;
         let variables: Vec<f64> = (0..self.number_of_variables)
@@ -102,8 +108,8 @@ impl Problem<f64> for RastriginProblem {
         self.description.clone()
     }
 
-    fn get_improvement_direction(&self) -> ImprovementDirection {
-        ImprovementDirection::Minimize
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+        minimizing_fitness
     }
 
     fn format_solution(&self, solution: &Solution<f64>) -> String {
@@ -149,13 +155,11 @@ mod tests {
     }
 
     #[test]
-    fn rastrigin_improvement_direction_is_minimize() {
+    fn rastrigin_uses_minimizing_fitness() {
         let problem = RastriginProblem::new_default();
 
-        assert_eq!(
-            problem.get_improvement_direction(),
-            ImprovementDirection::Minimize
-        );
+        assert!(problem.is_better_fitness(1.0, 5.0));
+        assert!(!problem.is_better_fitness(5.0, 1.0));
     }
 
     #[test]

@@ -2,7 +2,6 @@ use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
 use crate::algorithms::checkpoint::StepStateCheckpoint;
-use crate::algorithms::objective::is_better;
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
@@ -86,13 +85,6 @@ where
     parameters: HillClimbingParameters<T, M>,
     solution_set: Option<VectorSolutionSet<T>>,
     observers: Vec<Box<dyn AlgorithmObserver<T>>>,
-}
-
-impl<T, M> HillClimbing<T, M>
-where
-    T: Clone,
-    M: MutationOperator<T>,
-{
 }
 
 pub struct HillClimbingState<T>
@@ -263,18 +255,19 @@ where
         problem.evaluate(&mut neighbor);
         state.evaluations += 1;
 
-        let improved = is_better(
-            neighbor.quality_value(),
-            state.current.quality_value(),
-            problem.get_improvement_direction(),
-        );
+        let improved =
+            problem.is_better_fitness(neighbor.quality_value(), state.current.quality_value());
 
         if improved {
             state.current = neighbor;
         }
     }
 
-    fn build_snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T> {
+    fn build_snapshot(
+        &self,
+        _problem: &(impl Problem<T> + Sync),
+        state: &Self::StepState,
+    ) -> ExecutionStateSnapshot<T> {
         let fit = state.current.quality_value();
         ExecutionStateSnapshot {
             iteration: state.iteration,

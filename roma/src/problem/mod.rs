@@ -3,7 +3,7 @@
 //! The central abstraction is [`Problem`], which defines how to:
 //! - create random candidate solutions,
 //! - evaluate quality/fitness,
-//! - declare objective direction (minimize/maximize),
+//! - compare fitness according to problem-owned semantics,
 //! - render domain-specific solution summaries for observers.
 
 pub(crate) mod implementations;
@@ -15,4 +15,4 @@ pub use implementations::{
     tsp_problem::{build_tsp_from_records, TspProblem},
     zdt1_problem::ZDT1Problem,
 };
-pub use traits::Problem;
+pub use traits::{maximizing_fitness, minimizing_fitness, Problem};

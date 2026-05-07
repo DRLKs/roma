@@ -2,7 +2,6 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 use crate::algorithms::checkpoint::StepStateCheckpoint;
-use crate::algorithms::objective::{is_better, ImprovementDirection};
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
@@ -124,7 +123,6 @@ where
     T: Clone,
 {
     population: Vec<Solution<T>>,
-    direction: ImprovementDirection,
     generation: usize,
     evaluations: usize,
     run_seed: u64,
@@ -154,14 +152,9 @@ where
             .collect::<Vec<String>>()
             .join(",");
 
-        let dir_str = match self.direction {
-            ImprovementDirection::Minimize => "min",
-            ImprovementDirection::Maximize => "max",
-        };
-
         format!(
-            "iter={};eval={};seed={};dir={};pop=[{}]",
-            self.generation, self.evaluations, self.run_seed, dir_str, encoded_pop
+            "iter={};eval={};seed={};pop=[{}]",
+            self.generation, self.evaluations, self.run_seed, encoded_pop
         )
     }
 
@@ -181,11 +174,6 @@ where
             .and_then(|s| s.parse().ok())
             .unwrap_or_else(seed_from_time);
 
-        let direction = match parts.get("dir") {
-            Some(&"max") => ImprovementDirection::Maximize,
-            _ => ImprovementDirection::Minimize, // Default o "min"
-        };
-
         let population = parts
             .get("pop")
             .map(|pop_str| {
@@ -200,7 +188,6 @@ where
 
         Self {
             population,
-            direction,
             generation,
             evaluations,
             run_seed,
@@ -253,7 +240,6 @@ where
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
         problem: &(impl Problem<T> + Sync),
         current_population: &[Solution<T>],
-        direction: ImprovementDirection,
         generation: usize,
         run_seed: u64,
         evaluations: &mut usize,
@@ -263,12 +249,11 @@ where
             parameters,
             problem,
             current_population,
-            direction,
             generation_seed,
             evaluations,
         );
-        Self::apply_elitism(parameters, current_population, &mut offspring, direction);
-        Self::sort_population(&mut offspring, direction);
+        Self::apply_elitism(parameters, problem, current_population, &mut offspring);
+        Self::sort_population(problem, &mut offspring);
         offspring.truncate(parameters.population_size);
         offspring
     }
@@ -277,7 +262,6 @@ where
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
         problem: &(impl Problem<T> + Sync),
         population: &[Solution<T>],
-        direction: ImprovementDirection,
         generation_seed: u64,
         evaluations: &mut usize,
     ) -> Vec<Solution<T>> {
@@ -289,7 +273,6 @@ where
                 parameters,
                 problem,
                 population,
-                direction,
                 generation_seed,
             )
         } else {
@@ -297,7 +280,6 @@ where
                 parameters,
                 problem,
                 population,
-                direction,
                 thread_count,
                 generation_seed,
             )
@@ -312,7 +294,6 @@ where
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
         problem: &(impl Problem<T> + Sync),
         population: &[Solution<T>],
-        direction: ImprovementDirection,
         generation_seed: u64,
     ) -> (Vec<Solution<T>>, usize) {
         let mut offspring_population = Vec::with_capacity(parameters.population_size);
@@ -322,10 +303,10 @@ where
         while offspring_population.len() < parameters.population_size {
             let parent1 = parameters
                 .selection_operator
-                .execute(population, &mut rng, direction);
+                .execute(population, &mut rng, problem);
             let parent2 = parameters
                 .selection_operator
-                .execute(population, &mut rng, direction);
+                .execute(population, &mut rng, problem);
 
             let mut offspring = if rng.next_f64() < parameters.crossover_probability {
                 parameters
@@ -359,7 +340,6 @@ where
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
         problem: &(impl Problem<T> + Sync),
         population: &[Solution<T>],
-        direction: ImprovementDirection,
         thread_count: usize,
         generation_seed: u64,
     ) -> (Vec<Solution<T>>, usize) {
@@ -389,12 +369,12 @@ where
                         let parent1 = parameters.selection_operator.execute(
                             population,
                             &mut local_rng,
-                            direction,
+                            problem,
                         );
                         let parent2 = parameters.selection_operator.execute(
                             population,
                             &mut local_rng,
-                            direction,
+                            problem,
                         );
 
                         let mut children =
@@ -439,9 +419,9 @@ where
 
     fn apply_elitism(
         parameters: &GeneticAlgorithmParameters<T, C, M, Sel>,
+        problem: &(impl Problem<T> + Sync),
         current_population: &[Solution<T>],
         next_population: &mut Vec<Solution<T>>,
-        direction: ImprovementDirection,
     ) {
         if parameters.elite_size == 0 || current_population.is_empty() {
             return;
@@ -456,12 +436,9 @@ where
         elite_indices.sort_by(|&ia, &ib| {
             let a = &current_population[ia];
             let b = &current_population[ib];
-            let a_val = a.quality_value();
-            let b_val = b.quality_value();
-
-            if is_better(a_val, b_val, direction) {
+            if problem.dominates(a, b) {
                 std::cmp::Ordering::Less
-            } else if is_better(b_val, a_val, direction) {
+            } else if problem.dominates(b, a) {
                 std::cmp::Ordering::Greater
             } else {
                 std::cmp::Ordering::Equal
@@ -469,7 +446,7 @@ where
         });
         elite_indices.truncate(elite_count);
 
-        Self::sort_population(next_population, direction);
+        Self::sort_population(problem, next_population);
         next_population.truncate(parameters.population_size.saturating_sub(elite_count));
         next_population.extend(
             elite_indices
@@ -478,13 +455,11 @@ where
         );
     }
 
-    fn sort_population(population: &mut [Solution<T>], direction: ImprovementDirection) {
+    fn sort_population(problem: &(impl Problem<T> + Sync), population: &mut [Solution<T>]) {
         population.sort_by(|a, b| {
-            let a_val = a.quality_value();
-            let b_val = b.quality_value();
-            let ordering = if is_better(a_val, b_val, direction) {
+            let ordering = if problem.dominates(a, b) {
                 std::cmp::Ordering::Less
-            } else if is_better(b_val, a_val, direction) {
+            } else if problem.dominates(b, a) {
                 std::cmp::Ordering::Greater
             } else {
                 std::cmp::Ordering::Equal
@@ -578,11 +553,9 @@ where
         let run_seed = Random::resolve_seed(self.parameters.random_seed);
         let mut init_rng = Random::new(Random::derive_seed(run_seed, 0));
         let population = Self::initialize_population(&self.parameters, problem, &mut init_rng);
-        let direction = problem.get_improvement_direction();
 
         GeneticAlgorithmState {
             population,
-            direction,
             generation: 0,
             evaluations: self.parameters.population_size,
             run_seed,
@@ -600,25 +573,24 @@ where
             &self.parameters,
             problem,
             &state.population,
-            state.direction,
             state.generation,
             state.run_seed,
             &mut state.evaluations,
         );
     }
 
-    fn build_snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T> {
-        let (_best, avg, worst) = calculate_statistics(&state.population, state.direction);
+    fn build_snapshot(
+        &self,
+        problem: &(impl Problem<T> + Sync),
+        state: &Self::StepState,
+    ) -> ExecutionStateSnapshot<T> {
+        let (_best, avg, worst) = calculate_statistics(&state.population, problem);
         let best_solution = state
             .population
             .iter()
             .cloned()
             .reduce(|best, candidate| {
-                if is_better(
-                    candidate.quality_value(),
-                    best.quality_value(),
-                    state.direction,
-                ) {
+                if problem.is_better_fitness(candidate.quality_value(), best.quality_value()) {
                     candidate
                 } else {
                     best

@@ -1,5 +1,4 @@
 use crate::algorithms::checkpoint::StepStateCheckpoint;
-use crate::algorithms::objective::{best_worst, is_better, ImprovementDirection};
 use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
@@ -89,8 +88,6 @@ pub struct PSOState {
     velocities: Vec<Vec<f64>>,
     personal_best: Vec<Solution<bool>>,
     global_best: Solution<bool>,
-    /// Problem objective direction (maximize/minimize), taken from `Problem`.
-    direction: ImprovementDirection,
     rng: Random,
     iteration: usize,
     evaluations: usize,
@@ -139,14 +136,9 @@ impl StepStateCheckpoint<bool, f64> for PSOState {
         let encoded_g_best = self.global_best.encode();
 
         format!(
-            "iter={};eval={};dir={};particles=[{}];vels=[{}];pbests=[{}];gbest={}",
+            "iter={};eval={};particles=[{}];vels=[{}];pbests=[{}];gbest={}",
             self.iteration,
             self.evaluations,
-            if matches!(self.direction, ImprovementDirection::Maximize) {
-                "max"
-            } else {
-                "min"
-            },
             encoded_particles,
             encoded_velocities,
             encoded_p_bests,
@@ -174,11 +166,6 @@ impl StepStateCheckpoint<bool, f64> for PSOState {
 
         let iteration = parts.get("iter").and_then(|s| s.parse().ok()).unwrap_or(0);
         let evaluations = parts.get("eval").and_then(|s| s.parse().ok()).unwrap_or(0);
-        let direction = match parts.get("dir") {
-            Some(&"max") => ImprovementDirection::Maximize,
-            _ => ImprovementDirection::Minimize,
-        };
-
         let particles = split_list("particles")
             .filter_map(|s| Solution::decode(s).ok())
             .collect();
@@ -206,7 +193,6 @@ impl StepStateCheckpoint<bool, f64> for PSOState {
             velocities,
             personal_best,
             global_best,
-            direction,
             rng: Random::new(seed_from_time()),
             iteration,
             evaluations,
@@ -323,7 +309,6 @@ impl Algorithm<bool> for PSO {
     }
 
     fn initialize_step_state(&self, problem: &(impl Problem<bool> + Sync)) -> Self::StepState {
-        let direction: ImprovementDirection = problem.get_improvement_direction();
         let mut rng = Random::new(self.parameters.random_seed.unwrap_or_else(seed_from_time));
 
         let mut particles = Vec::with_capacity(self.parameters.swarm_size);
@@ -349,7 +334,7 @@ impl Algorithm<bool> for PSO {
             .iter()
             .cloned()
             .reduce(|a, b| {
-                if is_better(b.quality_value(), a.quality_value(), direction) {
+                if problem.is_better_fitness(b.quality_value(), a.quality_value()) {
                     b
                 } else {
                     a
@@ -362,7 +347,6 @@ impl Algorithm<bool> for PSO {
             velocities,
             personal_best,
             global_best,
-            direction,
             rng,
             iteration: 0,
             evaluations: self.parameters.swarm_size,
@@ -433,25 +417,27 @@ impl Algorithm<bool> for PSO {
         state.evaluations += state.particles.len();
 
         for i in 0..state.particles.len() {
-            if is_better(
+            if problem.is_better_fitness(
                 state.particles[i].quality_value(),
                 state.personal_best[i].quality_value(),
-                state.direction,
             ) {
                 state.personal_best[i] = state.particles[i].copy();
             }
 
-            if is_better(
+            if problem.is_better_fitness(
                 state.personal_best[i].quality_value(),
                 state.global_best.quality_value(),
-                state.direction,
             ) {
                 state.global_best = state.personal_best[i].copy();
             }
         }
     }
 
-    fn build_snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<bool> {
+    fn build_snapshot(
+        &self,
+        problem: &(impl Problem<bool> + Sync),
+        state: &Self::StepState,
+    ) -> ExecutionStateSnapshot<bool> {
         if state.particles.is_empty() {
             return ExecutionStateSnapshot {
                 iteration: state.iteration,
@@ -466,7 +452,16 @@ impl Algorithm<bool> for PSO {
         let values: Vec<f64> = state.particles.iter().map(|s| s.quality_value()).collect();
         let average = values.iter().sum::<f64>() / values.len() as f64;
 
-        let (best_value, worst_value) = best_worst(&values, state.direction);
+        let mut best_value = values[0];
+        let mut worst_value = values[0];
+        for &value in values.iter().skip(1) {
+            if problem.is_better_fitness(value, best_value) {
+                best_value = value;
+            }
+            if problem.is_better_fitness(worst_value, value) {
+                worst_value = value;
+            }
+        }
 
         ExecutionStateSnapshot {
             iteration: state.iteration,
@@ -535,7 +530,7 @@ mod tests {
     use super::*;
     use crate::algorithms::termination::TerminationCriterion;
     use crate::problem::implementations::knapsack_problem::KnapsackBuilder;
-    use crate::problem::traits::Problem;
+    use crate::problem::traits::{minimizing_fitness, Problem};
     use crate::solution::Solution;
     use crate::utils::random::Random;
 
@@ -564,8 +559,13 @@ mod tests {
             "MinOnesProblem".to_string()
         }
 
-        fn get_improvement_direction(&self) -> ImprovementDirection {
-            ImprovementDirection::Minimize
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+            minimizing_fitness
+        }
+
+        fn dominates(&self, solution_a: &Solution<bool, f64>, solution_b: &Solution<bool, f64>) -> bool {
+            solution_a.quality().copied().unwrap_or(f64::INFINITY)
+                < solution_b.quality().copied().unwrap_or(f64::INFINITY)
         }
     }
 

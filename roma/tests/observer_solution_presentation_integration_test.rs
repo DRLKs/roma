@@ -1,6 +1,5 @@
 use roma_lib::algorithms::{
-    Algorithm, HillClimbing, HillClimbingParameters, ImprovementDirection, TerminationCriteria,
-    TerminationCriterion,
+    Algorithm, HillClimbing, HillClimbingParameters, TerminationCriteria, TerminationCriterion,
 };
 use roma_lib::observer::{AlgorithmEvent, AlgorithmObserver, Observable};
 use roma_lib::operator::BitFlipMutation;
@@ -65,8 +64,13 @@ impl Problem<bool> for FormattedBinaryProblem {
         self.description.clone()
     }
 
-    fn get_improvement_direction(&self) -> ImprovementDirection {
-        ImprovementDirection::Maximize
+    fn dominates(&self, solution_a: &Solution<bool>, solution_b: &Solution<bool>) -> bool {
+        solution_a.quality().copied().unwrap_or(f64::NEG_INFINITY)
+            > solution_b.quality().copied().unwrap_or(f64::NEG_INFINITY)
+    }
+
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+        roma_lib::problem::maximizing_fitness
     }
 
     fn format_solution(&self, solution: &Solution<bool>) -> String {

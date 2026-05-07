@@ -478,20 +478,19 @@ where
         _context: &ExecutionContext<f64, ParetoCrowdingDistanceQuality>,
     ) {
         state.generation += 1;
-        let direction = problem.get_improvement_direction();
         let mut offspring = Vec::with_capacity(self.parameters.population_size);
 
         while offspring.len() < self.parameters.population_size {
             let parent1 = self.parameters.selection_operator.execute(
                 &state.population,
                 &mut state.rng,
-                direction,
+                problem,
             );
 
             let parent2 = self.parameters.selection_operator.execute(
                 &state.population,
                 &mut state.rng,
-                direction,
+                problem,
             );
 
             let mut children = if state.rng.next_f64() < self.parameters.crossover_probability {
@@ -545,6 +544,7 @@ where
 
     fn build_snapshot(
         &self,
+        _problem: &(impl Problem<f64, ParetoCrowdingDistanceQuality> + Sync),
         state: &Self::StepState,
     ) -> ExecutionStateSnapshot<f64, ParetoCrowdingDistanceQuality> {
         let worst = state

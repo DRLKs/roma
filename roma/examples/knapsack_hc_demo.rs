@@ -38,7 +38,7 @@ fn main() {
         .run(&problem)
         .expect("Hill Climbing run failed");
 
-    if let Some(best) = result.best_solution() {
+    if let Some(best) = result.best_solution(&problem) {
         println!(
             "Hill-Climbing finished (seed={}). Best fitness={:.4}",
             seed,

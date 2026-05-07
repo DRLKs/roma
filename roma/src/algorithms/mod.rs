@@ -12,7 +12,6 @@
 pub(crate) mod async_runner;
 pub(crate) mod checkpoint;
 pub(crate) mod implementations;
-pub(crate) mod objective;
 pub(crate) mod runtime;
 pub(crate) mod termination;
 pub(crate) mod traits;
@@ -25,7 +24,6 @@ pub use implementations::{
     pso::{PSOParameters, PSO},
     simulated_annealing::{SimulatedAnnealing, SimulatedAnnealingParameters},
 };
-pub use objective::{best_worst, is_better, non_improving_loss, ImprovementDirection};
 pub use runtime::{spawn_algorithm_run, ExecutionContext};
 pub use termination::{
     ExecutionStateSnapshot, TerminationController, TerminationCriteria, TerminationCriterion,

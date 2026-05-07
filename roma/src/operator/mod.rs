@@ -19,7 +19,8 @@ pub use mutation_operator_implementations::{
 };
 
 pub use crossover_operator_implementations::{
-    sbx_crossover::SBXCrossover, single_point_crossover::SinglePointCrossover,
+    order_crossover::OrderCrossover, sbx_crossover::SBXCrossover,
+    single_point_crossover::SinglePointCrossover,
 };
 
 pub use selection_operator_implementations::{
@@ -36,6 +37,7 @@ pub mod mutation {
 
 /// Idiomatic short aliases for operator groups.
 pub mod crossover {
+    pub use super::crossover_operator_implementations::order_crossover::OrderCrossover;
     pub use super::crossover_operator_implementations::sbx_crossover::SBXCrossover;
     pub use super::crossover_operator_implementations::single_point_crossover::SinglePointCrossover;
 }

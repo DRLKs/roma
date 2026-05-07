@@ -18,7 +18,7 @@ pub use implementations::{
     real_solution::RealSolutionBuilder,
     string_solution::StringSolutionBuilder,
 };
-pub use traits::{Dominance, ParetoCrowdingDistanceQuality};
+pub use traits::ParetoCrowdingDistanceQuality;
 
 /// Generic optimization solution.
 ///
@@ -44,7 +44,7 @@ pub struct Solution<T, Q = f64> {
     /// For scalar optimization this is usually `f64`.
     /// For vector-based multi-objective optimization this can be `Vec<f64>`.
     /// For metadata-rich workflows this can be a custom type.
-    quality: Option<Q>,
+    value: Option<Q>,
 }
 
 impl<T: Display, Q: Display> Solution<T, Q> {
@@ -54,7 +54,7 @@ impl<T: Display, Q: Display> Solution<T, Q> {
             variables,
             real_lower_bounds: None,
             real_upper_bounds: None,
-            quality: None,
+            value: None,
         }
     }
 
@@ -159,22 +159,22 @@ impl<T: Display, Q: Display> Solution<T, Q> {
 
     /// Returns quality payload if present.
     pub fn quality(&self) -> Option<&Q> {
-        self.quality.as_ref()
+        self.value.as_ref()
     }
 
     /// Returns mutable quality payload if present.
     pub fn quality_mut(&mut self) -> Option<&mut Q> {
-        self.quality.as_mut()
+        self.value.as_mut()
     }
 
     /// Replaces quality payload.
     pub fn set_quality(&mut self, quality: Q) {
-        self.quality = Some(quality);
+        self.value = Some(quality);
     }
 
     /// Returns true when quality payload is present.
     pub fn has_quality(&self) -> bool {
-        self.quality.is_some()
+        self.value.is_some()
     }
 
     /// Invalidates the quality cache.
@@ -183,11 +183,11 @@ impl<T: Display, Q: Display> Solution<T, Q> {
     /// After invalidation, the solution has no valid quality and must be
     /// re-evaluated by the problem.
     pub fn invalidate(&mut self) {
-        self.quality = None;
+        self.value = None;
     }
 
     pub fn encode(&self) -> String {
-        let quality_string = match &self.quality {
+        let quality_string = match &self.value {
             Some(q) => q.to_string(),
             None => "None".to_string(),
         };
@@ -235,7 +235,7 @@ impl<T: Display, Q: Display> Solution<T, Q> {
             variables,
             real_lower_bounds: None,
             real_upper_bounds: None,
-            quality,
+            value: quality,
         })
     }
 }
@@ -281,26 +281,10 @@ impl<Q> Solution<f64, Q> {
     }
 }
 
-impl<T, Q> Solution<T, Q>
-where
-    Q: traits::Dominance,
-{
-    /// Returns `true` when this solution dominates `other` according to
-    /// the quality-cache dominance semantics.
-    ///
-    /// If any quality cache is missing, returns `false`.
-    pub fn dominates(&self, other: &Self) -> bool {
-        match (&self.quality, &other.quality) {
-            (Some(a), Some(b)) => a.dominates(b),
-            _ => false,
-        }
-    }
-}
-
 impl<T> Solution<T, f64> {
     /// Returns the scalar quality value if present.
     pub fn try_quality_value(&self) -> Option<f64> {
-        self.quality
+        self.value
     }
 
     /// Returns the scalar quality value.
@@ -312,9 +296,17 @@ impl<T> Solution<T, f64> {
     /// states (non-evaluated solutions participating in selection/ranking).
     /// Use [`try_quality_value`](Self::try_quality_value) when absence is expected.
     pub fn quality_value(&self) -> f64 {
-        self.quality
+        self.value
             .expect("quality_value() called on a solution without evaluated quality")
     }
+
+    pub fn has_bigger_quality(&self, other: &Self) -> bool {
+        match (self.value, other.value) {
+            (Some(a), Some(b)) => a > b,
+            _ => false,
+        }
+    }
+
 }
 
 fn finalize_scalar_solution<T: Display>(variables: Vec<T>, quality: Option<f64>) -> Solution<T> {

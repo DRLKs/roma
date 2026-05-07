@@ -1,5 +1,4 @@
-use crate::algorithms::objective::ImprovementDirection;
-use crate::problem::traits::Problem;
+use crate::problem::traits::{maximizing_fitness, Problem};
 use crate::solution::Solution;
 use crate::utils::random::Random;
 use std::collections::HashMap;
@@ -96,6 +95,12 @@ impl Problem<bool> for KnapsackProblem {
         solution.set_quality(_fitness);
     }
 
+    fn dominates(&self, solution_a: &Solution<bool, f64>, solution_b: &Solution<bool, f64>) -> bool {
+        let fitness_a = solution_a.quality().copied().unwrap_or(f64::NEG_INFINITY);
+        let fitness_b = solution_b.quality().copied().unwrap_or(f64::NEG_INFINITY);
+        fitness_a > fitness_b
+    }
+
     fn create_solution(&self, _rng: &mut Random) -> Solution<bool> {
         let mut variables: Vec<bool> = vec![];
         for _ in 0..self.number_of_items {
@@ -112,8 +117,8 @@ impl Problem<bool> for KnapsackProblem {
         self.description.clone()
     }
 
-    fn get_improvement_direction(&self) -> ImprovementDirection {
-        ImprovementDirection::Maximize
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+        maximizing_fitness
     }
 
     fn format_solution(&self, solution: &Solution<bool>) -> String {
@@ -254,7 +259,6 @@ pub fn build_knapsack_from_records(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algorithms::objective::ImprovementDirection;
 
     #[test]
     fn problem_description_test() {
@@ -314,12 +318,10 @@ mod tests {
     }
 
     #[test]
-    fn knapsack_improvement_direction_is_maximize() {
+    fn knapsack_uses_maximizing_fitness() {
         let problem = KnapsackBuilder::new().build();
-        assert_eq!(
-            problem.get_improvement_direction(),
-            ImprovementDirection::Maximize
-        );
+        assert!(problem.is_better_fitness(10.0, 5.0));
+        assert!(!problem.is_better_fitness(5.0, 10.0));
     }
 
     #[test]

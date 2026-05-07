@@ -57,7 +57,7 @@ fn benchmark_sequential(problem: &KnapsackProblem, instances: usize, base_seed: 
         for i in 0..instances {
             let mut algorithm = GeneticAlgorithm::new(ga_params(base_seed + i as u64));
             let solution_set = algorithm.run(problem)?;
-            checksum += solution_set.best_solution_value_or(0.0);
+            checksum += solution_set.best_solution_value_or(problem, 0.0);
         }
 
         Ok::<f64, String>(checksum)
@@ -79,7 +79,7 @@ fn benchmark_spawn_runtime(problem: Arc<KnapsackProblem>, instances: usize, base
                 .join()
                 .expect("spawn_algorithm_run worker panicked while executing");
             let solution_set = run_result?;
-            checksum += solution_set.best_solution_value_or(0.0);
+            checksum += solution_set.best_solution_value_or(problem.as_ref(), 0.0);
         }
 
         Ok::<f64, String>(checksum)
@@ -103,7 +103,7 @@ fn benchmark_batch_async(problem: Arc<KnapsackProblem>, instances: usize, base_s
         let mut checksum = 0.0;
         for (_algorithm, run_result) in results {
             let solution_set = run_result?;
-            checksum += solution_set.best_solution_value_or(0.0);
+            checksum += solution_set.best_solution_value_or(problem.as_ref(), 0.0);
         }
 
         Ok::<f64, String>(checksum)

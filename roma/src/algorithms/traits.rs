@@ -5,7 +5,6 @@ use crate::algorithms::checkpoint::{
     select_resume_checkpoint, write_snapshot, CheckpointRecord, StepStateCheckpoint,
     DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES,
 };
-use crate::algorithms::objective::ImprovementDirection;
 use crate::algorithms::runtime::{
     run_with_observer_runtime, ExecutionContext, RuntimeExecutionOutput,
 };
@@ -13,7 +12,6 @@ use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria
 use crate::observer::traits::AlgorithmObserver;
 use crate::observer::ObserverState;
 use crate::problem::traits::Problem;
-use crate::solution::traits::Dominance;
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::cli::{has_flag, resolve_path_from_flag_or_default};
 use crate::utils::path::{
@@ -48,7 +46,7 @@ fn resolve_checkpoint_dir_from_config_for_writes(
 pub trait Algorithm<T, Q = f64>
 where
     T: Clone + Send + 'static + Display,
-    Q: Clone + Default + Dominance + Send + 'static + Display,
+    Q: Clone + Default + Send + 'static + Display,
 {
     type SolutionSet: SolutionSet<T, Q>;
     type Parameters;
@@ -87,7 +85,7 @@ where
         let algorithm_name = self.algorithm_name().to_string();
         let algorithm_parameters = self.checkpoint_algorithm_parameters();
         let criteria = self.termination_criteria();
-        let direction: ImprovementDirection = problem.get_improvement_direction();
+        let better_fitness = problem.better_fitness_fn();
         let algorithm = &*self;
         let problem_description = problem.get_problem_description();
         let problem_parameters = problem.get_problem_parameters_payload();
@@ -126,10 +124,10 @@ where
         let result = run_with_observer_runtime(
             &mut observers,
             criteria,
-            direction,
+            better_fitness,
             algorithm_name.clone(),
             move |context| {
-                let initial_snapshot = algorithm.build_snapshot(&state);
+                let initial_snapshot = algorithm.build_snapshot(problem, &state);
                 context.update_execution_state(&initial_snapshot);
 
                 let mut last_iteration = initial_snapshot.iteration;
@@ -162,7 +160,7 @@ where
                 while !context.should_terminate() {
                     algorithm.step(problem, &mut state, context);
 
-                    let step_snapshot = algorithm.build_snapshot(&state);
+                    let step_snapshot = algorithm.build_snapshot(problem, &state);
                     context.update_execution_state(&step_snapshot);
                     let step_presentation = problem.format_solution(&step_snapshot.best_solution);
                     last_iteration = step_snapshot.iteration;
@@ -229,7 +227,11 @@ where
         context: &ExecutionContext<T, Q>,
     );
 
-    fn build_snapshot(&self, state: &Self::StepState) -> ExecutionStateSnapshot<T, Q>;
+    fn build_snapshot(
+        &self,
+        problem: &(impl Problem<T, Q> + Sync),
+        state: &Self::StepState,
+    ) -> ExecutionStateSnapshot<T, Q>;
 
     fn finalize_step_state(&self, state: Self::StepState) -> Self::SolutionSet;
 

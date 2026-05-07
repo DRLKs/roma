@@ -234,7 +234,7 @@ fn main() {
     algorithm.add_observer(Box::new(html_observer));
     let result = algorithm.run(&problem).expect("Large CSV GA run failed");
 
-    if let Some(best) = result.best_solution() {
+    if let Some(best) = result.best_solution(&problem) {
         println!(
             "Large dataset GA demo finished (seed={}). input='{}', format={:?}, capacity={}, limit={}, records_path='{}', weight_key='{}', value_key='{}', items={}, best fitness={:.4}",
             seed,

@@ -1,8 +1,15 @@
 use std::fmt::Display;
 
-use crate::algorithms::objective::ImprovementDirection;
 use crate::solution::Solution;
 use crate::utils::random::Random;
+
+pub fn maximizing_fitness(candidate: f64, reference: f64) -> bool {
+    candidate > reference
+}
+
+pub fn minimizing_fitness(candidate: f64, reference: f64) -> bool {
+    candidate < reference
+}
 
 /// Trait that defines the basic interface for optimization problems.
 ///
@@ -14,14 +21,16 @@ use crate::utils::random::Random;
 /// Implementors provide:
 /// - random solution creation,
 /// - evaluation of candidate solutions,
-/// - objective direction (maximize or minimize),
+/// - problem-owned comparison semantics for ranking solutions,
 /// - optional domain-specific formatting used by observers/reports.
 pub trait Problem<T, Q = f64>
 where
     T: Clone,
-    Q: Clone + Default,
+    Q: Clone,
 {
-    fn new() -> Self;
+    fn new() -> Self
+    where
+        Self: Sized;
 
     /// Evaluates a solution and updates its quality/fitness
     fn evaluate(&self, solution: &mut Solution<T, Q>);
@@ -33,11 +42,21 @@ where
 
     fn get_problem_description(&self) -> String;
 
-    /// Returns the objective improvement direction for this problem.
-    ///
-    /// This is the single source of truth for scalar optimization direction
-    /// in the framework. Algorithms and runtime termination consume this value
-    fn get_improvement_direction(&self) -> ImprovementDirection;
+    fn dominates(&self, solution_a: &Solution<T, Q>, solution_b: &Solution<T, Q>) -> bool;
+
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool;
+
+    fn is_better_fitness(&self, candidate: f64, reference: f64) -> bool {
+        (self.better_fitness_fn())(candidate, reference)
+    }
+
+    fn non_improving_fitness_loss(&self, current: f64, candidate: f64) -> f64 {
+        if self.is_better_fitness(candidate, current) {
+            0.0
+        } else {
+            (candidate - current).abs()
+        }
+    }
 
     fn get_problem_parameters_payload(&self) -> String {
         String::new()

@@ -1,7 +1,11 @@
 use roma_lib::{
     Algorithm,
+    BinaryTournamentSelection,
+    GeneticAlgorithm,
+    GeneticAlgorithmParameters,
     HillClimbing,
     HillClimbingParameters,
+    OrderCrossover,
     SimulatedAnnealing,
     SimulatedAnnealingParameters,
     SolutionSet,
@@ -94,4 +98,39 @@ fn hill_climbing_respects_fixed_start_city_constraint() {
     let solution = result.get(0).expect("Expected one solution");
     assert_eq!(solution.get_variable(0).copied(), Some(fixed_start_city));
     assert!(solution.quality_value().is_finite());
+}
+
+#[test]
+fn genetic_algorithm_runs_on_tsp_and_preserves_route_validity() {
+    let problem = TspProblem::with_distance_matrix(vec![
+        vec![0.0, 8.0, 6.0, 4.0, 7.0],
+        vec![8.0, 0.0, 7.0, 5.0, 9.0],
+        vec![6.0, 7.0, 0.0, 3.0, 2.0],
+        vec![4.0, 5.0, 3.0, 0.0, 1.0],
+        vec![7.0, 9.0, 2.0, 1.0, 0.0],
+    ]);
+
+    let parameters = GeneticAlgorithmParameters::new(
+        24,
+        0.9,
+        0.15,
+        OrderCrossover::new(),
+        SwapMutation::new(),
+        BinaryTournamentSelection::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(25)]),
+    )
+    .with_elite_size(1)
+    .with_seed(11)
+    .sequential();
+
+    let mut algorithm = GeneticAlgorithm::new(parameters);
+    let result = algorithm.run(&problem).expect("GA on TSP should succeed");
+
+    let best = result.best_solution(&problem).expect("Expected one best solution");
+    let mut route = best.variables().to_vec();
+    route.sort_unstable();
+
+    assert_eq!(best.num_variables(), 5);
+    assert_eq!(route, vec![0, 1, 2, 3, 4]);
+    assert!(best.quality_value().is_finite());
 }

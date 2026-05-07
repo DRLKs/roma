@@ -1,6 +1,5 @@
 use crate::algorithms::traits::Algorithm;
 use crate::problem::traits::Problem;
-use crate::solution::traits::Dominance;
 use std::fmt::Display;
 use std::sync::Arc;
 use std::thread;
@@ -46,7 +45,7 @@ pub fn run_algorithm_instances_async<A, T, Q, P>(
 ) -> Vec<(A, Result<A::SolutionSet, String>)>
 where
     T: Clone + Send + 'static + Display,
-    Q: Clone + Default + Dominance + Send + 'static + Display,
+    Q: Clone + Default + Send + 'static + Display,
     A: Algorithm<T, Q> + Send + 'static,
     A::SolutionSet: Clone + Send + 'static,
     P: Problem<T, Q> + Sync + Send + 'static,
@@ -69,11 +68,10 @@ where
 mod tests {
     use super::{run_algorithm_instances_async, run_algorithms_async};
     use crate::algorithms::implementations::hill_climbing::{HillClimbing, HillClimbingParameters};
-    use crate::algorithms::objective::ImprovementDirection;
     use crate::algorithms::termination::{TerminationCriteria, TerminationCriterion};
     use crate::algorithms::traits::Algorithm;
     use crate::operator::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
-    use crate::problem::traits::Problem;
+    use crate::problem::traits::{minimizing_fitness, Problem};
     use crate::solution::Solution;
     use crate::solution_set::traits::SolutionSet;
     use crate::utils::random::Random;
@@ -104,8 +102,13 @@ mod tests {
             "MinOnesProblem".to_string()
         }
 
-        fn get_improvement_direction(&self) -> ImprovementDirection {
-            ImprovementDirection::Minimize
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+            minimizing_fitness
+        }
+
+        fn dominates(&self, solution_a: &Solution<bool, f64>, solution_b: &Solution<bool, f64>) -> bool {
+            solution_a.quality().copied().unwrap_or(f64::INFINITY)
+                < solution_b.quality().copied().unwrap_or(f64::INFINITY)
         }
     }
 
@@ -146,7 +149,7 @@ mod tests {
             let solution_set = run_result.expect("expected successful async run");
             assert_eq!(solution_set.size(), 1);
             let value = solution_set
-                .best_solution_value()
+                .best_solution_value(problem.as_ref())
                 .expect("expected one valid best value");
             assert!(value.is_finite());
         }

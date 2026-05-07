@@ -5,7 +5,7 @@ use crate::solution::{apply_bounds, Solution};
 impl<T> Solution<T, ParetoCrowdingDistanceQuality> {
     /// Returns the objective vector.
     pub fn objectives(&self) -> &[f64] {
-        if let Some(info) = &self.quality {
+        if let Some(info) = &self.value {
             &info.objectives
         } else {
             &[]
@@ -14,10 +14,10 @@ impl<T> Solution<T, ParetoCrowdingDistanceQuality> {
 
     /// Sets the objective vector.
     pub fn set_objectives(&mut self, objectives: Vec<f64>) {
-        match &mut self.quality {
+        match &mut self.value {
             Some(info) => info.objectives = objectives,
             None => {
-                self.quality = Some(ParetoCrowdingDistanceQuality {
+                self.value = Some(ParetoCrowdingDistanceQuality {
                     objectives,
                     rank: None,
                     crowding_distance: None,
@@ -28,15 +28,15 @@ impl<T> Solution<T, ParetoCrowdingDistanceQuality> {
 
     /// Returns the Pareto rank.
     pub fn rank(&self) -> Option<usize> {
-        self.quality.as_ref().and_then(|info| info.rank)
+        self.value.as_ref().and_then(|info| info.rank)
     }
 
     /// Sets the Pareto rank.
     pub fn set_rank(&mut self, rank: usize) {
-        match &mut self.quality {
+        match &mut self.value {
             Some(info) => info.rank = Some(rank),
             None => {
-                self.quality = Some(ParetoCrowdingDistanceQuality {
+                self.value = Some(ParetoCrowdingDistanceQuality {
                     objectives: vec![],
                     rank: Some(rank),
                     crowding_distance: None,
@@ -47,17 +47,17 @@ impl<T> Solution<T, ParetoCrowdingDistanceQuality> {
 
     /// Returns the crowding distance.
     pub fn crowding_distance(&self) -> Option<f64> {
-        self.quality
+        self.value
             .as_ref()
             .and_then(|info| info.crowding_distance)
     }
 
     /// Sets the crowding distance.
     pub fn set_crowding_distance(&mut self, distance: f64) {
-        match &mut self.quality {
+        match &mut self.value {
             Some(info) => info.crowding_distance = Some(distance),
             None => {
-                self.quality = Some(ParetoCrowdingDistanceQuality {
+                self.value = Some(ParetoCrowdingDistanceQuality {
                     objectives: vec![],
                     rank: None,
                     crowding_distance: Some(distance),
@@ -68,14 +68,14 @@ impl<T> Solution<T, ParetoCrowdingDistanceQuality> {
 
     /// Returns objective value by index.
     pub fn get_objective(&self, index: usize) -> Option<f64> {
-        self.quality
+        self.value
             .as_ref()
             .and_then(|info| info.objectives.get(index).copied())
     }
 
     /// Returns all objectives if present.
     pub fn get_objectives(&self) -> Option<&[f64]> {
-        self.quality.as_ref().and_then(|info| {
+        self.value.as_ref().and_then(|info| {
             if info.objectives.is_empty() {
                 None
             } else {

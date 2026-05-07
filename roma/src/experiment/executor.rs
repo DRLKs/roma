@@ -1,13 +1,11 @@
 use crate::experiment::traits::ExperimentalCase;
 use crate::problem::traits::Problem;
-use crate::solution::traits::Dominance;
-use crate::ImprovementDirection;
 use std::cmp::Ordering;
 use std::fmt::Display;
 
 use super::parallel::{parallel_collect_by_range, ParallelConfig};
 use super::report::{ExperimentFailure, ExperimentReport, ExperimentRunResult, ExperimentSummary};
-use super::utils::{best_and_worst, mean, variance};
+use super::utils::{mean, variance};
 
 /// Immutable metadata snapshot for each registered experiment case.
 ///
@@ -38,20 +36,19 @@ enum JobOutcome {
 pub struct Experiment<T, Q, P>
 where
     T: Clone + Send + 'static,
-    Q: Clone + Default + Dominance + Send + 'static + Copy + Into<f64>,
+    Q: Clone + Default + Send + 'static + Copy + Into<f64>,
     P: Problem<T, Q> + Sync,
 {
     problem: P,
     runs: usize,
     parallel_threads: Option<usize>,
-    objective: ImprovementDirection,
     cases: Vec<Box<dyn ExperimentalCase<T, Q, P>>>,
 }
 
 impl<T, Q, P> Experiment<T, Q, P>
 where
     T: Clone + Send + 'static + Display,
-    Q: Clone + Default + Dominance + Send + 'static + Copy + Into<f64> + Display,
+    Q: Clone + Default + Send + 'static + Copy + Into<f64> + Display,
     P: Problem<T, Q> + Sync,
 {
     /// Builds and caches textual metadata for each case.
@@ -80,7 +77,18 @@ where
 
         match case.run(&self.problem) {
             Ok(solution_set) => {
-                if let Some(best_value) = solution_set.best_solution_value() {
+                let best_value = solution_set
+                    .iter()
+                    .reduce(|current_best, candidate| {
+                        if self.problem.dominates(candidate, current_best) {
+                            candidate
+                        } else {
+                            current_best
+                        }
+                    })
+                    .and_then(|solution| solution.quality().copied().map(Into::into));
+
+                if let Some(best_value) = best_value {
                     JobOutcome::Success(ExperimentRunResult {
                         algorithm_name: metadata.algorithm_name.clone(),
                         case_name: metadata.case_name.clone(),
@@ -175,7 +183,28 @@ where
             let runs_ok = values.len();
             let mean = mean(&values);
             let variance = variance(&values, mean);
-            let (best, worst) = best_and_worst(&values, self.objective);
+            let best = values
+                .iter()
+                .copied()
+                .reduce(|current_best, candidate| {
+                    if self.problem.is_better_fitness(candidate, current_best) {
+                        candidate
+                    } else {
+                        current_best
+                    }
+                })
+                .unwrap_or(0.0);
+            let worst = values
+                .iter()
+                .copied()
+                .reduce(|current_worst, candidate| {
+                    if self.problem.is_better_fitness(current_worst, candidate) {
+                        candidate
+                    } else {
+                        current_worst
+                    }
+                })
+                .unwrap_or(0.0);
 
             summaries.push(ExperimentSummary {
                 algorithm_name: algorithm_name.clone(),
@@ -190,13 +219,12 @@ where
         }
 
         summaries.sort_by(|a, b| {
-            let ord = match self.objective {
-                ImprovementDirection::Maximize => {
-                    b.best.partial_cmp(&a.best).unwrap_or(Ordering::Equal)
-                }
-                ImprovementDirection::Minimize => {
-                    a.best.partial_cmp(&b.best).unwrap_or(Ordering::Equal)
-                }
+            let ord = if self.problem.is_better_fitness(a.best, b.best) {
+                Ordering::Less
+            } else if self.problem.is_better_fitness(b.best, a.best) {
+                Ordering::Greater
+            } else {
+                Ordering::Equal
             };
 
             if ord == Ordering::Equal {
@@ -213,15 +241,12 @@ where
     ///
     /// Defaults:
     /// - runs: `30`
-    /// - objective: `Objective::Maximize`
     /// - threads: auto
     pub fn new(problem: P) -> Self {
-        let objective = problem.get_improvement_direction().clone();
         Self {
             problem,
             runs: 30,
             parallel_threads: None,
-            objective: objective,
             cases: Vec::new(),
         }
     }
@@ -272,7 +297,7 @@ where
         let summaries = self.build_summaries(&case_metadata, &worker_output.run_results);
 
         Ok(ExperimentReport {
-            objective: self.objective,
+            objective_description: "problem-defined fitness comparison".to_string(),
             runs_per_case: self.runs,
             run_results: worker_output.run_results,
             failures: worker_output.failures,

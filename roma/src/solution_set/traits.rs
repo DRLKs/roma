@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
-use crate::solution::traits::Dominance;
 use crate::solution::Solution;
+use crate::problem::traits::Problem;
 
 /// Trait that defines the basic interface for sets of solutions.
 /// * `T` - Type of the solution variables
@@ -9,7 +9,7 @@ use crate::solution::Solution;
 pub trait SolutionSet<T, Q = f64>
 where
     T: Clone,
-    Q: Clone + Dominance + Display,
+    Q: Clone + Display,
 {
     /// Returns an iterator over all solutions in the set.
     fn iter(&self) -> Box<dyn Iterator<Item = &Solution<T, Q>> + '_>;
@@ -56,19 +56,20 @@ where
         self.len()
     }
 
-    /// Returns the best solution according to `Dominance`.
-    ///
-    /// This works for both scalar and multi-objective quality payloads because
-    /// the comparison logic is delegated to `Q: Dominance`.
-    fn best_solution(&self) -> Option<&Solution<T, Q>> {
+    fn best_solution<P>(&self, problem: &P) -> Option<&Solution<T, Q>>
+    where
+        Self: Sized,
+        P: Problem<T, Q>,
+    {
         let mut best: Option<&Solution<T, Q>> = None;
+
         for solution in self.iter() {
-            let is_better = match best {
-                Some(current_best) => solution.dominates(current_best),
+            let should_replace = match best {
+                Some(current_best) => problem.dominates(solution, current_best),
                 None => true,
             };
 
-            if is_better {
+            if should_replace {
                 best = Some(solution);
             }
         }
@@ -76,23 +77,25 @@ where
         best
     }
 
-    /// Returns the scalar value of the best solution, if any.
-    fn best_solution_value(&self) -> Option<f64>
+    fn best_solution_value<P>(&self, problem: &P) -> Option<f64>
     where
-        Q: Copy + Into<f64> + Display,
+        Self: Sized,
+        P: Problem<T, Q>,
         T: Display,
+        Q: Copy + Into<f64>,
     {
-        self.best_solution()
-            .and_then(|s| s.quality().map(|&q| q.into()))
+        self.best_solution(problem)
+            .and_then(|solution| solution.quality().copied().map(Into::into))
     }
 
-    /// Returns the scalar value of the best solution, or `default` when empty.
-    fn best_solution_value_or(&self, default: f64) -> f64
+    fn best_solution_value_or<P>(&self, problem: &P, default: f64) -> f64
     where
-        Q: Copy + Into<f64>,
+        Self: Sized,
+        P: Problem<T, Q>,
         T: Display,
+        Q: Copy + Into<f64>,
     {
-        self.best_solution_value().unwrap_or(default)
+        self.best_solution_value(problem).unwrap_or(default)
     }
 
     fn get(&self, index: usize) -> Option<&Solution<T, Q>> {
