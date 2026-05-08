@@ -3,15 +3,15 @@ use std::time::Duration;
 
 use roma_lib::algorithms::{
     Algorithm,
-    HillClimbing,
-    HillClimbingParameters,
+    GeneticAlgorithm,
+    GeneticAlgorithmParameters,
     TerminationCriteria,
     TerminationCriterion,
 };
-use roma_lib::operator::PolynomialMutation;
-use roma_lib::problem::RastriginProblem;
+use roma_lib::operator::{BinaryTournamentSelection, OrderCrossover, SwapMutation};
+use roma_lib::problem::TspProblem;
 use roma_lib::solution_set::SolutionSet;
-use roma_lib::utils::json_adapter::{get_json_array_values, get_json_value};
+use roma_lib::utils::json_adapter::{get_json_array_values, get_json_number_matrix, get_json_value};
 use roma_lib::utils::{measure_result, process_cpu_time_ms};
 
 struct BenchmarkInstance {
@@ -19,8 +19,9 @@ struct BenchmarkInstance {
     problem: String,
     instance_id: String,
     dimension: usize,
-    lower_bound: f64,
-    upper_bound: f64,
+    close_tour: bool,
+    city_positions: Option<Vec<(f64, f64)>>,
+    distance_matrix: Vec<Vec<f64>>,
 }
 
 struct BudgetSpec {
@@ -34,8 +35,10 @@ struct BenchmarkConfig {
     runs: usize,
     budget: BudgetSpec,
     seeds: Vec<u64>,
-    mutation_rate: f64,
-    distribution_index: f64,
+    population_size: usize,
+    crossover_probability: f64,
+    mutation_probability: f64,
+    elite_size: usize,
 }
 
 struct BenchmarkResult {
@@ -48,7 +51,7 @@ struct BenchmarkResult {
     budget_type: String,
     budget_value: usize,
     best_fitness: f64,
-    best_solution: Vec<f64>,
+    best_solution: Vec<usize>,
     wall_time_ms: f64,
     cpu_time_ms: Option<f64>,
     status: String,
@@ -59,7 +62,7 @@ fn benchmark_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("benchmark_suite")
-        .join("rastrigin_hill_climbing")
+        .join("tsp_ga")
         .join("shared")
 }
 
@@ -80,13 +83,31 @@ where
 }
 
 fn load_instance(path: &Path) -> Result<BenchmarkInstance, String> {
+    let distance_matrix = get_json_number_matrix(path, "distance_matrix")
+        .map_err(|error| format!("failed to read distance_matrix from {}: {}", path.display(), error))?;
+    let city_positions_matrix = get_json_number_matrix(path, "city_positions")
+        .map_err(|error| format!("failed to read city_positions from {}: {}", path.display(), error))?;
+    let city_positions = if city_positions_matrix.is_empty() {
+        None
+    } else {
+        let mut positions = Vec::with_capacity(city_positions_matrix.len());
+        for row in city_positions_matrix {
+            if row.len() != 2 {
+                return Err("city_positions rows must contain exactly two numbers".to_string());
+            }
+            positions.push((row[0], row[1]));
+        }
+        Some(positions)
+    };
+
     Ok(BenchmarkInstance {
         benchmark_id: required_json_string(path, "benchmark_id")?,
         problem: required_json_string(path, "problem")?,
         instance_id: required_json_string(path, "instance_id")?,
         dimension: required_json_parsed(path, "dimension")?,
-        lower_bound: required_json_parsed(path, "lower_bound")?,
-        upper_bound: required_json_parsed(path, "upper_bound")?,
+        close_tour: required_json_parsed(path, "close_tour")?,
+        city_positions,
+        distance_matrix,
     })
 }
 
@@ -110,13 +131,24 @@ fn load_config(path: &Path) -> Result<BenchmarkConfig, String> {
             value: required_json_parsed(path, "budget.value")?,
         },
         seeds,
-        mutation_rate: required_json_parsed(path, "roma.mutation_rate")?,
-        distribution_index: required_json_parsed(path, "roma.distribution_index")?,
+        population_size: required_json_parsed(path, "roma.population_size")?,
+        crossover_probability: required_json_parsed(path, "roma.crossover_probability")?,
+        mutation_probability: required_json_parsed(path, "roma.mutation_probability")?,
+        elite_size: required_json_parsed(path, "roma.elite_size")?,
     })
 }
 
-fn build_problem(instance: &BenchmarkInstance) -> RastriginProblem {
-    RastriginProblem::new(instance.dimension, instance.lower_bound, instance.upper_bound)
+fn build_problem(instance: &BenchmarkInstance) -> TspProblem {
+    let problem = if let Some(city_positions) = &instance.city_positions {
+        TspProblem::from_city_positions(city_positions.clone())
+    } else {
+        TspProblem::with_distance_matrix(instance.distance_matrix.clone())
+    };
+    if instance.close_tour {
+        problem
+    } else {
+        problem.with_open_route()
+    }
 }
 
 fn json_escape(value: &str) -> String {
@@ -138,7 +170,7 @@ fn json_string(value: &str) -> String {
     format!("\"{}\"", json_escape(value))
 }
 
-fn format_f64_array(values: &[f64]) -> String {
+fn format_usize_array(values: &[usize]) -> String {
     let items: Vec<String> = values.iter().map(|value| value.to_string()).collect();
     format!("[{}]", items.join(", "))
 }
@@ -169,7 +201,7 @@ fn format_result_json(result: &BenchmarkResult) -> String {
         format!("    \"budget_type\": {},", json_string(&result.budget_type)),
         format!("    \"budget_value\": {},", result.budget_value),
         format!("    \"best_fitness\": {},", result.best_fitness),
-        format!("    \"best_solution\": {},", format_f64_array(&result.best_solution)),
+        format!("    \"best_solution\": {},", format_usize_array(&result.best_solution)),
         format!("    \"wall_time_ms\": {},", result.wall_time_ms),
         format!("    \"cpu_time_ms\": {},", format_optional_number(result.cpu_time_ms)),
         format!("    \"status\": {},", json_string(&result.status)),
@@ -192,16 +224,22 @@ fn format_results_json(results: &[BenchmarkResult]) -> String {
 
 fn run_once(instance: &BenchmarkInstance, config: &BenchmarkConfig, seed: u64) -> BenchmarkResult {
     let cpu_start = process_cpu_time_ms();
-    let measured: Result<(Duration, (f64, Vec<f64>)), String> = measure_result(|| {
+    let measured: Result<(Duration, (f64, Vec<usize>)), String> = measure_result(|| {
         let problem = build_problem(instance);
-        let parameters = HillClimbingParameters::new(
-            PolynomialMutation::new(config.distribution_index),
-            config.mutation_rate,
+        let parameters = GeneticAlgorithmParameters::new(
+            config.population_size,
+            config.crossover_probability,
+            config.mutation_probability,
+            OrderCrossover::new(),
+            SwapMutation::new(),
+            BinaryTournamentSelection::new(),
             TerminationCriteria::new(vec![TerminationCriterion::MaxEvaluations(config.budget.value)]),
         )
-        .with_seed(seed);
+        .with_elite_size(config.elite_size)
+        .with_seed(seed)
+        .sequential();
 
-        let mut algorithm = HillClimbing::new(parameters);
+        let mut algorithm = GeneticAlgorithm::new(parameters);
         let solution_set = algorithm.run(&problem)?;
         let best_solution = solution_set
             .best_solution(&problem)
@@ -212,8 +250,7 @@ fn run_once(instance: &BenchmarkInstance, config: &BenchmarkConfig, seed: u64) -
         Ok((best_fitness, best_solution))
     });
 
-    let cpu_time_ms = cpu_start
-        .and_then(|start| process_cpu_time_ms().map(|end| end - start));
+    let cpu_time_ms = cpu_start.and_then(|start| process_cpu_time_ms().map(|end| end - start));
 
     match measured {
         Ok((elapsed, (best_fitness, best_solution))) => BenchmarkResult {
@@ -257,23 +294,49 @@ fn validate_config(instance: &BenchmarkInstance, config: &BenchmarkConfig) -> Re
     }
 
     if config.budget.r#type != "evaluations" {
-        return Err("Rastrigin benchmark runner currently supports only evaluation budgets".to_string());
+        return Err("TSP benchmark runner currently supports only evaluation budgets".to_string());
     }
 
     if config.seeds.len() < config.runs {
         return Err("config.json must define at least one seed per run".to_string());
     }
 
-    if !(0.0..=1.0).contains(&config.mutation_rate) {
-        return Err("roma.mutation_rate must be in [0,1]".to_string());
+    if config.population_size < 2 {
+        return Err("roma.population_size must be at least 2".to_string());
+    }
+
+    if !(0.0..=1.0).contains(&config.crossover_probability) {
+        return Err("roma.crossover_probability must be in [0,1]".to_string());
+    }
+
+    if !(0.0..=1.0).contains(&config.mutation_probability) {
+        return Err("roma.mutation_probability must be in [0,1]".to_string());
+    }
+
+    if config.elite_size >= config.population_size {
+        return Err("roma.elite_size must be smaller than population_size".to_string());
     }
 
     if instance.dimension == 0 {
         return Err("instance dimension must be positive".to_string());
     }
 
-    if instance.lower_bound >= instance.upper_bound {
-        return Err("instance lower_bound must be smaller than upper_bound".to_string());
+    if let Some(city_positions) = &instance.city_positions {
+        if city_positions.len() != instance.dimension {
+            return Err("city_positions size must match instance dimension".to_string());
+        }
+    } else {
+        if instance.distance_matrix.len() != instance.dimension {
+            return Err("distance_matrix size must match instance dimension".to_string());
+        }
+
+        if instance
+            .distance_matrix
+            .iter()
+            .any(|row| row.len() != instance.dimension)
+        {
+            return Err("distance_matrix must be square".to_string());
+        }
     }
 
     Ok(())

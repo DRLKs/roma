@@ -13,6 +13,10 @@ pub struct TspProblem {
     /// Full pairwise distance matrix, where `distance_matrix[i][j]`
     /// is the distance from city `i` to city `j`.
     distance_matrix: Vec<Vec<f64>>,
+    /// Optional city coordinates aligned by city index.
+    ///
+    /// When present, `city_positions[i]` stores the `(x, y)` position of city `i`.
+    city_positions: Option<Vec<(f64, f64)>>,
     /// Controls route topology:
     /// - `true`: closed tour (Hamiltonian cycle), adds last -> first edge.
     /// - `false`: open route (Hamiltonian path), does not add return edge.
@@ -24,6 +28,38 @@ pub struct TspProblem {
 }
 
 impl TspProblem {
+    fn rounded_euclidean_distance(from: (f64, f64), to: (f64, f64)) -> f64 {
+        let dx = from.0 - to.0;
+        let dy = from.1 - to.1;
+        (dx.mul_add(dx, dy * dy)).sqrt().round()
+    }
+
+    /// Creates a TSP instance directly from city coordinates using TSPLIB EUC_2D rounding.
+    pub fn from_city_positions(city_positions: Vec<(f64, f64)>) -> Self {
+        assert!(
+            !city_positions.is_empty(),
+            "city_positions must contain at least one city"
+        );
+
+        let size = city_positions.len();
+        let mut distance_matrix = vec![vec![0.0; size]; size];
+        for i in 0..size {
+            for j in i + 1..size {
+                let distance = Self::rounded_euclidean_distance(city_positions[i], city_positions[j]);
+                distance_matrix[i][j] = distance;
+                distance_matrix[j][i] = distance;
+            }
+        }
+
+        Self {
+            description: format!("TSP with {} cities", size),
+            distance_matrix,
+            city_positions: Some(city_positions),
+            close_tour: true,
+            fixed_start_city: None,
+        }
+    }
+
     /// Creates a TSP instance from a square distance matrix.
     pub fn with_distance_matrix(distance_matrix: Vec<Vec<f64>>) -> Self {
         assert!(
@@ -39,9 +75,21 @@ impl TspProblem {
         Self {
             description: format!("TSP with {} cities", size),
             distance_matrix,
+            city_positions: None,
             close_tour: true,
             fixed_start_city: None,
         }
+    }
+
+    /// Attaches explicit city coordinates aligned with the distance matrix indexes.
+    pub fn with_city_positions(mut self, city_positions: Vec<(f64, f64)>) -> Self {
+        assert_eq!(
+            city_positions.len(),
+            self.number_of_cities(),
+            "city_positions must have one entry per city"
+        );
+        self.city_positions = Some(city_positions);
+        self
     }
 
     /// Configures a fixed start city.
@@ -68,6 +116,16 @@ impl TspProblem {
 
     pub fn distance(&self, from: usize, to: usize) -> f64 {
         self.distance_matrix[from][to]
+    }
+
+    pub fn city_position(&self, city: usize) -> Option<(f64, f64)> {
+        self.city_positions
+            .as_ref()
+            .and_then(|positions| positions.get(city).copied())
+    }
+
+    pub fn city_positions(&self) -> Option<&[(f64, f64)]> {
+        self.city_positions.as_deref()
     }
 
     fn is_valid_permutation(&self, route: &[usize]) -> bool {
@@ -362,6 +420,39 @@ mod tests {
         let solution = problem.create_solution(&mut Random::new(42));
         assert_eq!(solution.num_variables(), 4);
         assert!(problem.is_valid_permutation(solution.variables()));
+    }
+
+    #[test]
+    fn from_city_positions_builds_euclidean_distance_matrix() {
+        let problem = TspProblem::from_city_positions(vec![(0.0, 0.0), (3.0, 4.0), (6.0, 8.0)]);
+
+        assert_eq!(problem.number_of_cities(), 3);
+        assert_eq!(problem.distance(0, 1), 5.0);
+        assert_eq!(problem.distance(1, 2), 5.0);
+        assert_eq!(problem.distance(0, 2), 10.0);
+        assert_eq!(problem.city_position(2), Some((6.0, 8.0)));
+    }
+
+    #[test]
+    fn city_positions_can_be_retrieved_by_city_index() {
+        let matrix = vec![
+            vec![0.0, 1.0, 2.0],
+            vec![1.0, 0.0, 3.0],
+            vec![2.0, 3.0, 0.0],
+        ];
+        let problem = TspProblem::with_distance_matrix(matrix)
+            .with_city_positions(vec![(10.0, 20.0), (30.0, 40.0), (50.0, 60.0)]);
+
+        assert_eq!(problem.city_position(1), Some((30.0, 40.0)));
+        assert_eq!(problem.city_position(3), None);
+        assert_eq!(problem.city_positions(), Some(&[(10.0, 20.0), (30.0, 40.0), (50.0, 60.0)][..]));
+    }
+
+    #[test]
+    #[should_panic(expected = "city_positions must have one entry per city")]
+    fn city_positions_length_must_match_city_count() {
+        let _ = TspProblem::with_distance_matrix(vec![vec![0.0, 1.0], vec![1.0, 0.0]])
+            .with_city_positions(vec![(0.0, 0.0)]);
     }
 
     #[test]
