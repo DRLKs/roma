@@ -1,4 +1,4 @@
-use crate::problem::traits::{maximizing_fitness, Problem};
+use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 use std::collections::HashMap;
@@ -118,7 +118,7 @@ impl Problem<bool> for KnapsackProblem {
     }
 
     fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        maximizing_fitness
+        crate::solution::traits::evaluator::maximizing_fitness
     }
 
     fn format_solution(&self, solution: &Solution<bool>) -> String {

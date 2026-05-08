@@ -1,6 +1,4 @@
-#[cfg(test)]
-use crate::problem::traits::maximizing_fitness;
-use crate::solution::Solution;
+use crate::Solution;
 use std::time::{Duration, Instant};
 
 /// Defines stopping criteria for optimization algorithms.
@@ -210,6 +208,7 @@ impl TerminationState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::solution::traits::evaluator::maximizing_fitness;
     use crate::solution::RealSolutionBuilder;
     use std::thread;
     use std::time::Duration;

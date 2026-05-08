@@ -1,5 +1,4 @@
 use crate::operator::traits::{Operator, SelectionOperator};
-use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 
@@ -38,7 +37,7 @@ where
         &self,
         population: &'a [Solution<T>],
         rng: &mut Random,
-        problem: &(impl Problem<T> + Sync),
+        dominates: &dyn Fn(&Solution<T, f64>, &Solution<T, f64>) -> bool,
     ) -> &'a Solution<T> {
         if population.is_empty() {
             panic!("Cannot select from empty population");
@@ -59,7 +58,7 @@ where
         let individual1 = &population[index1];
         let individual2 = &population[index2];
 
-        if problem.dominates(individual2, individual1) {
+        if dominates(individual2, individual1) {
             individual2
         } else {
             individual1
@@ -70,7 +69,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::problem::traits::{maximizing_fitness, minimizing_fitness, Problem};
+    use crate::problem::traits::Problem;
     use crate::solution::BinarySolutionBuilder;
 
     struct MaxProblem;
@@ -98,6 +97,7 @@ mod tests {
         }
 
         fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+            use crate::solution::traits::evaluator::maximizing_fitness;
             maximizing_fitness
         }
     }
@@ -124,6 +124,7 @@ mod tests {
         }
 
         fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+            use crate::solution::traits::evaluator::minimizing_fitness;
             minimizing_fitness
         }
     }
@@ -146,7 +147,7 @@ mod tests {
 
         let population = vec![solution1, solution2];
 
-        let selected = selection.execute(&population, &mut rng, &MaxProblem);
+        let selected = selection.execute(&population, &mut rng, &|a, b| MaxProblem.dominates(a, b));
 
         // Should consistently select the better solution
         assert_eq!(selected.quality_value(), 10.0);
@@ -160,7 +161,7 @@ mod tests {
 
         let population: Vec<Solution<bool>> = vec![];
 
-        let _selected = selection.execute(&population, &mut rng, &MaxProblem);
+        let _selected = selection.execute(&population, &mut rng, &|a, b| MaxProblem.dominates(a, b));
     }
 
     #[test]
@@ -175,7 +176,7 @@ mod tests {
 
         let population = vec![solution];
 
-        let selected = selection.execute(&population, &mut rng, &MaxProblem);
+        let selected = selection.execute(&population, &mut rng, &|a, b| MaxProblem.dominates(a, b));
 
         assert_eq!(selected.quality_value(), fitness);
     }
@@ -190,7 +191,7 @@ mod tests {
 
         let population = vec![solution1, solution2];
 
-        let selected = selection.execute(&population, &mut rng, &MinProblem);
+        let selected = selection.execute(&population, &mut rng, &|a, b| MinProblem.dominates(a, b));
         assert_eq!(selected.quality_value(), 5.0);
     }
 }

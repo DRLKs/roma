@@ -530,7 +530,7 @@ mod tests {
     use super::*;
     use crate::algorithms::termination::TerminationCriterion;
     use crate::problem::implementations::knapsack_problem::KnapsackBuilder;
-    use crate::problem::traits::{minimizing_fitness, Problem};
+    use crate::problem::traits::Problem;
     use crate::solution::Solution;
     use crate::utils::random::Random;
 
@@ -560,7 +560,7 @@ mod tests {
         }
 
         fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-            minimizing_fitness
+            crate::solution::traits::evaluator::minimizing_fitness
         }
 
         fn dominates(&self, solution_a: &Solution<bool, f64>, solution_b: &Solution<bool, f64>) -> bool {

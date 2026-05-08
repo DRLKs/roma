@@ -71,7 +71,7 @@ mod tests {
     use crate::algorithms::termination::{TerminationCriteria, TerminationCriterion};
     use crate::algorithms::traits::Algorithm;
     use crate::operator::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
-    use crate::problem::traits::{minimizing_fitness, Problem};
+    use crate::problem::traits::Problem;
     use crate::solution::Solution;
     use crate::solution_set::traits::SolutionSet;
     use crate::utils::random::Random;
@@ -103,7 +103,7 @@ mod tests {
         }
 
         fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-            minimizing_fitness
+            crate::solution::traits::evaluator::minimizing_fitness
         }
 
         fn dominates(&self, solution_a: &Solution<bool, f64>, solution_b: &Solution<bool, f64>) -> bool {

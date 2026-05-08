@@ -1,4 +1,4 @@
-use crate::problem::traits::{minimizing_fitness, Problem};
+use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 use std::collections::{BTreeMap, HashMap};
@@ -175,7 +175,7 @@ impl Problem<usize> for TspProblem {
     }
 
     fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        minimizing_fitness
+        crate::solution::traits::evaluator::minimizing_fitness
     }
 
     fn format_solution(&self, solution: &Solution<usize>) -> String {

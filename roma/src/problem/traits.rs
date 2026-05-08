@@ -3,14 +3,6 @@ use std::fmt::Display;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 
-pub fn maximizing_fitness(candidate: f64, reference: f64) -> bool {
-    candidate > reference
-}
-
-pub fn minimizing_fitness(candidate: f64, reference: f64) -> bool {
-    candidate < reference
-}
-
 /// Trait that defines the basic interface for optimization problems.
 ///
 /// # Type Parameters

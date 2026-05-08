@@ -45,7 +45,10 @@ impl Problem<bool> for HtmlFormattingProblem {
     }
 
     fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        roma_lib::problem::maximizing_fitness
+        fn maximizing_fitness(a: f64, b: f64) -> bool {
+            a > b
+        }
+        maximizing_fitness
     }
 
     fn format_solution(&self, solution: &Solution<bool>) -> String {

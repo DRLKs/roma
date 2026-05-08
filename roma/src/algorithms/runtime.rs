@@ -284,7 +284,6 @@ where
 mod tests {
     use super::*;
     use crate::algorithms::termination::TerminationCriterion;
-    use crate::problem::traits::maximizing_fitness;
     use crate::solution::RealSolutionBuilder;
 
     fn snapshot(
@@ -310,7 +309,7 @@ mod tests {
     #[test]
     fn snapshot_with_seq_updates_termination_state() {
         let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(2)]);
-        let context: ExecutionContext<f64> = ExecutionContext::new(None, criteria, maximizing_fitness);
+        let context: ExecutionContext<f64> = ExecutionContext::new(None, criteria, crate::solution::traits::evaluator::maximizing_fitness);
 
         assert_eq!(*context.next_snapshot_seq.borrow(), 0);
         context.update_execution_state(&snapshot(0, 1, 1.0));

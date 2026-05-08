@@ -1,4 +1,4 @@
-use crate::problem::traits::{minimizing_fitness, Problem};
+use crate::problem::traits::Problem;
 use crate::solution::implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
 use crate::solution::traits::ParetoCrowdingDistanceQuality;
 use crate::solution::Solution;
@@ -95,6 +95,9 @@ impl Problem<f64, ParetoCrowdingDistanceQuality> for ZDT1Problem {
     }
 
     fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+        fn minimizing_fitness(candidate: f64, reference: f64) -> bool {
+            candidate < reference
+        }
         minimizing_fitness
     }
 

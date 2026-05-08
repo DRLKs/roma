@@ -1,4 +1,3 @@
-use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 
@@ -92,7 +91,7 @@ where
     /// # Arguments
     /// * `population` - The population to select from
     /// * `rng` - Random generator provided by the algorithm
-    /// * `direction` - Improvement direction for scalar quality comparisons.
+    /// * `dominates` - Function to determine if one solution dominates another
     ///
     /// # Returns
     /// A reference to the selected solution
@@ -100,7 +99,7 @@ where
         &self,
         population: &'a [Solution<T, Q>],
         rng: &mut Random,
-        problem: &(impl Problem<T, Q> + Sync),
+        dominates: &dyn Fn(&Solution<T, Q>, &Solution<T, Q>) -> bool,
     ) -> &'a Solution<T, Q>;
 
     /// Selects multiple solutions from a population.
@@ -117,10 +116,10 @@ where
         population: &'a [Solution<T, Q>],
         count: usize,
         rng: &mut Random,
-        problem: &(impl Problem<T, Q> + Sync),
+        dominates: fn(&Solution<T, Q>, &Solution<T, Q>) -> bool,
     ) -> Vec<&'a Solution<T, Q>> {
         (0..count)
-            .map(|_| self.execute(population, rng, problem))
+            .map(|_| self.execute(population, rng, &dominates))
             .collect()
     }
 }

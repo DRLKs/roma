@@ -64,7 +64,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::problem::traits::{maximizing_fitness, minimizing_fitness, Problem};
+    use crate::problem::traits::Problem;
     use crate::solution::implementations::real_solution::RealSolutionBuilder;
     use crate::solution::implementations::string_solution::StringSolutionBuilder;
     use crate::solution::Solution;
@@ -96,7 +96,7 @@ mod test {
         }
 
         fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-            maximizing_fitness
+            crate::solution::traits::evaluator::maximizing_fitness
         }
 
         fn dominates(&self, solution_a: &Solution<T, f64>, solution_b: &Solution<T, f64>) -> bool {
@@ -129,7 +129,7 @@ mod test {
         }
 
         fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-            minimizing_fitness
+            crate::solution::traits::evaluator::minimizing_fitness
         }
 
         fn dominates(&self, solution_a: &Solution<T, f64>, solution_b: &Solution<T, f64>) -> bool {

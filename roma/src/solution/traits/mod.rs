@@ -2,8 +2,7 @@
 //!
 //! This module centralizes trait definitions and related implementations used
 //! by quality caches.
-
-mod dominance;
 mod pareto_crowding_distance_quality;
+pub mod evaluator;
 
 pub use pareto_crowding_distance_quality::ParetoCrowdingDistanceQuality;

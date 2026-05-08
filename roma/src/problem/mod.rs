@@ -15,4 +15,4 @@ pub use implementations::{
     tsp_problem::{build_tsp_from_records, TspProblem},
     zdt1_problem::ZDT1Problem,
 };
-pub use traits::{maximizing_fitness, minimizing_fitness, Problem};
+pub use traits::Problem;

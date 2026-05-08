@@ -303,10 +303,10 @@ where
         while offspring_population.len() < parameters.population_size {
             let parent1 = parameters
                 .selection_operator
-                .execute(population, &mut rng, problem);
+                .execute(population, &mut rng, &|a, b| problem.dominates(a, b));
             let parent2 = parameters
                 .selection_operator
-                .execute(population, &mut rng, problem);
+                .execute(population, &mut rng, &|a, b| problem.dominates(a, b));
 
             let mut offspring = if rng.next_f64() < parameters.crossover_probability {
                 parameters
@@ -369,12 +369,12 @@ where
                         let parent1 = parameters.selection_operator.execute(
                             population,
                             &mut local_rng,
-                            problem,
+                            &|a, b| problem.dominates(a, b),
                         );
                         let parent2 = parameters.selection_operator.execute(
                             population,
                             &mut local_rng,
-                            problem,
+                            &|a, b| problem.dominates(a, b),
                         );
 
                         let mut children =

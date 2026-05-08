@@ -484,13 +484,13 @@ where
             let parent1 = self.parameters.selection_operator.execute(
                 &state.population,
                 &mut state.rng,
-                problem,
+                &|a, b| problem.dominates(a, b),
             );
 
             let parent2 = self.parameters.selection_operator.execute(
                 &state.population,
                 &mut state.rng,
-                problem,
+                &|a, b| problem.dominates(a, b),
             );
 
             let mut children = if state.rng.next_f64() < self.parameters.crossover_probability {

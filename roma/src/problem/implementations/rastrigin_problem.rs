@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use crate::problem::traits::{minimizing_fitness, Problem};
+use crate::problem::traits::Problem;
 use crate::solution::{RealSolutionBuilder, Solution};
 use crate::utils::random::Random;
 
@@ -89,6 +89,13 @@ impl Problem<f64> for RastriginProblem {
         quality_a.abs() < quality_b.abs()
     }
 
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+        fn nerar_to_zero_fitness(candidate: f64, reference: f64) -> bool {
+            candidate.abs() < reference.abs()
+        }
+        nerar_to_zero_fitness
+    }
+
     fn create_solution(&self, rng: &mut Random) -> Solution<f64> {
         let span = self.upper_bound - self.lower_bound;
         let variables: Vec<f64> = (0..self.number_of_variables)
@@ -106,10 +113,6 @@ impl Problem<f64> for RastriginProblem {
 
     fn get_problem_description(&self) -> String {
         self.description.clone()
-    }
-
-    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        minimizing_fitness
     }
 
     fn format_solution(&self, solution: &Solution<f64>) -> String {

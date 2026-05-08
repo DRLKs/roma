@@ -45,7 +45,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::problem::traits::{maximizing_fitness, minimizing_fitness, Problem};
+    use crate::problem::traits::Problem;
     use crate::solution::implementations::binary_solution::BinarySolutionBuilder;
     use crate::solution::Solution;
     use crate::utils::random::Random;
@@ -62,7 +62,7 @@ mod tests {
         fn dominates(&self, solution_a: &Solution<bool>, solution_b: &Solution<bool>) -> bool {
             solution_a.quality_value() > solution_b.quality_value()
         }
-        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool { maximizing_fitness }
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool { crate::solution::traits::evaluator::maximizing_fitness }
     }
 
     impl Problem<bool> for MinProblem {
@@ -74,7 +74,7 @@ mod tests {
         fn dominates(&self, solution_a: &Solution<bool>, solution_b: &Solution<bool>) -> bool {
             solution_a.quality_value() < solution_b.quality_value()
         }
-        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool { minimizing_fitness }
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool { crate::solution::traits::evaluator::minimizing_fitness }
     }
 
     #[test]
