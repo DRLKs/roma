@@ -18,11 +18,14 @@ pub(crate) mod traits;
 
 pub use async_runner::{run_algorithm_instances_async, run_algorithms_async};
 pub use implementations::{
+    differential_evolution::{DifferentialEvolution, DifferentialEvolutionParameters},
     genetic_algorithm::{GeneticAlgorithm, GeneticAlgorithmParameters},
     hill_climbing::{HillClimbing, HillClimbingParameters},
     nsga2::{NSGAIIParameters, NSGAII},
     pso::{PSOParameters, PSO},
     simulated_annealing::{SimulatedAnnealing, SimulatedAnnealingParameters},
+    tabu_search::{TabuSearch, TabuSearchParameters},
+    vns::{VNSParameters, VNS},
 };
 pub use runtime::{spawn_algorithm_run, ExecutionContext};
 pub use termination::{

@@ -26,6 +26,32 @@ where
     fn execute(&self, solution: &mut Solution<T, Q>, probability: f64, rng: &mut Random);
 }
 
+/// Trait for neighborhood operators that derive candidate solutions from one base solution.
+///
+/// Neighborhood-based algorithms such as Tabu Search and Variable Neighborhood Search
+/// use this abstraction to sample one or several neighboring solutions without mutating
+/// the original candidate in place.
+pub trait NeighborhoodOperator<T, Q = f64>: Operator
+where
+    T: Clone,
+    Q: Clone,
+{
+    /// Builds one neighbor candidate from the provided base solution.
+    fn generate_neighbor(&self, solution: &Solution<T, Q>, rng: &mut Random) -> Solution<T, Q>;
+
+    /// Builds several neighbor candidates from the provided base solution.
+    fn generate_neighbors(
+        &self,
+        solution: &Solution<T, Q>,
+        count: usize,
+        rng: &mut Random,
+    ) -> Vec<Solution<T, Q>> {
+        (0..count)
+            .map(|_| self.generate_neighbor(solution, rng))
+            .collect()
+    }
+}
+
 /// Trait for crossover operators that combine two parent solutions.
 ///
 /// # Type Parameters

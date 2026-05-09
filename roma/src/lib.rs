@@ -81,10 +81,11 @@ pub mod utils;
 // Top-level re-exports for ergonomic imports.
 pub use algorithms::{
     run_algorithm_instances_async, run_algorithms_async, spawn_algorithm_run, Algorithm,
-    ExecutionStateSnapshot, GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing,
-    HillClimbingParameters, NSGAIIParameters, PSOParameters, SimulatedAnnealing,
-    SimulatedAnnealingParameters, TerminationController, TerminationCriteria,
-    TerminationCriterion, TerminationReason, TerminationState, NSGAII, PSO,
+    DifferentialEvolution, DifferentialEvolutionParameters, ExecutionStateSnapshot,
+    GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing, HillClimbingParameters,
+    NSGAIIParameters, PSOParameters, SimulatedAnnealing, SimulatedAnnealingParameters,
+    TabuSearch, TabuSearchParameters, TerminationController, TerminationCriteria,
+    TerminationCriterion, TerminationReason, TerminationState, VNSParameters, NSGAII, PSO, VNS,
 };
 pub use experiment::Experiment;
 pub use observer::{
@@ -93,12 +94,14 @@ pub use observer::{
 };
 pub use operator::{
     BinaryTournamentSelection, BitFlipMutation, CrossoverOperator,
-    MultiObjectiveTournamentSelection, MutationOperator, Operator, OrderCrossover,
-    PolynomialMutation, SBXCrossover, SelectionOperator, SinglePointCrossover, SwapMutation,
+    MultiObjectiveTournamentSelection, MutationOperator, NeighborhoodOperator, Operator,
+    OrderCrossover, PermutationSwapNeighborhood, PolynomialMutation,
+    RealPerturbationNeighborhood, SBXCrossover, SelectionOperator, SinglePointCrossover,
+    SwapMutation,
 };
 pub use problem::{
-    build_knapsack_from_records, build_tsp_from_records, KnapsackBuilder, KnapsackProblem, Problem,
-    TspProblem, ZDT1Problem,
+    build_knapsack_from_records, build_tsp_from_records, AckleyProblem, KnapsackBuilder,
+    KnapsackProblem, Problem, QapProblem, TspProblem, ZDT1Problem,
 };
 pub use solution::{
     BinarySolutionBuilder, MultiObjectiveRealSolutionBuilder,
@@ -120,22 +123,24 @@ pub use utils::{delete_snapshot_on_success, read_snapshot, write_snapshot};
 pub mod prelude {
     pub use crate::algorithms::{
         run_algorithm_instances_async, run_algorithms_async, spawn_algorithm_run, Algorithm,
-        ExecutionStateSnapshot, GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing,
-        HillClimbingParameters, NSGAIIParameters, PSOParameters, SimulatedAnnealing,
-        SimulatedAnnealingParameters, TerminationController, TerminationCriteria,
-        TerminationCriterion, TerminationReason, NSGAII, PSO,
+        DifferentialEvolution, DifferentialEvolutionParameters, ExecutionStateSnapshot,
+        GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing, HillClimbingParameters,
+        NSGAIIParameters, PSOParameters, SimulatedAnnealing, SimulatedAnnealingParameters,
+        TabuSearch, TabuSearchParameters, TerminationController, TerminationCriteria,
+        TerminationCriterion, TerminationReason, VNSParameters, NSGAII, PSO, VNS,
     };
 
     pub use crate::operator::{
         BinaryTournamentSelection, BitFlipMutation, CrossoverOperator,
-        MultiObjectiveTournamentSelection, MutationOperator, Operator, OrderCrossover,
-        PolynomialMutation, SBXCrossover, SelectionOperator, SinglePointCrossover,
-        SwapMutation,
+        MultiObjectiveTournamentSelection, MutationOperator, NeighborhoodOperator, Operator,
+        OrderCrossover, PermutationSwapNeighborhood, PolynomialMutation,
+        RealPerturbationNeighborhood, SBXCrossover, SelectionOperator,
+        SinglePointCrossover, SwapMutation,
     };
 
     pub use crate::problem::{
-        build_knapsack_from_records, build_tsp_from_records, KnapsackBuilder, KnapsackProblem,
-        Problem, TspProblem, ZDT1Problem,
+        build_knapsack_from_records, build_tsp_from_records, AckleyProblem, KnapsackBuilder,
+        KnapsackProblem, Problem, QapProblem, TspProblem, ZDT1Problem,
     };
 
     pub use crate::observer::{
