@@ -8,7 +8,7 @@ use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
-use crate::operator::traits::NeighborhoodOperator;
+use crate::operator::traits::MutationOperator;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
@@ -16,12 +16,13 @@ use crate::solution_set::traits::SolutionSet;
 use crate::utils::random::{seed_from_time, Random};
 
 #[derive(Clone)]
-pub struct TabuSearchParameters<T, N>
+pub struct TabuSearchParameters<T, M>
 where
     T: Clone,
-    N: NeighborhoodOperator<T>,
+    M: MutationOperator<T>,
 {
-    pub neighborhood_operator: N,
+    pub mutation_operator: M,
+    pub mutation_probability: f64,
     pub neighborhood_size: usize,
     pub tabu_tenure: usize,
     pub aspiration_enabled: bool,
@@ -30,19 +31,21 @@ where
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T, N> TabuSearchParameters<T, N>
+impl<T, M> TabuSearchParameters<T, M>
 where
     T: Clone,
-    N: NeighborhoodOperator<T>,
+    M: MutationOperator<T>,
 {
     pub fn new(
-        neighborhood_operator: N,
+        mutation_operator: M,
+        mutation_probability: f64,
         neighborhood_size: usize,
         tabu_tenure: usize,
         termination_criteria: TerminationCriteria,
     ) -> Self {
         Self {
-            neighborhood_operator,
+            mutation_operator,
+            mutation_probability,
             neighborhood_size,
             tabu_tenure,
             aspiration_enabled: true,
@@ -63,12 +66,12 @@ where
     }
 }
 
-pub struct TabuSearch<T, N>
+pub struct TabuSearch<T, M>
 where
     T: Clone,
-    N: NeighborhoodOperator<T>,
+    M: MutationOperator<T>,
 {
-    parameters: TabuSearchParameters<T, N>,
+    parameters: TabuSearchParameters<T, M>,
     solution_set: Option<VectorSolutionSet<T>>,
     observers: Vec<Box<dyn AlgorithmObserver<T>>>,
 }
@@ -168,10 +171,10 @@ where
     }
 }
 
-impl<T, N> Observable<T> for TabuSearch<T, N>
+impl<T, M> Observable<T> for TabuSearch<T, M>
 where
     T: Clone + Send + 'static,
-    N: NeighborhoodOperator<T>,
+    M: MutationOperator<T>,
 {
     fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<T>>) {
         self.observers.push(observer);
@@ -182,23 +185,23 @@ where
     }
 }
 
-impl<T, N> TabuSearch<T, N>
+impl<T, M> TabuSearch<T, M>
 where
     T: Clone + Send + Sync + 'static + Display + FromStr + Debug,
-    N: NeighborhoodOperator<T> + Send + Sync,
+    M: MutationOperator<T> + Send + Sync,
 {
     fn purge_expired_tabu_entries(tabu_memory: &mut HashMap<String, usize>, iteration: usize) {
         tabu_memory.retain(|_, expiry| *expiry > iteration);
     }
 }
 
-impl<T, N> Algorithm<T> for TabuSearch<T, N>
+impl<T, M> Algorithm<T> for TabuSearch<T, M>
 where
     T: Clone + Send + Sync + 'static + Display + FromStr + Debug,
-    N: NeighborhoodOperator<T> + Send + Sync,
+    M: MutationOperator<T> + Send + Sync,
 {
     type SolutionSet = VectorSolutionSet<T>;
-    type Parameters = TabuSearchParameters<T, N>;
+    type Parameters = TabuSearchParameters<T, M>;
     type StepState = TabuSearchState<T>;
 
     fn new(parameters: Self::Parameters) -> Self {
@@ -226,6 +229,10 @@ where
     }
 
     fn validate_parameters(&self) -> Result<(), String> {
+        if !(0.0..=1.0).contains(&self.parameters.mutation_probability) {
+            return Err("mutation_probability must be in [0,1]".to_string());
+        }
+
         if self.parameters.neighborhood_size == 0 {
             return Err("neighborhood_size must be > 0".to_string());
         }
@@ -276,13 +283,13 @@ where
         let mut best_admissible_candidate: Option<Solution<T>> = None;
         let best_quality = state.best.quality_value();
 
-        let neighbors = self.parameters.neighborhood_operator.generate_neighbors(
-            &state.current,
-            self.parameters.neighborhood_size,
-            &mut state.rng,
-        );
-
-        for mut candidate in neighbors {
+        for _ in 0..self.parameters.neighborhood_size {
+            let mut candidate = state.current.copy();
+            self.parameters.mutation_operator.execute(
+                &mut candidate,
+                self.parameters.mutation_probability,
+                &mut state.rng,
+            );
             problem.evaluate(&mut candidate);
             state.evaluations += 1;
 
@@ -350,8 +357,9 @@ where
 
     fn checkpoint_algorithm_parameters(&self) -> String {
         format!(
-            "neighborhood={};neighborhood_size={};tabu_tenure={};aspiration={};termination={:?}",
-            self.parameters.neighborhood_operator.name(),
+            "mutation={};mutation_probability={:.6};neighborhood_size={};tabu_tenure={};aspiration={};termination={:?}",
+            self.parameters.mutation_operator.name(),
+            self.parameters.mutation_probability,
             self.parameters.neighborhood_size,
             self.parameters.tabu_tenure,
             self.parameters.aspiration_enabled,
@@ -360,10 +368,10 @@ where
     }
 }
 
-impl<T, N, P> ExperimentalCase<T, f64, P> for TabuSearchParameters<T, N>
+impl<T, M, P> ExperimentalCase<T, f64, P> for TabuSearchParameters<T, M>
 where
     T: Clone + Send + Sync + 'static + Display + FromStr + Debug,
-    N: NeighborhoodOperator<T> + Clone + Send + Sync + 'static,
+    M: MutationOperator<T> + Clone + Send + Sync + 'static,
     P: Problem<T, f64> + Sync,
 {
     fn algorithm_name(&self) -> &str {
@@ -379,7 +387,11 @@ where
 
     fn parameters(&self) -> Vec<CaseParameter> {
         vec![
-            CaseParameter::new("neighborhood_operator", self.neighborhood_operator.name()),
+            CaseParameter::new("mutation_operator", self.mutation_operator.name()),
+            CaseParameter::new(
+                "mutation_probability",
+                format!("{:.6}", self.mutation_probability),
+            ),
             CaseParameter::new("neighborhood_size", self.neighborhood_size.to_string()),
             CaseParameter::new("tabu_tenure", self.tabu_tenure.to_string()),
             CaseParameter::new("aspiration_enabled", self.aspiration_enabled.to_string()),
@@ -399,7 +411,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::operator::PermutationSwapNeighborhood;
+    use crate::operator::SwapMutation;
     use crate::problem::QapProblem;
     use crate::solution_set::traits::SolutionSet;
     use crate::TerminationCriterion;
@@ -407,7 +419,8 @@ mod tests {
     #[test]
     fn tabu_search_rejects_zero_tenure() {
         let parameters = TabuSearchParameters::new(
-            PermutationSwapNeighborhood::new(1),
+            SwapMutation::new(),
+            1.0,
             8,
             0,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(5)]),
@@ -438,7 +451,8 @@ mod tests {
         );
 
         let parameters = TabuSearchParameters::new(
-            PermutationSwapNeighborhood::new(1),
+            SwapMutation::new(),
+            1.0,
             10,
             4,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(20)]),

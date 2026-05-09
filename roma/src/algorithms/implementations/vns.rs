@@ -7,7 +7,7 @@ use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
-use crate::operator::traits::NeighborhoodOperator;
+use crate::operator::traits::MutationOperator;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
@@ -15,30 +15,33 @@ use crate::solution_set::traits::SolutionSet;
 use crate::utils::random::{seed_from_time, Random};
 
 #[derive(Clone)]
-pub struct VNSParameters<T, N>
+pub struct VNSParameters<T, M>
 where
     T: Clone,
-    N: NeighborhoodOperator<T>,
+    M: MutationOperator<T>,
 {
-    pub neighborhoods: Vec<N>,
+    pub neighborhoods: Vec<M>,
+    pub mutation_probability: f64,
     pub local_search_trials: usize,
     pub termination_criteria: TerminationCriteria,
     pub random_seed: Option<u64>,
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T, N> VNSParameters<T, N>
+impl<T, M> VNSParameters<T, M>
 where
     T: Clone,
-    N: NeighborhoodOperator<T>,
+    M: MutationOperator<T>,
 {
     pub fn new(
-        neighborhoods: Vec<N>,
+        neighborhoods: Vec<M>,
+        mutation_probability: f64,
         local_search_trials: usize,
         termination_criteria: TerminationCriteria,
     ) -> Self {
         Self {
             neighborhoods,
+            mutation_probability,
             local_search_trials,
             termination_criteria,
             random_seed: None,
@@ -52,12 +55,12 @@ where
     }
 }
 
-pub struct VNS<T, N>
+pub struct VNS<T, M>
 where
     T: Clone,
-    N: NeighborhoodOperator<T>,
+    M: MutationOperator<T>,
 {
-    parameters: VNSParameters<T, N>,
+    parameters: VNSParameters<T, M>,
     solution_set: Option<VectorSolutionSet<T>>,
     observers: Vec<Box<dyn AlgorithmObserver<T>>>,
 }
@@ -138,10 +141,10 @@ where
     }
 }
 
-impl<T, N> Observable<T> for VNS<T, N>
+impl<T, M> Observable<T> for VNS<T, M>
 where
     T: Clone + Send + 'static,
-    N: NeighborhoodOperator<T>,
+    M: MutationOperator<T>,
 {
     fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<T>>) {
         self.observers.push(observer);
@@ -152,13 +155,13 @@ where
     }
 }
 
-impl<T, N> Algorithm<T> for VNS<T, N>
+impl<T, M> Algorithm<T> for VNS<T, M>
 where
     T: Clone + Send + Sync + 'static + Display + FromStr + Debug,
-    N: NeighborhoodOperator<T> + Send + Sync,
+    M: MutationOperator<T> + Send + Sync,
 {
     type SolutionSet = VectorSolutionSet<T>;
-    type Parameters = VNSParameters<T, N>;
+    type Parameters = VNSParameters<T, M>;
     type StepState = VNSState<T>;
 
     fn new(parameters: Self::Parameters) -> Self {
@@ -188,6 +191,10 @@ where
     fn validate_parameters(&self) -> Result<(), String> {
         if self.parameters.neighborhoods.is_empty() {
             return Err("neighborhoods must not be empty".to_string());
+        }
+
+        if !(0.0..=1.0).contains(&self.parameters.mutation_probability) {
+            return Err("mutation_probability must be in [0,1]".to_string());
         }
 
         if self.parameters.local_search_trials == 0 {
@@ -228,14 +235,24 @@ where
     ) {
         state.iteration += 1;
 
-        let neighborhood = &self.parameters.neighborhoods[state.neighborhood_index];
-        let mut candidate = neighborhood.generate_neighbor(&state.current, &mut state.rng);
+        let mutation = &self.parameters.neighborhoods[state.neighborhood_index];
+        let mut candidate = state.current.copy();
+        mutation.execute(
+            &mut candidate,
+            self.parameters.mutation_probability,
+            &mut state.rng,
+        );
         problem.evaluate(&mut candidate);
         state.evaluations += 1;
 
         let mut local_best = candidate;
         for _ in 0..self.parameters.local_search_trials {
-            let mut improved_candidate = neighborhood.generate_neighbor(&local_best, &mut state.rng);
+            let mut improved_candidate = local_best.copy();
+            mutation.execute(
+                &mut improved_candidate,
+                self.parameters.mutation_probability,
+                &mut state.rng,
+            );
             problem.evaluate(&mut improved_candidate);
             state.evaluations += 1;
 
@@ -281,25 +298,28 @@ where
     }
 
     fn checkpoint_algorithm_parameters(&self) -> String {
-        let neighborhood_names = self
+        let mutation_names = self
             .parameters
             .neighborhoods
             .iter()
-            .map(|neighborhood| neighborhood.name().to_string())
+            .map(|mutation| mutation.name().to_string())
             .collect::<Vec<_>>()
             .join(",");
 
         format!(
-            "neighborhoods=[{}];local_search_trials={};termination={:?}",
-            neighborhood_names, self.parameters.local_search_trials, self.parameters.termination_criteria
+            "mutations=[{}];mutation_probability={:.6};local_search_trials={};termination={:?}",
+            mutation_names,
+            self.parameters.mutation_probability,
+            self.parameters.local_search_trials,
+            self.parameters.termination_criteria
         )
     }
 }
 
-impl<T, N, P> ExperimentalCase<T, f64, P> for VNSParameters<T, N>
+impl<T, M, P> ExperimentalCase<T, f64, P> for VNSParameters<T, M>
 where
     T: Clone + Send + Sync + 'static + Display + FromStr + Debug,
-    N: NeighborhoodOperator<T> + Clone + Send + Sync + 'static,
+    M: MutationOperator<T> + Clone + Send + Sync + 'static,
     P: Problem<T, f64> + Sync,
 {
     fn algorithm_name(&self) -> &str {
@@ -316,7 +336,11 @@ where
 
     fn parameters(&self) -> Vec<CaseParameter> {
         vec![
-            CaseParameter::new("neighborhood_count", self.neighborhoods.len().to_string()),
+            CaseParameter::new("mutation_count", self.neighborhoods.len().to_string()),
+            CaseParameter::new(
+                "mutation_probability",
+                format!("{:.6}", self.mutation_probability),
+            ),
             CaseParameter::new("local_search_trials", self.local_search_trials.to_string()),
             CaseParameter::new(
                 "termination_criteria",
@@ -334,15 +358,16 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::operator::RealPerturbationNeighborhood;
+    use crate::operator::RealPerturbationMutation;
     use crate::problem::AckleyProblem;
     use crate::solution_set::traits::SolutionSet;
     use crate::TerminationCriterion;
 
     #[test]
     fn vns_rejects_empty_neighborhoods() {
-        let parameters: VNSParameters<f64, RealPerturbationNeighborhood> = VNSParameters::new(
+        let parameters: VNSParameters<f64, RealPerturbationMutation> = VNSParameters::new(
             Vec::new(),
+            1.0,
             3,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(5)]),
         );
@@ -359,9 +384,10 @@ mod tests {
         let problem = AckleyProblem::new(6, -5.0, 5.0);
         let parameters = VNSParameters::new(
             vec![
-                RealPerturbationNeighborhood::new(0.05, 0.5),
-                RealPerturbationNeighborhood::new(0.15, 0.75),
+                RealPerturbationMutation::new(0.05, 0.5),
+                RealPerturbationMutation::new(0.15, 0.75),
             ],
+            1.0,
             4,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(15)]),
         )

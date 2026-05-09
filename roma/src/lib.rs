@@ -94,10 +94,9 @@ pub use observer::{
 };
 pub use operator::{
     BinaryTournamentSelection, BitFlipMutation, CrossoverOperator,
-    MultiObjectiveTournamentSelection, MutationOperator, NeighborhoodOperator, Operator,
-    OrderCrossover, PermutationSwapNeighborhood, PolynomialMutation,
-    RealPerturbationNeighborhood, SBXCrossover, SelectionOperator, SinglePointCrossover,
-    SwapMutation,
+    MultiObjectiveTournamentSelection, MutationOperator, Operator, OrderCrossover,
+    PolynomialMutation, RealPerturbationMutation, SBXCrossover, SelectionOperator,
+    SinglePointCrossover, SwapMutation,
 };
 pub use problem::{
     build_knapsack_from_records, build_tsp_from_records, AckleyProblem, KnapsackBuilder,
@@ -132,9 +131,8 @@ pub mod prelude {
 
     pub use crate::operator::{
         BinaryTournamentSelection, BitFlipMutation, CrossoverOperator,
-        MultiObjectiveTournamentSelection, MutationOperator, NeighborhoodOperator, Operator,
-        OrderCrossover, PermutationSwapNeighborhood, PolynomialMutation,
-        RealPerturbationNeighborhood, SBXCrossover, SelectionOperator,
+        MultiObjectiveTournamentSelection, MutationOperator, Operator, OrderCrossover,
+        PolynomialMutation, RealPerturbationMutation, SBXCrossover, SelectionOperator,
         SinglePointCrossover, SwapMutation,
     };
 

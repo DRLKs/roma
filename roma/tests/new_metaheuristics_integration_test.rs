@@ -3,12 +3,12 @@ use roma_lib::{
     Algorithm,
     DifferentialEvolution,
     DifferentialEvolutionParameters,
-    NeighborhoodOperator,
-    PermutationSwapNeighborhood,
+    MutationOperator,
     Problem,
     QapProblem,
-    RealPerturbationNeighborhood,
+    RealPerturbationMutation,
     SolutionSet,
+    SwapMutation,
     TabuSearch,
     TabuSearchParameters,
     TerminationCriteria,
@@ -58,7 +58,8 @@ fn tabu_search_solves_qap_via_crate_root_exports() {
     );
 
     let parameters = TabuSearchParameters::new(
-        PermutationSwapNeighborhood::new(1),
+        SwapMutation::new(),
+        1.0,
         12,
         5,
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(20)]),
@@ -82,9 +83,10 @@ fn vns_solves_ackley_via_crate_root_exports() {
     let problem = AckleyProblem::new(8, -4.0, 4.0);
     let parameters = VNSParameters::new(
         vec![
-            RealPerturbationNeighborhood::new(0.05, 0.5),
-            RealPerturbationNeighborhood::new(0.15, 0.75),
+            RealPerturbationMutation::new(0.05, 0.5),
+            RealPerturbationMutation::new(0.15, 0.75),
         ],
+        1.0,
         5,
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(18)]),
     )
@@ -100,13 +102,14 @@ fn vns_solves_ackley_via_crate_root_exports() {
 }
 
 #[test]
-fn neighborhood_trait_is_available_from_crate_root() {
-    let operator = RealPerturbationNeighborhood::new(0.1, 1.0);
+fn real_perturbation_mutation_is_available_from_crate_root() {
     let problem = AckleyProblem::new(3, -1.0, 1.0);
-    let base = problem.create_solution(&mut Random::new(3));
+    let mut solution = problem.create_solution(&mut Random::new(3));
+    let original = solution.variables().to_vec();
     let mut rng = Random::new(9);
 
-    let neighbor = operator.generate_neighbor(&base, &mut rng);
+    RealPerturbationMutation::new(0.1, 1.0).execute(&mut solution, 1.0, &mut rng);
 
-    assert_eq!(neighbor.num_variables(), 3);
+    assert_eq!(solution.num_variables(), 3);
+    assert_ne!(solution.variables(), original.as_slice());
 }

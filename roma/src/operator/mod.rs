@@ -1,29 +1,21 @@
 //! Variation and selection operators used by algorithms.
 //!
 //! This module includes concrete mutation, crossover, and selection operators,
-//! neighborhood operators, plus trait interfaces for custom operator implementations.
+//! plus trait interfaces for custom operator implementations.
 //!
 //! Convenience submodules [`mutation`], [`crossover`], and [`selection`] provide
 //! short access paths to commonly used operator types.
 
 pub(crate) mod crossover_operator_implementations;
 pub(crate) mod mutation_operator_implementations;
-pub(crate) mod neighborhood_operator_implementations;
 pub(crate) mod selection_operator_implementations;
 pub(crate) mod traits;
 
-pub use traits::{
-    CrossoverOperator, MutationOperator, NeighborhoodOperator, Operator, SelectionOperator,
-};
+pub use traits::{CrossoverOperator, MutationOperator, Operator, SelectionOperator};
 
 pub use mutation_operator_implementations::{
     bit_flip_mutation::BitFlipMutation, polynomial_mutation::PolynomialMutation,
-    swap_mutation::SwapMutation,
-};
-
-pub use neighborhood_operator_implementations::{
-    permutation_swap_neighborhood::PermutationSwapNeighborhood,
-    real_perturbation_neighborhood::RealPerturbationNeighborhood,
+    real_perturbation_mutation::RealPerturbationMutation, swap_mutation::SwapMutation,
 };
 
 pub use crossover_operator_implementations::{
@@ -40,13 +32,8 @@ pub use selection_operator_implementations::{
 pub mod mutation {
     pub use super::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
     pub use super::mutation_operator_implementations::polynomial_mutation::PolynomialMutation;
+    pub use super::mutation_operator_implementations::real_perturbation_mutation::RealPerturbationMutation;
     pub use super::mutation_operator_implementations::swap_mutation::SwapMutation;
-}
-
-/// Idiomatic short aliases for neighborhood operators.
-pub mod neighborhood {
-    pub use super::neighborhood_operator_implementations::permutation_swap_neighborhood::PermutationSwapNeighborhood;
-    pub use super::neighborhood_operator_implementations::real_perturbation_neighborhood::RealPerturbationNeighborhood;
 }
 
 /// Idiomatic short aliases for operator groups.
