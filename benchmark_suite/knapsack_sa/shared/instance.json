@@ -1,0 +1,8 @@
+{
+  "benchmark_id": "knapsack_sa",
+  "problem": "knapsack",
+  "instance_id": "knapsack_10",
+  "capacity": 50.0,
+  "weights": [12.0, 7.0, 11.0, 8.0, 9.0, 4.0, 3.0, 6.0, 5.0, 10.0],
+  "values":  [24.0, 13.0, 10.0, 9.0, 15.0, 8.0, 6.0, 7.0, 5.0, 20.0]
+}

@@ -43,6 +43,10 @@ def rastrigin(solution):
     )
 
 
+def clamp_solution(values):
+    return [min(UPPER_BOUND, max(LOWER_BOUND, float(value))) for value in values]
+
+
 def run_benchmark(seed):
     random.seed(seed)
     np.random.seed(seed)
@@ -74,8 +78,8 @@ def run_benchmark(seed):
     end_wall = time.perf_counter()
 
     best = model.g_best
-    best_solution = best.solution.tolist()
-    best_fitness = float(best.target.fitness)
+    best_solution = clamp_solution(best.solution.tolist())
+    best_fitness = float(rastrigin(best_solution))
 
     return {
         "benchmark_id": CONFIG["benchmark_id"],
