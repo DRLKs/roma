@@ -1,0 +1,135 @@
+import json
+import time
+from pathlib import Path
+
+from mealpy import GA, PermutationVar, Problem
+
+
+ROOT = Path(__file__).resolve().parents[2]
+SHARED_DIR = ROOT / "shared"
+INSTANCE_PATH = SHARED_DIR / "instance.json"
+CONFIG_PATH = SHARED_DIR / "config.json"
+
+
+def load_json(path):
+    with path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+INSTANCE = load_json(INSTANCE_PATH)
+CONFIG = load_json(CONFIG_PATH)
+BUDGET = CONFIG["budget"]
+RUNS = int(CONFIG["runs"])
+SEEDS = list(CONFIG.get("seeds", []))
+MEALPY_CONFIG = CONFIG["mealpy"]
+FLOW_MATRIX = INSTANCE["flow_matrix"]
+DISTANCE_MATRIX = INSTANCE["distance_matrix"]
+DIMENSION = int(INSTANCE["dimension"])
+
+
+if BUDGET.get("type") != "evaluations":
+    raise ValueError("This mealpy benchmark runner currently supports only evaluation budgets")
+
+if len(SEEDS) < RUNS:
+    raise ValueError("config.json must define at least one seed per run")
+
+
+def qap_cost(assignment):
+    total = 0.0
+    for facility_i, location_i in enumerate(assignment):
+        for facility_j, location_j in enumerate(assignment):
+            total += FLOW_MATRIX[facility_i][facility_j] * DISTANCE_MATRIX[location_i][location_j]
+    return float(total)
+
+
+class QapProblem(Problem):
+    def __init__(self, bounds=None, minmax="min", **kwargs):
+        super().__init__(bounds=bounds, minmax=minmax, **kwargs)
+
+    def obj_func(self, solution):
+        decoded = self.decode_solution(solution)
+        assignment = [int(value) for value in decoded["per_var"]]
+        return qap_cost(assignment)
+
+
+def run_benchmark(seed):
+    budget_value = int(BUDGET["value"])
+    pop_size = int(MEALPY_CONFIG["population_size"])
+    if budget_value < pop_size:
+        raise ValueError("Evaluation budget must be at least the mealpy population size")
+
+    epoch = max(1, (budget_value - pop_size) // pop_size)
+    problem = QapProblem(
+        bounds=PermutationVar(valid_set=list(range(DIMENSION)), name="per_var"),
+        minmax="min",
+        log_to=None,
+        name=INSTANCE["instance_id"],
+    )
+
+    model = GA.OriginalGA(
+        epoch=epoch,
+        pop_size=pop_size,
+        pc=float(MEALPY_CONFIG["crossover_probability"]),
+        pm=float(MEALPY_CONFIG["mutation_probability"]),
+        selection=str(MEALPY_CONFIG["selection"]),
+        k_way=float(MEALPY_CONFIG["k_way"]),
+        crossover=str(MEALPY_CONFIG["crossover"]),
+        mutation=str(MEALPY_CONFIG["mutation"]),
+        mutation_multipoints=bool(MEALPY_CONFIG["mutation_multipoints"]),
+    )
+
+    start_wall = time.perf_counter()
+    model.solve(problem, seed=seed, mode="single")
+    end_wall = time.perf_counter()
+
+    best_assignment = [int(value) for value in problem.decode_solution(model.g_best.solution)["per_var"]]
+    best_fitness = float(model.g_best.target.fitness)
+
+    return {
+        "benchmark_id": CONFIG["benchmark_id"],
+        "library": "mealpy",
+        "algorithm_family": CONFIG["algorithm_family"],
+        "problem": INSTANCE["problem"],
+        "instance_id": INSTANCE["instance_id"],
+        "seed": seed,
+        "budget_type": BUDGET["type"],
+        "budget_value": budget_value,
+        "best_fitness": best_fitness,
+        "best_solution": best_assignment,
+        "wall_time_ms": (end_wall - start_wall) * 1000.0,
+        "cpu_time_ms": None,
+        "status": "ok",
+        "error": None,
+    }
+
+
+def main():
+    results = []
+    for index in range(RUNS):
+        seed = SEEDS[index]
+        try:
+            result = run_benchmark(seed)
+        except Exception as exc:  # noqa: BLE001
+            result = {
+                "benchmark_id": CONFIG["benchmark_id"],
+                "library": "mealpy",
+                "algorithm_family": CONFIG["algorithm_family"],
+                "problem": INSTANCE["problem"],
+                "instance_id": INSTANCE["instance_id"],
+                "seed": seed,
+                "budget_type": BUDGET["type"],
+                "budget_value": int(BUDGET["value"]),
+                "best_fitness": None,
+                "best_solution": None,
+                "wall_time_ms": None,
+                "cpu_time_ms": None,
+                "status": "error",
+                "error": str(exc),
+            }
+        results.append(result)
+
+    print(json.dumps(results, indent=2))
+
+
+if __name__ == "__main__":
+    main()

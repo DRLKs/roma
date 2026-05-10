@@ -1,0 +1,55 @@
+{
+  "benchmark_id": "qap_ga",
+  "algorithm_family": "genetic_algorithm",
+  "runs": 5,
+  "budget": {
+    "type": "evaluations",
+    "value": 5000
+  },
+  "seeds": [42, 43, 44, 45, 46],
+  "roma": {
+    "population_size": 100,
+    "crossover_probability": 0.9,
+    "mutation_probability": 0.2,
+    "elite_size": 2
+  },
+  "jmetal_java": {
+    "version": "5.11",
+    "population_size": 100,
+    "crossover_probability": 0.9,
+    "mutation_probability": 0.2
+  },
+  "jmetalpy": {
+    "population_size": 100,
+    "offspring_population_size": 100,
+    "crossover_probability": 0.9,
+    "mutation_probability": 0.2
+  },
+  "deap": {
+    "population_size": 100,
+    "crossover_probability": 0.9,
+    "mutation_probability": 0.2,
+    "tournament_size": 2
+  },
+  "pagmo2_cpp": {
+    "population_size": 100,
+    "crossover_probability": 0.9,
+    "mutation_probability": 0.2,
+    "eta_c": 10.0,
+    "param_m": 1.0,
+    "selection": "tournament",
+    "crossover": "single",
+    "mutation": "uniform",
+    "selection_param": 2
+  },
+  "mealpy": {
+    "population_size": 100,
+    "crossover_probability": 0.9,
+    "mutation_probability": 0.6,
+    "selection": "tournament",
+    "k_way": 0.2,
+    "crossover": "one_point",
+    "mutation": "swap",
+    "mutation_multipoints": false
+  }
+}
