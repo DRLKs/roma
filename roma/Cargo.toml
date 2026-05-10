@@ -1,6 +1,6 @@
 [package]
 name = "roma_lib"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 rust-version = "1.90"
 authors = ["David Muñoz del Valle <tu@email.com>"]
@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 description = "A Rust metaheuristics framework inspired by jMetal for optimization and experimentation."
 repository = "https://github.com/DRLKs/roma"
 homepage = "https://github.com/DRLKs/roma"
-documentation = "https://docs.rs/roma"
+documentation = "https://docs.rs/roma_lib"
 readme = "README.md"
 keywords = ["optimization", "metaheuristics", "evolutionary", "genetic", "nsga2"]
 categories = ["algorithms", "science", "simulation"]

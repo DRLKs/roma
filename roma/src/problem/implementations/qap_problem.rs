@@ -6,7 +6,9 @@ use crate::utils::random::Random;
 ///
 /// A solution is a permutation where index `i` represents the facility and the stored value
 /// is the assigned location. The objective is to minimize:
+/// ```text
 /// sum(flow[i][j] * distance[assignment[i]][assignment[j]])
+/// ```
 #[derive(Clone)]
 pub struct QapProblem {
     description: String,

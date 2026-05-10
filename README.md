@@ -26,7 +26,7 @@ compare experiments with repeatable settings.
 
 ```toml
 [dependencies]
-roma = "0.1.0"
+roma = "0.1.1"
 ```
 
 While development is ongoing, you can also depend on Git:

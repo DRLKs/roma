@@ -17,7 +17,7 @@ run reproducible executions, and observe progress through console or file-based 
 
 ```toml
 [dependencies]
-roma_lib = "0.1.0"
+roma_lib = "0.1.1"
 ```
 
 ## Quick Start
