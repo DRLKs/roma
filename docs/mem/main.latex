@@ -1,0 +1,1121 @@
+% ======================================================================
+\documentclass[12pt,a4paper,twoside,openright]{book}
+
+%───────── Plantilla, portadas y contraportada ─────────────────────────
+\usepackage{template/sty_files/template-TFGspanish-uma}
+
+\usepackage{template/sty_files/plain_cover-blueuma}
+\usepackage{template/sty_files/plain_cover-whiteuma}
+
+\usepackage{template/sty_files/backcover-umaes}
+
+%───────── Paquetes auxiliares ─────────────────────────────────────────
+\usepackage{blindtext}
+\usepackage{mwe}               
+\usepackage{csquotes}
+\usepackage[
+  backend=biber,
+  style=numeric,
+  sorting=nyt
+]{biblatex}
+\addbibresource{references.bib}
+
+% Paquete para notación matemática
+\usepackage{amssymb}
+% Código
+\usepackage{minted}
+\usemintedstyle{borland} % Puedes cambiar el estilo (borland, friendly, colorful etc.)
+
+% Diagramas 
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\tikzset{
+    block/.style = {rectangle, draw, fill=blue!5, text width=10em, text centered, rounded corners, minimum height=3em},
+    thread/.style = {draw, dashed, inner sep=1.8em, fill=gray!5},
+    channel_box/.style = {draw, fill=orange!10, rectangle, double, minimum width=2.8cm, minimum height=1.2cm, text centered, font=\small\ttfamily},
+    arrow/.style = {-{Stealth[scale=1.2]}, thick}
+}
+
+%======================================================================
+\begin{document}
+
+%────────────────────── Blue front cover ───────────────────────
+\MakePlainBlueUMACover{
+  degree      = {Grado en Ingeniería del Software},
+  titleES     = {Biblioteca extensible de optimización metaheurística en Rust},
+  titleEN     = {Extensible metaheuristic optimization library in Rust},
+  author      = {David Muñoz del Valle},
+  tutor       = {Gabriel Jesús Luque Polo},
+  dept        = {Departamento de Lenguajes y Ciencias de la Computación},
+  cityDate    = {MÁLAGA, \today},
+  logoLeft    = {template/logos/NEG-uma-logo.png},
+  logoRight   = {template/logos/NEG-etsi-logo.png}
+}
+
+%────────────────────── White front cover ──────────────────────
+\MakePlainWhiteUMACover{
+  degree      = {Graduado en Ingeniería de la Salud},
+  mencion     = {Mención en Bioinformática},
+  titleES     = {Biblioteca extensible de optimización metaheurística en Rust},
+  titleEN     = {Extensible metaheuristic optimization library in Rust},
+  author      = {David Muñoz del Valle},
+  tutor       = {Gabriel Jesús Luque Polo},
+  dept        = {Departamento de Lenguajes y Ciencias de la Computación},
+  cityDate    = {MÁLAGA, \today},
+  defenseDate = {Septiembre de 2025},
+  logoLeft    = {template/logos/POS-uma-logo.png},
+  logoRight   = {template/logos/POS-etsi-logo.png}
+}
+\frontmatter
+
+%────────────────────── Resumen / Abstract ─────────────────────────────
+\renewcommand{\abstractname}{Resumen}
+\begin{abstract}
+
+    El presente Trabajo de Fin de Grado tiene como objetivo principal el diseño y desarrollo de una biblioteca de optimización metaheurística de carácter extensible y modular, basada en una filosofía de cero dependencias y programada íntegramente en Rust, un lenguaje de programación compilado orientado a la seguridad de memoria y al alto rendimiento.
+
+\medskip
+\noindent\textbf{Palabras clave: Rust, Metaheurísticas, Optimización, Biblioteca} 
+\end{abstract}
+
+\renewcommand{\abstractname}{Abstract}
+\begin{abstract}
+    The main objective of this Bachelor’s Thesis is the design and development of an extensible and modular metaheuristic optimization library, based on a zero-dependency philosophy and implemented entirely in Rust, a compiled programming language focused on memory safety and high performance.
+
+
+\medskip
+\noindent\textbf{Keywords: Rust, Metaheuristics, Optimization, Library } 
+\end{abstract}
+
+%──────────────── Agradecimientos ──────────────────────────────────────
+\begin{umaacknowledgments}
+    El único apartado donde hablaré en primera persona es en este, no porque sea el único donde se me permite esta práctica, que me viene de perlas, sino porque es el único donde escribiré yo de verdad. 
+
+    En este apartado voy a resumir mi paso por la facultad, pero no quiero hablar sobre lo académico, más bien sobre mis sentimientos durante este.
+
+    Que viniera a Málaga no estaba entre mis planes, fue el sitio donde entré con mi nota de selectividad, no sabía que estudiar y de rebote acabé en esta carrera. 
+    Llegué solo, ningún amigo mio, nadie que conocía estudiaría en Málaga, sin embargo aquí, me esperaba muchísima gente increíble. 
+
+    Los primeros días hice migas con los que todavía considero amigos, un grupo maravilloso a los que les debo muchísimo, sin ellos no hubiera aguantado el primer semestre. El semestre que tan complicado se nos hizo con cálculo impartida por \textbf{Yadira} o electrónica, de la cual mejor no doy más detalles.
+    
+    Aquí conocí a \textbf{Carlos}, pocas personas me hacen reír tanto. Es una persona súper inteligente y aunque ahora ahora no encuentre su camino, lo acabará encontrando y le irá genial. También a \textbf{Tomás}, que aunque ya no nos veamos mucho, aprendí mucho de él. Luego a \textbf{Suito} que con su amabilidad, su sonrisa y su gorra nos cautiva a todos, \textbf{Dino}, la persona más bondadosa que existe, no exagero, nunca he visto ningún ápice de maldad en este chico. \textbf{Sofía} nuestra China, realmente no conozco a nadie que sea capaz de obsesionarse tanto con cualquier cosa, facilmente se convertiriía la mejor en lo que fuera si fuera capaz de mantener esa dedicación durante un largo periodo de tiempo,  luego \textbf{Salma}, la persona con más imaginación que conozco, la chica con mas calle de la ETSII. La \textbf{Marta}, la señora de los viajes, se ha tirado más tiempo en aviones que estudiando, es una crack, ahora te corre 20K y se la pela. \textbf{Jose}, se describe a si mismo como un pato galáctico pero es imposible ser más listo y más gafas, te habla en 100 idiomas y siempre está para todos. Por último \textbf{Roberto}, un rondeño de ojos bonitos. La vida nos puso en el mismo gimnasio y en la misma clase, siempre me acompañó aunque no coincidiéramos en clase. Ahora compartimos piso. Sin duda el mejor, te quiero mucho. 
+
+    Avanzaron los cursos, perdí el contacto con muchos y en tercero decidí cambiarme de modalidad, tuve que adaptarme a una nueva clase, a un nuevo conjunto de personas que llevaban juntas todos los años de carrera, en este cambio me acompañó Suito. Con él tenía una manía rara, nos tocábamos muchos las piernas cariñosamente y tuvimos que meternos en un grupo para camuflarnos entre ellos y no parecer \textit{raritos}. Este realmente no era un grupo, era un equipo, el equipo JAJER.
+
+    Con nuestra incorporación el equipo se transformó en JAJERDA, ya que el nombre se compone de las iniciales de los miembros que lo componen. La primera J, de \textbf{Joge}, una bestia de la programación, enamorada del baloncesto, la A de \textbf{Artu}, el rey del grupo, siempre con una sonrisa, el cortisol le teme a él. La siguiente J le pertenece a \textbf{Juan Manuel}. Juanma tiene varias pasiones; derrapar, los bocadillos baratos, las Ondas de Elliot, el monte, la playa y la novia de Eduardo, ... yo sinceramente soy el fan número uno de Juanma. La E obviamente, de \textbf{Eduardo}. Un cordobés pila pila fuerte, gym rat science based, un poco gótico, le gusta mucho el color negro y está potente. La última letra antes de las que nos corresponde a mi y a Suito, es la R, de ni más ni menos que de \textbf{Rubén}, el G.O.A.T del equipo, la mente pensante, mi compañero del bar Avilés, el friki de los perífericos, el humano en el loop (vibecodea mucho), la humildad y la generosidad personificada, te debo mucho. 
+
+    Durante estos años siendo parte del equipo JAJERDA, participé en varios Hackathones, en una de estos conocí a un profesor del que me siempre había escuchado buenas palabras. Entendí todos los elogios, él me estuvo ayudando con un problema que tenía de forma altruista como si el problema fuera le afectara de primera mano, este profesor ahora es el tutor este TFG, muchas gracias Gabriel, no eres consciente lo agradecidos que estamos los alumnos por tenerte a ti como docente.
+
+    En este último curso me mudé y cambiaron mis compañeros de piso. Estos eran Roberto, el cual ya conocéis y Pablo, que gracias a él, la convivencia durante este curso fue inmejorable. En esta nueva edición del piso Software, se vivieron incendios que casi tocaban nuestras ventanas, grades partidos del Albacete, intensas jornadas de repostería y escenas espirituales. Sobre esta última debo agradecer a Rosa. Es muy importante estar relajado durante estas sesiones.
+
+    Durante mis años en la carrera hubieron personas que se mantuvieron y que siempre estuvieron alli, obviamente hablo de mi familia y de mis amigos más cercanos. Ellos aunque suene muy cliché son de verdad los pilares de mi persona, sin ellos yo me desplomaría, no hubiera sido capaz de hacer nada con mi vida ni con migo mismo.
+    Con algunos he pasado todo lo que recuerdo de vida, Agustín y Guiri, todavía me acuerdo cuando de chicos jugábamos al fútbol y al \textit{torito en alto} en el parque. Otros llegasteis un poco más tarde, como Oncala, que aunque tuviéramos malos momentos, siempre está a tu disposición cuando se le solicita.
+    
+    Algunos llegaron más tarde con el balonmano: Rámirez y Sergio, mis \textit{compas} de Sierra Nevada, mis amigos exhibicionistas. Otros llegaron en el instituto como \textbf{Barrera} y  \textbf{Andrés}.
+
+    A diferencia de los demás casos mi familia no llegó, yo llegué con ellos, mi madre y mi padre siempre estuvieron para apoyarme, cuando no estaba a gusto en Málaga, siempre podía volver a mi casa, cuando estaba agobiado, siempre les podía llamar, cuando estaba enfermo, siempre me cuidaban. A ellos se lo debo todo, gracias Papá, gracia Mamá. Muchas gracias por estar. Gracias también a Luis, que aunque sea un poco gruñón, tiene muy buen corazón, el mejor hermano que se puede tener. Gracias a Laura y a Mario, vosotros también sois mis hermanos de sangre.
+
+    Falta todavía una persona por agradecer. 
+    
+    Esta persona constituye un caso un poco anticlimático, porque antes de los dos nacer ya eramos amigos. 
+    Siempre estuvimos juntos; en infantil, en el colegio, en el instituto, en balonmano... Intentamos incluso irnos a estudiar a la misma ciudad para compartir piso y pasar tiempo los dos en otra etapa más. 
+    
+    Por toda mi vida, mi mejor amigo, siempre me valoró y me motivó a ser mejor, a disfrutar y en los últimos momentos de su vida, a programar. 
+    
+    Descansa en paz Moreno.
+
+
+\end{umaacknowledgments}
+
+%────────────────────── Índice y listas ────────────────────────────────
+\clearpage
+\tableofcontents
+\clearpage
+\listoffigures
+\clearpage
+\listoftables
+\clearpage
+
+%────────────────────── Nomenclatura ───────────────────────────────────
+\nomenclature{SCRUM}{marco de trabajo ágil para gestionar proyectos complejos}
+\nomenclature{framework}{conjunto estandarizado de herramientas, librerías, reglas y buenas prácticas prediseñadas para agilizar el desarrollo de software}
+\nomenclature{IDE}{Integrated Development Environment (Entorno de Desarrollo Integrado)}
+\printnomenclature
+\clearpage
+
+\mainmatter
+%────────────────────── Cuerpo ─────────────────────────────────────────
+%https://en.wikipedia.org/wiki/Standing_on_the_shoulders_of_giants 
+
+\chapter{Introducción}
+
+\section{Motivación}
+
+    La optimización metaheurística constituye una herramienta fundamental para la resolución de problemas complejos en aquellos ámbitos donde los métodos exactos resultan inviables, ya sea debido al elevado coste computacional o a la naturaleza no lineal y no convexa de los espacios de búsqueda. Este tipo de técnicas ha demostrado su utilidad en una amplia variedad de aplicaciones, como la planificación y asignación de recursos, la optimización de rutas, el diseño de sistemas, la inteligencia artificial, el aprendizaje automático y la ingeniería en general.h
+
+    En distintos lenguajes de programación existen bibliotecas maduras que facilitan la aplicación de técnicas metaheurísticas. Por ejemplo, \textit{jMetal} es un framework ampliamente reconocido para la optimización multiobjetivo con metaheurísticas \cite{jmetal}. Su versión en Python, \textit{jMetalPy}, ofrece un entorno extensible y orientado a objetos para experimentar con técnicas clásicas y avanzadas de optimización \cite{jmetalpy}. Asimismo, \textit{MEALPY} (MEta-heuristic ALgorithms in PYthon) proporciona implementaciones de numerosos algoritmos inspirados en la naturaleza, tanto clásicos como híbridos, para abordar problemas complejos \cite{mealpy}. Sin embargo, dentro del ecosistema de Rust, el soporte para la optimización metaheurística es todavía limitado, lo que dificulta la adopción de estas metodologías en proyectos desarrollados en dicho lenguaje y pone de manifiesto la necesidad de disponer de herramientas nativas que se integren de forma natural con sus principios de diseño, especialmente en lo relativo al rendimiento, la seguridad de memoria y el control de recursos.
+
+    
+    Este Trabajo de Fin de Grado surge con la motivación de dar respuesta a esta necesidad mediante el desarrollo de una biblioteca de optimización metaheurística modular y extensible. No obstante, abordar un proyecto de esta envergadura resulta especialmente desafiante en las etapas iniciales, particularmente en ausencia de experiencia previa. Afrontar un trabajo de fin de carrera implica recopilar y consolidar los conocimientos adquiridos a lo largo de la titulación y aplicarlos en un proyecto real, lo cual supone una tarea de notable complejidad. Por ello, la elección de un tema que despierte interés, curiosidad y motivación personal resulta un factor clave para el desarrollo del proyecto.
+    
+    El diseño y desarrollo de algoritmos metaheurísticos conforma un campo especialmente atractivo, al combinar fundamentos de la teoría de la computación, la optimización y la inteligencia artificial. Su aplicación en dominios tan diversos como la logística, la ingeniería o la biología computacional pone de manifiesto su versatilidad y su impacto en la resolución de problemas reales.
+    
+    En el momento de inicio de este proyecto, no existían bibliotecas consolidadas orientadas al desarrollo de este tipo de soluciones en el lenguaje Rust, lo que constituyó una motivación adicional para su realización. Asimismo, el propio lenguaje Rust actuó como detonante del proyecto, al tratarse de una tecnología moderna, diseñada con un fuerte énfasis en la seguridad de memoria y el rendimiento, y especialmente adecuada tanto para el aprendizaje como para el desarrollo de software robusto y eficiente.
+
+\section{Objetivos}
+    El objetivo principal de este proyecto es desarrollar una biblioteca en Rust que implemente algoritmos metaheurísticos
+    para la optimización de problemas complejos. Debe ser capaz de resolver correctamente gran variedad de problemas de único objetivo y un conjunto de problemas multiobjetivo. 
+    
+    Idealmente, esta biblioteca debería ser fácil de usar, eficiente y extensible, permitiendo a los usuarios adaptar los algoritmos a sus necesidades específicas. 
+    Para garantizar el cumplimiento de estas premisas, se ha realizado un desglose exhaustivo de los requisitos del sistema, donde se definen formalmente las funcionalidades y restricciones que guiarán el desarrollo de la herramienta.
+
+\section{Tecnologías a utilizar}
+    Como lenguaje de programación, se ha elegido \textbf{Rust}, debido a su enfoque en el rendimiento, por su capacidad de manejo eficiente de la concurrencia y diferentes hilos, lo que lo hace ideal para la implementación de algoritmos metaheurísticos complejos que a menudo requieren un procesamiento paralelo intensivo.
+    Además, su creciente ecosistema y su tipo de sistema robusto nos permiten construir soluciones de optimización escalables y de alto rendimiento.
+    También, Rust ha comenzado a consolidarse como uno de los lenguajes de programación utilizados en el desarrollo del \emph{kernel} de Linux, dejando atrás su carácter experimental y siendo aprobado oficialmente para la implementación de determinados componentes del núcleo, lo que refuerza su madurez, fiabilidad y adecuación para sistemas críticos \cite{leemhuis2025rustlinux}.   
+    
+    Uno de los principales motivos por el que Rust es tan buena elección es por su gestor de paquetes y compilación, \textbf{Cargo}, que facilita la gestión de dependencias y la construcción de proyectos, permitiendo a los desarrolladores centrarse en la implementación de algoritmos en lugar de en la configuración del entorno.
+    
+    Este gestor de paquetes se encuentra entre los más populares y admirados por los desarrolladores, como se puede observar en la estadística de la encuesta anual de Stack Overflow, donde Cargo destaca como uno de los gestores de paquetes más valorados para el desarrollo e infraestructura en la nube durante 2025~\cite{stackoverflow2025}.
+    
+    \begin{figure}[h]
+      \centering
+        \includegraphics[width=0.5\textwidth]{images/cargo_admirated.png}
+      \caption{Resultados de una de las encuestas a desarrolladores de Stack Overflow 2025~\cite{stackoverflow2025}.}
+    \end{figure}
+
+    
+    En cuanto a las herramientas de desarrollo, se utilizó \textbf{Visual Studio Code} como entorno de desarrollo integrado (IDE) debido a su flexibilidad, amplia gama de extensiones y soporte para Rust a través de la extensión \textit{rust-analyzer} \cite{rust_analyzer}. Durante el desarrollo más temprano, también se usó \textbf{Rust Rover}, de \textbf{JetBrains},que es un IDE específico para Rust. Esto fue debido a que en ese momento los conocimientos sobre Rust eran muy limitados y se necesitaba un entorno más guiado e invasivo para poder progresar.
+    
+    Para la gestión del proyecto se ha utilizado \textbf{Jira}~\cite{jira_tool}. La documentación y redacción del proyecto se han realizado mediante \LaTeX{}. 
+    Por otro lado, el control de versiones se ha llevado a cabo utilizando \textbf{Git}~\cite{git_tool}, empleando \textbf{GitHub}~\cite{github_tool} como plataforma de alojamiento remoto del repositorio.
+
+\chapter{Metodología de trabajo}
+    En esta sección se describen los procedimientos, herramientas y fases seguidas para la consecución de los objetivos del proyecto.
+
+\section{Modelo de desarrollo}
+    Para el desarrollo del proyecto se ha adoptado una metodología iterativa, inspirada en el marco de trabajo SCRUM, pero adaptada a las particularidades de un entorno de trabajo unipersonal. Esta adaptación permite conservar las ventajas de la planificación incremental y la revisión continua, ajustándolas a la naturaleza y alcance del proyecto. 
+
+    Como herramienta de apoyo a la gestión y seguimiento de las tareas se ha utilizado JIRA~\cite{jira_tool}, cuyo uso y configuración dentro del proyecto se detallarán con mayor profundidad en el apartado siguiente.
+
+\section{Ecosistema y herramientas de desarrollo}
+    La selección de las herramientas de trabajo se realizó buscando maximizar la eficiencia en la detección de errores y la navegación por el código. Se utilizó mayoritariamente Visual Studio Code como entorno de desarrollo principal, aprovechando su versatilidad y el robusto soporte proporcionado por la extensión \textit{rust-analyzer} \cite{rust_analyzer}.
+
+\section{Fases del proyecto}
+    Un proyecto como en el que nos encontramos debe estructurarse por partes, en este caso en tres etapas diferenciadas:
+
+    \subsection{Investigación y capacitación}
+        Debido a la pronunciada curva de aprendizaje de Rust, esta fase inicial se centró en la asimilación de sus fundamentos sintácticos y las particularidades de su compilador. Para consolidar estos conceptos, se llevó a cabo la migración de un proyecto personal previo (una aplicación de escritorio), trasladando su arquitectura basada en Java y Javalin hacia un ecosistema nativo en Rust mediante el framework Tauri \cite{poker_helper}.
+    
+        Paralelamente, se desarrolló un repositorio de pruebas a modo de entorno de experimentación, destinado a la implementación de pequeños módulos funcionales que permitieron dominar aún más el lenguaje. Esta etapa de formación técnica se complementó con un estudio exhaustivo sobre metaheurísticas y algoritmos genéticos, sentando las bases teóricas necesarias para el posterior diseño de la biblioteca.
+        
+        Dentro del estudio técnico, cobró especial relevancia el análisis del repositorio y de la arquitectura de jMetal \cite{jmetal}, un framework de optimización metaheuristica multiobjetivo escrita en java por investigadores de la universidad de Málaga, ayudó a comprender los patrones de diseño y las estructuras de datos necesarias para implementar metaheurísticas de forma extensible.
+    
+    
+    \subsection{Definición de requisitos y planificación}
+
+        Durante esta etapa se realizó un trabajo de introspección, se analizaron los objetivos y se elaboró un documento donde se especificaron todos los requisitos del sistema. 
+
+        A partir de estos requisitos, se creó un \emph{backlog} en Jira, donde se registraron todas las tareas necesarias para completar el proyecto. Posteriormente, las tareas se organizaron en seis ``sprints'' y se clasificaron en las columnas ``Por hacer'', ``En curso'', ``Por revisar'' y ``Listo''. Esta organización permitió un seguimiento claro del progreso y facilitó la comunicación con el tutor, mostrando periódicamente las tareas en la columna ``Por revisar'' para recibir su aprobación. Una vez que el tutor daba el visto bueno, las tareas se marcaban como ``Listo'', asegurando así un flujo de trabajo controlado y transparente \cite{jira_tool}.
+        
+    \subsection{Implementación técnica}
+
+    Una vez definidos los requisitos del sistema y establecida la planificación del proyecto, se procedió a la implementación técnica de la biblioteca de optimización metaheurística. Esta fase tuvo como objetivo materializar las decisiones de diseño adoptadas previamente, dando lugar a un sistema funcional, modular y extensible, desarrollado íntegramente en el lenguaje Rust.
+
+    El proceso de implementación se llevó a cabo de forma incremental, permitiendo validar progresivamente las abstracciones definidas y adaptar la arquitectura a las particularidades del lenguaje y a los requisitos detectados durante el desarrollo.
+
+    La implementación estuvo fuertemente condicionada por las características propias del lenguaje Rust. La ausencia de herencia clásica y el uso intensivo de \emph{traits} influyeron directamente en el diseño de las abstracciones, fomentando un enfoque basado en la composición y el polimorfismo estático.
+
+    Asimismo, el sistema de propiedad y préstamos de Rust actuó como una herramienta de validación temprana, obligando a definir de forma explícita la gestión de memoria y el ciclo de vida de las estructuras de datos. Aunque este modelo supuso una dificultad inicial, permitió garantizar un alto nivel de seguridad y robustez en la implementación final.
+
+    La implementación de la biblioteca se realizó siguiendo un orden lógico que permitió construir el sistema de forma progresiva. En primer lugar, se desarrollaron las abstracciones básicas, tales como las representaciones de soluciones y problemas. Posteriormente, se implementaron los algoritmos de optimización, seguidos de los operadores fundamentales y de los mecanismos de observación.
+
+    Este enfoque permitió validar cada componente de manera aislada antes de integrarlo en el sistema global, reduciendo la complejidad del proceso de depuración y facilitando la detección de errores conceptuales en fases tempranas del desarrollo.
+
+    Durante la fase de implementación se llevó a cabo una validación continua del sistema, apoyándose principalmente en el compilador de Rust como herramienta de detección de errores y en la ejecución de pruebas y ejemplos controlados para verificar el comportamiento de los algoritmos.
+
+    Asimismo, se realizaron refactorizaciones periódicas del código con el objetivo de mejorar su claridad, reducir duplicidades y adaptar la arquitectura a nuevas necesidades detectadas durante el desarrollo. Este proceso iterativo permitió alcanzar una implementación estable y coherente con los objetivos iniciales del proyecto.
+
+\chapter{Optimización y Metaheurísticas}
+
+    En numerosas disciplinas de la ingeniería, la economía y las ciencias de la computación, surge de manera recurrente la necesidad de tomar decisiones que maximicen el beneficio o minimicen el coste de un sistema dado. Este proceso de búsqueda de la mejor alternativa posible, dentro de un conjunto de soluciones factibles, es lo que se conoce formalmente como optimización. En este capítulo se introducen los conceptos fundamentales de la optimización matemática, las limitaciones de los métodos clásicos y el papel crucial que desempeñan las metaheurísticas en la resolución de problemas complejos.
+
+\section{El Problema de Optimización}
+
+    De forma general, la optimización matemática trata de encontrar la mejor solución posible, evaluada según un criterio cuantitativo, de entre un conjunto de alternativas disponibles. Formalmente, un problema de optimización mono-objetivo se formula como la búsqueda de un vector de variables de decisión $x = (x_1, x_2, \dots, x_n)$ que optimice (ya sea minimizando o maximizando) una función objetivo escalar $f(x)$. Este problema se define matemáticamente de la siguiente manera:
+
+    $$ \text{Minimizar } f(x) $$
+    $$ \text{sujeto a } x \in \Omega $$
+
+    Sin pérdida de generalidad, en la literatura algorítmica suele trabajarse exclusivamente con problemas de minimización, dado que cualquier problema de maximización puede transformarse trivialmente multiplicando la función objetivo por $-1$ (es decir, $\max f(x) = \min -f(x)$).
+    Sin pérdida de generalidad, en la literatura algorítmica suele trabajarse exclusivamente con problemas de minimización, dado que cualquier problema de maximización puede transformarse trivialmente multiplicando la función objetivo por $-1$ (es decir, $\max f(x) = \min -f(x)$).
+    El vector $x$ representa las incógnitas del sistema sobre las cuales el proceso de resolución tiene control directo. La función objetivo $f: \Omega \to \mathbb{R}$ es la métrica que asigna un valor de calidad o coste a cada vector propuesto. 
+
+    El conjunto $\Omega$ denota el espacio de búsqueda o la región factible del problema. Lejos de ser un espacio infinito o arbitrario, en los escenarios de ingeniería y del mundo real, este espacio está delimitado geométrica y matemáticamente por un conjunto de restricciones que el vector $x$ debe cumplir de manera estricta. Estas restricciones imponen límites físicos, lógicos o económicos al sistema, y suelen expresarse mediante funciones de desigualdad ($g_i(x) \leq 0, i = 1, \dots, m$) y de igualdad ($h_j(x) = 0, j = 1, \dots, p$). 
+
+    Por consiguiente, $\Omega$ está constituido única y exclusivamente por aquellos vectores que satisfacen simultáneamente todas estas condiciones. Si un algoritmo de optimización genera una solución que recae fuera de las fronteras de $\Omega$, dicha solución se considera infactible. En el diseño de algoritmos y metaheurísticas, las soluciones infactibles suponen un desafío; por lo general, son descartadas inmediatamente o, de forma más sofisticada, se les aplica una penalización severa en su valor de $f(x)$ para guiar la búsqueda iterativa de vuelta hacia el interior de la región factible.
+
+ \section{Métodos Exactos frente a Métodos Aproximados}
+
+    Para abordar la resolución de los problemas matemáticos de optimización, existen tradicionalmente dos grandes familias de algoritmos: los métodos exactos y los métodos aproximados. La elección entre un enfoque u otro depende intrínsecamente de la naturaleza del problema, el tamaño de la instancia a resolver y los recursos computacionales disponibles.
+
+    Los métodos exactos exploran el espacio de búsqueda de una manera sistemática y exhaustiva, de tal forma que garantizan matemáticamente encontrar la solución óptima global del problema. Entre las técnicas más destacadas de esta familia se encuentran la Programación Lineal (como el algoritmo Simplex), la Programación Dinámica y los algoritmos de Ramificación y Acotación (\textit{Branch and Bound}). Cuando el problema presenta un modelo matemático tratable y un tamaño de entrada moderado, estos métodos son, sin lugar a duda, la opción preferida debido a la certeza de sus resultados.
+
+    Sin embargo, su aplicabilidad se ve severamente limitada en la práctica industrial y de investigación. Muchos de los problemas de mayor interés y aplicabilidad en el mundo real pertenecen a las clases de complejidad NP-completos o NP-duros. Un ejemplo paradigmático es el Problema del Viajante de Comercio (TSP, por sus siglas en inglés), donde se busca la ruta más corta que visite un conjunto de ciudades. En estos escenarios, el espacio de soluciones posibles crece de forma factorial o exponencial con respecto al tamaño del problema ($O(n!)$ o $O(2^n)$). Este fenómeno, conocido como "explosión combinatoria" o "la maldición de la dimensionalidad", provoca que un algoritmo exacto requiera tiempos de ejecución inasumibles (años o incluso siglos de cómputo) para instancias de tamaño realista.
+
+    Es precisamente ante esta intratabilidad computacional donde los métodos aproximados, concretamente los algoritmos heurísticos, cobran un protagonismo absoluto y se convierten en la única alternativa viable. La principal motivación de un heurístico es encontrar una solución en un tiempo razonable, especialmente para problemas NP-completos o de gran escala, donde un algoritmo exacto tardaría demasiado o sería inviable. Estos algoritmos logran esta eficiencia sacrificando la garantía de encontrar la solución óptima o perfecta.
+
+    A diferencia de los enfoques exactos, la naturaleza de los métodos aproximados es inherentemente incompleta, ya que no exploran todo el espacio de soluciones posibles. En su lugar, producen soluciones que son buenas o cercanas al óptimo (también conocidas como soluciones cuasi-óptimas), pero no tienen pruebas matemáticas que aseguren que la solución encontrada sea la mejor de todas. 
+
+\section{Heurísticas y Metaheurísticas}
+
+    El término \textit{heurística} (del griego \textit{heuriskein}, "encontrar" o "descubrir") hace referencia a estrategias que utilizan conocimiento específico del dominio del problema o "reglas prácticas" para guiar la búsqueda hacia soluciones de alta calidad. Si bien producen soluciones cuasi-óptimas de forma rápida, a menudo corren el riesgo de quedar atrapadas en óptimos locales (soluciones que son las mejores en su vecindario inmediato, pero no en todo el espacio de búsqueda).
+
+    Para superar esta limitación, nacen las \textbf{metaheurísticas}. Una metaheurística se define como un marco algorítmico de nivel superior, independiente del problema subyacente, que provee un conjunto de directrices para guiar a otras heurísticas subordinadas en la exploración del espacio de soluciones. 
+
+    El éxito de cualquier metaheurística reside en mantener un delicado equilibrio dinámico entre dos conceptos fundamentales:
+    \begin{itemize}
+      \item \textbf{Exploración (o diversificación):} La capacidad del algoritmo para investigar regiones globales y desconocidas del espacio de búsqueda, evitando la convergencia prematura.
+       \item \textbf{Explotación (o intensificación):} La capacidad de concentrar la búsqueda en las vecindades de las mejores soluciones encontradas hasta el momento, con el fin de refinar y mejorar dichos resultados.
+    \end{itemize}
+
+\section{Clasificación de las Metaheurísticas}
+
+A lo largo de las últimas décadas, la literatura científica ha propuesto numerosas metaheurísticas, muchas de ellas inspiradas en procesos naturales, biológicos o físicos. La clasificación más extendida en la comunidad académica divide estos algoritmos según el número de soluciones con las que trabajan simultáneamente en cada iteración:
+
+\subsection{Metaheurísticas basadas en trayectoria}
+También conocidas como métodos de búsqueda puntual, estos algoritmos mantienen y modifican una única solución a lo largo del tiempo, describiendo una trayectoria a través del espacio de búsqueda. En cada iteración, la solución actual se reemplaza por otra proveniente de su vecindario si se cumple un determinado criterio de aceptación. Ejemplos clásicos de esta categoría son la Búsqueda Local, el Recocido Simulado (\textit{Simulated Annealing}) y la Búsqueda Tabú.
+
+\subsection{Metaheurísticas basadas en población}
+A diferencia de los métodos de trayectoria, estas técnicas mantienen en memoria un conjunto (o población) de soluciones que evolucionan de manera simultánea en cada iteración. Esta característica les confiere una mayor robustez y una capacidad de exploración superior, ya que las soluciones pueden interactuar e intercambiar información entre sí. Dentro de este paradigma destacan los Algoritmos Evolutivos (como los Algoritmos Genéticos) y la Optimización por Enjambre de Partículas (PSO).
+
+\section{Extensión a la Optimización Multiobjetivo}
+
+    En gran parte de las aplicaciones del mundo real, los problemas no presentan un único objetivo a optimizar, sino múltiples objetivos que a menudo se encuentran en conflicto directo (por ejemplo, maximizar el rendimiento de un componente a la par que se minimiza su coste de fabricación).
+    
+    En estos escenarios, denominados Problemas de Optimización Multiobjetivo (MOP), el concepto de "solución óptima" desaparece para dar paso al concepto de \textit{Dominancia de Pareto}. El objetivo de las metaheurísticas multiobjetivo no es encontrar un único punto, sino aproximar el Frente de Pareto: un conjunto de soluciones no dominadas que representan los mejores compromisos posibles entre los diferentes objetivos evaluados, permitiendo finalmente al tomador de decisiones elegir la alternativa que mejor se adapte a sus necesidades.
+
+\chapter{Especificación y diseño}
+
+\section{Arquitectura}
+    El diseño y modelado de la arquitectura representan la fase de mayor complejidad y dedicación en el desarrollo. La integridad de esta estructura determina la calidad técnica, la eficiencia y la mantenibilidad de la biblioteca. Con el objetivo de garantizar un nivel de abstracción óptimo que permita su aplicación en diversos casos de uso, se han integrado los siguientes criterios de diseño:
+    
+    La arquitectura desacopla la definición del problema de la lógica del optimizador. Los límites del espacio de búsqueda y las restricciones se encapsulan en una estructura específica. Esta entidad es referenciada por el motor de ejecución, permitiendo que el algoritmo identifique el dominio de las variables y el objetivo de la optimización (maximización o minimización). De este modo, el algoritmo puede realizar las evaluaciones e iteraciones pertinentes respetando estrictamente las directrices del sistema a optimizar.
+
+    Los algoritmos se han diseñado de forma modular, fundamentándose en el uso de operadores genéricos que se configuran durante la fase de instanciación. Estos operadores son los responsables de la transformación y evolución de las soluciones. Se distinguen tres categorías principales, operadores de mutación, de cruce y de selección.
+
+    Todas las implementaciones de los algoritmos tienen varias estructuras asociadas. Estas son los \textbf{parámetros}, que definen el comportamiento del algoritmo, el \textbf{estado de ejecución}, que permite la trazabilidad de cada paso, dado que el sistema emplea un modelo de ejecución secuencial por etapas y luego el \textbf{conjunto de soluciones}, que representa el resultado final.
+
+    Un componente diferenciador es su sistema de experimentación integrado. A partir de la parametrización de los algoritmos, la biblioteca facilita la ejecución comparativa de múltiples configuraciones sobre un mismo problema. Este módulo automatiza la obtención de métricas, tales como tiempos de ejecución y calidad de la solución obtenida, facilitando así la elección del algoritmo más adecuado para solventar un problema específico.
+
+    El estado de ejecución actúa como el mecanismo principal para actualizar el contexto del algoritmo, permitiendo verificar de forma continua si se han cumplido los criterios de terminación definidos en la parametrización inicial. Este contexto no solo regula el flujo de control del proceso, sino que sirve como intermediario crítico para la comunicación con los observadores del sistema. Mediante el uso de hilos de ejecución independientes, el contexto transmite los datos de la evolución del algoritmo en tiempo real, facilitando tanto la monitorización por parte del usuario como el almacenamiento persistente de métricas para la generación posterior de reportes de rendimiento.
+
+    
+
+    \begin{figure}[h]
+      \centering
+        \includegraphics[width=0.8\textwidth]{images/architecture.png}
+      \caption{Arquitectura de la biblioteca. Diagrama de clases, UML. Visual Paradigm 17.0  ~\cite{visual_paradigm_tool}.}
+    \end{figure}
+
+\section{Módulos}
+    
+    A continuación, se describen los distintos módulos que componen la biblioteca y las responsabilidades asociadas a cada uno de ellos.
+    
+    \subsection{Algoritmos}
+
+        Este módulo es el encargado de ejecutar los distintos problemas definidos en la biblioteca. Este contiene toda la lógica sobre la ejecución, los puntos de control, la comunicación con los observadores y el paralelismo.
+
+        Su diseño sigue una separación clara entre las interfaces (traits), la infraestructura de ejecución y los distintos algoritmos concretos, facilitando la extensibilidad, la reutilización y la mantenibilidad del código.
+
+    \subsubsection{Contenido y organización}
+        \begin{itemize}
+        \item \textbf{Interfaces y contratos:} componente que declara las abstracciones y traits que describen el comportamiento esperado de los algoritmos y de sus elementos auxiliares. Estas interfaces permiten sustituir implementaciones concretas sin afectar al resto del sistema.
+        \item \textbf{Infraestructura de ejecución:} submódulos encargados de la gestión del ciclo de vida de un experimento/ejecución, incluyendo el \emph{runtime}, la terminación y mecanismos de ejecución asíncrona o en paralelo. Se agrupan aquí las piezas que controlan cuándo y cómo se ejecutan los algoritmos sobre instancias de problema.
+        \item \textbf{Persistencia y recuperación:} componentes destinados a checkpointing y mecanismos relacionados que facilitan la recuperación de ejecuciones largas o interrumpidas, y que permiten auditoría y análisis posteriores.
+        \item \textbf{Definición de objetivos:} submódulo que centraliza la representación de funciones objetivo y métricas relacionadas, separado de las implementaciones concretas para mantener una clara distinción entre problema y algoritmo.
+        \item \textbf{Implementaciones concretas:} paquete separado que contiene las implementaciones específicas de algoritmos (por ejemplo, enfoques evolutivos, heurísticos y de optimización ensamblados). Agruparlas en un submódulo permite añadir, probar y comparar algoritmos sin alterar la infraestructura común.
+        \item \textbf{Terminación y políticas:} lógica que alberga criterios de parada y políticas asociadas (por tiempo, por número de iteraciones, por convergencia, etc.), definida aparte para facilitar la composición y reutilización.
+        \end{itemize}
+
+
+
+        /// MOver a implementación
+
+        Para su configuración e instanciación, cada algoritmo se apoya en una estructura de parámetros que actúa como su base configurativa. Esta estructura encapsula toda la información necesaria para la construcción del algoritmo y desempeña un papel crucial en el módulo de experimentos, donde se utiliza para almacenar la configuración específica de cada algoritmo que servirá como caso de prueba.
+
+        Con el objetivo de garantizar la integridad de la configuración antes de la ejecución, los algoritmos incorporan un sistema de verificación basado en la función \texttt{validate\_parameters(\&self) -> Result<(), String>}. Este método se invoca de manera sistemática antes de iniciar el proceso de resolución para validar que los parámetros introducidos sean coherentes y correctos. En caso de que la configuración no cumpla con los requisitos establecidos, la función devuelve un error con un mensaje personalizado, lo que permite al usuario identificar y corregir anomalías en la configuración de forma precisa.
+
+        Para llevar a cabo su funcionamiento, los algoritmos requieren la aplicación de \emph{operadores}, responsables de realizar las transformaciones necesarias sobre las soluciones con el objetivo de explorarlas y mejorarlas de forma iterativa. Gracias a la arquitectura modular adoptada, dichos operadores son intercambiables, lo que permite adaptar el comportamiento del algoritmo sin alterar su implementación interna. De igual modo, esta modularización facilita la sustitución o modificación del problema sobre el que se ejecuta el algoritmo de manera sencilla y flexible.
+
+        Asimismo, los algoritmos admiten la incorporación directa de \emph{observadores}, cuyo propósito es analizar y monitorizar su comportamiento durante la ejecución. Estos observadores se describen con mayor detalle en su apartado correspondiente.
+
+        Estos algoritmos pueden ejecutarse de forma concurrente o paralela, en función de la configuración seleccionada por el usuario. En este trabajo se ofrece la posibilidad de especificar manualmente el número de hilos a crear o, alternativamente, delegar esta decisión al propio programa. En este último caso, el número de hilos se determina automáticamente en función de las características del sistema en el que se ejecuta, haciendo uso de la función \texttt{available\_parallelism()} proporcionada por la librería estándar.
+
+    \subsection{Experimentos}
+
+        Este módulo contiene toda la lógica sobre las experimentaciones. Los traits que deben implementar los parámetros de los algoritmos para que estos sean experimentables, la forma en la que se ejecutan estos, el sistema de paralelizado de los algoritmos, el reporte de los experimentos, ...
+
+    \subsection{Observadores}
+
+        El compartimento asociado a los observadores se ha diseñado como un componente desacoplado encargado de gestionar la monitorización durante el proceso evolutivo. Esta infraestructura se articula fundamentalmente a través de la definición de eventos específicos, los cuales son emitidos por el motor de ejecución para señalizar hitos relevantes o cambios en el progreso del algoritmo. Para dotar de contenido a estos eventos, el sistema emplea estructuras de datos especializadas que encapsulan el estado actual de la ejecución, permitiendo que la información fluya hacia los observadores de manera coherente y estructurada.
+
+        La flexibilidad de este componente reside en el uso de \textit{traits}, que actúan como interfaces abstractas definiendo el contrato de comportamiento que debe cumplir cualquier tipo de observador. Este enfoque no solo garantiza un polimorfismo robusto, sino que facilita la extensibilidad del sistema, permitiendo al desarrollador integrar nuevas formas de visualización o registro sin modificar el núcleo de la biblioteca. Además, el módulo incluye diversas implementaciones predefinidas que ya incorporan un funcionamiento por defecto, lo que proporciona herramientas de monitorización listas para su uso inmediato mientras se mantiene la capacidad de personalizar la lógica de respuesta ante cada evento según las necesidades específicas.
+        
+    ///// Mover a implementación
+        
+    Los observadores estarán asociados a aquellos algoritmos que implementen el \emph{trait} \texttt{Observable}. Dicho \emph{trait} proporciona la funcionalidad necesaria para añadir y eliminar observadores.
+
+    Para la comunicación entre el algoritmo y los observadores adjuntados, se ha diseñado un sistema basado en canales (\emph{channels}), un patrón idiomático en Rust para la comunicación segura entre hilos. Inicialmente, se planteó una implementación en la que el \emph{trait} \texttt{Observable} incluyese un método encargado de notificar directamente a todos los observadores registrados. Sin embargo, debido a las restricciones impuestas por el sistema de propiedad y préstamos de Rust (\emph{Borrow Checker}), esta aproximación resultó compleja de implementar de forma clara y segura.
+
+    Como alternativa, se optó por un modelo concurrente en el que el algoritmo de optimización se ejecuta en un hilo independiente, mientras que los observadores se mantienen a la espera en hilos separados, recibiendo de manera asíncrona eventos enviados por el algoritmo a través de los canales. Este enfoque simplifica la gestión de la concurrencia, evita conflictos de préstamos y garantiza una comunicación segura entre los distintos componentes del sistema.
+
+----------------------------------------------- FALTA \\
+    Existen distintos tipos de observadores, entre los que se incluyen aquellos que muestran la información directamente por terminal o los que generan tablas y estructuras de datos más elaboradas. Estos observadores permiten analizar la evolución del proceso de optimización en función del número de evaluaciones realizadas, proporcionando al usuario una visión clara y detallada del comportamiento del algoritmo.
+
+------------------------------------------ IDEAS \\
+        Los ChartObservers, generarán varios gráficos, uno que muestre como avanza la calidad de las soluciones junto a las evaluaciones, como avanzan las evaluaciones y uno con las soluciones en general. En el caso de que las soluciones sean un vector bidimensional, un gráfico de puntos, donde estos estén en las coordenadas de los objetivos, en el caso de que no sea un vector, pues un gráfico de barras, con las veces que se ha repetido cada valor y si fuera una vector de más de 2 dimensiones, podriamos generar varios gráficos con los diferentes casos. Se plantea generar un html con toda la información super currado. \\
+        ---------------------
+
+    \subsection{Operadores}
+
+        Este componente constituye el núcleo de la biblioteca de optimización, ya que encapsula la lógica fundamental de los algoritmos implementados. En particular, se definen tres tipos principales de operadores, cada uno de los cuales desempeña un papel esencial dentro del proceso de optimización:
+
+        \begin{itemize}
+            \item \textbf{Operadores de mutación:} introducen variaciones aleatorias en los individuos de la población con el objetivo de mantener la diversidad genética y evitar la convergencia prematura hacia soluciones subóptimas. Estos operadores permiten explorar nuevas regiones del espacio de búsqueda mediante modificaciones controladas de las soluciones existentes.
+        
+            \item \textbf{Operadores de selección:} se encargan de elegir los individuos que participarán en la generación de nuevas soluciones, generalmente en función de su calidad o valor de aptitud. Su función principal es favorecer la propagación de las mejores soluciones encontradas hasta el momento, equilibrando la presión selectiva con la preservación de la diversidad poblacional.
+        
+            \item \textbf{Operadores de cruce:} combinan la información de dos o más individuos seleccionados para generar nuevos descendientes. A través de este proceso se busca explotar las características favorables de las soluciones existentes, recombinándolas de manera que puedan dar lugar a individuos con un mejor desempeño.
+        \end{itemize}
+
+
+    \subsection{Problemas}
+
+        Este módulo contiene la información del problema que se quiere resolver. El "trait" que deben implementar todos los problemas es muy sencillo; solo obliga a crear unas simples funciones para obtener y editar la descripción del problema en sí, otras funciones para evaluar las soluciones al problema, y otra para crear una solución de la que partirá el algoritmo que intente resolver el problema.
+    ------ Quizás también deben implementar otra función para elegir la mejor solución para el problema ---
+    
+        Los problemas pueden ser muy diversos, por tanto no es fácilmente delimitable este módulo. Para ayudar a diseñar problemas en esta biblioteca, se muestran ejemplos de estos problemas e implementaciones para ayudar a la construcción de estos con el patrón "Builder". 
+
+
+    \subsection{Conjuntos de soluciones}
+
+        Los algoritmos devolverán esta estructura de datos; es un "wrapper" que contiene una lista con las soluciones obtenidas por el algoritmo al intentar solucionar el problema.
+
+    \subsection{Soluciones}
+
+        Las soluciones representan las estructuras que almacenan el resultado generado por la aplicación iterativa de los operadores dentro de los algoritmos de optimización.
+
+        En una primera aproximación del diseño, \texttt{Solution} se definió como un \textit{trait} que declaraba un conjunto de funciones fundamentales, tales como la obtención del valor de \textit{fitness}, el acceso a las variables de la solución o la recuperación de su representación interna. Este \textit{trait} debía ser implementado por distintos \textit{structs}, cada uno adaptado a las necesidades específicas de cada problema.
+
+        Por ejemplo, si el problema requería representar una solución como una permutación binaria, el \textit{struct} correspondiente contendría como atributos un vector binario junto con el valor de calidad asociado a dicha solución. Sin embargo, se observó que esta arquitectura introducía una elevada fragmentación en las implementaciones y dificultaba la generalización de la biblioteca para soportar un mayor número de problemas y algoritmos.
+
+        Por este motivo, se optó por una solución más abstracta y flexible. En el diseño actual, \texttt{Solution} se define como un \textit{struct} genérico parametrizado por dos tipos: \texttt{T} y \texttt{Q}. El tipo \texttt{T} representa el tipo de dato de las variables de decisión almacenadas en la solución, mientras que \texttt{Q} representa el tipo asociado a la evaluación de calidad de dicha solución.
+
+        Para poder comparar soluciones entre sí, el tipo \texttt{Q} debe implementar un \textit{trait} personalizado denominado \texttt{Dominance}. Este \textit{trait} define el comportamiento necesario para establecer relaciones de dominancia entre valores de calidad, proporcionando un método que permite comparar dos instancias del mismo tipo y determinar cuál de ellas representa una solución superior.
+
+        Adicionalmente, la estructura \texttt{Solution} expone un método denominado \texttt{dominates}, cuya implementación delega la comparación en el método definido por el \textit{trait} \texttt{Dominance}. De esta manera, la lógica de comparación queda desacoplada de la representación de la solución, permitiendo soportar tanto optimización monoobjetivo como multiobjetivo mediante diferentes implementaciones del tipo \texttt{Q}.
+
+    \subsection{Experimentos}
+        El módulo de experimentos constituye la capa de abstracción superior de la biblioteca, diseñada para facilitar la evaluación sistemática y comparativa de los diversos algoritmos frente a un problema específico. Su propósito fundamental es permitir que el usuario final realice un proceso de \emph{benchmarking} robusto, identificando qué configuraciones ofrecen un rendimiento óptimo mediante la ejecución controlada y automatizada de baterías de pruebas.
+
+        Este servicio se articula a través de la definición de casos de prueba, los cuales representan combinaciones específicas de parámetros y componentes. Gracias a la arquitectura modular de \texttt{roma}, el sistema permite explorar un amplio espacio de configuraciones, incluyendo la variación de operadores, el ajuste de las probabilidades de mutación y cruce, o la selección de diferentes criterios de terminación. Asimismo, es posible comparar directamente algoritmos distintos bajo las mismas condiciones de contorno, lo que proporciona una base empírica sólida para la toma de decisiones técnicas.
+
+        Al finalizar las ejecuciones, el módulo genera un reporte detallado que sintetiza los resultados obtenidos por cada configuración. Este informe no solo recopila las soluciones halladas, sino que ofrece una visión analítica del comportamiento de los algoritmos, permitiendo al usuario discernir con criterio qué estrategia es la más adecuada para la resolución de su problema.
+    
+    \subsection{Utilidades}
+        Para posibilitar el desarrollo de este proyecto y cumplir el objetivo de mantener una arquitectura con \emph{cero dependencias externas}, se han implementado pequeños módulos auxiliares utilizados en el núcleo de la biblioteca. Estos módulos reproducen de forma ligera y controlada parte de la funcionalidad ofrecida por \texttt{crates} ampliamente utilizados en el ecosistema Rust, como \texttt{rand}~\cite{rand_crate} o \texttt{plotters}~\cite{plotters_crate}. De este modo, se evita la inclusión de bibliotecas externas sin renunciar a las capacidades necesarias para el correcto funcionamiento del sistema.
+
+\chapter{Implementación y pruebas}
+    Este capítulo detalla el proceso de construcción de la biblioteca \texttt{roma}, trasladando los conceptos teóricos y el diseño arquitectónico descritos en los capítulos anteriores a código real en el lenguaje de programación Rust. 
+    
+    \section{Implementación}
+        Una vez definida y consolidada la arquitectura de la biblioteca, se inició la fase de construcción modular siguiendo un enfoque ascendente (\emph{bottom-up}). Contrariamente a lo que se podría suponer inicialmente, situando el foco en los algoritmos o en la definición de los problemas, el desarrollo comenzó por el módulo de las \textbf{soluciones}. Esta decisión estratégica se fundamenta en que la estructura que define a la solución es, en realidad, el componente más determinante del sistema, actuando como el eje central sobre el que pivotan todos los demás módulos.
+
+        La importancia de este módulo radica en que la solución es la entidad que los operadores transforman para explorar el espacio de búsqueda y la que los observadores monitorizan constantemente para extraer métricas de rendimiento. Del mismo modo, los problemas dependen de esta estructura para realizar tanto la generación inicial de individuos como su posterior evaluación, mientras que los algoritmos actúan como gestores encargados de almacenarlas y orquestar su flujo a lo largo de las iteraciones. 
+
+        Debido a esta interdependencia, un diseño deficiente o una implementación poco optimizada de esta estructura central comprometería no solo la \textbf{extensibilidad} de la biblioteca —al dificultar la integración de nuevos problemas o tipos de datos— sino también su \textbf{rendimiento computacional}. Dado que la solución es el objeto con mayor frecuencia de acceso y modificación, cualquier ineficiencia en su desarrollo se convertiría inevitablemente en un cuello de botella durante ejecuciones intensivas. Por ello, garantizar una base técnica sólida en este módulo fue la prioridad absoluta antes de proceder con la implementación del resto de componentes.
+
+        \begin{listing}[H]
+        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
+    #[derive(Clone, Debug)]
+    pub struct Solution<T, Q = f64> {
+        pub variables: Vec<T>,
+        pub quality: Option<Q>,
+    }
+        \end{minted}
+        \caption{Estructura desarrollada para las Soluciones}
+        \label{lst:solution}
+        \end{listing}
+
+        Posteriormente se abordó la implementación de los \textbf{problemas}, definidos mediante un \texttt{trait} que actúa como el contrato de interfaz para cualquier modelo de optimización que se desee resolver. Para garantizar que la biblioteca fuera lo suficientemente flexible como para soportar diversos dominios de problemas —desde optimización continua hasta combinatoria—, se diseñó una estructura altamente genérica:
+
+    \begin{listing}[H]
+    \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
+    pub trait Problem<T, Q = f64>
+    where
+        T: Clone,
+        Q: Clone + Default,
+    {
+        fn new() -> Self;
+    
+        fn evaluate(&self, solution: &mut Solution<T, Q>);
+        
+        fn create_solution(&self, _rng: &mut Random) -> Solution<T, Q>;
+        
+        fn get_problem_description(&self) -> String;
+    
+        fn get_improvement_direction(&self) -> ImprovementDirection;
+
+        fn format_solution(&self, solution: &Solution<T, Q>) -> String;
+    }
+        \end{minted}
+        \caption{Definición genérica del \texttt{trait Problem} para la abstracción de problemas de optimización.}
+        \label{lst:problem_trait}
+        \end{listing}
+
+        Como se observa en la definición, el uso de parámetros genéricos permite desacoplar la lógica del problema de la representación interna de los datos. El parámetro \texttt{T} representa el tipo de variable de decisión, mientras que \texttt{Q} define el tipo de la evaluación (u objetivo), que por defecto se establece como \texttt{f64}. Esta abstracción delega en el usuario la responsabilidad de definir aspectos críticos como la dirección de mejora (\texttt{ImprovementDirection}), permitiendo configurar si el objetivo es la maximización o minimización. 
+        
+        Asimismo, el \texttt{trait} estandariza la forma en que los algoritmos interactúan con el dominio del problema: la función \texttt{evaluate} permite calificar la calidad de una solución, mientras que \texttt{create\_solution} define el mecanismo de generación inicial. Esta estructura asegura que los algoritmos puedan operar de forma agnóstica al problema concreto, facilitando la extensibilidad del sistema. Una vez establecida esta base, el desarrollo prosiguió con la implementación de los operadores y los algoritmos, encargados de explotar estas definiciones para hallar soluciones óptimas.
+
+        En cuanto a los operadores, se definió el \texttt{trait Operator} como la abstracción base de la jerarquía. Aunque su estructura es intencionadamente mínima, actúa como una interfaz común que permite identificar y gestionar metadatos de los operadores, como su nombre, facilitando la trazabilidad y el reporte de resultados.
+        
+        \begin{listing}[H]
+        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
+    pub trait Operator {
+        fn name(&self) -> &str;
+    }
+        \end{minted}
+        \caption{Interfaz base \texttt{Operator} para la identificación de componentes.}
+        \label{lst:base_operator}
+        \end{listing}
+
+        A partir de esta interfaz fundamental, se especializa la jerarquía en tres categorías que representan los pilares de las metaheurísticas: los operadores de \textbf{mutación}, \textbf{cruce} (\emph{crossover}) y \textbf{selección}. Esta especialización permite que los algoritmos manipulen las soluciones de forma genérica, independientemente del tipo de dato subyacente (\texttt{T}) o de la métrica de evaluación (\texttt{Q}).
+
+        \begin{listing}[H]
+        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
+    pub trait MutationOperator<T, Q = f64>: Operator
+    where
+        T: Clone,
+        Q: Clone,
+    {
+        fn execute(&self, solution: &mut Solution<T, Q>, probability: f64, rng: &mut Random);
+    }
+
+    pub trait CrossoverOperator<T, Q = f64>: Operator
+    where
+        T: Clone,
+        Q: Clone,
+    {
+
+        fn execute(
+            &self,
+            parent1: &Solution<T, Q>,
+            parent2: &Solution<T, Q>,
+            rng: &mut Random,
+        ) -> Vec<Solution<T, Q>>;
+
+    
+        fn execute_several(
+            &self,
+            parents: Vec<Solution<T, Q>>,
+            _rng: &mut Random,
+        ) -> Vec<Solution<T, Q>>{
+            let mut offspring_result= vec![];
+            for i in 1..parents.len() {
+                offspring_result.push(parents[i].clone());
+            }
+            offspring_result
+        }
+        
+        fn number_of_offspring(&self) -> usize {
+            2
+        }
+    }
+    
+    pub trait SelectionOperator<T, Q = f64>: Operator
+    where
+        T: Clone,
+        Q: Clone,
+    {
+    
+        fn execute<'a>(&self, population: &'a [Solution<T, Q>], rng: &mut Random) -> &'a Solution<T, Q>;
+        
+        fn select_many<'a>(
+            &self,
+            population: &'a [Solution<T, Q>],
+            count: usize,
+            rng: &mut Random,
+        ) -> Vec<&'a Solution<T, Q>> {
+            (0..count).map(|_| self.execute(population, rng)).collect()
+        }
+    }
+        \end{minted}
+        \caption{\texttt{trait Operator} .}
+        \label{lst:selection_trait}
+        \end{listing}
+
+        Como se puede apreciar, cada \texttt{trait} define un contrato específico para su función: la mutación altera una solución existente según una probabilidad dada, el cruce combina material genético de progenitores para generar descendencia, y la selección identifica individuos basándose en su aptitud. Cabe destacar el uso de \emph{lifetimes} (\texttt{'a}) en el operador de selección, una característica avanzada de Rust que garantiza que las referencias a las soluciones seleccionadas sean válidas mientras la población original exista, asegurando así la seguridad de memoria sin incurrir en costes de copia innecesarios.
+
+        Esta estructura modular permite que los algoritmos sean configurados dinámicamente con diferentes estrategias de búsqueda, facilitando la experimentación y el ajuste de hiperparámetros. 
+
+        %% ALGORITMOS
+
+        En cuanto a los algoritmos, su la lógica de ejecución implementa un sistema basado en pasos. La entrada principal a este proceso es la función \texttt{run}, la cual delega la orquestación técnica en el método \texttt{run\_algorithm} del submódulo \texttt{runtime}. Esta función está diseñada siguiendo un patrón de programación funcional, utilizando tipos genéricos y \emph{closures} para desacoplar la lógica de control del comportamiento específico de cada algoritmo.
+        
+        \begin{listing}[H]
+        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+    pub(crate) fn run_algorithm<T, Q, S, R, Initialize, Step, Snapshot, Finalize>(
+        observers: &mut Vec<Box<dyn AlgorithmObserver<T, Q>>>,
+        criteria: TerminationCriteria,
+        direction: ImprovementDirection,
+        algorithm_name: impl Into<String>,
+        initialize: Initialize,
+        mut step: Step,
+        snapshot: Snapshot,
+        finalize: Finalize,
+    ) -> R
+    where
+        T: Clone + Send + 'static,
+        Q: Clone + Send + 'static,
+        Initialize: FnOnce(&ExecutionContext<T, Q>) -> S,
+        Step: FnMut(&mut S, &ExecutionContext<T, Q>),
+        Snapshot: Fn(&S) -> ExecutionStateSnapshot<T, Q>,
+        Finalize: FnOnce(S) -> R,
+    {
+        run_with_observer_runtime(
+            observers,
+            criteria,
+            direction,
+            algorithm_name,
+            move |context| {
+                let mut state = initialize(context);
+                let initial_snapshot = snapshot(&state);
+                context.report_progress(initial_snapshot);
+    
+                while !context.should_terminate() {
+                    step(&mut state, context);
+                    let step_snapshot = snapshot(&state);
+                    context.report_progress(step_snapshot);
+                }
+    
+                RuntimeExecutionOutput::new(
+                    finalize(state),
+                    // ... metadatos de ejecución
+                )
+            },
+        )
+    }
+        \end{minted}
+        \caption{Implementación del motor de ejecución genérico (\texttt{runtime}) de los algoritmos.}
+        \label{lst:runtime_logic}
+        \end{listing}
+
+        Como se aprecia en el Fragmento \ref{lst:runtime_logic}, el motor de ejecución gestiona el ciclo de vida completo mediante cuatro fases: inicialización (\texttt{Initialize}), iteración (\texttt{Step}), captura de estado (\texttt{Snapshot}) y finalización (\texttt{Finalize}). Este diseño permite que cualquier algoritmo (ya sea un Genético, PSO o Hill Climbing) pueda ejecutarse dentro del mismo \emph{runtime} siempre que cumpla con estos contratos. 
+        
+        El bucle de ejecución persiste mientras el contexto del algoritmo, representado por la estructura \texttt{ExecutionContext}, no determine el cese de la actividad mediante el método \texttt{should\_terminate()}. La decisión de terminación está delegada de forma flexible en el tipo \texttt{TerminationCriterion}, un enumerado que permite al usuario definir condiciones de parada basadas en diversos criterios físicos y lógicos.
+        
+        \begin{listing}[H]
+        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+        #[derive(Clone, Debug)]
+    pub enum TerminationCriterion {
+        /// Número máximo de iteraciones (generaciones, pasos, etc.).
+        MaxIterations(usize),
+        /// Número máximo de evaluaciones de la función objetivo.
+        MaxEvaluations(usize),
+        /// Criterio de convergencia basado en un umbral de cambio relativo.
+        Convergence { threshold: f64, patience: usize },
+        /// Límite de tiempo real de ejecución.
+        TimeLimit(Duration),
+        /// Parada por estancamiento (falta de mejora en la calidad).
+        NoImprovement { patience: usize },
+    }
+        \end{minted}
+        \caption{Enumerado \texttt{TerminationCriterion} con las condiciones de parada disponibles.}
+        \label{lst:termination_enum}
+        \end{listing}
+        
+        Esta implementación mediante un \texttt{enum} permite una gran expresividad en la configuración de los experimentos. El usuario puede optar por límites tradicionales, como el número de iteraciones o evaluaciones, o por criterios más avanzados de convergencia y estancamiento (\emph{patience}). La integración de estos criterios en el \texttt{ExecutionContext} garantiza que la comprobación se realice de manera eficiente al finalizar cada paso del algoritmo, permitiendo además que los observadores capturen el progreso en tiempo real antes de cada evaluación de terminación.
+
+        Siguiendo con la arquitectura de ejecución, cobra especial relevancia la función \texttt{run\_with\_observer\_runtime}. Como se puede sobreentender con su denominación, este componente es el encargado de orquestar la interacción entre los observadores y el núcleo del algoritmo durante el proceso de resolución.
+
+        Para garantizar que la monitorización no penalice excesivamente el rendimiento del algoritmo y que los observadores puedan procesar la información en tiempo real, se ha implementado un modelo de ejecución basado en la separación de hilos. En este esquema, el sistema mantiene el control de los observadores en el hilo principal (\emph{main thread}), mientras que delega la ejecución íntegra del algoritmo a un hilo secundario asíncrono. Esta arquitectura de hilos permite que la lógica de búsqueda progrese de forma independiente, evitando bloqueos en la interfaz de usuario o en los sistemas de registro de datos.
+
+        La comunicación entre ambos hilos se gestiona mediante el uso de canales (\emph{channels}), siguiendo el modelo de paso de mensajes propio de Rust. El hilo del algoritmo actúa como productor, enviando capturas del estado actual (\emph{snapshots}) a través del canal cada vez que se completa una iteración o se alcanza un hito de progreso. Por su parte, el hilo principal actúa como consumidor, recibiendo estos paquetes de datos y distribuyéndolos de manera síncrona a la lista de observadores registrados, tal y como se ilustra en la Figura \ref{fig:run_with_observers}.
+
+
+\begin{figure}[htbp]
+    \centering
+    % Usamos un factor de escala en lugar de resizebox para evitar errores de "LR mode"
+    \begin{tikzpicture}[
+        node distance=1.2cm and 2.2cm, 
+        >=Stealth,
+        % Definimos los estilos aquí mismo para asegurar compatibilidad
+        block/.style={rectangle, draw, fill=blue!5, text width=9em, text centered, rounded corners, minimum height=3em},
+        thread/.style={draw, dashed, inner sep=1.2em, fill=gray!5},
+        channel_box/.style={draw, fill=orange!10, rectangle, double, minimum width=2.5cm, minimum height=1.2cm, align=center, font=\small\ttfamily},
+        arrow/.style={-{Stealth[scale=1.2]}, thick}
+    ]
+
+        % --- HILO DEL ALGORITMO (Productor) ---
+        \node (start_alg) [block] {Inicio};
+        \node (iter) [block, below=of start_alg] {Ejecutar Iteración};
+        \node (snapshot) [block, below=of iter] {Generar \textit{Snapshot}};
+        \node (check) [diamond, draw, below=1cm of snapshot, aspect=2, fill=yellow!10] {¿Terminar?};
+
+        % --- COMUNICACIÓN (Canal MPSC) ---
+        \node (chan) [channel_box, right=of snapshot] {Canal MPSC\\(Buffer)};
+
+        % --- HILO PRINCIPAL / OBSERVADORES (Consumidor) ---
+        \node (recv) [block, right=of chan] {Recepción de datos};
+        \node (dist) [block, below=of recv] {Distribución a Observadores};
+        \node (tasks) [block, below=of dist, fill=green!5] {Tareas costosas (Gráficas, Disco, etc.)};
+
+        % --- FLUJO HILO ALGORITMO ---
+        \draw [arrow] (start_alg) -- (iter);
+        \draw [arrow] (iter) -- (snapshot);
+        \draw [arrow] (snapshot) -- (chan) node[midway, above, font=\scriptsize\ttfamily] {send()};
+        \draw [arrow] (snapshot) -- (check);
+        
+        % Retorno hilo algoritmo
+        \draw [arrow] (check.west) -- ++(-1.1,0) |- (iter.west) node[near start, left, font=\small] {No};
+        \draw [arrow] (check.south) -- ++(0,-1.0) node[below, font=\small] {Fin};
+
+        % --- FLUJO HILO OBSERVADORES ---
+        \draw [arrow] (chan) -- (recv) node[midway, above, font=\scriptsize\ttfamily] {recv()};
+        \draw [arrow] (recv) -- (dist);
+        \draw [arrow] (dist) -- (tasks);
+        
+        % Retorno hilo observadores
+        \draw [arrow] (tasks.east) -- ++(0.8,0) |- (recv.east);
+
+        % --- ENCAPSULADO DE HILOS (Background) ---
+        \begin{scope}[on background layer]
+            \node[thread, fit=(start_alg) (check), label=above:\textbf{Hilo del Algoritmo}] (box_alg) {};
+            \node[thread, fit=(recv) (tasks), label=above:\textbf{Hilo Principal}] (box_obs) {};
+        \end{scope}
+
+    \end{tikzpicture}
+    \caption{Arquitectura de comunicación asíncrona entre hilos mediante eventos.}
+    \label{fig:concurrencia_observers}
+\end{figure}
+
+        Este diseño no solo incrementa la robustez del sistema al aislar la ejecución del algoritmo, sino que también favorece la escalabilidad de la biblioteca. El uso de canales asíncronos permite que los observadores ejecuten tareas computacionalmente costosas como la actualización de gráficos en tiempo real o el volcado de datos en disco sin comprometer la latencia ni la velocidad de cómputo del motor heurístico, garantizando así una gestión eficiente de los recursos del hardware. Complementariamente, el sistema de estados no solo asiste a la monitorización externa, sino que constituye el pilar fundamental del mecanismo de puntos de control o \textit{checkpoints}. Estos estados se persisten en disco de forma periódica siguiendo las convenciones y rutas de almacenamiento estándar de cada sistema operativo, empleando directorios específicos como \texttt{LOCAL\_STATE\_ROMA} en entornos Linux, \texttt{HOME\_ROMA} en macOS y \texttt{LOCAL\_APPDATA} en sistemas Windows.
+
+        \begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[
+        node distance=1.1cm and 0.8cm,
+        >=Stealth,
+        % Estilos optimizados
+        start/.style={draw, fill=gray!15, rounded corners=10pt, font=\small\bfseries, minimum width=6em, minimum height=2cm, align=center},
+        proc/.style={draw, fill=blue!5, rectangle, text width=8.5em, text centered, rounded corners=3pt, font=\small, minimum height=2.5em},
+        dec/.style={draw, fill=yellow!10, diamond, aspect=1.8, text width=6em, text centered, inner sep=0pt, font=\footnotesize},
+        disk/.style={draw, fill=orange!5, cylinder, shape border rotate=90, minimum width=2.5cm, minimum height=1cm, font=\scriptsize, aspect=0.25, align=center},
+        arrow/.style={thick, ->, rounded corners=2pt}
+    ]
+
+    % --- COLUMNA CENTRAL: FLUJO PRINCIPAL ---
+    \node (init) [proc, fill=gray!10] {Reanudar ejecución};
+    \node (hash) [proc, below=of init] {Identificador Hash };
+    \node (search) [proc, below=of hash] {Buscar en:\\ \texttt{LOCAL\_STATE\_ROMA}};
+    \node (count) [dec, below=1.2cm of search] {¿Cuántos\\ \textit{Checkpoints}?};
+
+    % --- FILA DE OPCIONES (DISTRIBUCIÓN HORIZONTAL) ---
+    \node (auto) [proc, below=1.2cm of count] {Carga automática};
+    \node (new) [proc, left=of auto] {Nueva ejecución};
+    \node (select) [proc, right=of auto] {Selección usuario};
+
+    % --- COLUMNA INFERIOR: EJECUCIÓN ---
+    \node (exec) [proc, below=1.4cm of auto, fill=green!5] {Ejecución y\\Actualización Fichero};
+    \node (finish) [dec, below=1.1cm of exec] {¿Terminó?};
+    \node (delete) [proc, below=1.1cm of finish] {Eliminar Checkpoint};
+    \node (end) [proc, fill=gray!10, below=0.8cm of delete] {Fin};
+
+    % --- ELEMENTO LATERAL: DISCO ---
+    \node (storage) [disk, right=2.5cm of search] {Persistencia\\(Disco)};
+
+    % --- CONEXIONES SIN CRUCES ---
+    \draw [arrow] (init) -- (hash);
+    \draw [arrow] (hash) -- (search);
+    \draw [arrow] (search) -- (count);
+    
+    % Conexión al disco (salida lateral)
+    \draw [arrow] (search) -- (storage);
+
+    % Ramas del conteo (sin pisar nodos)
+    \draw [arrow] (count.west) -| node[above, pos=0.0, font=\scriptsize] {0} (new);
+    \draw [arrow] (count.south) -- node[right, font=\scriptsize] {1} (auto);
+    \draw [arrow] (count.east) -| node[above, pos=0.0, font=\scriptsize] {>1} (select);
+
+    % Unión en Ejecución
+    \draw [arrow] (new) |- ([yshift=0.7cm]exec.north);
+    \draw [arrow] (auto) -- (exec);
+    \draw [arrow] (select) |- ([yshift=0.7cm]exec.north);
+
+    % Ciclo de vida del checkpoint
+    \draw [arrow] (exec) -- (finish);
+    \draw [arrow] (finish) -- node[right, font=\scriptsize] {Sí} (delete);
+    \draw [arrow] (delete) -- (end);
+    
+    % Retorno de actualización al disco (sin cruzar líneas de flujo)
+    \draw [arrow] (exec.east) -- ++(6,0) |- (storage.east) 
+        node[pos=0.2, right, font=\tiny, align=left] {Actualización\\periódica};
+
+    % Bucle de ejecución (No terminado)
+    \draw [arrow] (finish.west) -- ++(-1,0) |- (exec.west)
+        node[pos=0.2, left, font=\scriptsize] {No};
+
+    \end{tikzpicture}
+    \caption{Flujo compacto de gestión de persistencia y recuperación de estados en Linux.}
+    \label{fig:checkpoint_compacto}
+\end{figure}
+
+        La información almacenada en cada punto de control incluye los datos críticos necesarios para reconstruir una ejecución específica, abarcando la configuración del algoritmo, el problema abordado y sus parámetros correspondientes. Para garantizar la integridad y la identificación unívoca de cada escenario, este conjunto de datos se procesa mediante una función \textit{hash}, generando un identificador único que vincula de manera determinista la configuración con sus archivos de estado. Al iniciar el sistema con la opción de reanudación activada, la biblioteca genera el \textit{hash} de la configuración actual y busca coincidencias en el sistema de archivos. En caso de localizar puntos de control compatibles, el sistema permite al usuario seleccionar el estado más conveniente para recuperar la ejecución o, alternativamente, optar por iniciar un proceso completamente nuevo, ofreciendo así una capa de tolerancia a fallos y flexibilidad en experimentos de larga duración.
+
+        \begin{listing}[H]
+        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{bash}
+david ~/roma/roma/examples ❯ cargo run --example knapsack_hc_demo -- --resume
+   Compiling roma v0.1.0 (/home/david/roma/roma)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.08s
+     Running `/home/david/roma/roma/target/debug/examples/knapsack_hc_demo --resume`
+
+                           --- CHECKPOINT SELECTION ---
+ID   | AGE     | ELAPSED. | INFO
+------------------------------------------------------------------------------------------
+[ 1] | 3 days ago | 00:00:00 | > iter=59750;eval=59751;seed=8238046302331804803;
+[ 2] | 3 days ago | 00:00:00 | > iter=52560;eval=52561;seed=8364640122973076249;
+[ 3] | 3 days ago | 00:00:00 | > iter=52100;eval=52101;seed=10450884331206695397;
+[ 4] | 3 days ago | 00:00:00 | > iter=43510;eval=43511;seed=15322852344410324979;
+[ 5] | 3 days ago | 00:00:00 | > iter=69010;eval=69011;seed=7946725581494022999;
+[ 6] | 3 days ago | 00:00:00 | > iter=57640;eval=57641;seed=5376056338251316545;
+[ 7] | 3 days ago | 00:00:00 | > iter=56170;eval=56171;seed=14048048055183702911;
+------------------------------------------------------------------------------------------
+ [0] Start a new run (ignore existing)
+                            ----------------------------
+> Select checkpoint index:
+        \end{minted}
+        \caption{Ejemplo solicitud de punto de control, al intentar reanudar la ejecución de un algoritmo}
+        \label{lst:resume_example}
+        \end{listing}
+ 
+        
+        
+    \section{Desarrollo de pruebas}
+        La utilización de un correcto conjunto de pruebas agiliza en gran medida el trabajo de programación en cualquier fase del desarrollo.
+        La utilización de un correcto conjunto de pruebas agiliza en gran medida el trabajo de programación en cualquier fase del desarrollo, previniendo regresiones y garantizando la estabilidad del código. Poder verificar de forma determinista que el código subyacente opera de manera correcta resulta indispensable. Para llevar a cabo esta tarea, el proyecto se ha apoyado fuertemente en el \textit{framework} de pruebas integrado de forma nativa en el ecosistema de Rust (\texttt{cargo test}).
+        
+        \subsection{Pruebas unitarias}
+
+            Dada la metodología de desarrollo ascendente adoptada, la implementación de pruebas unitarias se convirtió en un pilar fundamental para asegurar la robustez de cada componente antes de escalar hacia niveles de abstracción superiores. El objetivo principal de estas pruebas fue verificar de forma aislada e independiente el comportamiento de las funciones y estructuras mínimas de cada módulo, garantizando que cada unidad de código cumpliera estrictamente con su responsabilidad única. 
+
+            En consonancia con las prácticas estándar del ecosistema Rust, estas pruebas unitarias se encuentran integradas directamente en el mismo archivo que el código fuente del módulo que evalúan. Generalmente ubicadas al final de cada archivo bajo un módulo específico anotado con el atributo \texttt{\#[cfg(test)]}, esta disposición permite mantener una relación estrecha entre la implementación y su verificación. Además, esta estructura facilita el acceso a elementos privados del módulo, permitiendo una validación exhaustiva de la lógica interna que no sería accesible desde el exterior, garantizando así que cada componente sea intrínsecamente correcto antes de ser expuesto.
+
+            Este enfoque de aislamiento resultó especialmente crítico en el desarrollo de la estructura de los operadores, donde pequeñas desviaciones en la lógica podrían propagar errores difíciles de detectar en fases posteriores. Al diseñar pruebas simples y focalizadas en una única funcionalidad, se facilitó la identificación inmediata de regresiones durante el proceso de refactorización. Además, estas pruebas permitieron validar la gestión de tipos y la integridad de los datos en tiempo de ejecución, asegurando que los cimientos de la biblioteca fueran sólidos antes de proceder a la integración de sistemas más complejos.
+
+            \begin{listing}[H]
+            \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
+    #[test]
+    fn dominates_prefers_lower_rank() {
+        let a = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
+            .with_rank(0)
+            .with_crowding_distance(0.1)
+            .build();
+        let b = MultiObjectiveRealSolutionBuilder::from_variables(vec![0.0, 0.0])
+            .with_rank(1)
+            .with_crowding_distance(0.1)
+            .build();
+        
+        assert!(a.dominates(&b));
+        assert!(!b.dominates(&a));
+    }
+            \end{minted}
+            \caption{Prueba unitaria que prueba el correcto funcionamiento de la función \texttt{dominance} en rangos diferentes para \textit{pareto\_crowding\_solution.rs}. }
+            \label{lst:validación}
+            \end{listing}
+            
+        \subsection{Pruebas de integración}
+
+            Una vez validada la fiabilidad de los componentes individuales mediante el testeo unitario, se procedió al desarrollo de las pruebas de integración. Siguiendo las convenciones de estructuración de proyectos en Rust, este conjunto de pruebas se localiza de forma independiente en el directorio \texttt{tests/}, situado en la raíz del proyecto \texttt{roma}. Esta separación física respecto al código fuente alojado en \texttt{src/} es fundamental, ya que permite tratar a la biblioteca como una entidad externa, evaluando exclusivamente su interfaz pública y la interacción entre sus diversos módulos.
+
+            Mientras que las pruebas previas evalúan piezas aisladas, estas se han diseñado con el propósito de comprobar que todos los componentes de \texttt{roma} interactúan armónicamente entre sí para resolver un problema de optimización de principio a fin. El foco de estas pruebas reside en la orquestación del flujo de trabajo: desde la configuración e instanciación de un algoritmo, pasando por la validación sistemática de sus parámetros, hasta la ejecución iterativa donde intervienen operadores, problemas y observadores en un entorno compartido. 
+
+            Estas pruebas de mayor nivel permiten verificar que la comunicación entre módulos —por ejemplo, el intercambio de soluciones entre el algoritmo y el problema— se realiza de forma eficiente y sin errores de concordancia. Al ejecutarse desde la raíz del proyecto, estas pruebas simulan el uso real que tendría un usuario final de la biblioteca. En última instancia, las pruebas de integración garantizan que el sistema completo es capaz de cumplir con su propósito funcional, ofreciendo una visión global de la estabilidad y el rendimiento de la biblioteca ante casos de uso reales.
+            
+    \begin{listing}[H]
+            \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
+    #[test]
+    fn ga_returns_error_with_invalid_parameters_edge_case() {
+        // Edge case: invalid parameter configuration should return a validation error.
+        let problem = KnapsackBuilder::new()
+            .with_capacity(10.0)
+            .add_item(5.0, 10.0)
+            .build();
+
+        let parameters = GeneticAlgorithmParameters::new(
+            0,
+            0.8,
+            0.1,
+            SinglePointCrossover::new(),
+            BitFlipMutation::new(),
+            BinaryTournamentSelection::new(),
+            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(5)]),
+        )
+        .with_seed(1);
+    
+        let mut algorithm = GeneticAlgorithm::new(parameters);
+        let error = match algorithm.run(&problem) {
+            Ok(_) => panic!("GA must return an error for invalid parameters"),
+            Err(message) => message,
+        };
+        assert!(error.contains("population_size"));
+    }
+            \end{minted}
+            \caption{Prueba de integración sobre un ejemplo de error donde el tamaño de la población se inicializa a cero.}
+            \label{lst:validación_error}
+            \end{listing}
+\chapter{Validación experimental}
+
+En este capítulo se presenta la validación práctica de \texttt{roma} mediante una serie de experimentos diseñados para evaluar tanto la funcionalidad como la flexibilidad de la biblioteca. Estas pruebas se han integrado en el sistema nativo de ejemplos de \texttt{Cargo}, lo que permite que cualquier usuario pueda reproducir los resultados de forma directa. Para ejecutar estos escenarios de prueba, se utiliza el comando estándar del ecosistema Rust: \texttt{cargo run --example <nombre\_ejemplo>}.
+
+El primero de estos escenarios es el denominado \texttt{mono\_objective\_experiment}. Este experimento tiene como objetivo resolver una instancia del problema de la mochila (\emph{Knapsack Problem}) comparando la eficacia de diversas estrategias algorítmicas bajo condiciones controladas.
+
+\begin{listing}[H]
+\begin{minted}[
+    frame=lines, 
+    framesep=2mm, 
+    baselinestretch=1.1, 
+    fontsize=\scriptsize, 
+    linenos,
+    breaklines
+]{rust}
+use roma::algorithms::{
+    GeneticAlgorithmExperiment, GeneticAlgorithmParameters, HillClimbingParameters, 
+    PSOParameters, SimulatedAnnealingParameters, TerminationCriteria, TerminationCriterion,
+};
+use roma::experiment::{Experiment, Objective};
+use roma::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
+use roma::problem::KnapsackBuilder;
+
+fn main() {
+    // Definición de la instancia del problema de la mochila
+    let problem = KnapsackBuilder::new()
+        .with_capacity(150.0)
+        .add_item(1.0, 2.0)
+        .add_item(45.0, 100.0)
+        .add_item(90.0, 301.0)
+        .add_item(150.0, 301.0) // ... (resto de ítems)
+        .build();
+
+    // Configuración de los casos de prueba (Algoritmos)
+    let hill_climbing_case = HillClimbingParameters::new(
+            BitFlipMutation::new(),
+            0.12,
+            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(180)]),
+        );
+
+    let genetic_algorithm_case = GeneticAlgorithmExperiment::new(
+        GeneticAlgorithmParameters::new(
+            80, 0.90, 0.06,
+            SinglePointCrossover::new(),
+            BitFlipMutation::new(),
+            BinaryTournamentSelection::new(),
+            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(60)]),
+        )
+        .with_elite_size(1)
+        .with_threads(4),
+    );
+
+    let simulated_annealing_case = SimulatedAnnealingParameters::new(
+        BitFlipMutation::new(), 0.10, 45.0, 0.985,
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(220)]),
+    ).with_seed(777);
+
+    let pso_case = PSOParameters::new(
+        50, 0.72, 1.49, 1.49,
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
+    ).with_velocity_clamp(4.0).with_seed(999);
+
+    // Orquestación y ejecución del experimento
+    let report = Experiment::new(problem)
+        .with_runs(24)
+        .with_objective(Objective::Maximize)
+        .add_case(hill_climbing_case)
+        .add_case(genetic_algorithm_case)
+        .add_case(simulated_annealing_case)
+        .add_case(pso_case)
+        .execute();
+
+    match report {
+        Ok(report) => println!("{}", report.to_text_table()),
+        Err(error) => eprintln!("Experiment execution failed: {}", error),
+    }
+}
+\end{minted}
+\caption{Implementación del experimento mono-objetivo (\texttt{mono\_objective\_experiment.rs}) utilizando el problema de la mochila.}
+\label{lst:mono_objective_code}
+\end{listing}
+
+Como se observa en la implementación, el experimento comienza con la construcción de una instancia del problema mediante \texttt{KnapsackBuilder}, definiendo una capacidad máxima y un conjunto de ítems con sus respectivos pesos y valores. Posteriormente, se definen cuatro configuraciones algorítmicas distintas: \emph{Hill Climbing}, Algoritmo Genético, \emph{Simulated Annealing} y Optimización por Enjambre de Partículas (PSO). Cada uno de estos casos permite un ajuste fino de sus parámetros específicos, como el tamaño de la población, las probabilidades de mutación o el uso de semillas (\emph{seeds}) para garantizar la reproducibilidad de los resultados.
+
+Resulta relevante destacar la capacidad de personalización que ofrece la biblioteca; por ejemplo, en el Algoritmo Genético se especifica el uso de paralelismo mediante la creación de 4 hilos de ejecución. Una vez configurados, todos los casos se añaden a una instancia de \texttt{Experiment}, la cual se encarga de orquestar 24 ejecuciones por cada algoritmo para asegurar significancia estadística. Finalmente, el sistema genera un reporte detallado en formato de tabla, permitiendo comparar de forma directa el rendimiento y la convergencia de cada estrategia frente al objetivo de maximización propuesto.
+
+
+\chapter{Evaluación Comparativa y Análisis de Rendimiento}
+
+En este capítulo se describe el proceso de validación experimental y análisis comparativo de la biblioteca desarrollada frente a los marcos de trabajo líderes en la literatura: \textit{jMetal}, \textit{jMetalPy}, \textit{pagmo} y \textit{mealpy}. El objetivo es situar nuestra propuesta en términos de eficiencia computacional, capacidad de convergencia y facilidad de integración.
+
+\section{Bibliotecas de Referencia}
+
+Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la computación evolutiva y la optimización metaheurística, se ha realizado una selección de herramientas de referencia. Estas bibliotecas representan diversos paradigmas de programación, desde implementaciones académicas estrictas hasta plataformas diseñadas para la computación masivamente paralela.
+
+    \subsection{jMetal y jMetalPy}
+    El ecosistema \textit{jMetal} \cite{jmetal} es uno de los marcos de trabajo con mayor trayectoria en la investigación de optimización multiobjetivo. Originalmente desarrollado en Java, destaca por su diseño orientado a objetos basado en interfaces, lo que facilita la extensibilidad de operadores genéticos. Su variante en Python, \textit{jMetalPy} \cite{jmetalpy}, adapta esta arquitectura al entorno científico moderno, integrándose con librerías como \textit{NumPy} y permitiendo la visualización interactiva de frentes de Pareto, lo que la convierte en el estándar para el prototipado académico en entornos de \textit{Data Science}.
+
+    \subsection{Pagmo (C++)}
+    Desarrollada por la Agencia Espacial Europea (ESA), \textit{pagmo} \cite{pagmo} es una plataforma de optimización global masivamente paralela escrita íntegramente en C++. En este estudio se emplea su versión nativa en C++ para evaluar el límite de rendimiento computacional. 
+
+    \subsection{DEAP (Distributed Evolutionary Algorithms in Python)}
+    La biblioteca \textit{DEAP} \cite{deap} propone un paradigma diferente basado en la metaprogramación. A diferencia de otras herramientas con estructuras rígidas, \textit{DEAP} utiliza un sistema de \textit{toolbox} que permite al usuario construir tipos de datos y algoritmos a medida. Es especialmente reconocida por su capacidad para implementar Programación Genética y por su facilidad para distribuir la evaluación de individuos en clústeres mediante mecanismos de paralelismo simple.
+
+    \subsection{Mealpy}
+    \textit{Mealpy} \cite{mealpy} es una biblioteca de reciente aparición que se ha posicionado rápidamente debido a su extensísimo catálogo de algoritmos. Se especializa en metaheurísticas bio-inspiradas (como \textit{Swarms}, física o química), ofreciendo una interfaz unificada que prioriza la usabilidad.
+
+
+\section{Evaluación con la Función de Rastrigin}
+
+Para evaluar el desempeño de la biblioteca en un entorno de búsqueda complejo, se ha seleccionado la función de \textit{Rastrigin}. Este problema es un \textit{benchmark} clásico en optimización matemática debido a su topología altamente multimodal. Basada en la función de esfera pero modificada con un término cosenoidal, la función de \textit{Rastrigin} genera un paisaje de búsqueda plagado de mínimos locales distribuidos regularmente. 
+
+Su interés radica en la dificultad que supone para algoritmos de búsqueda: mientras que el óptimo global se encuentra en el origen ($f(\mathbf{x})=0$), un algoritmo puede quedar fácilmente atrapado en uno de los miles de mínimos locales si no gestiona adecuadamente la intensidad de búsqueda. En esta experimentación, se ha configurado una dimensión exigente de $D=80$ y un presupuesto limitado de $5000$ evaluaciones, utilizando el algoritmo \textit{Hill Climbing} para observar cómo cada implementación gestiona la búsqueda en un tiempo crítico bajo condiciones de aislamiento en \textit{Docker}.
+
+\subsection{Resultados y Análisis}
+
+Los resultados consolidados tras 5 ejecuciones independientes con semillas aleatorias fijas se detallan en la Tabla \ref{tab:results_rastrigin_80}. Los tiempos reportados corresponden al tiempo medio de ejecución de la CPU dentro del contenedor.
+
+\begin{table}[htbp]
+\centering
+\caption{Resultados comparativos: Función de Rastrigin ($D=80$, $5000$ evals).}
+\label{tab:results_rastrigin_80}
+\begin{tabular}{lrrrr}
+\hline
+\textbf{Biblioteca} & \textbf{Mejor Resultado} & \textbf{Media} & \textbf{Std. Dev.} & \textbf{Tiempo (ms)} \\ \hline
+\textbf{Roma (Propuesta)} & 629.32 & 664.41 & 35.36 & 13.21 \\
+jMetal (Java) \cite{jmetal} & \textbf{528.25} & 666.17 & 89.56 & 83.86 \\
+jMetalPy \cite{jmetalpy} & 629.72 & 695.49 & 37.30 & 487.16 \\
+pagmo2 (C++) \cite{pagmo} & 811.88 & 894.47 & 67.93 & \textbf{6.60} \\
+DEAP \cite{deap} & 807.70 & 861.97 & 30.62 & 405.84 \\
+Mealpy \cite{mealpy} & 859.08 & 934.23 & 51.58 & 373.66 \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    % Aquí puedes incluir la gráfica generada por tu orquestador
+    %\includegraphics[width=0.8\textwidth]{figures/rastrigin_comparison.png}
+    \caption{Comparativa de convergencia y tiempos de ejecución para $D=80$.}
+    \label{fig:rastrigin_graph}
+\end{figure}
+
+\subsection{Discusión de resultados}
+
+El análisis de los datos permite extraer conclusiones significativas sobre la competitividad de la biblioteca desarrollada frente a las soluciones establecidas:
+
+\begin{itemize}
+    \item \textbf{Precisión y Convergencia:} La propuesta (\textit{Roma}) ha obtenido una media de fitness de $664.41$, superando ligeramente a la versión de referencia de \textit{jMetal} en Java ($666.17$) y siendo significativamente más precisa que las bibliotecas basadas en Python como \textit{DEAP} ($861.97$) o \textit{Mealpy} ($934.23$). Es destacable que, aunque \textit{jMetal} Java logró el mejor valor absoluto en una ejecución puntual, nuestra biblioteca presenta una desviación típica mucho menor ($35.36$ vs $89.56$), sugiriendo una mayor robustez.
+    \item \textbf{Eficiencia Computacional:} En términos de velocidad, \textit{pagmo2} (C++) lidera la comparativa debido a su naturaleza nativa. Sin embargo, nuestra biblioteca se posiciona como la segunda opción más rápida con $13.21$ ms, siendo 6 veces más rápida que \textit{jMetal} Java y hasta 36 veces más veloz que \textit{jMetalPy}.
+    \item \textbf{Comportamiento en Alta Dimensionalidad:} Para una dimensión de $D=80$, muchas implementaciones de Python muestran una degradación en el rendimiento temporal. La biblioteca desarrollada mantiene un consumo de recursos mínimo, lo que valida su arquitectura para problemas de mayor escala.
+\end{itemize}
+
+
+\chapter{Conclusiones y líneas futuras}
+
+    
+----------- PRoblemas ---------
+
+    No determinimo entre máquinas distintas en ejecuciones paralelas, no se si es un problema, pero si una máquina tiene un procesador con más núcleos que otra máquina, al ejecutar paralelamente un algoritmo con la misma semilla, puede dar lugar a ejecucions distintas debido a que el algoritmo generará más hilos concurrentes por los cuales puede llegar a conclusiones distintas. (Creo que es importante recalcarlo)
+-----
+
+El desarrollo de este software ha representado un cambio de paradigma respecto a mi formación académica previa. La complejidad técnica no radica meramente en la sintaxis, sino en la comprensión profunda del ecosistema del lenguaje, así como de sus virtudes y limitaciones intrínsecas. \\
+Rust supuso un reto, un lenguaje de sistemas que, si bien permite ciertos patrones de diseño, se aleja de la Programación Orientada a Objetos convencional de lenguajes como Java a la cual estaba acostumbrado. En su lugar, propone un modelo basado en estructuras (structs) y rasgos (traits), estos últimos con una clara influencia de las clases de tipos de Haskell. \\
+Estas variaciones desembocaron en problemas durante el desarrollo de la arquitectura, al no existir tampoco herencia, un factor limitante en el desarrollo de la arquitectura
+
+ En cuanto a las herramientas de desarrollo, se utilizó \textbf{Visual Studio Code} como entorno de desarrollo integrado (IDE) debido a su flexibilidad, amplia 
+    gama de extensiones y soporte para Rust a través de la extensión \textit{rust-analyzer} \cite{rust_analyzer}. Durante el desarrollo más temprano, también se usó \textbf{Rust Rover}, de \textbf{JetBrains},
+
+\newpage
+
+
+
+
+%% Apendices
+\begin{umaappendices}
+    
+\umaappendix{Installation Manual}
+
+\small % La letra pequeña quizás hace que luzca más como un manual
+
+    En esta sección se describe el proceso de instalación y puesta en marcha de la biblioteca de optimización metaheurística desarrollada en este trabajo. Dado que el proyecto ha sido implementado íntegramente en Rust, su integración en otros proyectos resulta sencilla y se ajusta a los mecanismos estándar proporcionados por el propio ecosistema del lenguaje.
+
+\section{Requisitos}
+
+    Para poder utilizar la biblioteca es necesario disponer de los siguientes elementos:
+    
+    \begin{itemize}
+        \item Un sistema operativo compatible con el compilador de Rust (Linux, macOS o Windows).
+        \item El compilador de Rust y su gestor de paquetes \texttt{Cargo}, instalados y correctamente configurados.
+        \item Acceso a Internet para la descarga del código fuente o del \emph{crate} correspondiente.
+    \end{itemize}
+
+    La instalación del entorno de desarrollo de Rust puede realizarse siguiendo las instrucciones oficiales proporcionadas por el lenguaje.
+
+\section{Instalación desde el repositorio}
+
+    El método más directo para utilizar la biblioteca consiste en clonar el repositorio desde la plataforma GitHub y compilar el proyecto de forma local. Este enfoque resulta especialmente útil para desarrolladores que deseen inspeccionar, modificar o extender el código fuente.
+
+    El repositorio puede descargarse ejecutando el siguiente comando:
+
+    \begin{verbatim}
+    git clone https://github.com/DRLKs/roma
+    \end{verbatim}
+
+    Una vez clonado el repositorio, basta con acceder al directorio del proyecto y ejecutar:
+
+    \begin{verbatim}
+        cargo build
+    \end{verbatim}
+
+    Este comando descargará automáticamente las dependencias necesarias y generará la biblioteca en modo desarrollo. Para ejecutar ejemplos incluidos en el repositorio o realizar pruebas, puede utilizarse el comando:
+
+    \begin{verbatim}
+        cargo run
+    \end{verbatim}
+
+\section{Instalación como \emph{crate} mediante Cargo}
+    
+    Dado que la biblioteca ha sido diseñada siguiendo las convenciones estándar del ecosistema Rust, también puede integrarse fácilmente como dependencia en cualquier proyecto Rust mediante el gestor de paquetes \texttt{Cargo}. Este método es el más recomendado para usuarios que deseen emplear la biblioteca como componente dentro de una aplicación mayor.
+    
+    Para ello, basta con añadir la dependencia correspondiente en el archivo \texttt{Cargo.toml} del proyecto:
+    
+    \begin{verbatim}
+    [dependencies]
+    roma_lib = "0.1.0"
+    \end{verbatim}
+
+    Una vez añadida la dependencia, Cargo se encargará automáticamente de descargar, compilar e integrar la biblioteca durante el proceso de construcción del proyecto. A partir de ese momento, la funcionalidad proporcionada por la biblioteca podrá utilizarse directamente desde el código fuente mediante las instrucciones \texttt{use crate::} habituales del lenguaje.
+
+    Este mecanismo de distribución facilita la reutilización del software desarrollado y permite mantener actualizada la biblioteca de forma sencilla a medida que se publiquen nuevas versiones.
+
+    
+
+\end{umaappendices}
+
+%────────────────────── Contraportada ──────────────────────────────────
+\backmatter
+%% Bibliografía
+\printbibliography[title={Bibliografía}]  % heading=bibintoc para el índice
+\cleardoublepage
+\MakeUMABackCover
+\end{document}
+% ======================================================================
