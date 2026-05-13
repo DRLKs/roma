@@ -77,6 +77,31 @@ pub struct CheckpointRuntimeMetadata<'a> {
     pub problem_signature_hash: u64,
 }
 
+impl<'a> CheckpointRuntimeMetadata<'a> {
+    pub fn new(
+        algorithm_name: &'a str,
+        algorithm_parameters: &'a str,
+        problem_description: &'a str,
+        problem_parameters: &'a str,
+    ) -> Self {
+        let (algorithm_signature_hash, problem_signature_hash) = checkpoint_signature_hashes(
+            algorithm_name,
+            algorithm_parameters,
+            problem_description,
+            problem_parameters,
+        );
+
+        Self {
+            algorithm_name,
+            algorithm_parameters,
+            problem_description,
+            problem_parameters,
+            algorithm_signature_hash,
+            problem_signature_hash,
+        }
+    }
+}
+
 pub trait StepStateCheckpoint<T, Q = f64>
 where
     T: Clone,
@@ -137,21 +162,6 @@ pub fn generate_run_id(algorithm_name: &str) -> String {
         std::process::id(),
         sequence,
         timestamp
-    )
-}
-
-/// Computes deterministic identity hashes used to scope checkpoint files.
-pub fn checkpoint_identity_hashes(
-    algorithm_name: &str,
-    algorithm_parameters: &str,
-    problem_description: &str,
-    problem_parameters: &str,
-) -> (u64, u64) {
-    checkpoint_signature_hashes(
-        algorithm_name,
-        algorithm_parameters,
-        problem_description,
-        problem_parameters,
     )
 }
 
@@ -522,7 +532,7 @@ mod tests {
         step_state_payload: &str,
         created_at_ms: u64,
     ) -> CheckpointRecord {
-        let (algorithm_signature_hash, problem_signature_hash) = checkpoint_identity_hashes(
+        let metadata = CheckpointRuntimeMetadata::new(
             algorithm_name,
             algorithm_parameters,
             problem_description,
@@ -537,8 +547,8 @@ mod tests {
             algorithm_parameters: algorithm_parameters.to_string(),
             problem_description: problem_description.to_string(),
             problem_parameters: problem_parameters.to_string(),
-            algorithm_signature_hash,
-            problem_signature_hash,
+            algorithm_signature_hash: metadata.algorithm_signature_hash,
+            problem_signature_hash: metadata.problem_signature_hash,
             step_state_payload: step_state_payload.to_string(),
             seed_payload: None,
             elapsed_millis: 0,

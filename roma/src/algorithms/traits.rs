@@ -1,9 +1,9 @@
 use std::fmt::Display;
 
 use crate::algorithms::checkpoint::{
-    checkpoint_identity_hashes, delete_snapshot_on_success, generate_run_id,
-    select_resume_checkpoint, write_snapshot, CheckpointRecord,
-    CheckpointRuntimeMetadata, StepStateCheckpoint, ExecutionStateSnapshot,
+    delete_snapshot_on_success, generate_run_id, select_resume_checkpoint,
+    write_snapshot, CheckpointRecord, CheckpointRuntimeMetadata,
+    StepStateCheckpoint, ExecutionStateSnapshot,
     DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES,
 };
 use crate::algorithms::runtime::{
@@ -112,20 +112,12 @@ where
         let algorithm = &self;
         let problem_description = problem.get_problem_description();
         let problem_parameters = problem.get_problem_parameters_payload();
-        let (algorithm_signature_hash, problem_signature_hash) = checkpoint_identity_hashes(
+        let checkpoint_metadata = CheckpointRuntimeMetadata::new(
             &algorithm_name,
             &algorithm_parameters,
             &problem_description,
             &problem_parameters,
         );
-        let checkpoint_metadata = CheckpointRuntimeMetadata {
-            algorithm_name: &algorithm_name,
-            algorithm_parameters: &algorithm_parameters,
-            problem_description: &problem_description,
-            problem_parameters: &problem_parameters,
-            algorithm_signature_hash,
-            problem_signature_hash,
-        };
 
         // Configuration for checkpoint resumption
         let checkpoint_cfg = CheckpointPathConfig::default();
