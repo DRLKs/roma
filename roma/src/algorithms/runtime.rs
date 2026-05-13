@@ -1,6 +1,7 @@
 use crate::algorithms::termination::{
-    ExecutionStateSnapshot, TerminationController, TerminationCriteria, TerminationReason,
+    TerminationController, TerminationCriteria, TerminationReason,
 };
+use crate::algorithms::checkpoint::ExecutionStateSnapshot;
 use crate::algorithms::traits::Algorithm;
 use crate::observer::traits::AlgorithmObserver;
 use crate::observer::{AlgorithmEvent, ObserverState};
@@ -108,7 +109,7 @@ where
         id
     }
 
-    pub fn update_execution_state(&self, snapshot: &ExecutionStateSnapshot<T, Q>) {
+    pub fn update_execution_state(&self, snapshot: &ExecutionStateSnapshot) {
         self.next_snapshot_seq_id();
         self.termination.borrow_mut().on_snapshot(snapshot);
     }
@@ -284,40 +285,36 @@ where
 mod tests {
     use super::*;
     use crate::algorithms::termination::TerminationCriterion;
-    use crate::solution::RealSolutionBuilder;
-
-    fn snapshot(
-        iteration: usize,
-        evaluations: usize,
-        best_fitness: f64,
-    ) -> ExecutionStateSnapshot<f64> {
-        let best_solution = RealSolutionBuilder::new(1)
-            .set_variable(0, 0.0)
-            .with_quality(best_fitness)
-            .build();
-
-        ExecutionStateSnapshot {
-            iteration,
-            evaluations,
-            best_solution,
-            best_fitness,
-            worst_fitness: best_fitness,
-            average_fitness: best_fitness,
-        }
-    }
 
     #[test]
     fn snapshot_with_seq_updates_termination_state() {
         let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(2)]);
         let context: ExecutionContext<f64> = ExecutionContext::new(None, criteria, crate::solution::traits::evaluator::maximizing_fitness);
 
-        assert_eq!(*context.next_snapshot_seq.borrow(), 0);
-        context.update_execution_state(&snapshot(0, 1, 1.0));
-        assert_eq!(*context.next_snapshot_seq.borrow(), 1);
+        assert_eq!(context.seq_id(), 0);
+    
+        let snap1 = ExecutionStateSnapshot {
+            iteration: 0,
+            evaluations: 1,
+            best_fitness: 1.0,
+            worst_fitness: 1.0,
+            average_fitness: 1.0,
+            best_solution_presentation: String::new(),
+        };
+        context.update_execution_state(&snap1);
+        assert_eq!(context.seq_id(), 1);
         assert!(!context.should_terminate());
 
-        context.update_execution_state(&snapshot(2, 3, 1.2));
-        assert_eq!(*context.next_snapshot_seq.borrow(), 2);
+        let snap2 = ExecutionStateSnapshot {
+            iteration: 2,
+            evaluations: 3,
+            best_fitness: 1.0,
+            worst_fitness: 1.0,
+            average_fitness: 1.0,
+            best_solution_presentation: String::new(),
+        };
+        context.update_execution_state(&snap2);
+        assert_eq!(context.seq_id(), 2);
         assert!(context.should_terminate());
     }
 }

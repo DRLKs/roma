@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
-use crate::algorithms::checkpoint::StepStateCheckpoint;
+use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
 use crate::algorithms::runtime::ExecutionContext;
-use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
+use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
@@ -335,17 +335,17 @@ where
 
     fn build_snapshot(
         &self,
-        _problem: &(impl Problem<T> + Sync),
+        problem: &(impl Problem<T> + Sync),
         state: &Self::StepState,
-    ) -> ExecutionStateSnapshot<T> {
+    ) -> ExecutionStateSnapshot {
         let fitness = state.best.quality_value();
         ExecutionStateSnapshot {
             iteration: state.iteration,
             evaluations: state.evaluations,
-            best_solution: state.best.copy(),
             best_fitness: fitness,
             average_fitness: fitness,
             worst_fitness: fitness,
+            best_solution_presentation: problem.format_solution(&state.best),
         }
     }
 

@@ -1,6 +1,6 @@
-use crate::algorithms::checkpoint::StepStateCheckpoint;
+use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
 use crate::algorithms::runtime::ExecutionContext;
-use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
+use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::observer::traits::AlgorithmObserver;
 use crate::observer::Observable;
@@ -10,6 +10,7 @@ use crate::solution::{ParetoCrowdingDistanceQuality, Solution};
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::random::{seed_from_time, Random};
+use crate::utils::statistics::calculate_population_statistics_by;
 use std::cmp::Ordering;
 
 pub struct NSGAIIParameters<C, M, Sel>
@@ -544,46 +545,27 @@ where
 
     fn build_snapshot(
         &self,
-        _problem: &(impl Problem<f64, ParetoCrowdingDistanceQuality> + Sync),
+        problem: &(impl Problem<f64, ParetoCrowdingDistanceQuality> + Sync),
         state: &Self::StepState,
-    ) -> ExecutionStateSnapshot<f64, ParetoCrowdingDistanceQuality> {
-        let worst = state
-            .population
-            .iter()
-            .filter_map(|s| s.get_objective(0))
-            .fold(f64::NEG_INFINITY, f64::max);
-        let worst = if worst.is_finite() { worst } else { 0.0 };
-
-        let avg = if state.population.is_empty() {
-            0.0
-        } else {
-            let values: Vec<f64> = state
-                .population
-                .iter()
-                .filter_map(|s| s.get_objective(0))
-                .collect();
-            if values.is_empty() {
-                0.0
-            } else {
-                values.iter().sum::<f64>() / values.len() as f64
-            }
-        };
+    ) -> ExecutionStateSnapshot {
+        let stats = calculate_population_statistics_by(&state.population, problem, |solution| {
+            solution.get_objective(0)
+        });
 
         let best_solution = state
             .population
             .iter()
             .min_by(|a, b| Self::rank_crowding_cmp(a, b))
-            .map(|solution| solution.copy())
             .expect("population should not be empty when reporting progress");
         let best = best_solution.get_objective(0).unwrap_or(0.0);
 
         ExecutionStateSnapshot {
             iteration: state.generation,
             evaluations: state.evaluations,
-            best_solution,
             best_fitness: best,
-            average_fitness: avg,
-            worst_fitness: worst,
+            average_fitness: stats.average_fitness,
+            worst_fitness: stats.worst_fitness,
+            best_solution_presentation: problem.format_solution(best_solution),
         }
     }
 

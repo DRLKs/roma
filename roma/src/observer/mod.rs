@@ -9,7 +9,8 @@ pub(crate) mod traits;
 
 use std::path::PathBuf;
 
-use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationReason};
+use crate::algorithms::checkpoint::ExecutionStateSnapshot;
+use crate::algorithms::termination::TerminationReason;
 pub use implementations::{
     chart_observer::ChartObserver, console_observer::ConsoleObserver,
     html_report_observer::HtmlReportObserver,
@@ -49,15 +50,7 @@ impl ObserverState {
         }
     }
 
-    pub(crate) fn from_snapshot<T, Q>(
-        snapshot: ExecutionStateSnapshot<T, Q>,
-        best_solution_presentation: String,
-        seq_id: u64,
-    ) -> Self
-    where
-        T: Clone,
-        Q: Clone,
-    {
+    pub(crate) fn from_snapshot(snapshot: &ExecutionStateSnapshot, seq_id: u64) -> Self {
         Self::new(
             seq_id,
             snapshot.iteration,
@@ -65,7 +58,7 @@ impl ObserverState {
             snapshot.best_fitness,
             snapshot.average_fitness,
             snapshot.worst_fitness,
-            best_solution_presentation,
+            snapshot.best_solution_presentation.clone(),
         )
     }
 }

@@ -1,6 +1,6 @@
-use crate::algorithms::checkpoint::StepStateCheckpoint;
+use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
 use crate::algorithms::runtime::ExecutionContext;
-use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
+use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
@@ -10,6 +10,7 @@ use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::random::{seed_from_time, Random};
+use crate::utils::statistics::calculate_population_statistics;
 
 /// Configuration parameters for Binary PSO.
 ///
@@ -437,39 +438,27 @@ impl Algorithm<bool> for PSO {
         &self,
         problem: &(impl Problem<bool> + Sync),
         state: &Self::StepState,
-    ) -> ExecutionStateSnapshot<bool> {
-        if state.particles.is_empty() {
+    ) -> ExecutionStateSnapshot {
+        let stats = calculate_population_statistics(&state.particles, problem);
+
+        if stats.best_index.is_none() {
             return ExecutionStateSnapshot {
                 iteration: state.iteration,
                 evaluations: state.evaluations,
-                best_solution: state.global_best.copy(),
                 best_fitness: state.global_best.quality_value(),
                 worst_fitness: state.global_best.quality_value(),
                 average_fitness: state.global_best.quality_value(),
+                best_solution_presentation: problem.format_solution(&state.global_best),
             };
-        }
-
-        let values: Vec<f64> = state.particles.iter().map(|s| s.quality_value()).collect();
-        let average = values.iter().sum::<f64>() / values.len() as f64;
-
-        let mut best_value = values[0];
-        let mut worst_value = values[0];
-        for &value in values.iter().skip(1) {
-            if problem.is_better_fitness(value, best_value) {
-                best_value = value;
-            }
-            if problem.is_better_fitness(worst_value, value) {
-                worst_value = value;
-            }
         }
 
         ExecutionStateSnapshot {
             iteration: state.iteration,
             evaluations: state.evaluations,
-            best_solution: state.global_best.copy(),
-            best_fitness: best_value,
-            average_fitness: average,
-            worst_fitness: worst_value,
+            best_fitness: state.global_best.quality_value(),
+            average_fitness: stats.average_fitness,
+            worst_fitness: stats.worst_fitness,
+            best_solution_presentation: problem.format_solution(&state.global_best),
         }
     }
 

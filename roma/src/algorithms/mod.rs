@@ -17,6 +17,7 @@ pub(crate) mod termination;
 pub(crate) mod traits;
 
 pub use async_runner::{run_algorithm_instances_async, run_algorithms_async};
+pub use checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
 pub use implementations::{
     differential_evolution::{DifferentialEvolution, DifferentialEvolutionParameters},
     genetic_algorithm::{GeneticAlgorithm, GeneticAlgorithmParameters},
@@ -29,7 +30,7 @@ pub use implementations::{
 };
 pub use runtime::{spawn_algorithm_run, ExecutionContext};
 pub use termination::{
-    ExecutionStateSnapshot, TerminationController, TerminationCriteria, TerminationCriterion,
+    TerminationController, TerminationCriteria, TerminationCriterion,
     TerminationReason, TerminationState,
 };
 pub use traits::Algorithm;

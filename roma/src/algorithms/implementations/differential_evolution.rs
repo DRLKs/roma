@@ -1,6 +1,6 @@
-use crate::algorithms::checkpoint::StepStateCheckpoint;
+use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
 use crate::algorithms::runtime::ExecutionContext;
-use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
+use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
@@ -9,7 +9,7 @@ use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::random::Random;
-use crate::utils::statistics::calculate_statistics;
+use crate::utils::statistics::calculate_population_statistics;
 
 #[derive(Clone)]
 pub struct DifferentialEvolutionParameters {
@@ -293,29 +293,19 @@ impl Algorithm<f64> for DifferentialEvolution {
         &self,
         problem: &(impl Problem<f64> + Sync),
         state: &Self::StepState,
-    ) -> ExecutionStateSnapshot<f64> {
-        let (_best, average_fitness, worst_fitness) = calculate_statistics(&state.population, problem);
-        let best_solution = state
-            .population
-            .iter()
-            .cloned()
-            .reduce(|best, candidate| {
-                if problem.is_better_fitness(candidate.quality_value(), best.quality_value()) {
-                    candidate
-                } else {
-                    best
-                }
-            })
-            .expect("population should not be empty when reporting progress");
-        let best_fitness = best_solution.quality_value();
+    ) -> ExecutionStateSnapshot {
+        let stats = calculate_population_statistics(&state.population, problem);
+        let best_solution = &state.population[stats.best_index.expect(
+            "population should not be empty when reporting progress",
+        )];
 
         ExecutionStateSnapshot {
             iteration: state.generation,
             evaluations: state.evaluations,
-            best_solution,
-            best_fitness,
-            average_fitness,
-            worst_fitness,
+            best_fitness: stats.best_fitness,
+            average_fitness: stats.average_fitness,
+            worst_fitness: stats.worst_fitness,
+            best_solution_presentation: problem.format_solution(best_solution),
         }
     }
 

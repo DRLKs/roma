@@ -112,3 +112,5 @@ Cambiar algorithm.run añadir el argumento resume
 [ ] 29. Complicar los algoritmos
 
 [ ] 30. Poner el flag --no-checkpoint a las ejecuciones
+
+[ ] 31. En vez de compararlo con evaluaciones, vamos a compararlo con tiempo de ejecución (más realista)

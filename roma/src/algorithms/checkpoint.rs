@@ -44,6 +44,39 @@ impl CheckpointRunStatus {
     }
 }
 
+/// Shared execution snapshot emitted by algorithms and consumed by
+/// termination logic/observers.
+#[derive(Clone, Debug)]
+pub struct ExecutionStateSnapshot {
+    pub iteration: usize,
+    pub evaluations: usize,
+    /// Cached scalar metric for termination/monitoring.
+    pub best_fitness: f64,
+    pub average_fitness: f64,
+    pub worst_fitness: f64,
+    pub best_solution_presentation: String,
+}
+
+impl ExecutionStateSnapshot {
+    pub fn increment_iteration(&mut self) {
+        self.iteration += 1;
+    }
+
+    pub fn increment_evaluations(&mut self, count: usize) {
+        self.evaluations += count;
+    }
+}
+
+/// Runtime metadata attached to checkpoint records for one algorithm run.
+pub struct CheckpointRuntimeMetadata<'a> {
+    pub algorithm_name: &'a str,
+    pub algorithm_parameters: &'a str,
+    pub problem_description: &'a str,
+    pub problem_parameters: &'a str,
+    pub algorithm_signature_hash: u64,
+    pub problem_signature_hash: u64,
+}
+
 pub trait StepStateCheckpoint<T, Q = f64>
 where
     T: Clone,
@@ -62,12 +95,7 @@ where
     fn build_checkpoint_record(
         &self,
         run_id: &str,
-        runtime_algorithm_name: &str,
-        runtime_algorithm_parameters: &str,
-        runtime_problem_description: &str,
-        runtime_problem_parameters: &str,
-        runtime_algorithm_signature_hash: u64,
-        runtime_problem_signature_hash: u64,
+        runtime_metadata: &CheckpointRuntimeMetadata<'_>,
         elapsed_millis: Duration,
     ) -> CheckpointRecord {
         CheckpointRecord {
@@ -79,12 +107,12 @@ where
                 .unwrap_or(0),
             run_id: run_id.to_string(),
             random_seed: self.random_seed(),
-            algorithm_name: runtime_algorithm_name.to_string(),
-            algorithm_parameters: runtime_algorithm_parameters.to_string(),
-            problem_description: runtime_problem_description.to_string(),
-            problem_parameters: runtime_problem_parameters.to_string(),
-            algorithm_signature_hash: runtime_algorithm_signature_hash,
-            problem_signature_hash: runtime_problem_signature_hash,
+            algorithm_name: runtime_metadata.algorithm_name.to_string(),
+            algorithm_parameters: runtime_metadata.algorithm_parameters.to_string(),
+            problem_description: runtime_metadata.problem_description.to_string(),
+            problem_parameters: runtime_metadata.problem_parameters.to_string(),
+            algorithm_signature_hash: runtime_metadata.algorithm_signature_hash,
+            problem_signature_hash: runtime_metadata.problem_signature_hash,
             step_state_payload: self.to_payload(),
             seed_payload: None,
             elapsed_millis: elapsed_millis.as_millis() as u64,

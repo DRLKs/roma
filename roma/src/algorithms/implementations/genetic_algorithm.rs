@@ -1,9 +1,9 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
-use crate::algorithms::checkpoint::StepStateCheckpoint;
+use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
 use crate::algorithms::runtime::ExecutionContext;
-use crate::algorithms::termination::{ExecutionStateSnapshot, TerminationCriteria};
+use crate::algorithms::termination::{TerminationCriteria};
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::AlgorithmObserver;
@@ -15,7 +15,7 @@ use crate::solution_set::traits::SolutionSet;
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::parallel::resolve_num_threads;
 use crate::utils::random::{seed_from_time, Random};
-use crate::utils::statistics::calculate_statistics;
+use crate::utils::statistics::calculate_population_statistics;
 use crate::Observable;
 
 #[derive(Clone)]
@@ -583,29 +583,18 @@ where
         &self,
         problem: &(impl Problem<T> + Sync),
         state: &Self::StepState,
-    ) -> ExecutionStateSnapshot<T> {
-        let (_best, avg, worst) = calculate_statistics(&state.population, problem);
-        let best_solution = state
-            .population
-            .iter()
-            .cloned()
-            .reduce(|best, candidate| {
-                if problem.is_better_fitness(candidate.quality_value(), best.quality_value()) {
-                    candidate
-                } else {
-                    best
-                }
-            })
-            .expect("population should not be empty when reporting progress");
-
-        let best_fitness = best_solution.quality_value();
+    ) -> ExecutionStateSnapshot {
+        let stats = calculate_population_statistics(&state.population, problem);
+        let best_solution = &state.population[stats.best_index.expect(
+            "population should not be empty when reporting progress",
+        )];
         ExecutionStateSnapshot {
             iteration: state.generation,
             evaluations: state.evaluations,
-            best_solution,
-            best_fitness,
-            average_fitness: avg,
-            worst_fitness: worst,
+            best_fitness: stats.best_fitness,
+            average_fitness: stats.average_fitness,
+            worst_fitness: stats.worst_fitness,
+            best_solution_presentation: problem.format_solution(best_solution),
         }
     }
 

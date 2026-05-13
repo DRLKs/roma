@@ -1,5 +1,6 @@
-use crate::Solution;
 use std::time::{Duration, Instant};
+
+use crate::algorithms::checkpoint::ExecutionStateSnapshot;
 
 /// Defines stopping criteria for optimization algorithms.
 ///
@@ -44,23 +45,6 @@ pub enum TerminationReason {
     Criterion(TerminationCriterion),
 }
 
-/// Shared execution snapshot emitted by algorithms and consumed by
-/// termination logic/observers.
-#[derive(Clone, Debug)]
-pub struct ExecutionStateSnapshot<T, Q = f64>
-where
-    T: Clone,
-    Q: Clone,
-{
-    pub iteration: usize,
-    pub evaluations: usize,
-    pub best_solution: Solution<T, Q>,
-    /// Cached scalar metric for termination/monitoring.
-    pub best_fitness: f64,
-    pub average_fitness: f64,
-    pub worst_fitness: f64,
-}
-
 #[derive(Clone, Debug)]
 pub struct TerminationController {
     criteria: TerminationCriteria,
@@ -96,11 +80,7 @@ impl TerminationController {
             .update_best_quality(quality, iteration, self.better_fitness);
     }
 
-    pub fn on_snapshot<T, Q>(&mut self, snapshot: &ExecutionStateSnapshot<T, Q>)
-    where
-        T: Clone,
-        Q: Clone,
-    {
+    pub fn on_snapshot(&mut self, snapshot: &ExecutionStateSnapshot) {
         self.on_iteration(snapshot.iteration);
         self.on_evaluations(snapshot.evaluations);
         self.on_best_quality(snapshot.best_fitness, snapshot.iteration);
@@ -209,41 +189,48 @@ impl TerminationState {
 mod tests {
     use super::*;
     use crate::solution::traits::evaluator::maximizing_fitness;
-    use crate::solution::RealSolutionBuilder;
     use std::thread;
     use std::time::Duration;
 
-    fn snapshot(
-        iteration: usize,
-        evaluations: usize,
-        best_fitness: f64,
-    ) -> ExecutionStateSnapshot<f64> {
-        let best_solution = RealSolutionBuilder::new(2)
-            .with_quality(best_fitness)
-            .build();
-
-        ExecutionStateSnapshot {
-            iteration,
-            evaluations,
-            best_solution,
-            best_fitness,
-            average_fitness: best_fitness,
-            worst_fitness: best_fitness,
-        }
-    }
+    // Helper removed: snapshots now borrow local solutions; tests construct
+    // snapshots inline to ensure referenced solution outlives usage.
 
     #[test]
     fn max_iterations_termination_triggers() {
         let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(3)]);
         let mut controller = TerminationController::new(criteria, maximizing_fitness);
 
-        controller.on_snapshot(&snapshot(0, 1, 1.0));
+        let snap0 = ExecutionStateSnapshot {
+            iteration: 0,
+            evaluations: 1,
+            best_fitness: 1.0,
+            average_fitness: 1.0,
+            worst_fitness: 1.0,
+            best_solution_presentation: String::new(),
+        };
+        controller.on_snapshot(&snap0);
         assert!(!controller.should_terminate());
 
-        controller.on_snapshot(&snapshot(1, 2, 1.1));
+        let snap1 = ExecutionStateSnapshot {
+            iteration: 1,
+            evaluations: 2,
+            best_fitness: 1.1,
+            average_fitness: 1.1,
+            worst_fitness: 1.1,
+            best_solution_presentation: String::new(),
+        };
+        controller.on_snapshot(&snap1);
         assert!(!controller.should_terminate());
 
-        controller.on_snapshot(&snapshot(3, 4, 1.2));
+        let snap3 = ExecutionStateSnapshot {
+            iteration: 3,
+            evaluations: 4,
+            best_fitness: 1.2,
+            average_fitness: 1.2,
+            worst_fitness: 1.2,
+            best_solution_presentation: String::new(),
+        };
+        controller.on_snapshot(&snap3);
         assert!(controller.should_terminate());
         assert!(matches!(
             controller.reason(),
@@ -258,10 +245,26 @@ mod tests {
         let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxEvaluations(5)]);
         let mut controller = TerminationController::new(criteria, maximizing_fitness);
 
-        controller.on_snapshot(&snapshot(0, 2, 1.0));
+        let snap0 = ExecutionStateSnapshot {
+            iteration: 0,
+            evaluations: 2,
+            best_fitness: 1.0,
+            average_fitness: 1.0,
+            worst_fitness: 1.0,
+            best_solution_presentation: String::new(),
+        };
+        controller.on_snapshot(&snap0);
         assert!(!controller.should_terminate());
 
-        controller.on_snapshot(&snapshot(1, 5, 1.1));
+        let snap1 = ExecutionStateSnapshot {
+            iteration: 1,
+            evaluations: 5,
+            best_fitness: 1.1,
+            average_fitness: 1.1,
+            worst_fitness: 1.1,
+            best_solution_presentation: String::new(),
+        };
+        controller.on_snapshot(&snap1);
         assert!(controller.should_terminate());
         assert!(matches!(
             controller.reason(),
@@ -279,13 +282,48 @@ mod tests {
         }]);
         let mut controller = TerminationController::new(criteria, maximizing_fitness);
 
-        controller.on_snapshot(&snapshot(0, 1, 10.0));
+        let snap0 = ExecutionStateSnapshot {
+            iteration: 0,
+            evaluations: 1,
+            best_fitness: 10.0,
+            average_fitness: 10.0,
+            worst_fitness: 10.0,
+            best_solution_presentation: String::new(),
+        };
+        controller.on_snapshot(&snap0);
         assert!(!controller.should_terminate());
-        controller.on_snapshot(&snapshot(1, 2, 10.0));
+
+        let snap1 = ExecutionStateSnapshot {
+            iteration: 1,
+            evaluations: 2,
+            best_fitness: 10.0,
+            average_fitness: 10.0,
+            worst_fitness: 10.0,
+            best_solution_presentation: String::new(),
+        };
+        controller.on_snapshot(&snap1);
         assert!(!controller.should_terminate());
-        controller.on_snapshot(&snapshot(2, 3, 10.0));
+
+        let snap2 = ExecutionStateSnapshot {
+            iteration: 2,
+            evaluations: 3,
+            best_fitness: 10.0,
+            average_fitness: 10.0,
+            worst_fitness: 10.0,
+            best_solution_presentation: String::new(),
+        };
+        controller.on_snapshot(&snap2);
         assert!(!controller.should_terminate());
-        controller.on_snapshot(&snapshot(3, 4, 10.0));
+
+        let snap3 = ExecutionStateSnapshot {
+            iteration: 3,
+            evaluations: 4,
+            best_fitness: 10.0,
+            average_fitness: 10.0,
+            worst_fitness: 10.0,
+            best_solution_presentation: String::new(),
+        };
+        controller.on_snapshot(&snap3);
         assert!(controller.should_terminate());
         assert!(matches!(
             controller.reason(),
@@ -319,17 +357,59 @@ mod tests {
             TerminationCriteria::new(vec![TerminationCriterion::NoImprovement { patience: 3 }]);
         let mut controller = TerminationController::new(criteria, maximizing_fitness);
 
-        controller.on_snapshot(&snapshot(0, 1, 1.0));
+        let snap0 = ExecutionStateSnapshot {
+            iteration: 0,
+            evaluations: 1,
+            best_fitness: 1.0,
+            average_fitness: 1.0,
+            worst_fitness: 1.0,
+            best_solution_presentation: String::new(),
+        };
+        controller.on_snapshot(&snap0);
         assert!(!controller.should_terminate());
 
-        controller.on_snapshot(&snapshot(1, 2, 2.0));
+        let snap1 = ExecutionStateSnapshot {
+            iteration: 1,
+            evaluations: 2,
+            best_fitness: 2.0,
+            average_fitness: 2.0,
+            worst_fitness: 2.0,
+            best_solution_presentation: String::new(),
+        };
+        controller.on_snapshot(&snap1);
         assert!(!controller.should_terminate());
 
-        controller.on_snapshot(&snapshot(2, 3, 2.0));
+        let snap2 = ExecutionStateSnapshot {
+            iteration: 2,
+            evaluations: 3,
+            best_fitness: 2.0,
+            average_fitness: 2.0,
+            worst_fitness: 2.0,
+            best_solution_presentation: String::new(),
+        };
+        controller.on_snapshot(&snap2);
         assert!(!controller.should_terminate());
-        controller.on_snapshot(&snapshot(3, 4, 2.0));
+
+        let snap3 = ExecutionStateSnapshot {
+            iteration: 3,
+            evaluations: 4,
+            best_fitness: 2.0,
+            average_fitness: 2.0,
+            worst_fitness: 2.0,
+            best_solution_presentation: String::new(),
+        };
+        controller.on_snapshot(&snap3);
         assert!(!controller.should_terminate());
-        controller.on_snapshot(&snapshot(4, 5, 2.0));
+
+        let snap4 = ExecutionStateSnapshot {
+            iteration: 4,
+            evaluations: 5,
+            best_fitness: 2.0,
+            average_fitness: 2.0,
+            worst_fitness: 2.0,
+            best_solution_presentation: String::new(),
+        };
+        controller.on_snapshot(&snap4);
         assert!(controller.should_terminate());
         assert!(matches!(
             controller.reason(),
