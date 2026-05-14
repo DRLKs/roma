@@ -1,5 +1,4 @@
 use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
-use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
@@ -358,7 +357,6 @@ impl Algorithm<bool> for PSO {
         &self,
         problem: &(impl Problem<bool> + Sync),
         state: &mut Self::StepState,
-        _context: &ExecutionContext<bool>,
     ) {
         state.iteration += 1;
 

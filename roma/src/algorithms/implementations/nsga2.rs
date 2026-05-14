@@ -1,5 +1,4 @@
 use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
-use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::observer::traits::AlgorithmObserver;
@@ -476,7 +475,6 @@ where
         &self,
         problem: &(impl Problem<f64, ParetoCrowdingDistanceQuality> + Sync),
         state: &mut Self::StepState,
-        _context: &ExecutionContext<f64, ParetoCrowdingDistanceQuality>,
     ) {
         state.generation += 1;
         let mut offspring = Vec::with_capacity(self.parameters.population_size);

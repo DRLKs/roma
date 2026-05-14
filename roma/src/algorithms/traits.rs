@@ -173,7 +173,7 @@ where
                 report_snapshot(context, &initial_snapshot);
 
                 while !context.should_terminate() {
-                    algorithm.step(problem, &mut state, context);
+                    algorithm.step(problem, &mut state);
 
                     let step_snapshot = algorithm.build_snapshot(problem, &state);
                     context.update_execution_state(&step_snapshot);
@@ -230,7 +230,6 @@ where
         &self,
         problem: &(impl Problem<T, Q> + Sync),
         state: &mut Self::StepState,
-        context: &ExecutionContext<T, Q>,
     );
 
     fn build_snapshot(

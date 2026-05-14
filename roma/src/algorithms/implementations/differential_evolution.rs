@@ -1,5 +1,4 @@
 use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
-use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
@@ -258,7 +257,6 @@ impl Algorithm<f64> for DifferentialEvolution {
         &self,
         problem: &(impl Problem<f64> + Sync),
         state: &mut Self::StepState,
-        _context: &ExecutionContext<f64>,
     ) {
         state.generation += 1;
         let mut rng = Random::new(Random::derive_seed(state.run_seed, state.generation as u64));

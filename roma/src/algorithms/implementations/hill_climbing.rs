@@ -2,7 +2,6 @@ use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
 use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
-use crate::algorithms::runtime::ExecutionContext;
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
@@ -242,7 +241,6 @@ where
         &self,
         problem: &(impl Problem<T> + Sync),
         state: &mut Self::StepState,
-        _context: &ExecutionContext<T>,
     ) {
         state.iteration += 1;
 
