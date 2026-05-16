@@ -49,22 +49,21 @@
   author      = {David Muñoz del Valle},
   tutor       = {Gabriel Jesús Luque Polo},
   dept        = {Departamento de Lenguajes y Ciencias de la Computación},
-  cityDate    = {MÁLAGA, \today},
+  cityDate    = {MÁLAGA, Junio 2026},
   logoLeft    = {template/logos/NEG-uma-logo.png},
   logoRight   = {template/logos/NEG-etsi-logo.png}
 }
 
 %────────────────────── White front cover ──────────────────────
 \MakePlainWhiteUMACover{
-  degree      = {Graduado en Ingeniería de la Salud},
-  mencion     = {Mención en Bioinformática},
+  degree      = {Grado en Ingeniería del Software},
   titleES     = {Biblioteca extensible de optimización metaheurística en Rust},
   titleEN     = {Extensible metaheuristic optimization library in Rust},
   author      = {David Muñoz del Valle},
   tutor       = {Gabriel Jesús Luque Polo},
   dept        = {Departamento de Lenguajes y Ciencias de la Computación},
-  cityDate    = {MÁLAGA, \today},
-  defenseDate = {Septiembre de 2025},
+  cityDate    = {MÁLAGA, Junio 2026},
+  defenseDate = {Julio de 2026},
   logoLeft    = {template/logos/POS-uma-logo.png},
   logoRight   = {template/logos/POS-etsi-logo.png}
 }
@@ -138,40 +137,37 @@
 \listoftables
 \clearpage
 
-%────────────────────── Nomenclatura ───────────────────────────────────
-\nomenclature{SCRUM}{marco de trabajo ágil para gestionar proyectos complejos}
-\nomenclature{framework}{conjunto estandarizado de herramientas, librerías, reglas y buenas prácticas prediseñadas para agilizar el desarrollo de software}
-\nomenclature{IDE}{Integrated Development Environment (Entorno de Desarrollo Integrado)}
-\printnomenclature
-\clearpage
+
 
 \mainmatter
 %────────────────────── Cuerpo ─────────────────────────────────────────
-%https://en.wikipedia.org/wiki/Standing_on_the_shoulders_of_giants 
 
 \chapter{Introducción}
 
 \section{Motivación}
 
-    La optimización metaheurística constituye una herramienta fundamental para la resolución de problemas complejos en aquellos ámbitos donde los métodos exactos resultan inviables, ya sea debido al elevado coste computacional o a la naturaleza no lineal y no convexa de los espacios de búsqueda. Este tipo de técnicas ha demostrado su utilidad en una amplia variedad de aplicaciones, como la planificación y asignación de recursos, la optimización de rutas, el diseño de sistemas, la inteligencia artificial, el aprendizaje automático y la ingeniería en general.h
+    La optimización metaheurística constituye una herramienta fundamental para la resolución de problemas complejos en aquellos ámbitos donde los métodos exactos resultan inviables, ya sea debido al elevado coste computacional o a la naturaleza no lineal y no convexa de los espacios de búsqueda. Este tipo de técnicas ha demostrado su utilidad en una amplia variedad de aplicaciones, como la planificación y asignación de recursos, la optimización de rutas, el diseño de sistemas, la inteligencia artificial, el aprendizaje automático y la ingeniería en general \cite{blum2003metaheuristics}.
 
-    En distintos lenguajes de programación existen bibliotecas maduras que facilitan la aplicación de técnicas metaheurísticas. Por ejemplo, \textit{jMetal} es un framework ampliamente reconocido para la optimización multiobjetivo con metaheurísticas \cite{jmetal}. Su versión en Python, \textit{jMetalPy}, ofrece un entorno extensible y orientado a objetos para experimentar con técnicas clásicas y avanzadas de optimización \cite{jmetalpy}. Asimismo, \textit{MEALPY} (MEta-heuristic ALgorithms in PYthon) proporciona implementaciones de numerosos algoritmos inspirados en la naturaleza, tanto clásicos como híbridos, para abordar problemas complejos \cite{mealpy}. Sin embargo, dentro del ecosistema de Rust, el soporte para la optimización metaheurística es todavía limitado, lo que dificulta la adopción de estas metodologías en proyectos desarrollados en dicho lenguaje y pone de manifiesto la necesidad de disponer de herramientas nativas que se integren de forma natural con sus principios de diseño, especialmente en lo relativo al rendimiento, la seguridad de memoria y el control de recursos.
+    En distintos lenguajes de programación existen bibliotecas maduras que facilitan la utilización de técnicas metaheurísticas. Por ejemplo, \textit{jMetal} es un framework desarrollado por investigadores de la Universidad de Málaga, ampliamente reconocido para la optimización multiobjetivo con metaheurísticas \cite{jmetal}. Su versión en Python, \textit{jMetalPy}, ofrece un entorno extensible y orientado a objetos para experimentar con técnicas clásicas y avanzadas de optimización \cite{jmetalpy}. Asimismo, \textit{MEALPY} (MEta-heuristic ALgorithms in PYthon) proporciona implementaciones de numerosos algoritmos inspirados en la naturaleza, tanto clásicos como híbridos, para abordar problemas complejos \cite{mealpy}. Sin embargo, dentro del ecosistema de Rust~\cite{rust_language}, el soporte para la optimización metaheurística es todavía limitado, lo que dificulta la adopción de estas metodologías en proyectos desarrollados en dicho lenguaje y pone de manifiesto la necesidad de disponer de herramientas nativas que se integren de forma natural con sus principios de diseño, especialmente en lo relativo al rendimiento, la seguridad de memoria y el control de recursos.
 
     
-    Este Trabajo de Fin de Grado surge con la motivación de dar respuesta a esta necesidad mediante el desarrollo de una biblioteca de optimización metaheurística modular y extensible. No obstante, abordar un proyecto de esta envergadura resulta especialmente desafiante en las etapas iniciales, particularmente en ausencia de experiencia previa. Afrontar un trabajo de fin de carrera implica recopilar y consolidar los conocimientos adquiridos a lo largo de la titulación y aplicarlos en un proyecto real, lo cual supone una tarea de notable complejidad. Por ello, la elección de un tema que despierte interés, curiosidad y motivación personal resulta un factor clave para el desarrollo del proyecto.
+    Este Trabajo de Fin de Grado surge con la motivación de dar respuesta a esta necesidad mediante el desarrollo de una biblioteca de optimización metaheurística modular y extensible. No obstante, abordar un proyecto de esta envergadura resulta especialmente desafiante en las etapas iniciales, particularmente en ausencia de experiencia previa tanto en las técnicas de optimización como en el lenguaje de programación Rust. Afrontar un grado de fin de carrera implica recopilar y consolidar los conocimientos adquiridos a lo largo de la titulación y aplicarlos en un proyecto real, lo cual supone una tarea de notable complejidad. Por ello, la elección de un tema que despierte interés, curiosidad y motivación personal resulta un factor clave para el desarrollo del proyecto.
     
     El diseño y desarrollo de algoritmos metaheurísticos conforma un campo especialmente atractivo, al combinar fundamentos de la teoría de la computación, la optimización y la inteligencia artificial. Su aplicación en dominios tan diversos como la logística, la ingeniería o la biología computacional pone de manifiesto su versatilidad y su impacto en la resolución de problemas reales.
     
-    En el momento de inicio de este proyecto, no existían bibliotecas consolidadas orientadas al desarrollo de este tipo de soluciones en el lenguaje Rust, lo que constituyó una motivación adicional para su realización. Asimismo, el propio lenguaje Rust actuó como detonante del proyecto, al tratarse de una tecnología moderna, diseñada con un fuerte énfasis en la seguridad de memoria y el rendimiento, y especialmente adecuada tanto para el aprendizaje como para el desarrollo de software robusto y eficiente.
+    Como se ha comentado, en el momento de inicio de este proyecto, no existían bibliotecas consolidadas orientadas al desarrollo de este tipo de soluciones en el lenguaje Rust, lo que constituyó una motivación adicional para su realización. Asimismo, el propio lenguaje Rust actuó como detonante del proyecto, al tratarse de una tecnología moderna y en auge, diseñada con un fuerte énfasis en la seguridad de memoria y el rendimiento, y especialmente adecuada tanto para el aprendizaje como para el desarrollo de software robusto y eficiente.
 
 \section{Objetivos}
-    El objetivo principal de este proyecto es desarrollar una biblioteca en Rust que implemente algoritmos metaheurísticos
-    para la optimización de problemas complejos. Debe ser capaz de resolver correctamente gran variedad de problemas de único objetivo y un conjunto de problemas multiobjetivo. 
+    El objetivo principal de este proyecto es desarrollar una biblioteca en Rust que implemente algoritmos metaheurísticos para la optimización de problemas complejos. Debe ser capaz de resolver correctamente gran variedad de problemas de único objetivo y un conjunto de problemas multiobjetivo. 
     
     Idealmente, esta biblioteca debería ser fácil de usar, eficiente y extensible, permitiendo a los usuarios adaptar los algoritmos a sus necesidades específicas. 
-    Para garantizar el cumplimiento de estas premisas, se ha realizado un desglose exhaustivo de los requisitos del sistema, donde se definen formalmente las funcionalidades y restricciones que guiarán el desarrollo de la herramienta.
+
+    Con el propósito de demostrar el potencial, la viabilidad y el rendimiento de la herramienta, se implementará un conjunto seleccionado de problemas y algoritmos de referencia que servirán como base de pruebas. Sobre esta base, se llevarán a cabo validaciones experimentales y comparaciones exhaustivas, analizando críticamente los resultados obtenidos para evaluar el comportamiento real y la eficiencia de la biblioteca.
+    
+    Para garantizar el cumplimiento de estas premisas, se realizará un desglose exhaustivo de los requisitos del sistema, donde se definirán formalmente las funcionalidades y restricciones que guiarán el desarrollo de la herramienta.
 
 \section{Tecnologías a utilizar}
+    \label{sec:tecnologías-herramientas}
     Como lenguaje de programación, se ha elegido \textbf{Rust}, debido a su enfoque en el rendimiento, por su capacidad de manejo eficiente de la concurrencia y diferentes hilos, lo que lo hace ideal para la implementación de algoritmos metaheurísticos complejos que a menudo requieren un procesamiento paralelo intensivo.
     Además, su creciente ecosistema y su tipo de sistema robusto nos permiten construir soluciones de optimización escalables y de alto rendimiento.
     También, Rust ha comenzado a consolidarse como uno de los lenguajes de programación utilizados en el desarrollo del \emph{kernel} de Linux, dejando atrás su carácter experimental y siendo aprobado oficialmente para la implementación de determinados componentes del núcleo, lo que refuerza su madurez, fiabilidad y adecuación para sistemas críticos \cite{leemhuis2025rustlinux}.   
@@ -187,38 +183,48 @@
     \end{figure}
 
     
-    En cuanto a las herramientas de desarrollo, se utilizó \textbf{Visual Studio Code} como entorno de desarrollo integrado (IDE) debido a su flexibilidad, amplia gama de extensiones y soporte para Rust a través de la extensión \textit{rust-analyzer} \cite{rust_analyzer}. Durante el desarrollo más temprano, también se usó \textbf{Rust Rover}, de \textbf{JetBrains},que es un IDE específico para Rust. Esto fue debido a que en ese momento los conocimientos sobre Rust eran muy limitados y se necesitaba un entorno más guiado e invasivo para poder progresar.
+    En cuanto a las herramientas de desarrollo, se utilizó \textbf{Visual Studio Code}~\cite{visual_studio_code} como entorno de desarrollo integrado (IDE) debido a su flexibilidad, amplia gama de extensiones y soporte para Rust a través de la extensión \textit{rust-analyzer} \cite{rust_analyzer}. Durante el desarrollo más temprano, también se usó \textbf{Rust Rover}~\cite{rustrover_ide}, de \textbf{JetBrains}~\cite{jetbrains_toolbox}, que es un IDE específico para Rust. Esto fue debido a que en ese momento los conocimientos sobre Rust eran muy limitados y se necesitaba un entorno más guiado e invasivo para poder progresar.
     
-    Para la gestión del proyecto se ha utilizado \textbf{Jira}~\cite{jira_tool}. La documentación y redacción del proyecto se han realizado mediante \LaTeX{}. 
+    Para la gestión del proyecto se ha utilizado \textbf{Jira}~\cite{jira_tool}. La documentación y redacción del proyecto se han realizado mediante \LaTeX~\cite{latex_project}. 
     Por otro lado, el control de versiones se ha llevado a cabo utilizando \textbf{Git}~\cite{git_tool}, empleando \textbf{GitHub}~\cite{github_tool} como plataforma de alojamiento remoto del repositorio.
+
+    La gestión y planificación temporal de las tareas se ha articulado mediante \textbf{Jira}~\cite{jira_tool}, mientras que la composición y redacción de la memoria técnica se han elaborado en \LaTeX~\cite{latex_project}. En lo relativo a la ingeniería de software, el control de versiones se ha estructurado en torno al sistema descentralizado \textbf{Git}~\cite{git_tool}, empleando la plataforma \textbf{GitHub}~\cite{github_tool} para el alojamiento del repositorio remoto. 
+
+    La adopción de este ecosistema responde a la necesidad de garantizar la integridad y la trazabilidad del código fuente durante el ciclo de vida del desarrollo. Por un lado, la naturaleza distribuida de Git permite la experimentación segura y el aislamiento de nuevos algoritmos sin comprometer la estabilidad de la rama principal de la biblioteca. Por otro lado, GitHub aporta una infraestructura robusta para la persistencia de los datos, optimizando el seguimiento de las líneas de desarrollo e introduciendo un marco idóneo para la futura automatización de pruebas.
 
 \chapter{Metodología de trabajo}
     En esta sección se describen los procedimientos, herramientas y fases seguidas para la consecución de los objetivos del proyecto.
 
-\section{Modelo de desarrollo}
-    Para el desarrollo del proyecto se ha adoptado una metodología iterativa, inspirada en el marco de trabajo SCRUM, pero adaptada a las particularidades de un entorno de trabajo unipersonal. Esta adaptación permite conservar las ventajas de la planificación incremental y la revisión continua, ajustándolas a la naturaleza y alcance del proyecto. 
+    \section{Modelo y ecosistema de desarrollo}
+        Para el desarrollo del proyecto se ha adoptado una metodología iterativa, inspirada en el marco de trabajo SCRUM, pero adaptada a las particularidades de un entorno de trabajo unipersonal. Esta adaptación permite conservar las ventajas de la planificación incremental y la revisión continua, ajustándolas a la naturaleza y alcance del proyecto. 
+        
+        Como herramienta de apoyo a la gestión y seguimiento de las tareas, se ha utilizado JIRA~\cite{jira_tool}, cuyo uso y configuración dentro del proyecto se detallarán con mayor profundidad en el apartado siguiente.
+        
+        Por otra parte, las herramientas de desarrollo empleadas en este proyecto corresponden a las descritas conceptualmente en la \textbf{Sección~\ref{sec:tecnologías-herramientas}}. La selección de este ecosistema técnico se orientó a maximizar la eficiencia en la detección de errores y la navegación por el código fuente, consolidando a Visual Studio Code como el entorno de desarrollo principal debido a su versatilidad y al robusto soporte proporcionado por la extensión \textit{rust-analyzer}~\cite{rust_analyzer}.
 
-    Como herramienta de apoyo a la gestión y seguimiento de las tareas se ha utilizado JIRA~\cite{jira_tool}, cuyo uso y configuración dentro del proyecto se detallarán con mayor profundidad en el apartado siguiente.
-
-\section{Ecosistema y herramientas de desarrollo}
-    La selección de las herramientas de trabajo se realizó buscando maximizar la eficiencia en la detección de errores y la navegación por el código. Se utilizó mayoritariamente Visual Studio Code como entorno de desarrollo principal, aprovechando su versatilidad y el robusto soporte proporcionado por la extensión \textit{rust-analyzer} \cite{rust_analyzer}.
-
-\section{Fases del proyecto}
-    Un proyecto como en el que nos encontramos debe estructurarse por partes, en este caso en tres etapas diferenciadas:
+    \section{Fases del proyecto}
+        Un proyecto como en el que nos encontramos debe estructurarse por partes, en este caso en tres etapas diferenciadas:
 
     \subsection{Investigación y capacitación}
         Debido a la pronunciada curva de aprendizaje de Rust, esta fase inicial se centró en la asimilación de sus fundamentos sintácticos y las particularidades de su compilador. Para consolidar estos conceptos, se llevó a cabo la migración de un proyecto personal previo (una aplicación de escritorio), trasladando su arquitectura basada en Java y Javalin hacia un ecosistema nativo en Rust mediante el framework Tauri \cite{poker_helper}.
     
-        Paralelamente, se desarrolló un repositorio de pruebas a modo de entorno de experimentación, destinado a la implementación de pequeños módulos funcionales que permitieron dominar aún más el lenguaje. Esta etapa de formación técnica se complementó con un estudio exhaustivo sobre metaheurísticas y algoritmos genéticos, sentando las bases teóricas necesarias para el posterior diseño de la biblioteca.
+        Paralelamente, se desarrolló un repositorio de pruebas a modo de entorno de experimentación, destinado a la implementación de pequeños módulos funcionales que permitieron dominar aún más el lenguaje. Esta etapa de formación técnica se complementó con un estudio exhaustivo sobre metaheurísticas, especialmente, sobre algoritmos genéticos, sentando las bases teóricas necesarias para el posterior diseño de la biblioteca.
         
-        Dentro del estudio técnico, cobró especial relevancia el análisis del repositorio y de la arquitectura de jMetal \cite{jmetal}, un framework de optimización metaheuristica multiobjetivo escrita en java por investigadores de la universidad de Málaga, ayudó a comprender los patrones de diseño y las estructuras de datos necesarias para implementar metaheurísticas de forma extensible.
+        Dentro del estudio técnico, cobró especial relevancia el análisis del repositorio y de la arquitectura de jMetal \cite{jmetal}, un framework de optimización metaheuristica multiobjetivo escrita en Java por investigadores de la Universidad de Málaga, ayudó a comprender los patrones de diseño y las estructuras de datos necesarias para implementar metaheurísticas de forma extensible.
     
     
     \subsection{Definición de requisitos y planificación}
 
         Durante esta etapa se realizó un trabajo de introspección, se analizaron los objetivos y se elaboró un documento donde se especificaron todos los requisitos del sistema. 
-
-        A partir de estos requisitos, se creó un \emph{backlog} en Jira, donde se registraron todas las tareas necesarias para completar el proyecto. Posteriormente, las tareas se organizaron en seis ``sprints'' y se clasificaron en las columnas ``Por hacer'', ``En curso'', ``Por revisar'' y ``Listo''. Esta organización permitió un seguimiento claro del progreso y facilitó la comunicación con el tutor, mostrando periódicamente las tareas en la columna ``Por revisar'' para recibir su aprobación. Una vez que el tutor daba el visto bueno, las tareas se marcaban como ``Listo'', asegurando así un flujo de trabajo controlado y transparente \cite{jira_tool}.
+ 
+        A partir de estos requisitos, se creó un \emph{backlog} en Jira, donde se registraron todas las tareas necesarias para completar el proyecto. Posteriormente, las tareas se organizaron en seis \emph{sprints} y se clasificaron en las columnas «Por hacer», «En curso», «Por revisar» y «Listo». Esta organización permitió un seguimiento claro del progreso y facilitó la comunicación con el tutor, mostrando periódicamente las tareas en la columna «Por revisar» para recibir su aprobación. Una vez que el tutor daba el visto bueno, las tareas se marcaban como «Listo», asegurando así un flujo de trabajo controlado y transparente \cite{jira_tool}. En la Figura~\ref{fig:tablero_jira} se ilustra una captura de pantalla del estado del tablero de gestión durante el ciclo de vida del desarrollo, reflejando la distribución real de las tareas en sus respectivas fases.
+    
+        \begin{figure}[htbp]
+            \centering
+            \includegraphics[width=1\linewidth]{images/Jira-example.png}
+            \caption{Captura de pantalla del estado del tablero Kanban en Jira durante la ejecución del proyecto.}
+            \label{fig:tablero_jira}
+        \end{figure}
         
     \subsection{Implementación técnica}
 
@@ -249,13 +255,15 @@
     $$ \text{Minimizar } f(x) $$
     $$ \text{sujeto a } x \in \Omega $$
 
-    Sin pérdida de generalidad, en la literatura algorítmica suele trabajarse exclusivamente con problemas de minimización, dado que cualquier problema de maximización puede transformarse trivialmente multiplicando la función objetivo por $-1$ (es decir, $\max f(x) = \min -f(x)$).
-    Sin pérdida de generalidad, en la literatura algorítmica suele trabajarse exclusivamente con problemas de minimización, dado que cualquier problema de maximización puede transformarse trivialmente multiplicando la función objetivo por $-1$ (es decir, $\max f(x) = \min -f(x)$).
+    Sin pérdida de generalidad, en la literatura algorítmica suele trabajarse exclusivamente con problemas de minimización, dado que cualquier problema de maximización puede transformarse trivialmente multiplicando la función objetivo por $-1$ (es decir, $\max f(x) \equiv \min -f(x)$).
+
     El vector $x$ representa las incógnitas del sistema sobre las cuales el proceso de resolución tiene control directo. La función objetivo $f: \Omega \to \mathbb{R}$ es la métrica que asigna un valor de calidad o coste a cada vector propuesto. 
 
     El conjunto $\Omega$ denota el espacio de búsqueda o la región factible del problema. Lejos de ser un espacio infinito o arbitrario, en los escenarios de ingeniería y del mundo real, este espacio está delimitado geométrica y matemáticamente por un conjunto de restricciones que el vector $x$ debe cumplir de manera estricta. Estas restricciones imponen límites físicos, lógicos o económicos al sistema, y suelen expresarse mediante funciones de desigualdad ($g_i(x) \leq 0, i = 1, \dots, m$) y de igualdad ($h_j(x) = 0, j = 1, \dots, p$). 
 
     Por consiguiente, $\Omega$ está constituido única y exclusivamente por aquellos vectores que satisfacen simultáneamente todas estas condiciones. Si un algoritmo de optimización genera una solución que recae fuera de las fronteras de $\Omega$, dicha solución se considera infactible. En el diseño de algoritmos y metaheurísticas, las soluciones infactibles suponen un desafío; por lo general, son descartadas inmediatamente o, de forma más sofisticada, se les aplica una penalización severa en su valor de $f(x)$ para guiar la búsqueda iterativa de vuelta hacia el interior de la región factible.
+
+    Por consiguiente, $\Omega$ está constituido única y exclusivamente por aquellos vectores que satisfacen simultáneamente todas estas condiciones. Si un algoritmo de optimización genera una solución que recae fuera de las fronteras de $\Omega$, dicha solución se considera infactible. En el diseño de algoritmos y metaheurísticas, las soluciones infactibles suponen un desafío; por lo general, son descartadas inmediatamente, aunque se les puede aplicar de forma más sofisticada una penalización severa en su valor de $f(x)$ para guiar la búsqueda iterativa de vuelta hacia el interior de la región factible o en tercer lugar, se puede intentar su reparación mediante un proceso normalmente determinista pero subóptimo que las transforma en soluciones factibles.
 
  \section{Métodos Exactos frente a Métodos Aproximados}
 
@@ -263,7 +271,7 @@
 
     Los métodos exactos exploran el espacio de búsqueda de una manera sistemática y exhaustiva, de tal forma que garantizan matemáticamente encontrar la solución óptima global del problema. Entre las técnicas más destacadas de esta familia se encuentran la Programación Lineal (como el algoritmo Simplex), la Programación Dinámica y los algoritmos de Ramificación y Acotación (\textit{Branch and Bound}). Cuando el problema presenta un modelo matemático tratable y un tamaño de entrada moderado, estos métodos son, sin lugar a duda, la opción preferida debido a la certeza de sus resultados.
 
-    Sin embargo, su aplicabilidad se ve severamente limitada en la práctica industrial y de investigación. Muchos de los problemas de mayor interés y aplicabilidad en el mundo real pertenecen a las clases de complejidad NP-completos o NP-duros. Un ejemplo paradigmático es el Problema del Viajante de Comercio (TSP, por sus siglas en inglés), donde se busca la ruta más corta que visite un conjunto de ciudades. En estos escenarios, el espacio de soluciones posibles crece de forma factorial o exponencial con respecto al tamaño del problema ($O(n!)$ o $O(2^n)$). Este fenómeno, conocido como "explosión combinatoria" o "la maldición de la dimensionalidad", provoca que un algoritmo exacto requiera tiempos de ejecución inasumibles (años o incluso siglos de cómputo) para instancias de tamaño realista.
+    Sin embargo, su aplicabilidad se ve severamente limitada en la práctica industrial y de investigación \cite{talbi2009metaheuristics}. Muchos de los problemas de mayor interés y aplicabilidad en el mundo real pertenecen a las clases de complejidad NP-completos o NP-duros. Un ejemplo paradigmático es el Problema del Viajante de Comercio (TSP, por sus siglas en inglés) \cite{talbi2009metaheuristics}, donde se busca la ruta más corta que visite un conjunto de ciudades. En estos escenarios, el espacio de soluciones posibles crece de forma factorial o exponencial con respecto al tamaño del problema ($O(n!)$ o $O(2^n)$). Este fenómeno, conocido como "explosión combinatoria" o "la maldición de la dimensionalidad", provoca que un algoritmo exacto requiera tiempos de ejecución inasumibles (años o incluso siglos de cómputo) para instancias de tamaño realista \cite{karp1972reducibility}.
 
     Es precisamente ante esta intratabilidad computacional donde los métodos aproximados, concretamente los algoritmos heurísticos, cobran un protagonismo absoluto y se convierten en la única alternativa viable. La principal motivación de un heurístico es encontrar una solución en un tiempo razonable, especialmente para problemas NP-completos o de gran escala, donde un algoritmo exacto tardaría demasiado o sería inviable. Estos algoritmos logran esta eficiencia sacrificando la garantía de encontrar la solución óptima o perfecta.
 
@@ -278,7 +286,7 @@
     El éxito de cualquier metaheurística reside en mantener un delicado equilibrio dinámico entre dos conceptos fundamentales:
     \begin{itemize}
       \item \textbf{Exploración (o diversificación):} La capacidad del algoritmo para investigar regiones globales y desconocidas del espacio de búsqueda, evitando la convergencia prematura.
-       \item \textbf{Explotación (o intensificación):} La capacidad de concentrar la búsqueda en las vecindades de las mejores soluciones encontradas hasta el momento, con el fin de refinar y mejorar dichos resultados.
+       \item \textbf{Explotación (o intensificación):} La capacidad de concentrar la búsqueda en las vecindades de las mejores soluciones encontradas hasta el momento, con el fin de refinar y mejorar dichos resultados \cite{blum2003metaheuristics}.
     \end{itemize}
 
 \section{Clasificación de las Metaheurísticas}
@@ -289,13 +297,85 @@ A lo largo de las últimas décadas, la literatura científica ha propuesto nume
 También conocidas como métodos de búsqueda puntual, estos algoritmos mantienen y modifican una única solución a lo largo del tiempo, describiendo una trayectoria a través del espacio de búsqueda. En cada iteración, la solución actual se reemplaza por otra proveniente de su vecindario si se cumple un determinado criterio de aceptación. Ejemplos clásicos de esta categoría son la Búsqueda Local, el Recocido Simulado (\textit{Simulated Annealing}) y la Búsqueda Tabú.
 
 \subsection{Metaheurísticas basadas en población}
-A diferencia de los métodos de trayectoria, estas técnicas mantienen en memoria un conjunto (o población) de soluciones que evolucionan de manera simultánea en cada iteración. Esta característica les confiere una mayor robustez y una capacidad de exploración superior, ya que las soluciones pueden interactuar e intercambiar información entre sí. Dentro de este paradigma destacan los Algoritmos Evolutivos (como los Algoritmos Genéticos) y la Optimización por Enjambre de Partículas (PSO).
+    A diferencia de los métodos de trayectoria, estas técnicas mantienen en memoria un conjunto (o población) de soluciones que evolucionan de manera simultánea en cada iteración. Esta característica les confiere una mayor robustez y una capacidad de exploración superior, ya que las soluciones pueden interactuar e intercambiar información entre sí. Dentro de este paradigma destacan los Algoritmos Evolutivos (como los Algoritmos Genéticos) y la Optimización por Enjambre de Partículas (PSO).
+
+    Los Algoritmos Genéticos, fuertemente fundamentados en la teoría de la evolución biológica y la genética de poblaciones, abordan la búsqueda iterando sobre un conjunto de soluciones codificadas como individuos o cromosomas. El progreso hacia la región factible y óptima del espacio de búsqueda se dirige mediante tres mecanismos fundamentales aplicados de forma secuencial. Inicialmente, un mecanismo de selección evalúa la función objetivo de la población y discrimina probabilísticamente a los individuos más aptos, asegurando la supervivencia del mejor material genético. A continuación, el operador de cruce fomenta la explotación del espacio mediante el intercambio de segmentos del vector de variables entre pares de individuos seleccionados, generando una descendencia que hereda características de sus progenitores. Finalmente, un operador de mutación introduce perturbaciones de carácter aleatorio en la configuración genética de la descendencia; esta inyección de variabilidad constituye la principal herramienta de exploración del algoritmo, mitigando el riesgo de convergencia prematura en mínimos locales. Tras la aplicación de estos operadores, se ejecuta una política de reemplazo que define la transición hacia la siguiente generación, incorporando frecuentemente mecanismos de elitismo para retener incondicionalmente la mejor solución descubierta.
+
+    Por su parte, la Optimización por Enjambre de Partículas (PSO) modela una dinámica sustancialmente distinta, inspirada en el comportamiento colectivo exhibido por agregaciones biológicas, tales como el vuelo sincronizado de bandadas de aves o el nado de bancos de peces. En este modelo, la población se conceptualiza como un enjambre y las soluciones candidatas actúan como partículas que se desplazan de manera continua y autónoma a lo largo del hiperespacio de búsqueda de dimensión $n$. A diferencia de los modelos evolutivos, en PSO no existe la destrucción ni creación de nuevos individuos, sino la perturbación guiada de sus trayectorias. 
+
+    Cada partícula se encuentra definida unívocamente en una iteración $t$ por su posición o vector de variables $x_i(t)$ y por su vector de velocidad $v_i(t)$. La cinemática del enjambre se articula mediante la actualización iterativa de estas magnitudes vectoriales. La nueva velocidad de una partícula se calcula como una combinación lineal de tres factores principales: un factor de inercia que perpetúa el momento de la trayectoria previa fomentando la exploración global; un componente cognitivo que dirige a la partícula hacia la mejor posición histórica que ella misma ha experimentado, denominada $pbest$; y un componente social que atrae a la partícula hacia el óptimo global descubierto por la totalidad del enjambre hasta ese momento, identificado como $gbest$. 
+
+    Matemáticamente, la modificación del vector velocidad se expresa de la forma:
+    \begin{equation}
+    v_i(t+1) = w \cdot v_i(t) + c_1 \cdot r_1 \cdot (pbest_i - x_i(t)) + c_2 \cdot r_2 \cdot (gbest - x_i(t))
+    \end{equation}
+    Donde $w$ denota el coeficiente de inercia, $c_1$ y $c_2$ representan las constantes de aceleración cognitiva y social respectivamente, y $r_1, r_2$ son variables aleatorias extraídas de una distribución uniforme en el intervalo $[0, 1]$ que aportan el necesario grado de estocasticidad al sistema. Inmediatamente después, el vector de posición se actualiza integrando algebraicamente la nueva velocidad:
+    \begin{equation}
+    x_i(t+1) = x_i(t) + v_i(t+1)
+    \end{equation}
+    Este esquema de actualización garantiza un equilibrio dinámico entre la autonomía exploratoria de cada solución y la convergencia acelerada inducida por el conocimiento topológico compartido por toda la red de la población.
+
 
 \section{Extensión a la Optimización Multiobjetivo}
 
     En gran parte de las aplicaciones del mundo real, los problemas no presentan un único objetivo a optimizar, sino múltiples objetivos que a menudo se encuentran en conflicto directo (por ejemplo, maximizar el rendimiento de un componente a la par que se minimiza su coste de fabricación).
     
-    En estos escenarios, denominados Problemas de Optimización Multiobjetivo (MOP), el concepto de "solución óptima" desaparece para dar paso al concepto de \textit{Dominancia de Pareto}. El objetivo de las metaheurísticas multiobjetivo no es encontrar un único punto, sino aproximar el Frente de Pareto: un conjunto de soluciones no dominadas que representan los mejores compromisos posibles entre los diferentes objetivos evaluados, permitiendo finalmente al tomador de decisiones elegir la alternativa que mejor se adapte a sus necesidades.
+    En estos escenarios, denominados Problemas de Optimización Multiobjetivo (MOP), el concepto de «solución óptima» desaparece para dar paso al concepto de \textit{Dominancia de Pareto}. El objetivo de las metaheurísticas multiobjetivo no es encontrar un único punto, sino aproximar el Frente de Pareto: un conjunto de soluciones no dominadas que representan los mejores compromisos posibles entre los diferentes objetivos evaluados, permitiendo finalmente al tomador de decisiones elegir la alternativa que mejor se adapte a sus necesidades.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[scale=1.2]
+        % Ejes
+        \draw[->, thick] (0,0) -- (7,0) node[right] {$f_1(x)$ (Minimizar)};
+        \draw[->, thick] (0,0) -- (0,5) node[above] {$f_2(x)$ (Minimizar)};
+
+        % Línea conceptual del frente de pareto
+        \draw[thick, dashed, gray!70] (0.8, 4.2) to[out=-75,in=165] (5.5, 0.8);
+
+        % Soluciones no dominadas (Frente)
+        \fill[red] (1.0, 3.8) circle (2.5pt);
+        \fill[red] (1.5, 2.6) circle (2.5pt) node[below left, text=black] {$A$};
+        \fill[red] (2.5, 1.8) circle (2.5pt);
+        \fill[red] (3.8, 1.2) circle (2.5pt);
+        \fill[red] (5.2, 0.9) circle (2.5pt);
+
+        % Soluciones dominadas
+        \fill[blue] (2.5, 3.8) circle (2.5pt);
+        \fill[blue] (3.2, 2.8) circle (2.5pt) node[above right, text=black] {$B$};
+        \fill[blue] (4.5, 2.2) circle (2.5pt);
+        \fill[blue] (3.5, 4.2) circle (2.5pt);
+        \fill[blue] (5.5, 3.2) circle (2.5pt);
+        \fill[blue] (1.8, 4.5) circle (2.5pt);
+
+        % Flechas de dominancia
+        \draw[->, thick, magenta] (1.6, 2.7) -- (3.1, 2.8) node[midway, below, sloped] {Domina};
+        \draw[->, thick, magenta] (2.6, 1.9) -- (3.1, 2.7);
+
+        % Leyenda desplazada a la derecha
+        \draw[draw=black, fill=white, rounded corners] (5.0, 4.8) rectangle (8.3, 3.6);
+        \fill[red] (5.2, 4.4) circle (2.5pt) node[right, text=black, font=\small] {No dominadas (Frente)};
+        \fill[blue] (5.2, 3.9) circle (2.5pt) node[right, text=black, font=\small] {Dominadas};
+
+    \end{tikzpicture}
+    \caption{Representación en el espacio de objetivos de un problema con dos funciones a minimizar ($f_1$ y $f_2$). La solución $A$ domina a la solución $B$, ya que es estrictamente mejor en $f_1$ e igual o mejor en $f_2$.}
+    \label{fig:frente_pareto}
+\end{figure}
+
+    \subsection{Formulación Matemática del Problema y Dominancia}
+        Matemáticamente, un Problema de Optimización Multiobjetivo (MOP) sin restricciones se define como la minimización simultánea de un vector de $M$ funciones objetivo, expresado de la forma $\min \vec{f}(\vec{x}) = [f_1(\vec{x}), f_2(\vec{x}), \dots, f_M(\vec{x})]^T$, donde $\vec{x} \in \Omega$ es el vector de variables de decisión dentro del espacio de búsqueda factible. En este contexto analítico, se establece que una solución $\vec{x}_1$ domina a otra solución $\vec{x}_2$, lo cual se denota formalmente como $\vec{x}_1 \prec \vec{x}_2$, si y solo si $\vec{x}_1$ no es peor que $\vec{x}_2$ en ninguno de los objetivos, es decir, $\forall i \in \{1, \dots, M\}, f_i(\vec{x}_1) \leq f_i(\vec{x}_2)$, y además es estrictamente superior en al menos un objetivo, lo que implica que $\exists j \in \{1, \dots, M\} \mid f_j(\vec{x}_1) < f_j(\vec{x}_2)$.
+    
+    \subsection{Algoritmo NSGA-II (Non-dominated Sorting Genetic Algorithm II)}
+        Para resolver este tipo de escenarios, uno de los algoritmos más extendidos e influyentes en la literatura científica es el NSGA-II, propuesto por K. Deb et al~\cite{deb2002fast}. Este algoritmo genético basa su eficacia en dos pilares matemáticos fundamentales que guían la evolución de la población: un mecanismo de ordenación rápida no dominada (Fast Non-Dominated Sort) y un estimador de la densidad del entorno denominado distancia de apilamiento (Crowding Distance).
+    
+        En primer lugar, la población combinada $R_t$ de tamaño $2N$ (formada por la unión de la población de padres $P_t$ y su descendencia $Q_t$) se evalúa y clasifica en diferentes frentes de Pareto $\mathcal{F} = \{F_1, F_2, \dots, F_k\}$. El primer frente $F_1$ contiene exclusivamente aquellas soluciones que no son dominadas por ninguna otra dentro del conjunto $R_t$. El frente $F_2$ contiene a las soluciones dominadas únicamente por los individuos presentes en $F_1$, y el proceso continúa iterativamente. A cada solución $i$ se le asigna un rango o nivel de no dominancia $r_i$ equivalente al índice de su frente, de modo que un rango menor indica una calidad global superior de la solución.
+    
+        En segundo lugar, para garantizar la diversidad algorítmica y promover una distribución uniforme de los individuos a lo largo del Frente de Pareto, se calcula la distancia de apilamiento $d_i$ para cada individuo exclusivamente respecto a las soluciones de su mismo frente. Para un objetivo $m$ específico, se ordenan los individuos del frente en función de su valor en dicho objetivo. A las soluciones límite (aquellas que determinan los extremos del frente) se les asigna una distancia matemática infinita ($d_1 = d_{l} = \infty$), garantizando su preservación. Para el resto de soluciones intermedias $i$, la distancia se computa acumulando las diferencias normalizadas entre sus vecinos topológicos adyacentes:
+        \begin{equation}
+            d_i = \sum_{m=1}^{M} \frac{f_m^{(i+1)} - f_m^{(i-1)}}{f_m^{\max} - f_m^{\min}}
+        \end{equation}
+        donde $f_m^{(i+1)}$ y $f_m^{(i-1)}$ son los valores del objetivo $m$ para los individuos vecinos de la solución $i$, mientras que $f_m^{\max}$ y $f_m^{\min}$ representan los valores máximo y mínimo empíricos registrados para ese objetivo concreto dentro del frente en evaluación.
+        
+        Finalmente, la convergencia del método se garantiza utilizando el operador de comparación atestada o \textit{crowded-comparison operator} ($\prec_n$) para seleccionar deterministamente a los $N$ mejores individuos que conformarán la población de la siguiente generación $P_{t+1}$. Dadas dos soluciones $i$ y $j$, el algoritmo establece que $i \prec_n j$ (y por tanto $i$ prevalece) si el rango de dominancia de $i$ es estrictamente mejor que el de $j$ ($r_i < r_j$), o bien, en caso de empate al pertenecer ambos al mismo frente ($r_i = r_j$), si la solución $i$ reside en una región del espacio de objetivos menos poblada que $j$, maximizando su distancia de apilamiento ($d_i > d_j$).
 
 \chapter{Especificación y diseño}
 
@@ -316,7 +396,7 @@ A diferencia de los métodos de trayectoria, estas técnicas mantienen en memori
 
     \begin{figure}[h]
       \centering
-        \includegraphics[width=0.8\textwidth]{images/architecture.png}
+        \includegraphics[width=1.1\textwidth]{images/architecture.png}
       \caption{Arquitectura de la biblioteca. Diagrama de clases, UML. Visual Paradigm 17.0  ~\cite{visual_paradigm_tool}.}
     \end{figure}
 
@@ -1028,6 +1108,44 @@ El análisis de los datos permite extraer conclusiones significativas sobre la c
     \item \textbf{Comportamiento en Alta Dimensionalidad:} Para una dimensión de $D=80$, muchas implementaciones de Python muestran una degradación en el rendimiento temporal. La biblioteca desarrollada mantiene un consumo de recursos mínimo, lo que valida su arquitectura para problemas de mayor escala.
 \end{itemize}
 
+
+\section{Evaluación con el Problema del Viajante (TSP)}
+
+Para evaluar el desempeño en problemas de optimización combinatoria, se ha seleccionado el Problema del Viajante (\textit{Traveling Salesman Problem}, TSP). El TSP es un problema NP-duro fundamental en la investigación operativa, cuyo objetivo es encontrar la ruta más corta que visite un conjunto de ciudades exactamente una vez y regrese al punto de partida. En este experimento se ha utilizado la instancia \texttt{tsp\_48\_clustered\_euc2d} (48 ciudades) bajo un presupuesto de $4000$ evaluaciones.
+
+A diferencia del experimento anterior, aquí se emplea un \textbf{Algoritmo Genético (GA)}, lo que permite evaluar la eficiencia de la biblioteca en el manejo de poblaciones, operadores de cruce específicos para permutaciones y gestión de memoria en tareas iterativas de mayor complejidad estructural.
+
+\subsection{Resultados y Análisis}
+
+Los resultados obtenidos tras la orquestación en contenedores se presentan en la Tabla \ref{tab:results_tsp_ga}. Se reporta el fitness (distancia total) y el tiempo de ejecución promedio.
+
+\begin{table}[htbp]
+\centering
+\caption{Resultados comparativos: TSP con Algoritmo Genético ($D=48$, $4000$ evals).}
+\label{tab:results_tsp_ga}
+\begin{tabular}{lrrrr}
+\hline
+\textbf{Biblioteca} & \textbf{Mejor Fitness} & \textbf{Media Fitness} & \textbf{Std. Dev.} & \textbf{Tiempo (ms)} \\ \hline
+\textbf{Roma (Propuesta)} & 2891.00 & 3071.40 & 111.55 & \textbf{5.49} \\
+pagmo2 (C++) \cite{pagmo} & 2578.00 & 2772.20 & 166.48 & 7.55 \\
+DEAP \cite{deap} & \textbf{2052.00} & \textbf{2287.60} & 171.62 & 154.67 \\
+jMetal (Java) \cite{jmetal} & 2708.00 & 3113.20 & 297.91 & 47.95 \\
+jMetalPy \cite{jmetalpy} & 3414.00 & 3651.80 & 169.91 & 265.48 \\
+Mealpy \cite{mealpy} & 5117.00 & 5297.20 & 100.21 & 14.39 \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Interpretación de los resultados}
+
+El análisis de la comparativa en el problema TSP revela comportamientos divergentes según la prioridad de la biblioteca:
+
+\begin{itemize}
+    \item \textbf{Eficiencia Temporal Extrema:} La biblioteca propuesta, \textit{Roma}, registra el tiempo de ejecución más bajo de toda la comparativa ($5.49$ ms), superando incluso a \textit{pagmo2} en C++ ($7.55$ ms) para esta configuración. Esto demuestra una sobrecarga (\textit{overhead}) de gestión de población prácticamente nula, lo cual es crítico cuando se integran estos algoritmos en sistemas de tiempo real.
+    \item \textbf{Calidad de la Solución (Fitness):} En este escenario, \textit{DEAP} destaca con la mejor media de fitness ($2287.60$), lo que sugiere que su implementación interna del Algoritmo Genético para permutaciones está altamente optimizada para la convergencia. \textit{Roma} se sitúa en un rango competitivo, logrando resultados similares a \textit{jMetal} Java ($3071$ vs $3113$) y superando con claridad a \textit{jMetalPy} y \textit{Mealpy}.
+    \item \textbf{Robustez:} A pesar de no obtener el fitness más bajo, \textit{Roma} presenta una de las desviaciones típicas más controladas ($111.55$), lo que indica una alta consistencia entre ejecuciones estocásticas, un factor clave para la fiabilidad de la herramienta.
+\end{itemize}
+
+En conclusión, los resultados del TSP confirman que la biblioteca desarrollada mantiene su ventaja competitiva en términos de velocidad de computación pura, posicionándose como una alternativa eficiente para aplicaciones donde el tiempo de respuesta es tan crítico como la calidad de la solución.
 
 \chapter{Conclusiones y líneas futuras}
 
