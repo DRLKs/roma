@@ -9,10 +9,10 @@ use roma_lib::observer::{ChartObserver, ConsoleObserver, Observable};
 use roma_lib::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
 use roma_lib::problem::KnapsackBuilder;
 use roma_lib::solution_set::SolutionSet;
-use roma_lib::utils::cli::seed_from_cli_or;
+use roma_lib::utils::cli::CliArgs;
 
 fn main() {
-    let seed = seed_from_cli_or(42);
+    let seed = CliArgs::from_env().seed_or(42);
 
     let problem = KnapsackBuilder::new()
         .with_capacity(150.0)

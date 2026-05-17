@@ -118,3 +118,7 @@ Cambiar algorithm.run añadir el argumento resume
 [ ] 32. Analizar run_with_observers: Es limpiable muy facilmente
 
 [ ] 33. Cambiar el orden en el que aparece INFO en checkpoint selection
+
+[ ] 34. Limpiar el módulo CLI.
+
+[ ] 35. Mover lógica de algoritmos de traits, no creo que sea el mejor sitio

@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::utils::cli::prompt_checkpoint_selection;
+use crate::utils::cli::{prompt_checkpoint_selection, CliArgs};
 
 use crate::utils::binary::{
     byte_to_status, push_option_string, push_string, push_u64, push_u8, read_option_string,
@@ -14,7 +14,8 @@ use crate::utils::binary::{
 };
 use crate::utils::hash::checkpoint_signature_hashes;
 use crate::utils::path::{
-    checkpoint_file_path, checkpoint_scope_dir, list_checkpoint_files, run_id_timestamp_ms,
+    checkpoint_file_path, checkpoint_scope_dir, initialize_checkpoint_dir, list_checkpoint_files,
+    resolve_checkpoint_dir, run_id_timestamp_ms, CheckpointInitMode, CheckpointPathConfig,
 };
 
 pub const DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES: usize = 10;
@@ -24,6 +25,74 @@ const CHECKPOINT_BIN_MAGIC: [u8; 4] = *b"RCKP";
 const ERR_INVALID_CHECKPOINT_MAGIC: &str = "invalid checkpoint magic header";
 const ERR_TRAILING_BYTES: &str = "trailing bytes found in checkpoint file";
 static RUN_ID_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+pub struct CheckpointPolicy {
+    checkpoint_dir: PathBuf,
+    storage_ready: bool,
+    writes_requested: bool,
+    resume_requested: bool,
+}
+
+impl CheckpointPolicy {
+    pub fn from_cli(checkpoint_cfg: &CheckpointPathConfig) -> Self {
+        let args = CliArgs::from_env();
+        Self::resolve(&args, checkpoint_cfg)
+    }
+
+    pub fn resolve(args: &CliArgs, checkpoint_cfg: &CheckpointPathConfig) -> Self {
+        let default_dir = resolve_checkpoint_dir(checkpoint_cfg);
+        let checkpoint_dir = args.checkpoint_dir_or(default_dir);
+        let explicit_checkpoint_dir = args.has_checkpoint_dir_override();
+        let storage_ready = if explicit_checkpoint_dir {
+            fs::create_dir_all(&checkpoint_dir).is_ok()
+        } else {
+            resolve_checkpoint_dir_from_config_for_writes(checkpoint_cfg).is_ok()
+        };
+
+        Self {
+            checkpoint_dir,
+            storage_ready,
+            writes_requested: !args.checkpoints_disabled(),
+            resume_requested: args.resume_requested(),
+        }
+    }
+
+    pub fn checkpoint_dir(&self) -> &Path {
+        &self.checkpoint_dir
+    }
+
+    pub fn resume_requested(&self) -> bool {
+        self.resume_requested
+    }
+
+    pub fn should_write(&self) -> bool {
+        self.storage_ready && self.writes_requested
+    }
+
+    pub fn persist_record(
+        &self,
+        last_checkpoint_path: &mut Option<PathBuf>,
+        record: &CheckpointRecord,
+    ) {
+        if self.should_write() {
+            if let Ok(path) = write_snapshot(self.checkpoint_dir(), record) {
+                *last_checkpoint_path = Some(path);
+            }
+        }
+    }
+}
+
+fn resolve_checkpoint_dir_from_config_for_writes(
+    config: &CheckpointPathConfig,
+) -> Result<PathBuf, String> {
+    initialize_checkpoint_dir(config, CheckpointInitMode::BestEffort)
+        .map_err(|err| format!("failed to initialize checkpoint directory: {}", err))
+        .and_then(|result| {
+            result.directory.ok_or_else(|| {
+                "no writable checkpoint directory available; checkpoint writes disabled".to_string()
+            })
+        })
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CheckpointRunStatus {
@@ -100,6 +169,20 @@ impl<'a> CheckpointRuntimeMetadata<'a> {
             problem_signature_hash,
         }
     }
+}
+
+fn select_checkpoint_record(entries: Vec<CheckpointEntry>) -> Result<Option<CheckpointRecord>, String> {
+    if entries.is_empty() {
+        return Ok(None);
+    }
+
+    let selected_index = if entries.len() == 1 {
+        Some(0)
+    } else {
+        prompt_checkpoint_selection(&entries)?
+    };
+
+    Ok(selected_index.map(|index| entries[index].record.clone()))
 }
 
 pub trait StepStateCheckpoint<T, Q = f64>
@@ -374,71 +457,34 @@ pub(crate) fn list_resumable_checkpoint_entries_for(
     Ok(entries.into_iter().map(|(_, entry)| entry).collect())
 }
 
-/// Lists resumable checkpoints for a specific algorithm+problem identity.
-///
-/// This helper is the high-level entrypoint when you have algorithm/problem
-/// metadata and want matching checkpoints quickly.
-pub fn list_resumable_checkpoint_entries_for_identity(
+/// Lists resumable checkpoints for precomputed runtime metadata.
+pub fn list_resumable_checkpoint_entries_for_metadata(
     base_dir: &Path,
-    algorithm_name: &str,
-    algorithm_parameters: &str,
-    problem_description: &str,
-    problem_parameters: &str,
+    runtime_metadata: &CheckpointRuntimeMetadata<'_>,
 ) -> io::Result<Vec<CheckpointEntry>> {
-    let (algorithm_signature_hash, problem_signature_hash) = checkpoint_signature_hashes(
-        algorithm_name,
-        algorithm_parameters,
-        problem_description,
-        problem_parameters,
-    );
-
     list_resumable_checkpoint_entries_for(
         base_dir,
-        algorithm_name,
-        algorithm_signature_hash,
-        problem_signature_hash,
+        runtime_metadata.algorithm_name,
+        runtime_metadata.algorithm_signature_hash,
+        runtime_metadata.problem_signature_hash,
     )
 }
 
-/// Selects one resumable checkpoint for a specific algorithm+problem identity.
-///
-/// Selection behavior:
-/// - no matches: returns `Ok(None)`
-/// - one match: auto-selects it
-/// - multiple matches: prompts user to choose index
-pub fn select_resume_checkpoint(
+/// Selects one resumable checkpoint from precomputed runtime metadata.
+pub fn select_resume_checkpoint_for_metadata(
     base_dir: &Path,
-    algorithm_name: &str,
-    algorithm_parameters: &str,
-    problem_description: &str,
-    problem_parameters: &str,
+    runtime_metadata: &CheckpointRuntimeMetadata<'_>,
 ) -> Result<Option<CheckpointRecord>, String> {
-    let entries = list_resumable_checkpoint_entries_for_identity(
-        base_dir,
-        algorithm_name,
-        algorithm_parameters,
-        problem_description,
-        problem_parameters,
-    )
-    .map_err(|err| {
-        format!(
-            "failed to list resumable checkpoints in '{}': {}",
-            base_dir.display(),
-            err
-        )
-    })?;
+    let entries = list_resumable_checkpoint_entries_for_metadata(base_dir, runtime_metadata)
+        .map_err(|err| {
+            format!(
+                "failed to list resumable checkpoints in '{}': {}",
+                base_dir.display(),
+                err
+            )
+        })?;
 
-    if entries.is_empty() {
-        return Ok(None);
-    }
-
-    let selected_index = if entries.len() == 1 {
-        Some(0)
-    } else {
-        prompt_checkpoint_selection(&entries)?
-    };
-
-    Ok(selected_index.map(|index| entries[index].record.clone()))
+    select_checkpoint_record(entries)
 }
 
 /// Removes checkpoints older than the provided UTC epoch milliseconds.
@@ -487,6 +533,7 @@ fn is_resumable_status(status: CheckpointRunStatus) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::path::CheckpointPathConfig;
 
     struct TestCheckpointDir {
         path: std::path::PathBuf,
@@ -752,13 +799,14 @@ mod tests {
             write_snapshot(dir.path(), record).expect("checkpoint should be written");
         }
 
-        let entries = list_resumable_checkpoint_entries_for_identity(
-            dir.path(),
+        let metadata = CheckpointRuntimeMetadata::new(
             "HillClimbing",
             "seed=11;mutation=0.2",
             "DemoProblem",
             "size=4",
-        )
+        );
+
+        let entries = list_resumable_checkpoint_entries_for_metadata(dir.path(), &metadata)
         .expect("entries should be listed");
 
         let run_ids: Vec<&str> = entries
@@ -810,17 +858,89 @@ mod tests {
         write_snapshot(dir.path(), &different_identity)
             .expect("non matching checkpoint should be written");
 
-        let selected = select_resume_checkpoint(
-            dir.path(),
+        let metadata = CheckpointRuntimeMetadata::new(
             "HillClimbing",
             "seed=11;mutation=0.2",
             "DemoProblem",
             "size=4",
-        )
+        );
+
+        let selected = select_resume_checkpoint_for_metadata(dir.path(), &metadata)
         .expect("selection should not fail")
         .expect("one checkpoint should be auto-selected");
 
         assert_eq!(selected.run_id, matching.run_id);
         assert_eq!(selected.step_state_payload, "state:matching");
+    }
+
+    #[test]
+    fn checkpoint_policy_distinguishes_requested_writes_from_storage_availability() {
+        let base = std::env::temp_dir().join(format!(
+            "roma_checkpoint_policy_test_{}_{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        let explicit_dir = base.join("checkpoints");
+        let config = CheckpointPathConfig::default();
+
+        let writes_disabled = CheckpointPolicy::resolve(
+            &CliArgs::from_iter(vec![
+                crate::utils::cli::CLI_FLAG_CHECKPOINT_DIR.to_string(),
+                explicit_dir.to_string_lossy().into_owned(),
+                crate::utils::cli::CLI_FLAG_NO_CHECKPOINT.to_string(),
+            ]),
+            &config,
+        );
+
+        assert!(writes_disabled.storage_ready);
+        assert!(!writes_disabled.writes_requested);
+        assert!(!writes_disabled.should_write());
+
+        let writes_enabled = CheckpointPolicy::resolve(
+            &CliArgs::from_iter(vec![
+                crate::utils::cli::CLI_FLAG_CHECKPOINT_DIR.to_string(),
+                explicit_dir.to_string_lossy().into_owned(),
+                crate::utils::cli::CLI_FLAG_RESUME.to_string(),
+            ]),
+            &config,
+        );
+
+        assert!(writes_enabled.storage_ready);
+        assert!(writes_enabled.writes_requested);
+        assert!(writes_enabled.should_write());
+        assert!(writes_enabled.resume_requested());
+
+        let _ = std::fs::remove_dir_all(base);
+    }
+
+    #[test]
+    fn resolve_checkpoint_dir_for_writes_skips_unwritable_candidates() {
+        let base = std::env::temp_dir().join(format!(
+            "roma_checkpoint_dir_test_{}_{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        let fallback = base.join("fallback");
+
+        let config = CheckpointPathConfig {
+            app_name: "/dev/null".to_string(),
+            env_var_name: "ROMA_TEST_UNUSED_CHECKPOINT_ENV",
+            explicit_dir: Some(PathBuf::from("/dev/null/roma")),
+            project_fallback_dir: Some(fallback.clone()),
+        };
+
+        let resolved = resolve_checkpoint_dir_from_config_for_writes(&config)
+            .expect("a writable fallback directory should be resolved");
+
+        assert_eq!(resolved, fallback);
+        assert!(resolved.exists());
+
+        let _ = std::fs::remove_dir_all(base);
     }
 }

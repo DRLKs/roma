@@ -13,12 +13,8 @@ use roma_lib::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePoint
 use roma_lib::problem::build_knapsack_from_records;
 use roma_lib::solution_set::SolutionSet;
 use roma_lib::utils::cli::{
-    argument_value,
+    CliArgs,
     infer_format_from_extension,
-    parse_f64_flag_or,
-    parse_usize_flag_or,
-    resolve_path_from_flag_or_default,
-    seed_from_cli_or,
 };
 use roma_lib::utils::csv_adapter::read_csv_records;
 use roma_lib::utils::json_adapter::{get_json_value, read_json_records};
@@ -31,8 +27,15 @@ enum InputFormat {
     Yaml,
 }
 
-fn print_help_if_requested() -> bool {
-    let wants_help = std::env::args().skip(1).any(|arg| arg == "--help" || arg == "-h");
+const HELP_FLAG: &str = "--help";
+const HELP_FLAG_SHORT: &str = "-h";
+const INPUT_FLAG: &str = "--input";
+const FORMAT_FLAG: &str = "--format";
+const CAPACITY_FLAG: &str = "--capacity";
+const LIMIT_FLAG: &str = "--limit";
+
+fn print_help_if_requested(cli_args: &CliArgs) -> bool {
+    let wants_help = cli_args.has_any_flag(&[HELP_FLAG, HELP_FLAG_SHORT]);
     if !wants_help {
         return false;
     }
@@ -66,17 +69,17 @@ Examples:\n\
     true
 }
 
-fn resolve_input_path() -> PathBuf {
+fn resolve_input_path(cli_args: &CliArgs) -> PathBuf {
     let default_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("examples")
         .join("knapsack_items_file")
         .join("items.csv");
 
-    resolve_path_from_flag_or_default("--input", default_path)
+    cli_args.resolve_path_from_flag_or_default(INPUT_FLAG, default_path)
 }
 
-fn resolve_input_format(path: &Path) -> Result<InputFormat, String> {
-    if let Some(raw) = argument_value("--format") {
+fn resolve_input_format(cli_args: &CliArgs, path: &Path) -> Result<InputFormat, String> {
+    if let Some(raw) = cli_args.argument_value(FORMAT_FLAG) {
         let normalized = raw.trim().to_ascii_lowercase();
         return match normalized.as_str() {
             "csv" => Ok(InputFormat::Csv),
@@ -176,11 +179,15 @@ fn read_yaml_required_usize(path: &Path, key_path: &str) -> Result<usize, String
         .map_err(|_| format!("YAML key '{}' must be usize, got '{}'", key_path, raw))
 }
 
-fn resolve_capacity_and_limit(path: &Path, input_format: InputFormat) -> Result<(f64, usize), String> {
+fn resolve_capacity_and_limit(
+    cli_args: &CliArgs,
+    path: &Path,
+    input_format: InputFormat,
+) -> Result<(f64, usize), String> {
     match input_format {
         InputFormat::Csv => Ok((
-            parse_f64_flag_or("--capacity", 400.0),
-            parse_usize_flag_or("--limit", 120),
+            cli_args.parse_f64_or(CAPACITY_FLAG, 400.0),
+            cli_args.parse_usize_or(LIMIT_FLAG, 120),
         )),
         InputFormat::Json => Ok((
             read_json_required_f64(path, "problem.capacity")?,
@@ -194,18 +201,21 @@ fn resolve_capacity_and_limit(path: &Path, input_format: InputFormat) -> Result<
 }
 
 fn main() {
-    if print_help_if_requested() {
+    let cli_args = CliArgs::from_env();
+
+    if print_help_if_requested(&cli_args) {
         return;
     }
 
-    let seed = seed_from_cli_or(42);
-    let input_path = resolve_input_path();
-    let input_format = resolve_input_format(&input_path).unwrap_or_else(|msg| panic!("{}", msg));
+    let seed = cli_args.seed_or(42);
+    let input_path = resolve_input_path(&cli_args);
+    let input_format = resolve_input_format(&cli_args, &input_path)
+        .unwrap_or_else(|msg| panic!("{}", msg));
     let records_path = records_path_for_format(input_format);
     let weight_key = weight_key_for_format(input_format);
     let value_key = value_key_for_format(input_format);
-    let (capacity, row_limit) =
-        resolve_capacity_and_limit(&input_path, input_format).unwrap_or_else(|msg| panic!("{}", msg));
+    let (capacity, row_limit) = resolve_capacity_and_limit(&cli_args, &input_path, input_format)
+        .unwrap_or_else(|msg| panic!("{}", msg));
 
     let records = read_records_from_input(&input_path, input_format, records_path)
         .unwrap_or_else(|msg| panic!("{}", msg));

@@ -157,7 +157,7 @@ pub mod prelude {
     pub use crate::solution_set::{DequeSolutionSet, SolutionSet, VectorSolutionSet};
 
     pub use crate::utils::{
-        delete_snapshot_on_success, read_snapshot, seed_from_cli_or, seed_from_time,
-        write_snapshot, Random,
+        delete_snapshot_on_success, read_snapshot, seed_from_time, write_snapshot, CliArgs,
+        Random,
     };
 }

@@ -14,7 +14,7 @@ use roma_lib::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePoint
 use roma_lib::problem::{KnapsackBuilder, KnapsackProblem};
 use roma_lib::solution_set::SolutionSet;
 use roma_lib::utils::{measure_result, speedup};
-use roma_lib::utils::cli::seed_from_cli_or;
+use roma_lib::utils::cli::CliArgs;
 
 fn build_problem() -> KnapsackProblem {
     let items: Vec<(f64, f64)> = (0..90)
@@ -111,7 +111,7 @@ fn benchmark_batch_async(problem: Arc<KnapsackProblem>, instances: usize, base_s
 }
 
 fn main() {
-    let seed = seed_from_cli_or(10_000u64);
+    let seed = CliArgs::from_env().seed_or(10_000u64);
     let instances = 16usize;
     let problem = Arc::new(build_problem());
 
