@@ -115,4 +115,6 @@ Cambiar algorithm.run añadir el argumento resume
 
 [ ] 31. En vez de compararlo con evaluaciones, vamos a compararlo con tiempo de ejecución (más realista)
 
-[ ] Analizar run_with_observers: Es limpiable muy facilmente
+[ ] 32. Analizar run_with_observers: Es limpiable muy facilmente
+
+[ ] 33. Cambiar el orden en el que aparece INFO en checkpoint selection

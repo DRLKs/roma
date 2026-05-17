@@ -1,7 +1,7 @@
+use crate::algorithms::checkpoint::ExecutionStateSnapshot;
 use crate::algorithms::termination::{
     TerminationController, TerminationCriteria, TerminationReason,
 };
-use crate::algorithms::checkpoint::ExecutionStateSnapshot;
 use crate::algorithms::traits::Algorithm;
 use crate::observer::traits::AlgorithmObserver;
 use crate::observer::{AlgorithmEvent, ObserverState};
@@ -232,14 +232,6 @@ where
 {
     let algorithm_name = algorithm_name.into();
 
-    if observers.is_empty() {
-        let context = ExecutionContext::new(None, criteria, better_fitness);
-        context.start(algorithm_name);
-        let output = task(&context);
-        context.end(output.total_generations, output.total_evaluations);
-        return output.result;
-    }
-
     let runtime = ObserverRuntime::new(std::mem::take(observers));
     let context = ExecutionContext::new(runtime.sender(), criteria, better_fitness);
     context.start(algorithm_name);
@@ -251,9 +243,7 @@ where
     // thread can drain and terminate.
     drop(context);
 
-    let observers_after = runtime.finish();
-    *observers = observers_after;
-
+    *observers = runtime.finish();
     output.result
 }
 
