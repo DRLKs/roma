@@ -107,9 +107,9 @@ Cambiar algorithm.run añadir el argumento resume
 
 [ ] 27. Creo que ExecutionStateSnapshot se puede eliminar
 
-[ ] 28. Buscar el error que tiene que tener TSP. Muy mal resultado muy poco tiempo de wall, no tiene que estar haciendo algo. Le faltan pasos seguro
+[X] 28. Buscar el error que tiene que tener TSP. Muy mal resultado muy poco tiempo de wall, no tiene que estar haciendo algo. Le faltan pasos seguro
 
-[ ] 29. Complicar los algoritmos
+[X] 29. Complicar los algoritmos
 
 [ ] 30. Poner el flag --no-checkpoint a las ejecuciones
 
@@ -122,3 +122,7 @@ Cambiar algorithm.run añadir el argumento resume
 [ ] 34. Limpiar el módulo CLI.
 
 [ ] 35. Mover lógica de algoritmos de traits, no creo que sea el mejor sitio
+
+[ ] 36. Reducir tamaño imagen Workflows. Alpine o algo así
+
+[ ] 37. Workflow o algo para subir releases y crates a la vez
