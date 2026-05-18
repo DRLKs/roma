@@ -108,7 +108,12 @@ fn real_perturbation_mutation_is_available_from_crate_root() {
     let original = solution.variables().to_vec();
     let mut rng = Random::new(9);
 
-    RealPerturbationMutation::new(0.1, 1.0).execute(&mut solution, 1.0, &mut rng);
+    RealPerturbationMutation::new(0.1, 1.0).execute(
+        &mut solution,
+        1.0,
+        problem.real_bounds(),
+        &mut rng,
+    );
 
     assert_eq!(solution.num_variables(), 3);
     assert_ne!(solution.variables(), original.as_slice());

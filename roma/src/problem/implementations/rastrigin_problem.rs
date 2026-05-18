@@ -1,6 +1,7 @@
 use std::f64::consts::PI;
 
-use crate::problem::traits::Problem;
+use crate::problem::Problem;
+use crate::solution::RealBounds;
 use crate::solution::{RealSolutionBuilder, Solution};
 use crate::utils::random::Random;
 
@@ -20,6 +21,7 @@ pub struct RastriginProblem {
     number_of_variables: usize,
     lower_bound: f64,
     upper_bound: f64,
+    bounds: RealBounds,
     description: String,
 }
 
@@ -38,6 +40,7 @@ impl RastriginProblem {
             number_of_variables,
             lower_bound,
             upper_bound,
+            bounds: RealBounds::uniform(lower_bound, upper_bound, number_of_variables),
             description: format!("Rastrigin problem with {} variables", number_of_variables),
         }
     }
@@ -113,6 +116,10 @@ impl Problem<f64> for RastriginProblem {
 
     fn get_problem_description(&self) -> String {
         self.description.clone()
+    }
+
+    fn real_bounds(&self) -> Option<&RealBounds> {
+        Some(&self.bounds)
     }
 
     fn format_solution(&self, solution: &Solution<f64>) -> String {

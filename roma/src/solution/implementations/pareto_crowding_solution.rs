@@ -132,14 +132,9 @@ impl MultiObjectiveVectorRealSolutionBuilder {
 
     /// Builds the final vector-based multi-objective real solution.
     pub fn build(self) -> Solution<f64, ParetoCrowdingDistanceQuality> {
-        let lower_bounds = self.lower_bounds.clone();
-        let upper_bounds = self.upper_bounds.clone();
         let variables = apply_bounds(self.variables, &self.lower_bounds, &self.upper_bounds);
 
         let mut solution: Solution<f64, ParetoCrowdingDistanceQuality> = Solution::new(variables);
-        if let (Some(lower_bounds), Some(upper_bounds)) = (lower_bounds, upper_bounds) {
-            solution.set_bounds(lower_bounds, upper_bounds);
-        }
         if !self.objectives.is_empty() {
             solution.set_objectives(self.objectives);
         }
@@ -210,14 +205,9 @@ impl MultiObjectiveRealSolutionBuilder {
 
     /// Builds the final Pareto-and-crowding multi-objective real solution.
     pub fn build(self) -> Solution<f64, ParetoCrowdingDistanceQuality> {
-        let lower_bounds = self.lower_bounds.clone();
-        let upper_bounds = self.upper_bounds.clone();
         let variables = apply_bounds(self.variables, &self.lower_bounds, &self.upper_bounds);
 
         let mut solution: Solution<f64, ParetoCrowdingDistanceQuality> = Solution::new(variables);
-        if let (Some(lower_bounds), Some(upper_bounds)) = (lower_bounds, upper_bounds) {
-            solution.set_bounds(lower_bounds, upper_bounds);
-        }
         solution.set_objectives(self.objectives);
         if let Some(rank) = self.rank {
             solution.set_rank(rank);

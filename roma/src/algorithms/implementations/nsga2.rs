@@ -478,6 +478,7 @@ where
     ) {
         state.generation += 1;
         let mut offspring = Vec::with_capacity(self.parameters.population_size);
+        let real_bounds = problem.real_bounds();
 
         while offspring.len() < self.parameters.population_size {
             let parent1 = self.parameters.selection_operator.execute(
@@ -495,7 +496,12 @@ where
             let mut children = if state.rng.next_f64() < self.parameters.crossover_probability {
                 self.parameters
                     .crossover_operator
-                    .execute(&parent1, &parent2, &mut state.rng)
+                    .execute(
+                        &parent1,
+                        &parent2,
+                        real_bounds,
+                        &mut state.rng,
+                    )
             } else {
                 vec![parent1.copy(), parent2.copy()]
             };
@@ -504,6 +510,7 @@ where
                 self.parameters.mutation_operator.execute(
                     child,
                     self.parameters.mutation_probability,
+                    real_bounds,
                     &mut state.rng,
                 );
             }

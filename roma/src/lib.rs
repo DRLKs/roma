@@ -5,8 +5,10 @@
 //! ## Architecture
 //!
 //! Roma is organized around five core concepts:
-//! - [`problem::Problem`]: domain definition and evaluation logic.
-//! - [`solution::Solution`]: decision variables plus cached quality payload.
+//! - [`problem::Problem`]: domain definition, evaluation logic, and optional
+//!   exposure of real-valued bounds.
+//! - [`solution::Solution`]: decision variables, cached quality payload, and
+//!   solution-scoped metadata such as [`solution::RealBounds`].
 //! - [`algorithms::Algorithm`]: shared execution lifecycle for optimization methods.
 //! - [`solution_set::SolutionSet`]: container abstraction for algorithm outputs.
 //! - [`observer::AlgorithmObserver`]: event-based progress and reporting hooks.
@@ -104,7 +106,7 @@ pub use problem::{
 };
 pub use solution::{
     BinarySolutionBuilder, MultiObjectiveRealSolutionBuilder,
-    MultiObjectiveVectorRealSolutionBuilder, ParetoCrowdingDistanceQuality,
+    MultiObjectiveVectorRealSolutionBuilder, ParetoCrowdingDistanceQuality, RealBounds,
     PermutationSolutionBuilder, RealSolutionBuilder, Solution, StringSolutionBuilder,
 };
 pub use solution_set::{DequeSolutionSet, SolutionSet, VectorSolutionSet};
@@ -150,7 +152,7 @@ pub mod prelude {
 
     pub use crate::solution::{
         BinarySolutionBuilder, MultiObjectiveRealSolutionBuilder,
-        MultiObjectiveVectorRealSolutionBuilder, ParetoCrowdingDistanceQuality,
+        MultiObjectiveVectorRealSolutionBuilder, ParetoCrowdingDistanceQuality, RealBounds,
         PermutationSolutionBuilder, RealSolutionBuilder, Solution, StringSolutionBuilder,
     };
 

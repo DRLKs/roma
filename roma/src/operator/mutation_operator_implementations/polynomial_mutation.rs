@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use crate::operator::traits::{MutationOperator, Operator};
+use crate::solution::RealBounds;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 
@@ -50,6 +51,120 @@ impl PolynomialMutation {
             1.0 - value.powf(mut_pow)
         }
     }
+
+    fn execute_with_bounds<Q>(
+        &self,
+        solution: &mut Solution<f64, Q>,
+        probability: f64,
+        bounds: Option<&RealBounds>,
+        rng: &mut Random,
+    )
+    where
+        Q: Clone + Display,
+    {
+        match bounds {
+            None => self.execute_uniform_bounds(solution, probability, 0.0, 1.0, 0, rng),
+            Some(RealBounds::Uniform {
+                lower,
+                upper,
+                dimensions,
+            }) => self.execute_uniform_bounds(
+                solution,
+                probability,
+                *lower,
+                *upper,
+                *dimensions,
+                rng,
+            ),
+            Some(RealBounds::PerVariable {
+                lower_bounds,
+                upper_bounds,
+            }) => self.execute_per_variable_bounds(
+                solution,
+                probability,
+                lower_bounds,
+                upper_bounds,
+                rng,
+            ),
+        }
+    }
+
+    fn execute_uniform_bounds<Q>(
+        &self,
+        solution: &mut Solution<f64, Q>,
+        probability: f64,
+        lower: f64,
+        upper: f64,
+        bounded_dimensions: usize,
+        rng: &mut Random,
+    ) where
+        Q: Clone + Display,
+    {
+        let variable_count = solution.num_variables();
+        for i in 0..variable_count {
+            if rng.next_f64() >= probability {
+                continue;
+            }
+
+            let (effective_lower, effective_upper) = if bounded_dimensions == 0 || i < bounded_dimensions
+            {
+                (lower, upper)
+            } else {
+                (0.0, 1.0)
+            };
+            if effective_upper <= effective_lower {
+                continue;
+            }
+
+            let u = rng.next_f64();
+            let x = solution
+                .get_variable(i)
+                .copied()
+                .expect("index must be valid within num_variables loop");
+            let bounded_x = x.clamp(effective_lower, effective_upper);
+            let delta_q = self.calculate_delta_q(bounded_x, effective_lower, effective_upper, u);
+            let mutated = bounded_x + delta_q * (effective_upper - effective_lower);
+
+            solution.set_variable(i, mutated.clamp(effective_lower, effective_upper));
+        }
+    }
+
+    fn execute_per_variable_bounds<Q>(
+        &self,
+        solution: &mut Solution<f64, Q>,
+        probability: f64,
+        lower_bounds: &[f64],
+        upper_bounds: &[f64],
+        rng: &mut Random,
+    ) where
+        Q: Clone + Display,
+    {
+        let variable_count = solution.num_variables();
+        for i in 0..variable_count {
+            if rng.next_f64() >= probability {
+                continue;
+            }
+
+            let (lower, upper) = match (lower_bounds.get(i), upper_bounds.get(i)) {
+                (Some(&lower), Some(&upper)) => (lower, upper),
+                _ => (0.0, 1.0),
+            };
+            if upper <= lower {
+                continue;
+            }
+
+            let u = rng.next_f64();
+            let x = solution
+                .get_variable(i)
+                .copied()
+                .expect("index must be valid within num_variables loop");
+            let bounded_x = x.clamp(lower, upper);
+            let delta_q = self.calculate_delta_q(bounded_x, lower, upper, u);
+            let mutated = bounded_x + delta_q * (upper - lower);
+
+            solution.set_variable(i, mutated.clamp(lower, upper));
+        }
+    }
 }
 
 impl Operator for PolynomialMutation {
@@ -62,27 +177,14 @@ impl<Q> MutationOperator<f64, Q> for PolynomialMutation
 where
     Q: Clone + Display,
 {
-    fn execute(&self, solution: &mut Solution<f64, Q>, probability: f64, rng: &mut Random) {
-        for i in 0..solution.num_variables() {
-            if rng.next_f64() < probability {
-                let (lower, upper) = solution.bounds_at(i).unwrap_or((0.0, 1.0));
-                if upper <= lower {
-                    continue;
-                }
-
-                let u = rng.next_f64();
-
-                let x = solution
-                    .get_variable(i)
-                    .copied()
-                    .expect("index must be valid within num_variables loop");
-                let bounded_x = x.clamp(lower, upper);
-                let delta_q = self.calculate_delta_q(bounded_x, lower, upper, u);
-                let mutated = bounded_x + delta_q * (upper - lower);
-
-                solution.set_variable(i, mutated.clamp(lower, upper));
-            }
-        }
+    fn execute(
+        &self,
+        solution: &mut Solution<f64, Q>,
+        probability: f64,
+        bounds: Option<&RealBounds>,
+        rng: &mut Random,
+    ) {
+        self.execute_with_bounds(solution, probability, bounds, rng);
     }
 }
 
@@ -98,7 +200,7 @@ mod tests {
         let mut solution = RealSolutionBuilder::from_variables(original_vars.clone()).build();
         let mut rng = Random::new(42);
 
-        mutation.execute(&mut solution, 0.0, &mut rng);
+        mutation.execute(&mut solution, 0.0, None, &mut rng);
 
         assert_eq!(solution.variables(), original_vars.as_slice());
     }
@@ -109,7 +211,7 @@ mod tests {
         let mut solution = RealSolutionBuilder::from_variables(vec![0.5, 0.5, 0.5, 0.5]).build();
         let mut rng = Random::new(42);
 
-        mutation.execute(&mut solution, 1.0, &mut rng);
+        mutation.execute(&mut solution, 1.0, None, &mut rng);
 
         assert_eq!(solution.num_variables(), 4);
     }
@@ -122,7 +224,7 @@ mod tests {
 
         // Apply mutation multiple times to test boundary conditions
         for _ in 0..10 {
-            mutation.execute(&mut solution, 1.0, &mut rng);
+            mutation.execute(&mut solution, 1.0, None, &mut rng);
             for &var in solution.variables() {
                 assert!(var >= 0.0 && var <= 1.0, "Variable out of bounds: {}", var);
             }
@@ -135,10 +237,11 @@ mod tests {
         let mut solution = RealSolutionBuilder::from_variables(vec![-5.0, 0.0, 5.0])
             .with_bounds(-5.12, 5.12)
             .build();
+        let bounds = RealBounds::uniform(-5.12, 5.12, solution.num_variables());
         let mut rng = Random::new(42);
 
         for _ in 0..20 {
-            mutation.execute(&mut solution, 1.0, &mut rng);
+            mutation.execute(&mut solution, 1.0, Some(&bounds), &mut rng);
             for &var in solution.variables() {
                 assert!(
                     (-5.12..=5.12).contains(&var),
@@ -156,7 +259,7 @@ mod tests {
         let mut solution = RealSolutionBuilder::from_variables(original_vars.clone()).build();
         let mut rng = Random::new(42);
 
-        mutation.execute(&mut solution, 1.0, &mut rng);
+        mutation.execute(&mut solution, 1.0, None, &mut rng);
 
         let mutated_vars = solution.variables();
         // With probability 1.0 and 10 variables, at least some should change

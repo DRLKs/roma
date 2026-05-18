@@ -258,11 +258,13 @@ where
         state: &mut Self::StepState,
     ) {
         state.iteration += 1;
+        let real_bounds = problem.real_bounds();
 
         let mut candidate = state.current.copy();
         self.parameters.mutation_operator.execute(
             &mut candidate,
             self.parameters.mutation_probability,
+            real_bounds,
             &mut state.rng,
         );
         problem.evaluate(&mut candidate);

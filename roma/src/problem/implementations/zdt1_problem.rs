@@ -1,4 +1,5 @@
-use crate::problem::traits::Problem;
+use crate::problem::Problem;
+use crate::solution::RealBounds;
 use crate::solution::implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
 use crate::solution::traits::ParetoCrowdingDistanceQuality;
 use crate::solution::Solution;
@@ -21,6 +22,7 @@ const DEFAULT_NUMBER_OF_VARIABLES: usize = 30;
 /// The Pareto-optimal front is f2 = 1 - sqrt(f1) for f1 in [0, 1]
 pub struct ZDT1Problem {
     number_of_variables: usize,
+    bounds: RealBounds,
     description: String,
 }
 
@@ -32,6 +34,7 @@ impl ZDT1Problem {
         );
         Self {
             number_of_variables,
+            bounds: RealBounds::uniform(0.0, 1.0, number_of_variables),
             description: format!("ZDT1 problem with {} variables", number_of_variables),
         }
     }
@@ -82,6 +85,10 @@ impl Problem<f64, ParetoCrowdingDistanceQuality> for ZDT1Problem {
 
     fn get_problem_description(&self) -> String {
         self.description.clone()
+    }
+
+    fn real_bounds(&self) -> Option<&RealBounds> {
+        Some(&self.bounds)
     }
 
     fn create_solution(&self, _rng: &mut Random) -> Solution<f64, ParetoCrowdingDistanceQuality> {

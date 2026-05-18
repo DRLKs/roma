@@ -1,3 +1,4 @@
+use crate::solution::RealBounds;
 use crate::operator::traits::{CrossoverOperator, Operator};
 use crate::solution::Solution;
 use crate::utils::random::Random;
@@ -44,6 +45,7 @@ impl CrossoverOperator<bool> for SinglePointCrossover {
         &self,
         parent1: &Solution<bool>,
         parent2: &Solution<bool>,
+        _bounds: Option<&RealBounds>,
         rng: &mut Random,
     ) -> Vec<Solution<bool>> {
         let length = parent1.num_variables().min(parent2.num_variables());
@@ -57,6 +59,8 @@ impl CrossoverOperator<bool> for SinglePointCrossover {
 
         let mut offspring1 = parent1.clone();
         let mut offspring2 = parent2.clone();
+        let offspring1_variables = offspring1.variables_mut();
+        let offspring2_variables = offspring2.variables_mut();
 
         // Exchange segments after crossover point
         for i in crossover_point..length {
@@ -68,8 +72,8 @@ impl CrossoverOperator<bool> for SinglePointCrossover {
                 .get_variable(i)
                 .copied()
                 .expect("index must be valid within crossover length");
-            let _ = offspring1.set_variable(i, val2);
-            let _ = offspring2.set_variable(i, val1);
+            offspring1_variables[i] = val2;
+            offspring2_variables[i] = val1;
         }
 
         if self.offspring_count == 1 {
@@ -103,7 +107,7 @@ mod tests {
         let parent2 = BinarySolutionBuilder::ones(10).build();
         let mut rng = Random::new(42);
 
-        let offspring = crossover.execute(&parent1, &parent2, &mut rng);
+        let offspring = crossover.execute(&parent1, &parent2, None, &mut rng);
 
         assert_eq!(offspring.len(), 2);
         assert_eq!(offspring[0].num_variables(), 10);

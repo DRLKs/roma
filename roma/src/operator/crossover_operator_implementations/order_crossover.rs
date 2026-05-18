@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use crate::solution::RealBounds;
 use crate::operator::traits::{CrossoverOperator, Operator};
 use crate::solution::Solution;
 use crate::utils::random::Random;
@@ -83,6 +84,7 @@ impl CrossoverOperator<usize> for OrderCrossover {
         &self,
         parent1: &Solution<usize>,
         parent2: &Solution<usize>,
+        _bounds: Option<&RealBounds>,
         rng: &mut Random,
     ) -> Vec<Solution<usize>> {
         let length = parent1.num_variables().min(parent2.num_variables());
@@ -125,7 +127,7 @@ mod tests {
         let parent2 = PermutationSolutionBuilder::from_variables(vec![2, 4, 1, 5, 3, 0]).build();
         let mut rng = Random::new(42);
 
-        let offspring = crossover.execute(&parent1, &parent2, &mut rng);
+        let offspring = crossover.execute(&parent1, &parent2, None, &mut rng);
 
         assert_eq!(offspring.len(), 2);
         for child in offspring {

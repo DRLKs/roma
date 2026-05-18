@@ -1,3 +1,4 @@
+use crate::solution::RealBounds;
 use crate::operator::traits::{MutationOperator, Operator};
 use crate::solution::Solution;
 use crate::utils::random::Random;
@@ -30,14 +31,22 @@ impl Operator for BitFlipMutation {
 }
 
 impl MutationOperator<bool> for BitFlipMutation {
-    fn execute(&self, solution: &mut Solution<bool>, probability: f64, rng: &mut Random) {
-        for i in 0..solution.num_variables() {
+    fn execute(
+        &self,
+        solution: &mut Solution<bool>,
+        probability: f64,
+        bounds: Option<&RealBounds>,
+        rng: &mut Random,
+    ) {
+        let _ = bounds;
+        if probability <= 0.0 {
+            return;
+        }
+
+        let variables = solution.variables_mut();
+        for value in variables.iter_mut() {
             if rng.next_f64() < probability {
-                let value = solution
-                    .get_variable(i)
-                    .copied()
-                    .expect("index must be valid within num_variables loop");
-                solution.set_variable(i, !value);
+                *value = !*value;
             }
         }
     }
@@ -62,7 +71,7 @@ mod tests {
         let mut rng = Random::new(42);
 
         // With probability 1.0, all bits should be flipped
-        mutation.execute(&mut solution, 1.0, &mut rng);
+        mutation.execute(&mut solution, 1.0, None, &mut rng);
 
         let number_ones = solution.variables().iter().filter(|&&x| x).count();
         assert!(number_ones > 0, "At least some bits should be flipped");
@@ -75,7 +84,7 @@ mod tests {
         let mut rng = Random::new(42);
 
         // With probability 0.0, no bits should be flipped
-        mutation.execute(&mut solution, 0.0, &mut rng);
+        mutation.execute(&mut solution, 0.0, None, &mut rng);
 
         let number_ones = solution.variables().iter().filter(|&&x| x).count();
         assert_eq!(number_ones, 0, "No one should be flipped");
@@ -88,7 +97,7 @@ mod tests {
         let mut rng = Random::new(42);
 
         // With probability 0.0, no bits should be flipped
-        mutation.execute(&mut solution, -2.0, &mut rng);
+        mutation.execute(&mut solution, -2.0, None, &mut rng);
 
         let number_ones = solution.variables().iter().filter(|&&x| x).count();
         assert_eq!(number_ones, 0, "No one should be flipped");
@@ -102,7 +111,7 @@ mod tests {
         let mut rng = Random::new(42);
 
         // With probability 2.0, all bits should be flipped
-        mutation.execute(&mut solution, 2.0, &mut rng);
+        mutation.execute(&mut solution, 2.0, None, &mut rng);
 
         let number_ones = solution.variables().iter().filter(|&&x| x).count();
         assert_eq!(number_ones, size, "All bits should be flipped");

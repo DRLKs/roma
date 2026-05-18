@@ -1,6 +1,7 @@
 use std::f64::consts::{E, PI};
 
-use crate::problem::traits::Problem;
+use crate::problem::Problem;
+use crate::solution::RealBounds;
 use crate::solution::{RealSolutionBuilder, Solution};
 use crate::utils::random::Random;
 
@@ -20,6 +21,7 @@ pub struct AckleyProblem {
     number_of_variables: usize,
     lower_bound: f64,
     upper_bound: f64,
+    bounds: RealBounds,
     description: String,
 }
 
@@ -35,6 +37,7 @@ impl AckleyProblem {
             number_of_variables,
             lower_bound,
             upper_bound,
+            bounds: RealBounds::uniform(lower_bound, upper_bound, number_of_variables),
             description: format!("Ackley problem with {} variables", number_of_variables),
         }
     }
@@ -109,6 +112,10 @@ impl Problem<f64> for AckleyProblem {
 
     fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
         crate::solution::traits::evaluator::minimizing_fitness
+    }
+
+    fn real_bounds(&self) -> Option<&RealBounds> {
+        Some(&self.bounds)
     }
 
     fn format_solution(&self, solution: &Solution<f64>) -> String {

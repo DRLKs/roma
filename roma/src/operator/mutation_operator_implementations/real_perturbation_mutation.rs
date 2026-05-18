@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use crate::operator::traits::{MutationOperator, Operator};
+use crate::solution::RealBounds;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 
@@ -36,17 +37,14 @@ impl RealPerturbationMutation {
         self.per_variable_probability
     }
 
-    fn perturb_value<Q>(
+    fn perturb_value(
         &self,
-        solution: &Solution<f64, Q>,
+        bounds: Option<&RealBounds>,
         index: usize,
         value: f64,
         rng: &mut Random,
-    ) -> f64
-    where
-        Q: Clone + Display,
-    {
-        if let Some((lower, upper)) = solution.bounds_at(index) {
+    ) -> f64 {
+        if let Some((lower, upper)) = bounds.and_then(|problem_bounds| problem_bounds.bounds_at(index)) {
             let span = upper - lower;
             if span <= f64::EPSILON {
                 return lower;
@@ -71,36 +69,96 @@ impl<Q> MutationOperator<f64, Q> for RealPerturbationMutation
 where
     Q: Clone + Display,
 {
-    fn execute(&self, solution: &mut Solution<f64, Q>, probability: f64, rng: &mut Random) {
+    fn execute(
+        &self,
+        solution: &mut Solution<f64, Q>,
+        probability: f64,
+        bounds: Option<&RealBounds>,
+        rng: &mut Random,
+    ) {
         let probability = probability.clamp(0.0, 1.0);
         if probability <= 0.0 || solution.num_variables() == 0 {
             return;
         }
 
         let effective_probability = (probability * self.per_variable_probability).clamp(0.0, 1.0);
-        let reference = solution.clone();
+        let variable_count = solution.num_variables();
+        let variables = solution.variables_mut();
         let mut changed = false;
 
-        for index in 0..solution.num_variables() {
-            if rng.next_f64() < effective_probability {
-                let current = solution
-                    .get_variable(index)
-                    .copied()
-                    .expect("index must be valid within num_variables loop");
-                let mutated = self.perturb_value(&reference, index, current, rng);
-                let _ = solution.set_variable(index, mutated);
-                changed = true;
+        match bounds {
+            None => {
+                for value in variables.iter_mut() {
+                    if rng.next_f64() < effective_probability {
+                        let delta = (rng.next_f64() * 2.0 - 1.0) * self.radius;
+                        *value += delta;
+                        changed = true;
+                    }
+                }
+            }
+            Some(RealBounds::Uniform {
+                lower,
+                upper,
+                dimensions,
+            }) => {
+                let lower = *lower;
+                let upper = *upper;
+                let dimensions = *dimensions;
+                let bounded_span = upper - lower;
+                for (index, value) in variables.iter_mut().enumerate() {
+                    if rng.next_f64() >= effective_probability {
+                        continue;
+                    }
+
+                    let mutated = if index < dimensions {
+                        if bounded_span <= f64::EPSILON {
+                            lower
+                        } else {
+                            let delta = (rng.next_f64() * 2.0 - 1.0) * self.radius * bounded_span;
+                            (*value + delta).clamp(lower, upper)
+                        }
+                    } else {
+                        let delta = (rng.next_f64() * 2.0 - 1.0) * self.radius;
+                        *value + delta
+                    };
+                    *value = mutated;
+                    changed = true;
+                }
+            }
+            Some(RealBounds::PerVariable {
+                lower_bounds,
+                upper_bounds,
+            }) => {
+                for (index, value) in variables.iter_mut().enumerate() {
+                    if rng.next_f64() >= effective_probability {
+                        continue;
+                    }
+
+                    let mutated = match (lower_bounds.get(index), upper_bounds.get(index)) {
+                        (Some(&lower), Some(&upper)) => {
+                            let span = upper - lower;
+                            if span <= f64::EPSILON {
+                                lower
+                            } else {
+                                let delta = (rng.next_f64() * 2.0 - 1.0) * self.radius * span;
+                                (*value + delta).clamp(lower, upper)
+                            }
+                        }
+                        _ => {
+                            let delta = (rng.next_f64() * 2.0 - 1.0) * self.radius;
+                            *value + delta
+                        }
+                    };
+                    *value = mutated;
+                    changed = true;
+                }
             }
         }
 
         if !changed {
-            let index = rng.range(solution.num_variables() as u64) as usize;
-            let current = solution
-                .get_variable(index)
-                .copied()
-                .expect("random index must be valid within num_variables");
-            let mutated = self.perturb_value(&reference, index, current, rng);
-            let _ = solution.set_variable(index, mutated);
+            let index = rng.range(variable_count as u64) as usize;
+            let current = variables[index];
+            variables[index] = self.perturb_value(bounds, index, current, rng);
         }
     }
 }
@@ -116,9 +174,10 @@ mod tests {
         let mut solution = RealSolutionBuilder::from_variables(vec![-1.0, 0.0, 1.0])
             .with_bounds(-2.0, 2.0)
             .build();
+        let bounds = RealBounds::uniform(-2.0, 2.0, solution.num_variables());
         let mut rng = Random::new(7);
 
-        operator.execute(&mut solution, 1.0, &mut rng);
+        operator.execute(&mut solution, 1.0, Some(&bounds), &mut rng);
 
         assert_eq!(solution.num_variables(), 3);
         assert!(solution.variables().iter().all(|value| (-2.0..=2.0).contains(value)));
@@ -130,10 +189,11 @@ mod tests {
         let mut solution = RealSolutionBuilder::from_variables(vec![0.5, 0.5, 0.5])
             .with_bounds(0.0, 1.0)
             .build();
+        let bounds = RealBounds::uniform(0.0, 1.0, solution.num_variables());
         let original = solution.variables().to_vec();
         let mut rng = Random::new(17);
 
-        operator.execute(&mut solution, 1.0, &mut rng);
+        operator.execute(&mut solution, 1.0, Some(&bounds), &mut rng);
 
         assert_ne!(solution.variables(), original.as_slice());
     }
@@ -147,7 +207,7 @@ mod tests {
         let original = solution.variables().to_vec();
         let mut rng = Random::new(23);
 
-        operator.execute(&mut solution, 0.0, &mut rng);
+        operator.execute(&mut solution, 0.0, None, &mut rng);
 
         assert_eq!(solution.variables(), original.as_slice());
     }

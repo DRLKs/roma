@@ -243,11 +243,13 @@ where
         state: &mut Self::StepState,
     ) {
         state.iteration += 1;
+        let real_bounds = problem.real_bounds();
 
         let mut neighbor = state.current.copy();
         self.parameters.mutation_operator.execute(
             &mut neighbor,
             self.parameters.mutation_probability,
+            real_bounds,
             &mut state.rng,
         );
         problem.evaluate(&mut neighbor);

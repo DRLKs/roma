@@ -4,7 +4,8 @@
 //! - create random candidate solutions,
 //! - evaluate quality/fitness,
 //! - compare fitness according to problem-owned semantics,
-//! - render domain-specific solution summaries for observers.
+//! - render domain-specific solution summaries for observers,
+//! - optionally expose bounds metadata for real-valued solutions.
 
 pub(crate) mod implementations;
 pub(crate) mod traits;

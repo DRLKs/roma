@@ -298,6 +298,7 @@ where
         let mut offspring_population = Vec::with_capacity(parameters.population_size);
         let mut generation_evaluations = 0usize;
         let mut rng = Random::new(generation_seed);
+        let real_bounds = problem.real_bounds();
 
         while offspring_population.len() < parameters.population_size {
             let parent1 = parameters
@@ -310,7 +311,12 @@ where
             let mut offspring = if rng.next_f64() < parameters.crossover_probability {
                 parameters
                     .crossover_operator
-                    .execute(&parent1, &parent2, &mut rng)
+                    .execute(
+                        &parent1,
+                        &parent2,
+                        real_bounds,
+                        &mut rng,
+                    )
             } else {
                 vec![parent1.copy(), parent2.copy()]
             };
@@ -319,6 +325,7 @@ where
                 parameters.mutation_operator.execute(
                     child,
                     parameters.mutation_probability,
+                    real_bounds,
                     &mut rng,
                 );
                 problem.evaluate(child);
@@ -363,6 +370,7 @@ where
                     let mut local_rng = Random::new(worker_seed);
                     let mut local_offspring = Vec::with_capacity(worker_target);
                     let mut local_evaluations = 0usize;
+                    let real_bounds = problem.real_bounds();
 
                     while local_offspring.len() < worker_target {
                         let parent1 = parameters.selection_operator.execute(
@@ -381,6 +389,7 @@ where
                                 parameters.crossover_operator.execute(
                                     &parent1,
                                     &parent2,
+                                    real_bounds,
                                     &mut local_rng,
                                 )
                             } else {
@@ -391,6 +400,7 @@ where
                             parameters.mutation_operator.execute(
                                 child,
                                 parameters.mutation_probability,
+                                real_bounds,
                                 &mut local_rng,
                             );
                             problem.evaluate(child);

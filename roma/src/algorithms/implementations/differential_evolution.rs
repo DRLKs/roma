@@ -3,8 +3,8 @@ use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
-use crate::problem::traits::Problem;
-use crate::solution::Solution;
+use crate::problem::Problem;
+use crate::solution::{RealBounds, Solution};
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::random::Random;
@@ -145,6 +145,7 @@ impl DifferentialEvolution {
 
     fn build_trial_solution(
         parameters: &DifferentialEvolutionParameters,
+        bounds: Option<&RealBounds>,
         target: &Solution<f64>,
         donor_a: &Solution<f64>,
         donor_b: &Solution<f64>,
@@ -158,18 +159,55 @@ impl DifferentialEvolution {
         }
 
         let forced_index = rng.range(variable_count as u64) as usize;
+        let trial_variables = trial.variables_mut();
 
-        for index in 0..variable_count {
-            if index == forced_index || rng.next_f64() < parameters.crossover_rate {
-                let mutant_value = donor_a.variables()[index]
-                    + parameters.differential_weight
-                        * (donor_b.variables()[index] - donor_c.variables()[index]);
-                let bounded_value = if let Some((lower, upper)) = target.bounds_at(index) {
-                    mutant_value.clamp(lower, upper)
-                } else {
-                    mutant_value
-                };
-                let _ = trial.set_variable(index, bounded_value);
+        match bounds {
+            None => {
+                for index in 0..variable_count {
+                    if index == forced_index || rng.next_f64() < parameters.crossover_rate {
+                        let mutant_value = donor_a.variables()[index]
+                            + parameters.differential_weight
+                                * (donor_b.variables()[index] - donor_c.variables()[index]);
+                        trial_variables[index] = mutant_value;
+                    }
+                }
+            }
+            Some(RealBounds::Uniform {
+                lower,
+                upper,
+                dimensions,
+            }) => {
+                let lower = *lower;
+                let upper = *upper;
+                let dimensions = *dimensions;
+                for index in 0..variable_count {
+                    if index == forced_index || rng.next_f64() < parameters.crossover_rate {
+                        let mutant_value = donor_a.variables()[index]
+                            + parameters.differential_weight
+                                * (donor_b.variables()[index] - donor_c.variables()[index]);
+                        trial_variables[index] = if index < dimensions {
+                            mutant_value.clamp(lower, upper)
+                        } else {
+                            mutant_value
+                        };
+                    }
+                }
+            }
+            Some(RealBounds::PerVariable {
+                lower_bounds,
+                upper_bounds,
+            }) => {
+                for index in 0..variable_count {
+                    if index == forced_index || rng.next_f64() < parameters.crossover_rate {
+                        let mutant_value = donor_a.variables()[index]
+                            + parameters.differential_weight
+                                * (donor_b.variables()[index] - donor_c.variables()[index]);
+                        trial_variables[index] = match (lower_bounds.get(index), upper_bounds.get(index)) {
+                            (Some(&lower), Some(&upper)) => mutant_value.clamp(lower, upper),
+                            _ => mutant_value,
+                        };
+                    }
+                }
             }
         }
 
@@ -260,6 +298,7 @@ impl Algorithm<f64> for DifferentialEvolution {
     ) {
         state.generation += 1;
         let mut rng = Random::new(Random::derive_seed(state.run_seed, state.generation as u64));
+        let real_bounds = problem.real_bounds();
 
         let current_population = state.population.clone();
         let mut next_population = Vec::with_capacity(current_population.len());
@@ -268,6 +307,7 @@ impl Algorithm<f64> for DifferentialEvolution {
             let [a, b, c] = Self::sample_distinct_indices(current_population.len(), target_index, &mut rng);
             let mut trial = Self::build_trial_solution(
                 &self.parameters,
+                real_bounds,
                 target,
                 &current_population[a],
                 &current_population[b],

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::solution::Solution;
+use crate::solution::{RealBounds, Solution};
 use crate::utils::random::Random;
 
 /// Trait that defines the basic interface for optimization problems.
@@ -37,6 +37,15 @@ where
     fn dominates(&self, solution_a: &Solution<T, Q>, solution_b: &Solution<T, Q>) -> bool;
 
     fn better_fitness_fn(&self) -> fn(f64, f64) -> bool;
+
+    /// Returns optional bounds metadata for real-valued solutions.
+    ///
+    /// The bounds type belongs to the solution module, but problems can expose
+    /// a shared view of that metadata so algorithms and operators can enforce
+    /// domain constraints without storing bounds inside each solution.
+    fn real_bounds(&self) -> Option<&RealBounds> {
+        None
+    }
 
     fn is_better_fitness(&self, candidate: f64, reference: f64) -> bool {
         (self.better_fitness_fn())(candidate, reference)

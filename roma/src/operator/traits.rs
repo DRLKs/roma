@@ -1,4 +1,4 @@
-use crate::solution::Solution;
+use crate::solution::{RealBounds, Solution};
 use crate::utils::random::Random;
 
 /// Base trait for all operators in the framework.
@@ -22,8 +22,15 @@ where
     /// # Arguments
     /// * `solution` - The solution to mutate
     /// * `probability` - Probability of mutation (0.0 to 1.0)
+    /// * `bounds` - Optional solution-space bounds for bounded real-valued operators
     /// * `rng` - Random generator provided by the algorithm
-    fn execute(&self, solution: &mut Solution<T, Q>, probability: f64, rng: &mut Random);
+    fn execute(
+        &self,
+        solution: &mut Solution<T, Q>,
+        probability: f64,
+        bounds: Option<&RealBounds>,
+        rng: &mut Random,
+    );
 }
 
 /// Trait for crossover operators that combine two parent solutions.
@@ -40,6 +47,7 @@ where
     /// # Arguments
     /// * `parent1` - First parent solution
     /// * `parent2` - Second parent solution
+    /// * `bounds` - Optional solution-space bounds for bounded real-valued operators
     /// * `rng` - Random generator provided by the algorithm
     ///
     /// # Returns
@@ -48,6 +56,7 @@ where
         &self,
         parent1: &Solution<T, Q>,
         parent2: &Solution<T, Q>,
+        bounds: Option<&RealBounds>,
         rng: &mut Random,
     ) -> Vec<Solution<T, Q>>;
 
@@ -62,8 +71,10 @@ where
     fn execute_several(
         &self,
         parents: Vec<Solution<T, Q>>,
+        bounds: Option<&RealBounds>,
         _rng: &mut Random,
     ) -> Vec<Solution<T, Q>> {
+        let _ = bounds;
         let mut offspring_result = vec![];
         for i in 1..parents.len() {
             offspring_result.push(parents[i].clone());

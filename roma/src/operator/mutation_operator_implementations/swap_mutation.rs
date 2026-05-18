@@ -1,3 +1,4 @@
+use crate::solution::RealBounds;
 use crate::operator::traits::{MutationOperator, Operator};
 use crate::solution::Solution;
 use crate::utils::random::Random;
@@ -31,7 +32,14 @@ impl Operator for SwapMutation {
 }
 
 impl MutationOperator<usize> for SwapMutation {
-    fn execute(&self, solution: &mut Solution<usize>, probability: f64, rng: &mut Random) {
+    fn execute(
+        &self,
+        solution: &mut Solution<usize>,
+        probability: f64,
+        bounds: Option<&RealBounds>,
+        rng: &mut Random,
+    ) {
+        let _ = bounds;
         let n = solution.num_variables();
         if n < 2 {
             return;
@@ -68,7 +76,7 @@ mod tests {
         let mut solution = Solution::new(vec![0, 1, 2, 3, 4]);
         let mut rng = Random::new(42);
 
-        mutation.execute(&mut solution, 1.0, &mut rng);
+        mutation.execute(&mut solution, 1.0, None, &mut rng);
         assert_eq!(solution.num_variables(), 5);
     }
 
@@ -79,7 +87,7 @@ mod tests {
         let original = solution.variables().to_vec();
         let mut rng = Random::new(42);
 
-        mutation.execute(&mut solution, 0.0, &mut rng);
+        mutation.execute(&mut solution, 0.0, None, &mut rng);
 
         assert_eq!(solution.variables(), original.as_slice());
     }
@@ -90,7 +98,7 @@ mod tests {
         let mut solution = Solution::new(vec![0, 1, 2, 3, 4]);
         let mut rng = Random::new(42);
 
-        mutation.execute(&mut solution, 1.0, &mut rng);
+        mutation.execute(&mut solution, 1.0, None, &mut rng);
 
         let mut genes = solution.variables().to_vec();
         genes.sort_unstable();

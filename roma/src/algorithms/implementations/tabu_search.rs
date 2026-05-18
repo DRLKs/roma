@@ -275,6 +275,7 @@ where
         state: &mut Self::StepState,
     ) {
         state.iteration += 1;
+        let real_bounds = problem.real_bounds();
         Self::purge_expired_tabu_entries(&mut state.tabu_memory, state.iteration);
 
         let mut best_any_candidate: Option<Solution<T>> = None;
@@ -286,6 +287,7 @@ where
             self.parameters.mutation_operator.execute(
                 &mut candidate,
                 self.parameters.mutation_probability,
+                real_bounds,
                 &mut state.rng,
             );
             problem.evaluate(&mut candidate);
