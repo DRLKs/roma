@@ -29,7 +29,7 @@
 % Diagramas 
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
-\usepackage{pgfplots}
+\usepackage{pgfplots} \pgfplotsset{compat=1.18}
 \usepackage{pgfplotstable}
 \tikzset{
     block/.style = {rectangle, draw, fill=blue!5, text width=10em, text centered, rounded corners, minimum height=3em},
@@ -382,7 +382,7 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
 \section{Arquitectura}
     El diseño y modelado de la arquitectura representan la fase de mayor complejidad y dedicación en el desarrollo. La integridad de esta estructura determina la calidad técnica, la eficiencia y la mantenibilidad de la biblioteca. Con el objetivo de garantizar un nivel de abstracción óptimo que permita su aplicación en diversos casos de uso, se han integrado los siguientes criterios de diseño:
     
-    La arquitectura desacopla la definición del problema de la lógica del optimizador. Los límites del espacio de búsqueda y las restricciones se encapsulan en una estructura específica. Esta entidad es referenciada por el motor de ejecución, permitiendo que el algoritmo identifique el dominio de las variables y el objetivo de la optimización (maximización o minimización). De este modo, el algoritmo puede realizar las evaluaciones e iteraciones pertinentes respetando estrictamente las directrices del sistema a optimizar.
+    La arquitectura desacopla la definición del problema de la lógica del optimizador. Los límites del espacio de búsqueda y las restricciones se encapsulan en una estructura específica. Esta entidad es referenciada por el motor de ejecución, permitiendo que el algoritmo identifique el dominio de las variables. De este modo, el algoritmo puede realizar las evaluaciones e iteraciones pertinentes respetando estrictamente las directrices del sistema a optimizar.
 
     Los algoritmos se han diseñado de forma modular, fundamentándose en el uso de operadores genéricos que se configuran durante la fase de instanciación. Estos operadores son los responsables de la transformación y evolución de las soluciones. Se distinguen tres categorías principales, operadores de mutación, de cruce y de selección.
 
@@ -435,16 +435,27 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
         Estos algoritmos pueden ejecutarse de forma concurrente o paralela, en función de la configuración seleccionada por el usuario. En este trabajo se ofrece la posibilidad de especificar manualmente el número de hilos a crear o, alternativamente, delegar esta decisión al propio programa. En este último caso, el número de hilos se determina automáticamente en función de las características del sistema en el que se ejecuta, haciendo uso de la función \texttt{available\_parallelism()} proporcionada por la librería estándar.
 
     \subsection{Experimentos}
+        El módulo de experimentos constituye la capa de abstracción superior de la biblioteca, diseñada para facilitar la evaluación sistemática y comparativa de los diversos algoritmos frente a un problema específico. Su propósito fundamental es permitir que el usuario final realice un proceso de \emph{benchmarking} robusto, identificando qué configuraciones ofrecen un rendimiento óptimo mediante la ejecución controlada y automatizada de baterías de pruebas.
 
-        Este módulo contiene toda la lógica sobre las experimentaciones. Los traits que deben implementar los parámetros de los algoritmos para que estos sean experimentables, la forma en la que se ejecutan estos, el sistema de paralelizado de los algoritmos, el reporte de los experimentos, ...
+        Este servicio se articula a través de la definición de casos de prueba, los cuales representan combinaciones específicas de parámetros y componentes. Gracias a la arquitectura modular de \texttt{roma}, el sistema permite explorar un amplio espacio de configuraciones, incluyendo la variación de operadores, el ajuste de las probabilidades de mutación y cruce, o la selección de diferentes criterios de terminación. Asimismo, es posible comparar directamente algoritmos distintos bajo las mismas condiciones de contorno, lo que proporciona una base empírica sólida para la toma de decisiones técnicas.
+
+        Al finalizar las ejecuciones, el módulo genera un reporte detallado que sintetiza los resultados obtenidos por cada configuración. Este informe no solo recopila las soluciones halladas, sino que ofrece una visión analítica del comportamiento de los algoritmos, permitiendo al usuario discernir con criterio qué estrategia es la más adecuada para la resolución de su problema.
+
+    -------- Implementación
+        
+        Para lograr este grado de flexibilidad y modularidad, el sistema se apoya en abstracciones del lenguaje mediante la definición de \textit{traits} específicos que deben implementar los parámetros de los algoritmos. Estos componentes actúan como interfaces genéricas que habilitan la condición de "experimentable" para cualquier técnica que se integre en la biblioteca, independientemente de sus particularidades internas. Gracias a esta arquitectura, el motor de experimentos puede manipular, instanciar y variar dinámicamente las configuraciones sin necesidad de acoplarse a una implementación concreta.
+
+    ---------        --------
+        La infraestructura encargada de la ejecución incorpora, asimismo, un sistema de paralelización diseñado para optimizar el uso de los recursos computacionales disponibles. Dado que las metaheurísticas poseen una naturaleza estocástica y requieren ejecuciones independientes recurrentes para obtener significancia estadística, el módulo distribuye de forma eficiente estas tareas concurrentes a nivel de hilos o procesos. Finalmente, el ciclo de experimentación concluye con un subsistema de reporte, el cual recopila las métricas de rendimiento y calidad de las soluciones generadas durante las distintas ejecuciones para exportarlas en formatos estructurados que faciliten su posterior análisis estadístico y visualización.
 
     \subsection{Observadores}
 
         El compartimento asociado a los observadores se ha diseñado como un componente desacoplado encargado de gestionar la monitorización durante el proceso evolutivo. Esta infraestructura se articula fundamentalmente a través de la definición de eventos específicos, los cuales son emitidos por el motor de ejecución para señalizar hitos relevantes o cambios en el progreso del algoritmo. Para dotar de contenido a estos eventos, el sistema emplea estructuras de datos especializadas que encapsulan el estado actual de la ejecución, permitiendo que la información fluya hacia los observadores de manera coherente y estructurada.
 
+    ///// Mover a implementación
+
         La flexibilidad de este componente reside en el uso de \textit{traits}, que actúan como interfaces abstractas definiendo el contrato de comportamiento que debe cumplir cualquier tipo de observador. Este enfoque no solo garantiza un polimorfismo robusto, sino que facilita la extensibilidad del sistema, permitiendo al desarrollador integrar nuevas formas de visualización o registro sin modificar el núcleo de la biblioteca. Además, el módulo incluye diversas implementaciones predefinidas que ya incorporan un funcionamiento por defecto, lo que proporciona herramientas de monitorización listas para su uso inmediato mientras se mantiene la capacidad de personalizar la lógica de respuesta ante cada evento según las necesidades específicas.
         
-    ///// Mover a implementación
         
     Los observadores estarán asociados a aquellos algoritmos que implementen el \emph{trait} \texttt{Observable}. Dicho \emph{trait} proporciona la funcionalidad necesaria para añadir y eliminar observadores.
 
@@ -460,33 +471,40 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
         ---------------------
 
     \subsection{Operadores}
+        Este componente constituye el núcleo funcional y arquitectónico de la biblioteca de optimización, ya que encapsula la lógica algorítmica fundamental mediante un modelo desacoplado y altamente modular. En lugar de ligar los operadores a algoritmos específicos, la biblioteca implementa un diseño basado en abstracciones y polimorfismo que separa completamente la definición del espacio de búsqueda de los mecanismos de variación y selección. Este modelo permite que cualquier operador sea tratado como una entidad independiente e intercambiable, facilitando la hibridación de técnicas y permitiendo al usuario configurar algoritmos a la carta combinando distintas estrategias.
 
-        Este componente constituye el núcleo de la biblioteca de optimización, ya que encapsula la lógica fundamental de los algoritmos implementados. En particular, se definen tres tipos principales de operadores, cada uno de los cuales desempeña un papel esencial dentro del proceso de optimización:
+        Más allá de su flexibilidad arquitectónica, la eficiencia computacional de estos operadores es un factor crítico para el éxito de la biblioteca. Debido a la naturaleza iterativa de las metaheurísticas, en cada ciclo del algoritmo se invocan de manera encadenada múltiples operadores que realizan cálculos y mutaciones directas sobre las estructuras de las soluciones.
 
-        \begin{itemize}
-            \item \textbf{Operadores de mutación:} introducen variaciones aleatorias en los individuos de la población con el objetivo de mantener la diversidad genética y evitar la convergencia prematura hacia soluciones subóptimas. Estos operadores permiten explorar nuevas regiones del espacio de búsqueda mediante modificaciones controladas de las soluciones existentes.
-        
-            \item \textbf{Operadores de selección:} se encargan de elegir los individuos que participarán en la generación de nuevas soluciones, generalmente en función de su calidad o valor de aptitud. Su función principal es favorecer la propagación de las mejores soluciones encontradas hasta el momento, equilibrando la presión selectiva con la preservación de la diversidad poblacional.
-        
-            \item \textbf{Operadores de cruce:} combinan la información de dos o más individuos seleccionados para generar nuevos descendientes. A través de este proceso se busca explotar las características favorables de las soluciones existentes, recombinándolas de manera que puedan dar lugar a individuos con un mejor desempeño.
-        \end{itemize}
+        Dentro de esta arquitectura flexible y de alto rendimiento, los componentes se clasifican en tres tipos principales de operadores, diseñados para interactuar perfectamente sobre las estructuras de datos poblacionales:
+    
+    \begin{itemize}
+        \item \textbf{Operadores de mutación:} Introducen variaciones aleatorias en los individuos de la población con el objetivo de mantener la diversidad genética y evitar la convergencia prematura hacia soluciones subóptimas. Estos operadores permiten explorar nuevas regiones del espacio de búsqueda mediante modificaciones controladas de las soluciones existentes.
+            
+        \item \textbf{Operadores de selección:} Se encargan de elegir los individuos que participarán en la generación de nuevas soluciones, generalmente en función de su calidad o valor de aptitud. Su función principal es favorecer la propagación de las mejores soluciones encontradas hasta el momento, equilibrando la presión selectiva con la preservación de la diversidad poblacional.
+            
+        \item \textbf{Operadores de cruce:} Combinan la información de dos o más individuos seleccionados para generar nuevos descendientes. A través de este proceso se busca explotar las características favorables de las soluciones existentes, recombinándolas de manera que puedan dar lugar a individuos con un mejor desempeño.
+    \end{itemize}
 
+    
 
     \subsection{Problemas}
+        Este módulo constituye la abstracción que define y modela el dominio del escenario de optimización concreto que se desea resolver. Dentro de la arquitectura de la biblioteca, el componente de problemas actúa como un intermediario o contrato formal que desacopla la lógica genérica de las metaheurísticas de los detalles particulares de cada aplicación. Estas estructuras no solo almacenan los datos de entrada o las instancias del problema, sino también las reglas matemáticas y las restricciones que gobiernan el espacio de búsqueda, guiando de manera activa tanto a los algoritmos poblacionales como a los operadores de variación hacia los objetivos definidos. Para cumplir con esta función de guía y control, el módulo asume de forma integrada la responsabilidad de orquestar la creación de soluciones y su respectiva evaluación.
+        
+        En primer lugar, el módulo define los mecanismos necesarios para construir configuraciones de partida válidas dentro del espacio de búsqueda, soluciones puramente aleatorias, esenciales para garantizar la diversidad en las primeras etapas de las metaheurísticas. Conectado directamente con este proceso, el componente implementa la lógica matemática de la función u objetivos $f(x)$ que miden el desempeño de cada vector de decisión. El módulo es, por tanto, el responsable de transformar una solución abstracta en un valor numérico cualitativo o en un vector de valores si se trabaja en entornos multiobjetivo, gestionando además el cálculo de las penalizaciones en caso de que la solución generada vulnere alguna de las restricciones de frontera impuestas por el modelo.
+        
+        Finalmente, al conocer en detalle cómo se manejan y se relacionan internamente los datos del dominio, este componente proporciona la información estructural indispensable para que los operadores echen mano de las características del problema. Esto permite determinar de manera analítica la vecindad de una solución, facilitando que las perturbaciones y las variaciones locales se realicen con un sentido semántico preciso —como el intercambio de aristas en problemas de rutas o la asignación de tareas en problemas de planificación— en lugar de ejecutar modificaciones ciegas que comprometan la eficiencia del proceso de optimización.
 
-        Este módulo contiene la información del problema que se quiere resolver. El "trait" que deben implementar todos los problemas es muy sencillo; solo obliga a crear unas simples funciones para obtener y editar la descripción del problema en sí, otras funciones para evaluar las soluciones al problema, y otra para crear una solución de la que partirá el algoritmo que intente resolver el problema.
-    ------ Quizás también deben implementar otra función para elegir la mejor solución para el problema ---
-    
-        Los problemas pueden ser muy diversos, por tanto no es fácilmente delimitable este módulo. Para ayudar a diseñar problemas en esta biblioteca, se muestran ejemplos de estos problemas e implementaciones para ayudar a la construcción de estos con el patrón "Builder". 
+    \subsection{Conjunto de soluciones}
+        Los algoritmos devolverán esta estructura de datos, la cual está diseñada como una estructura abstracta orientada a actuar como una entidad contenedora encargada de encapsular de manera unificada el conjunto de resultados obtenidos tras el proceso de búsqueda. En lugar de retornar una colección nativa o un vector de soluciones en crudo, se opta por este diseño de abstracción desacoplado para centralizar y homogeneizar la información derivada de la ejecución del algoritmo ante el problema planteado. Al adoptar la forma de una interfaz o tipo abstracto, se dota al sistema de una alta flexibilidad, permitiendo que esta estructura pueda ser implementada o extendida de cualquier manera en el futuro para solventar necesidades emergentes del desarrollo sin alterar el núcleo de la biblioteca.
 
-
-    \subsection{Conjuntos de soluciones}
-
-        Los algoritmos devolverán esta estructura de datos; es un "wrapper" que contiene una lista con las soluciones obtenidas por el algoritmo al intentar solucionar el problema.
+        Esta naturaleza abstracta permite albergar internamente desde una lista indexada con las soluciones óptimas o aproximadas que han logrado superar los criterios de convergencia impuestos, hasta estructuras más complejas adaptadas a paradigmas específicos. Al aislar esta lógica dentro de un contrato de datos genérico, se facilita la incorporación dinámica de metadatos adicionales de gran valor para la posterior fase de análisis.
 
     \subsection{Soluciones}
+        Las soluciones representan las estructuras que almacenan el resultado generado por la aplicación iterativa de los operadores dentro de los algoritmos de optimización. Este componente es de vital importancia para la eficiencia global del sistema, dado que constituye la unidad fundamental con la que opera la biblioteca de manera ininterrumpida a lo largo de todo el ciclo de ejecución. El motor de optimización modifica constantemente estas estructuras, gestiona poblaciones masivas de las mismas, evalúa sus atributos en cada iteración y analiza sus valores para guiar la búsqueda. Por consiguiente, cualquier ineficiencia o sobrecarga en su diseño se amplificaría exponencialmente, comprometiendo críticamente el rendimiento temporal y el consumo de memoria de los algoritmos.
+        
+        Bajo esta premisa, la estructura se ha diseñado siguiendo una filosofía minimalista que prioriza la ligereza y la simplicidad estructural. Sin embargo, alcanzar este equilibrio ha supuesto un desafío de desarrollo complejo debido a la necesidad de dar soporte simultáneo tanto a problemas de un único objetivo como a enfoques multiobjetivo. Mientras que en entornos mono-objetivo basta con asociar al vector de variables un único valor escalar de aptitud, los entornos multiobjetivo exigen gestionar vectores de funciones objetivo, rangos de dominancia y métricas de densidad como la distancia de apilamiento.
 
-        Las soluciones representan las estructuras que almacenan el resultado generado por la aplicación iterativa de los operadores dentro de los algoritmos de optimización.
+    ------- IMplementación ----
 
         En una primera aproximación del diseño, \texttt{Solution} se definió como un \textit{trait} que declaraba un conjunto de funciones fundamentales, tales como la obtención del valor de \textit{fitness}, el acceso a las variables de la solución o la recuperación de su representación interna. Este \textit{trait} debía ser implementado por distintos \textit{structs}, cada uno adaptado a las necesidades específicas de cada problema.
 
@@ -498,69 +516,128 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
 
         Adicionalmente, la estructura \texttt{Solution} expone un método denominado \texttt{dominates}, cuya implementación delega la comparación en el método definido por el \textit{trait} \texttt{Dominance}. De esta manera, la lógica de comparación queda desacoplada de la representación de la solución, permitiendo soportar tanto optimización monoobjetivo como multiobjetivo mediante diferentes implementaciones del tipo \texttt{Q}.
 
-    \subsection{Experimentos}
-        El módulo de experimentos constituye la capa de abstracción superior de la biblioteca, diseñada para facilitar la evaluación sistemática y comparativa de los diversos algoritmos frente a un problema específico. Su propósito fundamental es permitir que el usuario final realice un proceso de \emph{benchmarking} robusto, identificando qué configuraciones ofrecen un rendimiento óptimo mediante la ejecución controlada y automatizada de baterías de pruebas.
-
-        Este servicio se articula a través de la definición de casos de prueba, los cuales representan combinaciones específicas de parámetros y componentes. Gracias a la arquitectura modular de \texttt{roma}, el sistema permite explorar un amplio espacio de configuraciones, incluyendo la variación de operadores, el ajuste de las probabilidades de mutación y cruce, o la selección de diferentes criterios de terminación. Asimismo, es posible comparar directamente algoritmos distintos bajo las mismas condiciones de contorno, lo que proporciona una base empírica sólida para la toma de decisiones técnicas.
-
-        Al finalizar las ejecuciones, el módulo genera un reporte detallado que sintetiza los resultados obtenidos por cada configuración. Este informe no solo recopila las soluciones halladas, sino que ofrece una visión analítica del comportamiento de los algoritmos, permitiendo al usuario discernir con criterio qué estrategia es la más adecuada para la resolución de su problema.
-    
     \subsection{Utilidades}
-        Para posibilitar el desarrollo de este proyecto y cumplir el objetivo de mantener una arquitectura con \emph{cero dependencias externas}, se han implementado pequeños módulos auxiliares utilizados en el núcleo de la biblioteca. Estos módulos reproducen de forma ligera y controlada parte de la funcionalidad ofrecida por \texttt{crates} ampliamente utilizados en el ecosistema Rust, como \texttt{rand}~\cite{rand_crate} o \texttt{plotters}~\cite{plotters_crate}. De este modo, se evita la inclusión de bibliotecas externas sin renunciar a las capacidades necesarias para el correcto funcionamiento del sistema.
+        Para posibilitar el desarrollo de este proyecto y cumplir el objetivo de mantener una arquitectura con \emph{cero dependencias externas}, se han desarrollado componentes auxiliares ligeros integrados en el núcleo de la biblioteca. Estos submódulos reproducen, de forma optimizada y autocontenida, las funcionalidades estrictamente necesarias de \texttt{crates} estándar del ecosistema Rust, tales como \texttt{rand}~\cite{rand_crate} para la generación estocástica y \texttt{plotters}~\cite{plotters_crate} para la representación gráfica. Esta decisión de diseño permite evitar la inclusión de bibliotecas externas sin renunciar a las capacidades necesarias para el correcto funcionamiento del sistema.
 
 \chapter{Implementación y pruebas}
     Este capítulo detalla el proceso de construcción de la biblioteca \texttt{roma}, trasladando los conceptos teóricos y el diseño arquitectónico descritos en los capítulos anteriores a código real en el lenguaje de programación Rust. 
     
     \section{Implementación}
-        Una vez definida y consolidada la arquitectura de la biblioteca, se inició la fase de construcción modular siguiendo un enfoque ascendente (\emph{bottom-up}). Contrariamente a lo que se podría suponer inicialmente, situando el foco en los algoritmos o en la definición de los problemas, el desarrollo comenzó por el módulo de las \textbf{soluciones}. Esta decisión estratégica se fundamenta en que la estructura que define a la solución es, en realidad, el componente más determinante del sistema, actuando como el eje central sobre el que pivotan todos los demás módulos.
-
+        Una vez definida y consolidada la arquitectura de la biblioteca, se inició la fase de construcción modular siguiendo un enfoque ascendente. Contrariamente a lo que se podría suponer inicialmente, situando el foco en los algoritmos o en la definición de los problemas, el desarrollo comenzó por el módulo de las \textbf{soluciones}. Esta decisión estratégica se fundamenta en que la estructura que define a la solución es, en realidad, el componente más determinante del sistema, actuando como el eje central sobre el que pivotan todos los demás módulos.
+        
+    \subsection{Las complejas soluciones}
         La importancia de este módulo radica en que la solución es la entidad que los operadores transforman para explorar el espacio de búsqueda y la que los observadores monitorizan constantemente para extraer métricas de rendimiento. Del mismo modo, los problemas dependen de esta estructura para realizar tanto la generación inicial de individuos como su posterior evaluación, mientras que los algoritmos actúan como gestores encargados de almacenarlas y orquestar su flujo a lo largo de las iteraciones. 
 
         Debido a esta interdependencia, un diseño deficiente o una implementación poco optimizada de esta estructura central comprometería no solo la \textbf{extensibilidad} de la biblioteca —al dificultar la integración de nuevos problemas o tipos de datos— sino también su \textbf{rendimiento computacional}. Dado que la solución es el objeto con mayor frecuencia de acceso y modificación, cualquier ineficiencia en su desarrollo se convertiría inevitablemente en un cuello de botella durante ejecuciones intensivas. Por ello, garantizar una base técnica sólida en este módulo fue la prioridad absoluta antes de proceder con la implementación del resto de componentes.
 
+        En una primera aproximación del diseño, \texttt{Solution} se definió como un \textit{trait} que declaraba un conjunto de funciones fundamentales, tales como la obtención del valor de \textit{fitness}, el acceso a las variables de la solución o la recuperación de su representación interna. Este \textit{trait} debía ser implementado por distintos \textit{structs}, cada uno adaptado a las necesidades específicas de cada problema.
+
+        Por ejemplo, si el problema requería representar una solución como una permutación binaria, el \textit{struct} correspondiente contendría como atributos un vector binario junto con el valor de calidad asociado a dicha solución. Sin embargo, se observó que esta arquitectura introducía una elevada fragmentación en las implementaciones y dificultaba la generalización de la biblioteca para soportar un mayor número de problemas y algoritmos.
+
+        Por este motivo, se optó por una solución más abstracta y flexible. En el diseño actual \ref{lst:solution}, \texttt{Solution} se define como un \textit{struct} genérico parametrizado por dos tipos: \texttt{T} y \texttt{Q}. El tipo \texttt{T} representa el tipo de dato de las variables de decisión almacenadas en la solución, mientras que \texttt{Q} representa el tipo asociado a la evaluación de calidad de dicha solución. De forma predeterminada, este último toma el tipo \texttt{f64}.
+
         \begin{listing}[H]
         \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
-    #[derive(Clone, Debug)]
-    pub struct Solution<T, Q = f64> {
-        pub variables: Vec<T>,
-        pub quality: Option<Q>,
-    }
+#[derive(Clone, Debug)]
+pub struct Solution<T, Q = f64> {
+    variables: Vec<T>,
+    value: Option<Q>,
+}
         \end{minted}
         \caption{Estructura desarrollada para las Soluciones}
         \label{lst:solution}
         \end{listing}
 
-        Posteriormente se abordó la implementación de los \textbf{problemas}, definidos mediante un \texttt{trait} que actúa como el contrato de interfaz para cualquier modelo de optimización que se desee resolver. Para garantizar que la biblioteca fuera lo suficientemente flexible como para soportar diversos dominios de problemas —desde optimización continua hasta combinatoria—, se diseñó una estructura altamente genérica:
+        Sobre esta estructura, en lugar de recurrir a implementaciones rígidas o acopladas de manera convencional, se optó por diseñar fábricas de inicialización mediante constructores específicos para entornos mono-objetivo y multiobjetivo capaces de adaptarse a una amplia variedad de problemas. Este enfoque modular permite instanciar estados con una sintaxis fluida y desacoplada del núcleo del algoritmo. Un caso representativo de esta estrategia se ilustra en el Listado~\ref{lst:binary_solution}, donde se muestra el código reducido para la construcción de soluciones binarias (cuyas variables se definen mediante valores booleanos). En este fragmento de código se aprecia cómo el patrón \textit{Builder} facilita la inicialización homogénea de la estructura —ya sea de forma aleatoria estocástica, parametrizada a ceros o a unos— antes de consolidar el objeto de tipo \texttt{Solution<bool>} definitivo a través del método de finalización.
 
-    \begin{listing}[H]
-    \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
-    pub trait Problem<T, Q = f64>
-    where
-        T: Clone,
-        Q: Clone + Default,
-    {
-        fn new() -> Self;
-    
-        fn evaluate(&self, solution: &mut Solution<T, Q>);
-        
-        fn create_solution(&self, _rng: &mut Random) -> Solution<T, Q>;
-        
-        fn get_problem_description(&self) -> String;
-    
-        fn get_improvement_direction(&self) -> ImprovementDirection;
+\begin{listing}[H]
+\begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
+pub struct BinarySolutionBuilder {
+    variables: Vec<bool>,
+    quality: Option<f64>,
+}
 
-        fn format_solution(&self, solution: &Solution<T, Q>) -> String;
+impl BinarySolutionBuilder {
+    pub fn ones(size: usize) -> Self {
+        Self {
+            variables: vec![true; size],
+            quality: None,
+        }
     }
-        \end{minted}
-        \caption{Definición genérica del \texttt{trait Problem} para la abstracción de problemas de optimización.}
-        \label{lst:problem_trait}
-        \end{listing}
 
-        Como se observa en la definición, el uso de parámetros genéricos permite desacoplar la lógica del problema de la representación interna de los datos. El parámetro \texttt{T} representa el tipo de variable de decisión, mientras que \texttt{Q} define el tipo de la evaluación (u objetivo), que por defecto se establece como \texttt{f64}. Esta abstracción delega en el usuario la responsabilidad de definir aspectos críticos como la dirección de mejora (\texttt{ImprovementDirection}), permitiendo configurar si el objetivo es la maximización o minimización. 
+    pub fn zeros(size: usize) -> Self {
+        Self {
+            variables: vec![false; size],
+            quality: None,
+        }
+    }
+
+    pub fn random(size: usize, seed: Option<u64>) -> Self {
+        let mut rng = if let Some(seed) = seed {
+            Random::new(seed)
+        } else {
+            Random::new(seed_from_time())
+        };
+        let variables: Vec<bool> = (0..size).map(|_| rng.coin_flip()).collect();
+        Self {
+            variables,
+            quality: None,
+        }
+    }
+
+    pub fn with_quality(mut self, quality: f64) -> Self {
+        self.quality = Some(quality);
+        self
+    }
+
+
+    pub fn build(self) -> Solution<bool> {
+        finalize_scalar_solution(self.variables, self.quality)
+    }
+}
+\end{minted}
+\caption{Código reducido sobre el constructor de soluciones binarias}
+\label{lst:binary_solution}
+\end{listing}
+
+        \subsection{Abstracción de Problemas y Operadores}
+Posteriormente se abordó la implementación de los \textbf{problemas}, definidos mediante un \texttt{trait} que actúa como el contrato de interfaz para cualquier modelo de optimización que se desee resolver. Para garantizar que la biblioteca fuera lo suficientemente flexible como para soportar diversos dominios de problemas —desde optimización continua hasta combinatoria—, se diseñó una estructura altamente genérica. 
+
+La interfaz que deben satisfacer todos los modelos se ha proyectado bajo un enfoque minimalista y cohesivo. Este contrato obliga a la implementación de métodos específicos destinados a la obtención de metadatos identificativos de la instancia, los cuales sirven como identificadores unívocos en los sistemas de persistencia y puntos de control (\textit{checkpoints}). Asimismo, exige la definición de funciones para la evaluación cuantitativa de las soluciones y un mecanismo de inicialización estocástica que dote a los algoritmos de un punto de partida válido en el espacio de búsqueda. Esta especificación formal se detalla en el Listado~\ref{lst:problem_trait}.
+
+\begin{listing}[H]
+\begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
+pub trait Problem<T, Q = f64>
+where
+    T: Clone,
+    Q: Clone + Default,
+{
+    fn new() -> Self;
+
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool;
+    
+    fn evaluate(&self, solution: &mut Solution<T, Q>);
         
-        Asimismo, el \texttt{trait} estandariza la forma en que los algoritmos interactúan con el dominio del problema: la función \texttt{evaluate} permite calificar la calidad de una solución, mientras que \texttt{create\_solution} define el mecanismo de generación inicial. Esta estructura asegura que los algoritmos puedan operar de forma agnóstica al problema concreto, facilitando la extensibilidad del sistema. Una vez establecida esta base, el desarrollo prosiguió con la implementación de los operadores y los algoritmos, encargados de explotar estas definiciones para hallar soluciones óptimas.
+    fn create_solution(&self, _rng: &mut Random) -> Solution<T, Q>;
+        
+    fn dominates(&self, solution_a: &Solution<T, Q>, solution_b: &Solution<T, Q>) -> bool;
+    
+    fn get_improvement_direction(&self) -> ImprovementDirection;
 
-        En cuanto a los operadores, se definió el \texttt{trait Operator} como la abstracción base de la jerarquía. Aunque su estructura es intencionadamente mínima, actúa como una interfaz común que permite identificar y gestionar metadatos de los operadores, como su nombre, facilitando la trazabilidad y el reporte de resultados.
+    fn get_problem_description(&self) -> String;
+
+    fn format_solution(&self, solution: &Solution<T, Q>) -> String;
+}
+\end{minted}
+\caption{Definición genérica del \texttt{trait Problem} para la abstracción de problemas de optimización.}
+\label{lst:problem_trait}
+\end{listing}
+
+        Como se observa en la definición conceptual expuesta en el Listado~\ref{lst:problem_trait}, el uso de tipos genéricos permite desacoplar por completo la lógica del problema de la representación interna de los datos. El parámetro \texttt{T} representa el tipo de la variable de decisión, mientras que \texttt{Q} define el tipo de la evaluación (u objetivo), cuya especialización por defecto se establece como \texttt{f64}. Esta abstracción delega en la concreción del usuario la responsabilidad de definir aspectos críticos como la dirección de mejora (\texttt{better\_fitness\_fn} e \texttt{get\_improvement\_direction}), permitiendo configurar de manera flexible los criterios de ordenación e idoneidad de las soluciones. 
+
+        Asimismo, el \texttt{trait} estandariza la forma en que los algoritmos interactúan con el dominio del problema: la función \texttt{evaluate} califica la calidad de un espécimen mediante efectos colaterales controlados en su estado, mientras que \texttt{create\_solution} define el mecanismo de generación inicial parametrizado por un generador de números pseudoaleatorios. Esta arquitectura asegura que las metaheurísticas puedan operar de forma agnóstica al problema concreto, potenciando la extensibilidad y reutilización del sistema. Una vez consolidada esta base, el desarrollo prosiguió con la implementación de los operadores y los algoritmos, encargados de explotar estas definiciones para guiar la búsqueda hacia soluciones óptimas.
+
+        En lo que respecta a los operadores, se definió el \texttt{trait Operator} como la abstracción base de la jerarquía del módulo de variación. Aunque su estructura se ha mantenido intencionadamente mínima para no sobrecargar el tiempo de cómputo, actúa como una interfaz común que unifica la gestión de metadatos esenciales, tales como el nombre del operador o su firma procedimental. Esto facilita la trazabilidad de las transformaciones genéticas, la auditoría del comportamiento del algoritmo y la posterior estructuración de los reportes estadísticos de resultados.
         
         \begin{listing}[H]
         \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
@@ -643,6 +720,8 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
 
         %% ALGORITMOS
 
+        \subsection{ Algoritmos, Checkpoints y Observadores}
+
         En cuanto a los algoritmos, su la lógica de ejecución implementa un sistema basado en pasos. La entrada principal a este proceso es la función \texttt{run}, la cual delega la orquestación técnica en el método \texttt{run\_algorithm} del submódulo \texttt{runtime}. Esta función está diseñada siguiendo un patrón de programación funcional, utilizando tipos genéricos y \emph{closures} para desacoplar la lógica de control del comportamiento específico de cada algoritmo.
         
         \begin{listing}[H]
@@ -723,7 +802,7 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
 
         Para garantizar que la monitorización no penalice excesivamente el rendimiento del algoritmo y que los observadores puedan procesar la información en tiempo real, se ha implementado un modelo de ejecución basado en la separación de hilos. En este esquema, el sistema mantiene el control de los observadores en el hilo principal (\emph{main thread}), mientras que delega la ejecución íntegra del algoritmo a un hilo secundario asíncrono. Esta arquitectura de hilos permite que la lógica de búsqueda progrese de forma independiente, evitando bloqueos en la interfaz de usuario o en los sistemas de registro de datos.
 
-        La comunicación entre ambos hilos se gestiona mediante el uso de canales (\emph{channels}), siguiendo el modelo de paso de mensajes propio de Rust. El hilo del algoritmo actúa como productor, enviando capturas del estado actual (\emph{snapshots}) a través del canal cada vez que se completa una iteración o se alcanza un hito de progreso. Por su parte, el hilo principal actúa como consumidor, recibiendo estos paquetes de datos y distribuyéndolos de manera síncrona a la lista de observadores registrados, tal y como se ilustra en la Figura \ref{fig:run_with_observers}.
+        La comunicación entre ambos hilos se gestiona mediante el uso de canales (\emph{channels}), siguiendo el modelo de paso de mensajes propio de Rust. El hilo del algoritmo actúa como productor, enviando capturas del estado actual (\emph{snapshots}) a través del canal cada vez que se completa una iteración o se alcanza un hito de progreso. Por su parte, el hilo principal actúa como consumidor, recibiendo estos paquetes de datos y distribuyéndolos de manera síncrona a la lista de observadores registrados, tal y como se ilustra en la Figura \ref{fig:concurrencia_observers}.
 
 
 \begin{figure}[htbp]
