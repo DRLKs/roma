@@ -600,10 +600,10 @@ impl BinarySolutionBuilder {
 \label{lst:binary_solution}
 \end{listing}
 
-        \subsection{Abstracción de Problemas y Operadores}
-Posteriormente se abordó la implementación de los \textbf{problemas}, definidos mediante un \texttt{trait} que actúa como el contrato de interfaz para cualquier modelo de optimización que se desee resolver. Para garantizar que la biblioteca fuera lo suficientemente flexible como para soportar diversos dominios de problemas —desde optimización continua hasta combinatoria—, se diseñó una estructura altamente genérica. 
-
-La interfaz que deben satisfacer todos los modelos se ha proyectado bajo un enfoque minimalista y cohesivo. Este contrato obliga a la implementación de métodos específicos destinados a la obtención de metadatos identificativos de la instancia, los cuales sirven como identificadores unívocos en los sistemas de persistencia y puntos de control (\textit{checkpoints}). Asimismo, exige la definición de funciones para la evaluación cuantitativa de las soluciones y un mecanismo de inicialización estocástica que dote a los algoritmos de un punto de partida válido en el espacio de búsqueda. Esta especificación formal se detalla en el Listado~\ref{lst:problem_trait}.
+    \subsection{Abstracción de Problemas y Operadores}
+        Posteriormente se abordó la implementación de los \textbf{problemas}, definidos mediante un \texttt{trait} que actúa como el contrato de interfaz para cualquier modelo de optimización que se desee resolver. Para garantizar que la biblioteca fuera lo suficientemente flexible como para soportar diversos dominios de problemas —desde optimización continua hasta combinatoria—, se diseñó una estructura altamente genérica. 
+        
+        La interfaz que deben satisfacer todos los modelos se ha proyectado bajo un enfoque minimalista y cohesivo. Este contrato obliga a la implementación de métodos específicos destinados a la obtención de metadatos identificativos de la instancia, los cuales sirven como identificadores unívocos en los sistemas de persistencia y puntos de control (\textit{checkpoints}). Asimismo, exige la definición de funciones para la evaluación cuantitativa de las soluciones y un mecanismo de inicialización estocástica que dote a los algoritmos de un punto de partida válido en el espacio de búsqueda. Esta especificación formal se detalla en el Listado~\ref{lst:problem_trait}.
 
 \begin{listing}[H]
 \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
@@ -649,128 +649,159 @@ where
         \label{lst:base_operator}
         \end{listing}
 
-        A partir de esta interfaz fundamental, se especializa la jerarquía en tres categorías que representan los pilares de las metaheurísticas: los operadores de \textbf{mutación}, \textbf{cruce} (\emph{crossover}) y \textbf{selección}. Esta especialización permite que los algoritmos manipulen las soluciones de forma genérica, independientemente del tipo de dato subyacente (\texttt{T}) o de la métrica de evaluación (\texttt{Q}).
+        A partir de esta interfaz fundamental, se especializa la jerarquía en tres categorías que representan los pilares de las metaheurísticas: los operadores de \textbf{mutación}, \textbf{cruce} (\emph{crossover}) y \textbf{selección}. Esta especialización mediante subtipos de \texttt{traits} permite que los algoritmos manipulen las soluciones de forma genérica, independientemente del tipo de dato subyacente (\texttt{T}) o de la métrica de evaluación (\texttt{Q}), tal y como se detalla en el Listado~\ref{lst:operators_hierarchy}.
 
         \begin{listing}[H]
         \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
-    pub trait MutationOperator<T, Q = f64>: Operator
-    where
-        T: Clone,
-        Q: Clone,
-    {
-        fn execute(&self, solution: &mut Solution<T, Q>, probability: f64, rng: &mut Random);
-    }
+pub trait MutationOperator<T, Q = f64>: Operator
+where
+    T: Clone,
+    Q: Clone,
+{
+    fn execute(
+        &self,
+        solution: &mut Solution<T, Q>,
+        probability: f64,
+        bounds: Option<&RealBounds>,
+        rng: &mut Random,
+    );
+}
 
-    pub trait CrossoverOperator<T, Q = f64>: Operator
-    where
-        T: Clone,
-        Q: Clone,
-    {
+pub trait CrossoverOperator<T, Q = f64>: Operator
+where
+    T: Clone,
+    Q: Clone,
+{
+    fn execute(
+        &self,
+        parent1: &Solution<T, Q>,
+        parent2: &Solution<T, Q>,
+        bounds: Option<&RealBounds>,
+        rng: &mut Random,
+    ) -> Vec<Solution<T, Q>>;
+}
 
-        fn execute(
-            &self,
-            parent1: &Solution<T, Q>,
-            parent2: &Solution<T, Q>,
-            rng: &mut Random,
-        ) -> Vec<Solution<T, Q>>;
-
-    
-        fn execute_several(
-            &self,
-            parents: Vec<Solution<T, Q>>,
-            _rng: &mut Random,
-        ) -> Vec<Solution<T, Q>>{
-            let mut offspring_result= vec![];
-            for i in 1..parents.len() {
-                offspring_result.push(parents[i].clone());
-            }
-            offspring_result
-        }
-        
-        fn number_of_offspring(&self) -> usize {
-            2
-        }
-    }
-    
-    pub trait SelectionOperator<T, Q = f64>: Operator
-    where
-        T: Clone,
-        Q: Clone,
-    {
-    
-        fn execute<'a>(&self, population: &'a [Solution<T, Q>], rng: &mut Random) -> &'a Solution<T, Q>;
-        
-        fn select_many<'a>(
-            &self,
-            population: &'a [Solution<T, Q>],
-            count: usize,
-            rng: &mut Random,
-        ) -> Vec<&'a Solution<T, Q>> {
-            (0..count).map(|_| self.execute(population, rng)).collect()
-        }
-    }
+pub trait SelectionOperator<T, Q = f64>: Operator
+where
+    T: Clone,
+    Q: Clone,
+{
+    fn execute<'a>(
+        &self,
+        population: &'a [Solution<T, Q>],
+        rng: &mut Random,
+        dominates: &dyn Fn(&Solution<T, Q>, &Solution<T, Q>) -> bool,
+    ) -> &'a Solution<T, Q>;
+}
         \end{minted}
-        \caption{\texttt{trait Operator} .}
-        \label{lst:selection_trait}
-        \end{listing}
+        \caption{Muestra del desarrollo de los diferentes tipos de \texttt{traits} sobre los operadores.}        \label{lst:operators_hierarchy}
+        \end{listing} 
 
-        Como se puede apreciar, cada \texttt{trait} define un contrato específico para su función: la mutación altera una solución existente según una probabilidad dada, el cruce combina material genético de progenitores para generar descendencia, y la selección identifica individuos basándose en su aptitud. Cabe destacar el uso de \emph{lifetimes} (\texttt{'a}) en el operador de selección, una característica avanzada de Rust que garantiza que las referencias a las soluciones seleccionadas sean válidas mientras la población original exista, asegurando así la seguridad de memoria sin incurrir en costes de copia innecesarios.
+        Como se puede apreciar en el Listado~\ref{lst:operators_hierarchy}, cada contrato especifica formalmente los requisitos para su cometido. Un aspecto clave en el diseño de las firmas de \texttt{MutationOperator} y \texttt{CrossoverOperator} es la inclusión opcional de los límites espaciales del problema mediante el parámetro \texttt{bounds: Option<\&RealBounds>}. Esta adición es de vital importancia para garantizar la validez matemática y la abstracción de la biblioteca cuando se opera en espacios de búsqueda continuos de números reales. Operadores paradigmáticos de la literatura, tales como el cruce binario simulado (\textit{Simulated Binary Crossover}, SBX) o la mutación polinomial (\textit{Polynomial Mutation}), calculan las nuevas posiciones basándose estrictamente en distribuciones de probabilidad acotadas por las fronteras del espacio factible $\Omega$. Al pasar estos límites de manera genérica y opcional, la biblioteca es capaz de reutilizar el mismo flujo computacional tanto para problemas combinatorios o discretos (donde los límites reales no aplican y se evalúan como \texttt{None}) como para optimización continua de alta dimensionalidad.
 
-        Esta estructura modular permite que los algoritmos sean configurados dinámicamente con diferentes estrategias de búsqueda, facilitando la experimentación y el ajuste de hiperparámetros. 
+        Por otra parte, destaca la gestión de los tiempos de vida o \textit{lifetimes} (\texttt{'a}) implementada en la firma del método de ejecución de \texttt{SelectionOperator}. En lenguajes de programación tradicionales, retornar un elemento elegido de una colección suele implicar o bien la copia íntegra del objeto en memoria o bien el uso de punteros desprotegidos que amenazan la estabilidad del hilo de ejecución. A través del parámetro genérico de ciclo de vida \texttt{'a}, el compilador de Rust valida estáticamente que la referencia de la solución seleccionada devuelta por el operador posea exactamente la misma persistencia temporal que el vector de la población original (\texttt{population: \&'a [Solution<T, Q>]}). Esta restricción asegura de forma matemática que no se produzcan punteros colgados (\textit{dangling pointers}) si la población se destruye, eliminando por completo la necesidad de realizar clonaciones pesadas de memoria (\textit{overhead} por asignación en el \textit{heap}) y optimizando drásticamente la velocidad en cada iteración del algoritmo.
 
         %% ALGORITMOS
-
-        \subsection{ Algoritmos, Checkpoints y Observadores}
-
-        En cuanto a los algoritmos, su la lógica de ejecución implementa un sistema basado en pasos. La entrada principal a este proceso es la función \texttt{run}, la cual delega la orquestación técnica en el método \texttt{run\_algorithm} del submódulo \texttt{runtime}. Esta función está diseñada siguiendo un patrón de programación funcional, utilizando tipos genéricos y \emph{closures} para desacoplar la lógica de control del comportamiento específico de cada algoritmo.
         
+    \subsection{ Algoritmos, Checkpoints y Observadores}
+
+        En cuanto a los algoritmos, la lógica de ejecución se implementa mediante un sistema basado en pasos. El punto de entrada principal para iniciar cualquier metaheurística es el método \texttt{run}, cuya firma procedimental e interfaz de rasgos (\textit{trait bounds}) se detalla en el Listado~\ref{lst:run_definition}.
+
         \begin{listing}[H]
         \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
-    pub(crate) fn run_algorithm<T, Q, S, R, Initialize, Step, Snapshot, Finalize>(
-        observers: &mut Vec<Box<dyn AlgorithmObserver<T, Q>>>,
-        criteria: TerminationCriteria,
-        direction: ImprovementDirection,
-        algorithm_name: impl Into<String>,
-        initialize: Initialize,
-        mut step: Step,
-        snapshot: Snapshot,
-        finalize: Finalize,
-    ) -> R
-    where
-        T: Clone + Send + 'static,
-        Q: Clone + Send + 'static,
-        Initialize: FnOnce(&ExecutionContext<T, Q>) -> S,
-        Step: FnMut(&mut S, &ExecutionContext<T, Q>),
-        Snapshot: Fn(&S) -> ExecutionStateSnapshot<T, Q>,
-        Finalize: FnOnce(S) -> R,
-    {
-        run_with_observer_runtime(
-            observers,
-            criteria,
-            direction,
-            algorithm_name,
-            move |context| {
-                let mut state = initialize(context);
-                let initial_snapshot = snapshot(&state);
-                context.report_progress(initial_snapshot);
-    
-                while !context.should_terminate() {
-                    step(&mut state, context);
-                    let step_snapshot = snapshot(&state);
-                    context.report_progress(step_snapshot);
-                }
-    
-                RuntimeExecutionOutput::new(
-                    finalize(state),
-                    // ... metadatos de ejecución
-                )
-            },
-        )
-    }
+fn run<P>(&mut self, problem: &P) -> Result<Self::SolutionSet, String>
+where
+    Self: Sized,
+    Self::SolutionSet: Clone,
+    P: Problem<T, Q> + Sync,
+{
         \end{minted}
-        \caption{Implementación del motor de ejecución genérico (\texttt{runtime}) de los algoritmos.}
-        \label{lst:runtime_logic}
+        \caption{Definición de la firma genérica del método principal \texttt{run}.}
+        \label{lst:run_definition}
         \end{listing}
+
+        El diseño de la función \texttt{run} aprovecha las ventajas de los sistemas de tipos avanzados de Rust. Destaca en su declaración el uso del límite restrictivo \texttt{Self: Sized}. En Rust, por defecto, los \textit{traits} pueden ser implementados por tipos cuyo tamaño en tiempo de compilación no sea conocido de forma estática (como los objetos de rasgo o \textit{trait objects}). Al imponer el \textit{bound} \texttt{Sized}, se garantiza que el algoritmo concreto posee un tamaño fijo y conocido en tiempo de compilación. Esto es un requisito indispensable para permitir el polimorfismo estático, asegurando que el compilador optimice las llamadas a funciones eliminando el coste de la resolución dinámica en tiempo de ejecución (*dynamic dispatch*). Asimismo, la restricción \texttt{Sync} sobre el parámetro genérico del problema (\texttt{P}) asegura que la estructura del modelo matemático sea segura para ser accedida concurrentemente desde múltiples hilos de ejecución, habilitando el paralelismo a nivel del motor experimental.
+
+        Desde una perspectiva arquitectónica, \texttt{run} delega la orquestación y el control de eventos en una función interna especializada de la biblioteca denominada \texttt{run\_with\_observer\_runtime}, detallada en el Listado~\ref{lst:run_with_observer_runtime}. El método \texttt{run} actúa bajo un enfoque de programación funcional, encapsulando el comportamiento interactivo de la metaheurística en una \textit{closure} o función anónima que se inyecta a través del argumento \texttt{task}. El motor central evalúa de forma transparente esta tarea, aislando los mecanismos de monitorización del algoritmo en sí.
+
+        \begin{listing}[H]
+        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+pub fn run_with_observer_runtime<T, Q, R, F>(
+    observers: &mut Vec<Box<dyn AlgorithmObserver<T, Q>>>,
+    criteria: TerminationCriteria,
+    better_fitness: fn(f64, f64) -> bool,
+    algorithm_name: impl Into<String>,
+    task: F,
+) -> R
+where
+    T: Clone + Send + 'static,
+    Q: Clone + Send + 'static,
+    F: FnOnce(&ExecutionContext<T, Q>) -> RuntimeExecutionOutput<R>,
+{
+    let algorithm_name = algorithm_name.into();
+
+    let runtime = ObserverRuntime::new(std::mem::take(observers));
+    let context = ExecutionContext::new(runtime.sender(), criteria, better_fitness);
+    context.start(algorithm_name);
+
+    let output = task(&context);
+    context.end(output.total_generations, output.total_evaluations);
+
+    // Must be dropped before joining runtime so the channel closes and observer
+    // thread can drain and terminate.
+    drop(context);
+
+    *observers = runtime.finish();
+    output.result
+}
+        \end{minted}
+        \caption{Implementación del motor de ejecución y el entorno de comunicación para los observadores.}
+        \label{lst:run_with_observer_runtime}
+        \end{listing}
+
+        Como se aprecia en la lógica de \texttt{run\_with\_observer\_runtime}, la función asume el control del ciclo de vida del proceso de optimización. Inicialmente extrae los observadores mediante \texttt{std::mem::take} para evitar copias costosas y configura un canal de comunicación asíncrono gestionado a través de un \texttt{ExecutionContext}. Tras arrancar formalmente el contexto, se invoca la \textit{closure} \texttt{task}, transfiriéndole una referencia del contexto de ejecución para que el algoritmo pueda reportar sus progresos. Una vez finalizada la tarea, es de vital importancia la llamada explícita a \texttt{drop(context)}. Este paso destruye el contexto de forma controlada, provocando el cierre definitivo del extremo emisor del canal (*channel*). Al cerrarse el flujo, el hilo secundario encargado de procesar la lógica de los observadores puede consumir los mensajes restantes en cola (*drain*) y concluir de manera limpia su ciclo de ejecución, evitando interbloqueos (*deadlocks*) antes de recuperar los observadores a través de \texttt{runtime.finish()}.
+
+        Finalmente, la sustancia algorítmica de la tarea inyectada se despliega en un bucle iterativo controlado por las condiciones de parada, cuyo comportamiento se describe en el Listado~\ref{lst:run_algorithm_loop}.
+
+
+        \begin{listing}[H]
+        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+while !context.should_terminate() 
+{
+    algorithm.step(problem, &mut state);
+
+    let step_snapshot = algorithm.build_snapshot(problem, &state);
+    context.update_execution_state(&step_snapshot);
+    last_iteration = step_snapshot.iteration;
+    last_evaluations = step_snapshot.evaluations;
+
+    if DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES > 0 &&
+    step_snapshot.iteration % DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES == 0
+    {
+        let record = state.build_checkpoint_record(
+            &run_id,
+            &checkpoint_metadata,
+            context.time_elapsed(),
+        );
+        checkpoint_policy.persist_record(&mut last_checkpoint_path, &record);
+    }
+    context.report_progress(
+        ObserverState::from_snapshot(&step_snapshot, context.seq_id())
+    );
+}
+        \end{minted}
+        \caption{Bucle de ejecución del interior de la función \textbf{run}}
+        \label{lst:run_algorithm_loop}
+        \end{listing}
+
+
+        En cada iteración del bucle, el algoritmo avanza mediante el método \texttt{step}, el cual altera el estado de la población o la trayectoria actual. Acto seguido, se extrae un estado intermedio inmutable o captura (\textit{snapshot}) que almacena la evolución temporal de la ejecución. Este reporte intermedio se aprovecha por el sistema de tolerancia a fallos mediante una política de puntos de control o \textit{checkpoints}. Si la frecuencia parametrizada coincide con el módulo de la iteración corriente, se construye un registro (\textit{record}) que se vuelca de forma persistente a disco a través de \texttt{checkpoint\_policy.persist\_record}, permitiendo reanudar la computación en caso de una interrupción imprevista de la máquina. El ciclo concluye con la invocación de \texttt{context.report\_progress}, función encargada de serializar y transmitir el nuevo estado en forma de un mensaje \texttt{ObserverState} hacia el canal del runtime de observadores, garantizando una auditoría en tiempo real del proceso sin penalizar el rendimiento del hilo principal.
+
+
+%%%%%%%
+
+%%%%%%
+
 
         Como se aprecia en el Fragmento \ref{lst:runtime_logic}, el motor de ejecución gestiona el ciclo de vida completo mediante cuatro fases: inicialización (\texttt{Initialize}), iteración (\texttt{Step}), captura de estado (\texttt{Snapshot}) y finalización (\texttt{Finalize}). Este diseño permite que cualquier algoritmo (ya sea un Genético, PSO o Hill Climbing) pueda ejecutarse dentro del mismo \emph{runtime} siempre que cumpla con estos contratos. 
         
