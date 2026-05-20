@@ -3,7 +3,9 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+/// Environment variable used to override the checkpoint directory.
 pub const DEFAULT_CHECKPOINT_ENV_VAR: &str = "ROMA_CHECKPOINT_DIR";
+/// Default application namespace used for OS-specific checkpoint locations.
 pub const DEFAULT_APP_NAME: &str = "roma";
 
 // Checkpoint files are stored with this extension under scoped directories.
@@ -33,15 +35,22 @@ const MACOS_LIBRARY_SEGMENT: &str = "Library";
 #[cfg(target_os = "macos")]
 const MACOS_APP_SUPPORT_SEGMENT: &str = "Application Support";
 
+/// Source from which the checkpoint base directory was resolved.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CheckpointDirSource {
+    /// Explicit directory passed by the caller.
     Explicit,
+    /// Directory taken from the configured environment variable.
     EnvVar,
+    /// OS-specific default state directory.
     OsDefault,
+    /// Project-scoped fallback supplied by the caller.
     ProjectFallback,
+    /// Local fallback under the current working tree.
     LocalFallback,
 }
 
+/// Controls whether checkpoint directory initialization may fail softly.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CheckpointInitMode {
     /// Any initialization error is returned to caller.
@@ -50,10 +59,14 @@ pub enum CheckpointInitMode {
     BestEffort,
 }
 
+/// Result returned after attempting to initialize checkpoint storage.
 #[derive(Debug, Clone)]
 pub struct CheckpointInitResult {
+    /// Directory selected for checkpoint storage, if any.
     pub directory: Option<PathBuf>,
+    /// Source that produced `directory`, if initialization succeeded.
     pub source: Option<CheckpointDirSource>,
+    /// Failed candidate paths together with their source and error kind.
     pub attempts: Vec<(CheckpointDirSource, PathBuf, io::ErrorKind)>,
 }
 
@@ -67,9 +80,13 @@ pub struct CheckpointInitResult {
 /// 5. `./.roma/checkpoints`
 #[derive(Debug, Clone)]
 pub struct CheckpointPathConfig {
+    /// Application name used when deriving OS-default paths.
     pub app_name: String,
+    /// Environment variable consulted for user overrides.
     pub env_var_name: &'static str,
+    /// Highest-priority explicit checkpoint directory.
     pub explicit_dir: Option<PathBuf>,
+    /// Optional project-relative fallback used before the local fallback.
     pub project_fallback_dir: Option<PathBuf>,
 }
 
@@ -85,16 +102,19 @@ impl Default for CheckpointPathConfig {
 }
 
 impl CheckpointPathConfig {
+    /// Overrides the application namespace used in OS-default locations.
     pub fn with_app_name(mut self, app_name: impl Into<String>) -> Self {
         self.app_name = app_name.into();
         self
     }
 
+    /// Uses `dir` as the highest-priority checkpoint directory.
     pub fn with_explicit_dir(mut self, dir: impl Into<PathBuf>) -> Self {
         self.explicit_dir = Some(dir.into());
         self
     }
 
+    /// Sets a project-scoped fallback directory.
     pub fn with_project_fallback_dir(mut self, dir: impl Into<PathBuf>) -> Self {
         self.project_fallback_dir = Some(dir.into());
         self

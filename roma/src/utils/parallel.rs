@@ -111,6 +111,9 @@ where
     result
 }
 
+/// Resolves a user-facing thread count to a usable positive worker count.
+///
+/// `None` falls back to the system-reported available parallelism.
 pub fn resolve_num_threads(num_threads: Option<usize>) -> usize {
     match num_threads {
         Some(n) => n.max(1),

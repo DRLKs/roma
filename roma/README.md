@@ -66,7 +66,7 @@ fn main() {
 
 ## Documentation
 
-- API docs: <https://docs.rs/roma>
+- API docs: <https://docs.rs/roma_lib>
 - Repository: <https://github.com/DRLKs/roma>
 
 ## License

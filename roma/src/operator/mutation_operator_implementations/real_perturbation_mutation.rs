@@ -16,6 +16,10 @@ pub struct RealPerturbationMutation {
 }
 
 impl RealPerturbationMutation {
+    /// Creates a mutation with a bounded perturbation radius.
+    ///
+    /// `radius` must be greater than zero. `per_variable_probability` is clamped
+    /// by validation to the inclusive range `[0, 1]`.
     pub fn new(radius: f64, per_variable_probability: f64) -> Self {
         assert!(radius > 0.0, "radius must be > 0");
         assert!(
@@ -29,10 +33,12 @@ impl RealPerturbationMutation {
         }
     }
 
+    /// Returns the configured perturbation radius.
     pub fn radius(&self) -> f64 {
         self.radius
     }
 
+    /// Returns the probability applied per variable before the outer mutation probability.
     pub fn per_variable_probability(&self) -> f64 {
         self.per_variable_probability
     }

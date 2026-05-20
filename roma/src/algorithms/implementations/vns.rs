@@ -13,6 +13,7 @@ use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::random::{seed_from_time, Random};
 
+/// Configuration for [`VNS`].
 #[derive(Clone)]
 pub struct VNSParameters<T, M>
 where
@@ -32,6 +33,7 @@ where
     T: Clone,
     M: MutationOperator<T>,
 {
+    /// Creates a new Variable Neighborhood Search parameter set.
     pub fn new(
         neighborhoods: Vec<M>,
         mutation_probability: f64,
@@ -48,12 +50,14 @@ where
         }
     }
 
+    /// Uses a fixed RNG seed for reproducible executions.
     pub fn with_seed(mut self, seed: u64) -> Self {
         self.random_seed = Some(seed);
         self
     }
 }
 
+/// Variable Neighborhood Search optimizer parameterized by mutation-based neighborhoods.
 pub struct VNS<T, M>
 where
     T: Clone,
@@ -64,6 +68,7 @@ where
     observers: Vec<Box<dyn AlgorithmObserver<T>>>,
 }
 
+/// Serializable execution state used by checkpoint and resume flows.
 pub struct VNSState<T>
 where
     T: Clone,

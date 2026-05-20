@@ -1,3 +1,5 @@
+//! Integration tests for the crate-root exports of the recently added metaheuristics.
+
 use roma_lib::{
     AckleyProblem,
     Algorithm,

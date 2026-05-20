@@ -1,5 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// Generates a time-based seed from the current UNIX timestamp in nanoseconds.
 pub fn seed_from_time() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -7,17 +8,22 @@ pub fn seed_from_time() -> u64 {
         .as_nanos() as u64
 }
 
+/// Small deterministic pseudo-random number generator used across Roma.
+///
+/// The generator is intentionally dependency-free and exposes its internal
+/// state so algorithms can checkpoint and resume runs exactly.
 #[derive(Debug, Clone)]
 pub struct Random {
     state: u64,
 }
 
 impl Random {
-    /// Crea un RNG con semilla
+    /// Creates a generator initialized with `seed`.
     pub fn new(seed: u64) -> Self {
         Self { state: seed }
     }
 
+    /// Derives a reproducible stream seed from a base seed and stream id.
     #[inline]
     pub fn derive_seed(base_seed: u64, stream: u64) -> u64 {
         let mut z = base_seed ^ stream.wrapping_mul(0x9E37_79B9_7F4A_7C15);
@@ -26,21 +32,25 @@ impl Random {
         z ^ (z >> 31)
     }
 
+    /// Returns the configured seed or a fresh time-based seed when absent.
     #[inline]
     pub fn resolve_seed(random_seed: Option<u64>) -> u64 {
         random_seed.unwrap_or_else(seed_from_time)
     }
 
+    /// Returns the current internal generator state.
     #[inline]
     pub fn state(&self) -> u64 {
         self.state
     }
 
+    /// Replaces the internal generator state.
     #[inline]
     pub fn set_state(&mut self, state: u64) {
         self.state = state;
     }
 
+    /// Advances the generator and returns a 64-bit pseudo-random value.
     #[inline]
     pub fn next_u64(&mut self) -> u64 {
         self.state = self.state.wrapping_add(0x9E3779B97F4A7C15);
@@ -50,19 +60,22 @@ impl Random {
         z ^ (z >> 31)
     }
 
+    /// Advances the generator and returns the low 32 bits.
     #[inline]
     pub fn next_u32(&mut self) -> u32 {
         self.next_u64() as u32
     }
 
-    /// [0, 1)
+    /// Returns a floating-point value in the half-open interval `[0, 1)`.
     #[inline]
     pub fn next_f64(&mut self) -> f64 {
         let x = self.next_u64() >> 11;
         (x as f64) * (1.0 / ((1u64 << 53) as f64))
     }
 
-    /// [0, max)
+    /// Returns an integer in the half-open interval `[0, max)`.
+    ///
+    /// When `max` is zero the function returns `0`.
     #[inline]
     pub fn range(&mut self, max: u64) -> u64 {
         if max == 0 {
@@ -71,18 +84,19 @@ impl Random {
         self.next_u64() % max
     }
 
-    /// [min, max)
+    /// Returns an integer in the half-open interval `[min, max)`.
     #[inline]
     pub fn range_between(&mut self, min: u64, max: u64) -> u64 {
         min + self.range(max - min)
     }
 
-    /// p ∈ \[0,1\]
+    /// Returns `true` with probability `p`.
     #[inline]
     pub fn chance(&mut self, p: f64) -> bool {
         self.next_f64() < p
     }
 
+    /// Returns `true` with probability `0.5`.
     #[inline]
     pub fn coin_flip(&mut self) -> bool {
         self.chance(0.5)

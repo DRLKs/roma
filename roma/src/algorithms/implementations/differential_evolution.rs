@@ -10,6 +10,10 @@ use crate::solution_set::traits::SolutionSet;
 use crate::utils::random::Random;
 use crate::utils::statistics::calculate_population_statistics;
 
+/// Configuration for [`DifferentialEvolution`].
+///
+/// The algorithm keeps a fixed-size population and combines individuals using
+/// the classic DE/rand/1/bin style trial generation used by this implementation.
 #[derive(Clone)]
 pub struct DifferentialEvolutionParameters {
     pub population_size: usize,
@@ -20,6 +24,7 @@ pub struct DifferentialEvolutionParameters {
 }
 
 impl DifferentialEvolutionParameters {
+    /// Creates a new Differential Evolution parameter set.
     pub fn new(
         population_size: usize,
         crossover_rate: f64,
@@ -35,18 +40,21 @@ impl DifferentialEvolutionParameters {
         }
     }
 
+    /// Uses a fixed RNG seed for reproducible executions.
     pub fn with_seed(mut self, seed: u64) -> Self {
         self.random_seed = Some(seed);
         self
     }
 }
 
+/// Differential Evolution optimizer for bounded real-valued problems.
 pub struct DifferentialEvolution {
     parameters: DifferentialEvolutionParameters,
     solution_set: Option<VectorSolutionSet<f64>>,
     observers: Vec<Box<dyn AlgorithmObserver<f64>>>,
 }
 
+/// Serializable execution state used by checkpoint and resume flows.
 pub struct DifferentialEvolutionState {
     population: Vec<Solution<f64>>,
     generation: usize,

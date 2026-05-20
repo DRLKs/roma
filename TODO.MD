@@ -128,3 +128,5 @@ Cambiar algorithm.run añadir el argumento resume
 [ ] 37. Workflow o algo para subir releases y crates a la vez
 
 [ ] 38. Implementar checkpoint_algorithm_parameters para muchos algoritmos. No diferencia entonces por algoritmos con distintos operadores u parámetros de algoritmos
+
+[] 39. Mirar bien CheckpointDirSource

@@ -1,6 +1,7 @@
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 
+/// Summary statistics computed from an evaluated population.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PopulationStatistics {
     pub best_index: Option<usize>,
@@ -19,11 +20,13 @@ impl PopulationStatistics {
         }
     }
 
+    /// Returns `(best, average, worst)` as a compact tuple.
     pub fn as_tuple(self) -> (f64, f64, f64) {
         (self.best_fitness, self.average_fitness, self.worst_fitness)
     }
 }
 
+/// Calculates population statistics using each solution's cached quality value.
 pub fn calculate_population_statistics<T, P>(
     population: &[Solution<T>],
     problem: &P,
@@ -37,6 +40,10 @@ where
     })
 }
 
+/// Calculates population statistics using a custom fitness extractor.
+///
+/// Solutions for which `fitness_of` returns `None` are skipped. If every
+/// solution is skipped, the returned statistics are empty-valued.
 pub fn calculate_population_statistics_by<T, Q, P, F>(
     population: &[Solution<T, Q>],
     problem: &P,

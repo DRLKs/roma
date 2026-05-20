@@ -4,11 +4,17 @@ use std::{io, io::Write};
 
 use crate::algorithms::checkpoint::{CheckpointEntry, CheckpointRunStatus};
 
+/// Long CLI flag used to provide a deterministic random seed.
 pub const CLI_FLAG_SEED: &str = "--seed";
+/// Short CLI flag used to provide a deterministic random seed.
 pub const CLI_FLAG_SEED_SHORT: &str = "-s";
+/// CLI flag that requests resuming from an existing checkpoint.
 pub const CLI_FLAG_RESUME: &str = "--resume";
+/// CLI flag that disables checkpointing.
 pub const CLI_FLAG_NO_CHECKPOINT: &str = "--no-checkpoint";
+/// Short alias for disabling checkpointing.
 pub const CLI_FLAG_NO_CHECKPOINT_SHORT: &str = "--nc";
+/// CLI flag used to override the checkpoint directory.
 pub const CLI_FLAG_CHECKPOINT_DIR: &str = "--checkpoint-dir";
 
 const CLI_INLINE_VALUE_SEPARATOR: &str = "=";
@@ -37,16 +43,19 @@ const CHECKPOINT_STATUS_IDLE_ICON: &str = "[]";
 const CHECKPOINT_TABLE_WIDTH: usize = 90;
 const CHECKPOINT_AGE_COLUMN_WIDTH: usize = 12;
 
+/// Lightweight command-line argument helper for Roma examples and binaries.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CliArgs {
     args: Vec<String>,
 }
 
 impl CliArgs {
+    /// Captures command-line arguments from the current process environment.
     pub fn from_env() -> Self {
         Self::from_iter(std::env::args().skip(1))
     }
 
+    /// Builds an argument collection from an iterator of raw tokens.
     pub fn from_iter<I, S>(args: I) -> Self
     where
         I: IntoIterator<Item = S>,
@@ -57,20 +66,26 @@ impl CliArgs {
         }
     }
 
+    /// Returns `true` when `flag` appears exactly in the argument list.
     pub fn has_flag(&self, flag: &str) -> bool {
         self.args.iter().any(|arg| arg == flag)
     }
 
+    /// Returns `true` when any flag in `flags` appears exactly.
     pub fn has_any_flag(&self, flags: &[&str]) -> bool {
         self.args
             .iter()
             .any(|arg| flags.iter().any(|flag| arg == flag))
     }
 
+    /// Returns the argument value associated with `flag`, if present.
     pub fn argument_value(&self, flag: &str) -> Option<String> {
         self.argument_value_for_any(&[flag])
     }
 
+    /// Returns the first value associated with any flag in `flags`.
+    ///
+    /// Both `--flag value` and `--flag=value` forms are supported.
     pub fn argument_value_for_any(&self, flags: &[&str]) -> Option<String> {
         let mut args = self.args.iter();
 
@@ -90,49 +105,59 @@ impl CliArgs {
         None
     }
 
+    /// Parses a `u64` value for any flag in `flags`, falling back to `default_value`.
     pub fn parse_u64_for_any_or(&self, flags: &[&str], default_value: u64) -> u64 {
         self.argument_value_for_any(flags)
             .and_then(|value| value.parse::<u64>().ok())
             .unwrap_or(default_value)
     }
 
+    /// Returns the configured random seed or `default_value`.
     pub fn seed_or(&self, default_value: u64) -> u64 {
         self.parse_u64_for_any_or(&[CLI_FLAG_SEED_SHORT, CLI_FLAG_SEED], default_value)
     }
 
+    /// Parses a `usize` value or returns `default_value` on absence or parse failure.
     pub fn parse_usize_or(&self, flag: &str, default_value: usize) -> usize {
         self.argument_value(flag)
             .and_then(|value| value.parse::<usize>().ok())
             .unwrap_or(default_value)
     }
 
+    /// Parses an `f64` value or returns `default_value` on absence or parse failure.
     pub fn parse_f64_or(&self, flag: &str, default_value: f64) -> f64 {
         self.argument_value(flag)
             .and_then(|value| value.parse::<f64>().ok())
             .unwrap_or(default_value)
     }
 
+    /// Returns a string argument value or `default_value` when absent.
     pub fn parse_string_or(&self, flag: &str, default_value: &str) -> String {
         self.argument_value(flag)
             .unwrap_or_else(|| default_value.to_string())
     }
 
+    /// Returns `true` when checkpoint resumption was requested.
     pub fn resume_requested(&self) -> bool {
         self.has_flag(CLI_FLAG_RESUME)
     }
 
+    /// Returns `true` when checkpointing was explicitly disabled.
     pub fn checkpoints_disabled(&self) -> bool {
         self.has_any_flag(&[CLI_FLAG_NO_CHECKPOINT, CLI_FLAG_NO_CHECKPOINT_SHORT])
     }
 
+    /// Returns `true` when a checkpoint directory override was provided.
     pub fn has_checkpoint_dir_override(&self) -> bool {
         self.argument_value(CLI_FLAG_CHECKPOINT_DIR).is_some()
     }
 
+    /// Returns the checkpoint directory override or `default_path`.
     pub fn checkpoint_dir_or(&self, default_path: PathBuf) -> PathBuf {
         self.resolve_path_from_flag_or_default(CLI_FLAG_CHECKPOINT_DIR, default_path)
     }
 
+    /// Resolves a path argument against the current working directory when relative.
     pub fn resolve_path_from_flag_or_default(&self, flag: &str, default_path: PathBuf) -> PathBuf {
         if let Some(raw) = self.argument_value(flag) {
             let candidate = PathBuf::from(raw);
@@ -192,6 +217,10 @@ fn format_time_ago(created_ms: u64) -> String {
     }
 }
 
+/// Presents a checkpoint selection menu and returns the chosen entry index.
+///
+/// The returned index is zero-based. `Ok(None)` means the user chose to start
+/// a fresh run instead of resuming from an existing checkpoint.
 pub fn prompt_checkpoint_selection(entries: &[CheckpointEntry]) -> Result<Option<usize>, String> {
     if entries.is_empty() {
         return Ok(None);

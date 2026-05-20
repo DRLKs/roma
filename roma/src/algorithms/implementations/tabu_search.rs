@@ -14,6 +14,7 @@ use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::random::{seed_from_time, Random};
 
+/// Configuration for [`TabuSearch`].
 #[derive(Clone)]
 pub struct TabuSearchParameters<T, M>
 where
@@ -35,6 +36,7 @@ where
     T: Clone,
     M: MutationOperator<T>,
 {
+    /// Creates a new Tabu Search parameter set.
     pub fn new(
         mutation_operator: M,
         mutation_probability: f64,
@@ -54,17 +56,20 @@ where
         }
     }
 
+    /// Uses a fixed RNG seed for reproducible executions.
     pub fn with_seed(mut self, seed: u64) -> Self {
         self.random_seed = Some(seed);
         self
     }
 
+    /// Enables or disables the aspiration rule.
     pub fn with_aspiration(mut self, aspiration_enabled: bool) -> Self {
         self.aspiration_enabled = aspiration_enabled;
         self
     }
 }
 
+/// Tabu Search optimizer for discrete and combinatorial problems.
 pub struct TabuSearch<T, M>
 where
     T: Clone,
@@ -75,6 +80,7 @@ where
     observers: Vec<Box<dyn AlgorithmObserver<T>>>,
 }
 
+/// Serializable execution state used by checkpoint and resume flows.
 pub struct TabuSearchState<T>
 where
     T: Clone,
