@@ -465,6 +465,17 @@ impl Algorithm<bool> for PSO {
         result.add_solution(state.global_best);
         result
     }
+
+    fn checkpoint_algorithm_parameters(&self) -> String {
+        format!(
+            "swarm_size={};inertia_weight={:.6};cognitive_coefficient={:.6};social_coefficient={:.6};velocity_clamp={:.6}",
+            self.parameters.swarm_size,
+            self.parameters.inertia_weight,
+            self.parameters.cognitive_coefficient,
+            self.parameters.social_coefficient,
+            self.parameters.velocity_clamp,
+        )
+    }
 }
 
 impl<P> ExperimentalCase<bool, f64, P> for PSOParameters

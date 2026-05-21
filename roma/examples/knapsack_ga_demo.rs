@@ -32,7 +32,7 @@ fn main() {
         SinglePointCrossover::new(),
         BitFlipMutation::new(),
         BinaryTournamentSelection::new(),
-        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(40)]),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(4000)]),
     )
     .with_elite_size(1)
     .with_seed(seed);

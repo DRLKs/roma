@@ -72,8 +72,9 @@
 %────────────────────── Resumen / Abstract ─────────────────────────────
 \renewcommand{\abstractname}{Resumen}
 \begin{abstract}
+El presente Trabajo de Fin de Grado tiene como objetivo principal el diseño, desarrollo e implementación de una biblioteca de optimización metaheurística de alto rendimiento, caracterizada por una arquitectura extensible, modular y completamente autocontenida bajo una filosofía de cero dependencias externas. Para cumplir con estas directrices de diseño, el sistema ha sido programado íntegramente en Rust, un lenguaje de programación moderno que garantiza la seguridad de memoria y la ausencia de carreras de datos sin comprometer la eficiencia temporal ni el consumo de recursos de la máquina.
 
-    El presente Trabajo de Fin de Grado tiene como objetivo principal el diseño y desarrollo de una biblioteca de optimización metaheurística de carácter extensible y modular, basada en una filosofía de cero dependencias y programada íntegramente en Rust, un lenguaje de programación compilado orientado a la seguridad de memoria y al alto rendimiento.
+Con el fin de materializar este propósito principal, el proyecto se articula en torno a una serie de objetivos específicos destinados a aportar valor tanto desde el prisma de la ingeniería de software como de la computación evolutiva. En primer lugar, se persigue la definición de abstracciones sólidas mediante contratos de interfaz flexibles que desacoplen por completo la representación del dominio de los problemas de la lógica intrínseca de las metaheurísticas y sus operadores. En segundo lugar, se establece el objetivo de dar soporte nativo y transparente a escenarios de optimización tanto mono-objetivo como multiobjetivo, superando las rigideces estructurales comunes en plataformas tradicionales. Por último, la biblioteca busca proveer un motor de experimentación robusto y paralelizado, dotado de mecanismos de tolerancia a fallos y sistemas de monitorización en tiempo real, que facilite la sintonización de hiperparámetros y la realización de análisis comparativos frente a las principales herramientas de referencia de la literatura científica.
 
 \medskip
 \noindent\textbf{Palabras clave: Rust, Metaheurísticas, Optimización, Biblioteca} 
@@ -81,7 +82,10 @@
 
 \renewcommand{\abstractname}{Abstract}
 \begin{abstract}
-    The main objective of this Bachelor’s Thesis is the design and development of an extensible and modular metaheuristic optimization library, based on a zero-dependency philosophy and implemented entirely in Rust, a compiled programming language focused on memory safety and high performance.
+   
+The main objective of this Bachelor's Thesis is the design, development, and implementation of a high-performance metaheuristic optimization library, characterized by an extensible, modular, and fully self-contained architecture under a zero-external-dependencies philosophy. To comply with these design guidelines, the system has been programmed entirely in Rust, a modern programming language that guarantees memory safety and the absence of data races without compromising time efficiency or machine resource consumption.
+
+In order to achieve this core purpose, the project is structured around a series of specific objectives aimed at providing value from the perspectives of both software engineering and evolutionary computation. First, it aims to define solid abstractions through flexible interface contracts that completely decouple the problem domain representation from the intrinsic logic of the metaheuristics and their operators. Second, it establishes the objective of providing native and transparent support for both single-objective and multi-objective optimization scenarios, overcoming the structural rigidities common in traditional frameworks. Finally, the library seeks to provide a robust and parallelized experimentation engine, equipped with fault-tolerance mechanisms and real-time monitoring systems, to facilitate hyperparameter tuning and comparative analysis against the leading reference tools in the scientific literature.
 
 
 \medskip
@@ -90,38 +94,42 @@
 
 %──────────────── Agradecimientos ──────────────────────────────────────
 \begin{umaacknowledgments}
-    El único apartado donde hablaré en primera persona es en este, no porque sea el único donde se me permite esta práctica, que me viene de perlas, sino porque es el único donde escribiré yo de verdad. 
+    El único apartado donde hablaré en primera persona y no porque sea en el único donde se me permite esta práctica, sino porque es el único donde realmente lo escribiré yo. 
 
-    En este apartado voy a resumir mi paso por la facultad, pero no quiero hablar sobre lo académico, más bien sobre mis sentimientos durante este.
+    En este capítulo voy a resumir mi paso por la facultad, pero no quiero hablar sobre lo académico, más bien sobre las personas que me acompañaron.
 
-    Que viniera a Málaga no estaba entre mis planes, fue el sitio donde entré con mi nota de selectividad, no sabía que estudiar y de rebote acabé en esta carrera. 
-    Llegué solo, ningún amigo mio, nadie que conocía estudiaría en Málaga, sin embargo aquí, me esperaba muchísima gente increíble. 
+    Que viniera aquí no estaba entre mis planes, fue el sitio donde pude entrar con mi nota de selectividad, nunca tampoco tuve muy claro lo que estudiar y de rebote acabé cursando Ingeniería Informática en Málaga. 
+    Llegué solo, ningún amigo, nadie que conocía estudiaría en Málaga, sin embargo aquí, me esperaba muchísima gente increíble. 
 
-    Los primeros días hice migas con los que todavía considero amigos, un grupo maravilloso a los que les debo muchísimo, sin ellos no hubiera aguantado el primer semestre. El semestre que tan complicado se nos hizo con cálculo impartida por \textbf{Yadira} o electrónica, de la cual mejor no doy más detalles.
+    Los primeros días hice migas con los que todavía son mis amigos, un grupo maravilloso a los que les debo muchísimo, sin ellos no hubiera aguantado el primer cuatrimestre. El cuatrimestre que tan complicado se nos hizo con cálculo impartida por \textbf{Yadira} o electrónica, de la cual mejor no doy más detalles.
     
-    Aquí conocí a \textbf{Carlos}, pocas personas me hacen reír tanto. Es una persona súper inteligente y aunque ahora ahora no encuentre su camino, lo acabará encontrando y le irá genial. También a \textbf{Tomás}, que aunque ya no nos veamos mucho, aprendí mucho de él. Luego a \textbf{Suito} que con su amabilidad, su sonrisa y su gorra nos cautiva a todos, \textbf{Dino}, la persona más bondadosa que existe, no exagero, nunca he visto ningún ápice de maldad en este chico. \textbf{Sofía} nuestra China, realmente no conozco a nadie que sea capaz de obsesionarse tanto con cualquier cosa, facilmente se convertiriía la mejor en lo que fuera si fuera capaz de mantener esa dedicación durante un largo periodo de tiempo,  luego \textbf{Salma}, la persona con más imaginación que conozco, la chica con mas calle de la ETSII. La \textbf{Marta}, la señora de los viajes, se ha tirado más tiempo en aviones que estudiando, es una crack, ahora te corre 20K y se la pela. \textbf{Jose}, se describe a si mismo como un pato galáctico pero es imposible ser más listo y más gafas, te habla en 100 idiomas y siempre está para todos. Por último \textbf{Roberto}, un rondeño de ojos bonitos. La vida nos puso en el mismo gimnasio y en la misma clase, siempre me acompañó aunque no coincidiéramos en clase. Ahora compartimos piso. Sin duda el mejor, te quiero mucho. 
+    Aquí conocí a \textbf{Carlos}, pocas personas me hacen reír tanto. También a \textbf{Tomás}, que aunque ya no nos veamos mucho, aprendí mucho de él. Luego a \textbf{Suito} que con su amabilidad, su sonrisa y ahora con su gorra nos cautiva a todos, \textbf{Dino}, la persona más bondadosa que existe, no exagero, nunca he visto un ápice de maldad en este chico. \textbf{Sofía}, nuestra China, luego \textbf{Salma}, la persona con más imaginación que conozco y la chica con mas calle de la ETSII. La \textbf{Marta}, la señora de los viajes, se ha tirado más tiempo en aviones que estudiando, es una crack, ahora te corre 20K y se la pela. \textbf{Jose}, se describe a si mismo como un pato galáctico pero es imposible ser más listo y más gafas, te habla en 100 idiomas y siempre está para todos. Por último \textbf{Roberto}, un rondeño de ojos bonitos. La vida nos puso en el mismo gimnasio y en la misma clase.
 
-    Avanzaron los cursos, perdí el contacto con muchos y en tercero decidí cambiarme de modalidad, tuve que adaptarme a una nueva clase, a un nuevo conjunto de personas que llevaban juntas todos los años de carrera, en este cambio me acompañó Suito. Con él tenía una manía rara, nos tocábamos muchos las piernas cariñosamente y tuvimos que meternos en un grupo para camuflarnos entre ellos y no parecer \textit{raritos}. Este realmente no era un grupo, era un equipo, el equipo JAJER.
+    Avanzaron los cursos, perdí el contacto con muchos y en tercero decidí cambiarme de modalidad, tuve que adaptarme a una nueva clase, a un nuevo conjunto de personas. En este cambio me acompañó Suito. Con él tenía una manía rara, nos tocábamos mucho cariñosamente las piernas. No nos quedó otra que colarnos en un grupo para camuflarnos entre ellos y no parecer \textit{raritos}. Este realmente no era un grupo, era un equipo, el equipo JAJER.
 
-    Con nuestra incorporación el equipo se transformó en JAJERDA, ya que el nombre se compone de las iniciales de los miembros que lo componen. La primera J, de \textbf{Joge}, una bestia de la programación, enamorada del baloncesto, la A de \textbf{Artu}, el rey del grupo, siempre con una sonrisa, el cortisol le teme a él. La siguiente J le pertenece a \textbf{Juan Manuel}. Juanma tiene varias pasiones; derrapar, los bocadillos baratos, las Ondas de Elliot, el monte, la playa y la novia de Eduardo, ... yo sinceramente soy el fan número uno de Juanma. La E obviamente, de \textbf{Eduardo}. Un cordobés pila pila fuerte, gym rat science based, un poco gótico, le gusta mucho el color negro y está potente. La última letra antes de las que nos corresponde a mi y a Suito, es la R, de ni más ni menos que de \textbf{Rubén}, el G.O.A.T del equipo, la mente pensante, mi compañero del bar Avilés, el friki de los perífericos, el humano en el loop (vibecodea mucho), la humildad y la generosidad personificada, te debo mucho. 
+    Con nuestra incorporación el equipo se transformó en JAJERDA, ya que el nombre se forma de las iniciales de los miembros que lo componen. La primera J, de \textbf{Joge}, una bestia de la programación, enamorado del baloncesto, la A de \textbf{Artu}, el rey del grupo, siempre con una sonrisa, el cortisol le teme a él. La siguiente J le pertenece a \textbf{Juan Manuel}. Juanma tiene varias pasiones; derrapar, los bocadillos baratos, las Ondas de Elliot, el monte, la playa y la novia de Eduardo, ... yo sinceramente soy el fan número uno de Juanma. La E obviamente, de \textbf{Eduardo}. Un cordobés pila pila fuerte, \texttt{gym rat science based}, le gusta mucho el color negro y está potente. La última letra antes de las que nos corresponden a mi y a Suito, es la R, de ni más ni menos que de \textbf{Rubén}, el G.O.A.T del equipo, la mente pensante, mi compañero del \texttt{Bar Avilés}, el friki de los perífericos, el humano en el loop (vibecodea mucho), la humildad y la generosidad personificada. Este hombre nos pasará a todos por la izquierda, en unos meses lo veremos muy alto. 
 
-    Durante estos años siendo parte del equipo JAJERDA, participé en varios Hackathones, en una de estos conocí a un profesor del que me siempre había escuchado buenas palabras. Entendí todos los elogios, él me estuvo ayudando con un problema que tenía de forma altruista como si el problema fuera le afectara de primera mano, este profesor ahora es el tutor este TFG, muchas gracias Gabriel, no eres consciente lo agradecidos que estamos los alumnos por tenerte a ti como docente.
+    Durante este año me mudé, empecé a compartir piso con Sofía, la famosa china, durante la convivencia la conocí mucho mejor y realmente me llevé una grata sorpresa, me sorprendió para bien. Sofía es increíble y realmente es capaz de lo que se proponga, tiene una capacidad de enfocarse inimaginable.
 
-    En este último curso me mudé y cambiaron mis compañeros de piso. Estos eran Roberto, el cual ya conocéis y Pablo, que gracias a él, la convivencia durante este curso fue inmejorable. En esta nueva edición del piso Software, se vivieron incendios que casi tocaban nuestras ventanas, grades partidos del Albacete, intensas jornadas de repostería y escenas espirituales. Sobre esta última debo agradecer a Rosa. Es muy importante estar relajado durante estas sesiones.
-
-    Durante mis años en la carrera hubieron personas que se mantuvieron y que siempre estuvieron alli, obviamente hablo de mi familia y de mis amigos más cercanos. Ellos aunque suene muy cliché son de verdad los pilares de mi persona, sin ellos yo me desplomaría, no hubiera sido capaz de hacer nada con mi vida ni con migo mismo.
-    Con algunos he pasado todo lo que recuerdo de vida, Agustín y Guiri, todavía me acuerdo cuando de chicos jugábamos al fútbol y al \textit{torito en alto} en el parque. Otros llegasteis un poco más tarde, como Oncala, que aunque tuviéramos malos momentos, siempre está a tu disposición cuando se le solicita.
+    Al año siguiente, en mi último curso, me volví a mudar y cambiaron mis compañeros de piso. Estos eran Roberto, el cual ya conocéis y \textbf{Pablo}, la convivencia durante este curso fue inmejorable y estos es gracias a que ellos también lo eran. Pablo es un crack absoluto, es un futuro mayordomo de Montejaque y el fan número uno del Málaga FC. Servicial y siempre está para sus allegados. Sobre Roberto ya está todo dicho, el más cariñoso de toda ronda, le da miedo conseguir dopamina de una fuente que no sea mirar a una pared durante treinta minutos, francotirador con la honda y apasionado de la tortilla francesa y de las patatas fritas, pero al final, es el mejor. 
     
-    Algunos llegaron más tarde con el balonmano: Rámirez y Sergio, mis \textit{compas} de Sierra Nevada, mis amigos exhibicionistas. Otros llegaron en el instituto como \textbf{Barrera} y  \textbf{Andrés}.
+    En esta nueva edición del piso Software, se vivieron grandes incendios, grandes partidos del Albacete, intensas jornadas de repostería y escenas espirituales..... Sobre esta última debo agradecer a \textbf{Rosa}, quien me enseñó sobre la importancia de estar relajado durante estas jornadas espirituales.
 
-    A diferencia de los demás casos mi familia no llegó, yo llegué con ellos, mi madre y mi padre siempre estuvieron para apoyarme, cuando no estaba a gusto en Málaga, siempre podía volver a mi casa, cuando estaba agobiado, siempre les podía llamar, cuando estaba enfermo, siempre me cuidaban. A ellos se lo debo todo, gracias Papá, gracia Mamá. Muchas gracias por estar. Gracias también a Luis, que aunque sea un poco gruñón, tiene muy buen corazón, el mejor hermano que se puede tener. Gracias a Laura y a Mario, vosotros también sois mis hermanos de sangre.
+    Durante estos años siendo parte del equipo JAJERDA, participé en varios Hackathones, en una de estos tuve la oportunidad de conocer a un profesor del que me siempre había escuchado buenas palabras. Le pregunté sobre una duda que tenía y él estuvo ayudando de forma altruista como si el problema le afectara de primera mano, este profesor ahora es el tutor este TFG, muchas gracias Gabriel, no eres consciente lo agradecidos que estamos los alumnos por tenerte a ti como docente.
+
+    Durante mis años en la carrera también hubieron personas que me ayudaron muchisísimo, provenían de antes y siempre estuvieron allí. Obviamente hablo de mi familia y de mis amigos más cercanos. Ellos aunque suene muy cliché son de verdad los pilares de mi mismo, sin ellos yo me desplomaría, no sería capaz de nada.
+    Con algunos he pasado todo lo que recuerdo de vida, \textbf{Agustín} y \textbf{Guiri}, todavía me acuerdo cuando de chicos jugábamos al fútbol y al \textit{torito en alto} en el parque. Otros llegasteis un poco más tarde, como \textbf{Oncala}, que aunque hayamos pasado por malos momentos, es de los que más confío.
+    
+    Algunos más tarde con el balonmano como \textbf{Rámirez} y \textbf{Sergio}, mis \textit{compas} de Sierra Nevada, mis exhibicionistas. Otros durante el instituto, como \textbf{Barrera} y  \textbf{Andrés}.
+
+    A diferencia de los demás casos mi familia no llegó, yo llegué a ellos, mi madre y mi padre, los que siempre están, los que creen más en mi que yo mismo, los que me daban cobijo cuando no estaba a gusto en Málaga, cuando estaba agobiado, siempre les podía llamar, cuando estaba enfermo, siempre me cuidaban y cuando quería siempre podía volver a mi casa con ellos. A ellos se lo debo todo, gracias \textbf{Papá}, gracia \textbf{Mamá}. Muchas gracias por estar. Gracias también a \textbf{Luis}, que aunque gruñón, tienes muy buen corazón, el mejor hermano que se puede tener. Gracias a \textbf{Laura} y a \textbf{Mario}, vosotros también sois mis hermanos.
 
     Falta todavía una persona por agradecer. 
     
-    Esta persona constituye un caso un poco anticlimático, porque antes de los dos nacer ya eramos amigos. 
-    Siempre estuvimos juntos; en infantil, en el colegio, en el instituto, en balonmano... Intentamos incluso irnos a estudiar a la misma ciudad para compartir piso y pasar tiempo los dos en otra etapa más. 
+    Esta persona constituye un caso un poco anticlimático. Antes de los dos nacer ya eramos amigos. 
+    Las vida nos mantuvo siempre cerca; en la misma clase en infantil, en la misma clase del colegio, en la misma clase del instituto, en el mismo grupo de amigos, en el mismo equipo de balonmano... Intentamos incluso irnos a estudiar a la misma ciudad para poder compartir piso y pasar juntos una etapa más. 
     
-    Por toda mi vida, mi mejor amigo, siempre me valoró y me motivó a ser mejor, a disfrutar y en los últimos momentos de su vida, a programar. 
+    Siempre contestaré con tu nombre cuando me pregunten sobre quien es mi mejor amigo, siempre me pusiste en primer lugar, me valoraste y me motivaste a ser mejor, a disfrutar y en los últimos momentos de tu vida, a programar.  
     
     Descansa en paz Moreno.
 
@@ -243,6 +251,19 @@
     Durante la fase de implementación se llevó a cabo una validación continua del sistema, apoyándose principalmente en el compilador de Rust como herramienta de detección de errores y en la ejecución de pruebas y ejemplos controlados para verificar el comportamiento de los algoritmos.
 
     Asimismo, se realizaron refactorizaciones periódicas del código con el objetivo de mejorar su claridad, reducir duplicidades y adaptar la arquitectura a nuevas necesidades detectadas durante el desarrollo. Este proceso iterativo permitió alcanzar una implementación estable y coherente con los objetivos iniciales del proyecto.
+
+\section{Licencia de software}
+    Con el propósito de fomentar la transferencia tecnológica, garantizar la transparencia del código y contribuir activamente al ecosistema de software libre y de código abierto (\emph{open-source}), este proyecto se distribuye bajo los términos de la \textbf{Licencia MIT}~\cite{mit_license}. La elección de este marco legal responde a una decisión estratégica alineada con las prácticas habituales del entorno de desarrollo en Rust, donde se prioriza la máxima reutilización del software con las menores restricciones posibles.
+    
+    La Licencia MIT se caracteriza por ser una licencia de tipo permisivo. A diferencia de las licencias con \emph{copyleft} fuerte (como la familia GPL), el modelo MIT concede a cualquier persona que obtenga una copia del software el derecho perpetuo, gratuito e irrevocable de utilizar, modificar, fusionar, publicar, distribuir, sublicenciar y comercializar la biblioteca sin necesidad de liberar las modificaciones bajo las mismas condiciones. Las únicas obligaciones impuestas por este marco legal se reducen a dos condiciones fundamentales:
+    
+    \begin{itemize}
+        \item \textbf{Preservación del aviso de copyright:} Cualquier distribución del software, ya sea en su forma original o modificada, debe incluir obligatoriamente el aviso de derechos de autor y el texto de la licencia original.
+        \item \textbf{Exención de responsabilidad:} Se estipula explícitamente que el software se proporciona ``tal cual'', eximiendo a los autores de cualquier reclamación, daño o responsabilidad legal derivada de su uso, ejecución o mal funcionamiento.
+    \end{itemize}
+    
+    Esta permisividad resulta fundamental, ya que elimina barreras legales y reduce la fricción burocrática asociada a su adopción. Gracias a ello, tanto investigadores del ámbito académico como desarrolladores del sector industrial pueden integrar, auditar y adaptar el motor de optimización en sistemas propietarios o comerciales sin comprometer su propiedad intelectual. Esto favorece la transferencia tecnológica, amplía el alcance de la solución y refuerza la sostenibilidad e impacto del proyecto a largo plazo.
+
 
 \chapter{Optimización y Metaheurísticas}
 
@@ -380,7 +401,7 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
 \chapter{Especificación y diseño}
 
 \section{Arquitectura}
-    El diseño y modelado de la arquitectura representan la fase de mayor complejidad y dedicación en el desarrollo. La integridad de esta estructura determina la calidad técnica, la eficiencia y la mantenibilidad de la biblioteca. Con el objetivo de garantizar un nivel de abstracción óptimo que permita su aplicación en diversos casos de uso, se han integrado los siguientes criterios de diseño:
+    El diseño y modelado de la arquitectura representan la fase de mayor complejidad y dedicación en el desarrollo. La integridad de esta estructura determina la calidad técnica, la eficiencia y la mantenibilidad de la biblioteca. Con el objetivo de garantizar un nivel de abstracción óptimo que permita su aplicación en diversos casos de uso, se han integrado los siguientes criterios de diseño;
     
     La arquitectura desacopla la definición del problema de la lógica del optimizador. Los límites del espacio de búsqueda y las restricciones se encapsulan en una estructura específica. Esta entidad es referenciada por el motor de ejecución, permitiendo que el algoritmo identifique el dominio de las variables. De este modo, el algoritmo puede realizar las evaluaciones e iteraciones pertinentes respetando estrictamente las directrices del sistema a optimizar.
 
@@ -422,18 +443,6 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
 
 
 
-        /// MOver a implementación
-
-        Para su configuración e instanciación, cada algoritmo se apoya en una estructura de parámetros que actúa como su base configurativa. Esta estructura encapsula toda la información necesaria para la construcción del algoritmo y desempeña un papel crucial en el módulo de experimentos, donde se utiliza para almacenar la configuración específica de cada algoritmo que servirá como caso de prueba.
-
-        Con el objetivo de garantizar la integridad de la configuración antes de la ejecución, los algoritmos incorporan un sistema de verificación basado en la función \texttt{validate\_parameters(\&self) -> Result<(), String>}. Este método se invoca de manera sistemática antes de iniciar el proceso de resolución para validar que los parámetros introducidos sean coherentes y correctos. En caso de que la configuración no cumpla con los requisitos establecidos, la función devuelve un error con un mensaje personalizado, lo que permite al usuario identificar y corregir anomalías en la configuración de forma precisa.
-
-        Para llevar a cabo su funcionamiento, los algoritmos requieren la aplicación de \emph{operadores}, responsables de realizar las transformaciones necesarias sobre las soluciones con el objetivo de explorarlas y mejorarlas de forma iterativa. Gracias a la arquitectura modular adoptada, dichos operadores son intercambiables, lo que permite adaptar el comportamiento del algoritmo sin alterar su implementación interna. De igual modo, esta modularización facilita la sustitución o modificación del problema sobre el que se ejecuta el algoritmo de manera sencilla y flexible.
-
-        Asimismo, los algoritmos admiten la incorporación directa de \emph{observadores}, cuyo propósito es analizar y monitorizar su comportamiento durante la ejecución. Estos observadores se describen con mayor detalle en su apartado correspondiente.
-
-        Estos algoritmos pueden ejecutarse de forma concurrente o paralela, en función de la configuración seleccionada por el usuario. En este trabajo se ofrece la posibilidad de especificar manualmente el número de hilos a crear o, alternativamente, delegar esta decisión al propio programa. En este último caso, el número de hilos se determina automáticamente en función de las características del sistema en el que se ejecuta, haciendo uso de la función \texttt{available\_parallelism()} proporcionada por la librería estándar.
-
     \subsection{Experimentos}
         El módulo de experimentos constituye la capa de abstracción superior de la biblioteca, diseñada para facilitar la evaluación sistemática y comparativa de los diversos algoritmos frente a un problema específico. Su propósito fundamental es permitir que el usuario final realice un proceso de \emph{benchmarking} robusto, identificando qué configuraciones ofrecen un rendimiento óptimo mediante la ejecución controlada y automatizada de baterías de pruebas.
 
@@ -441,34 +450,9 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
 
         Al finalizar las ejecuciones, el módulo genera un reporte detallado que sintetiza los resultados obtenidos por cada configuración. Este informe no solo recopila las soluciones halladas, sino que ofrece una visión analítica del comportamiento de los algoritmos, permitiendo al usuario discernir con criterio qué estrategia es la más adecuada para la resolución de su problema.
 
-    -------- Implementación
-        
-        Para lograr este grado de flexibilidad y modularidad, el sistema se apoya en abstracciones del lenguaje mediante la definición de \textit{traits} específicos que deben implementar los parámetros de los algoritmos. Estos componentes actúan como interfaces genéricas que habilitan la condición de "experimentable" para cualquier técnica que se integre en la biblioteca, independientemente de sus particularidades internas. Gracias a esta arquitectura, el motor de experimentos puede manipular, instanciar y variar dinámicamente las configuraciones sin necesidad de acoplarse a una implementación concreta.
-
-    ---------        --------
-        La infraestructura encargada de la ejecución incorpora, asimismo, un sistema de paralelización diseñado para optimizar el uso de los recursos computacionales disponibles. Dado que las metaheurísticas poseen una naturaleza estocástica y requieren ejecuciones independientes recurrentes para obtener significancia estadística, el módulo distribuye de forma eficiente estas tareas concurrentes a nivel de hilos o procesos. Finalmente, el ciclo de experimentación concluye con un subsistema de reporte, el cual recopila las métricas de rendimiento y calidad de las soluciones generadas durante las distintas ejecuciones para exportarlas en formatos estructurados que faciliten su posterior análisis estadístico y visualización.
-
     \subsection{Observadores}
 
         El compartimento asociado a los observadores se ha diseñado como un componente desacoplado encargado de gestionar la monitorización durante el proceso evolutivo. Esta infraestructura se articula fundamentalmente a través de la definición de eventos específicos, los cuales son emitidos por el motor de ejecución para señalizar hitos relevantes o cambios en el progreso del algoritmo. Para dotar de contenido a estos eventos, el sistema emplea estructuras de datos especializadas que encapsulan el estado actual de la ejecución, permitiendo que la información fluya hacia los observadores de manera coherente y estructurada.
-
-    ///// Mover a implementación
-
-        La flexibilidad de este componente reside en el uso de \textit{traits}, que actúan como interfaces abstractas definiendo el contrato de comportamiento que debe cumplir cualquier tipo de observador. Este enfoque no solo garantiza un polimorfismo robusto, sino que facilita la extensibilidad del sistema, permitiendo al desarrollador integrar nuevas formas de visualización o registro sin modificar el núcleo de la biblioteca. Además, el módulo incluye diversas implementaciones predefinidas que ya incorporan un funcionamiento por defecto, lo que proporciona herramientas de monitorización listas para su uso inmediato mientras se mantiene la capacidad de personalizar la lógica de respuesta ante cada evento según las necesidades específicas.
-        
-        
-    Los observadores estarán asociados a aquellos algoritmos que implementen el \emph{trait} \texttt{Observable}. Dicho \emph{trait} proporciona la funcionalidad necesaria para añadir y eliminar observadores.
-
-    Para la comunicación entre el algoritmo y los observadores adjuntados, se ha diseñado un sistema basado en canales (\emph{channels}), un patrón idiomático en Rust para la comunicación segura entre hilos. Inicialmente, se planteó una implementación en la que el \emph{trait} \texttt{Observable} incluyese un método encargado de notificar directamente a todos los observadores registrados. Sin embargo, debido a las restricciones impuestas por el sistema de propiedad y préstamos de Rust (\emph{Borrow Checker}), esta aproximación resultó compleja de implementar de forma clara y segura.
-
-    Como alternativa, se optó por un modelo concurrente en el que el algoritmo de optimización se ejecuta en un hilo independiente, mientras que los observadores se mantienen a la espera en hilos separados, recibiendo de manera asíncrona eventos enviados por el algoritmo a través de los canales. Este enfoque simplifica la gestión de la concurrencia, evita conflictos de préstamos y garantiza una comunicación segura entre los distintos componentes del sistema.
-
------------------------------------------------ FALTA \\
-    Existen distintos tipos de observadores, entre los que se incluyen aquellos que muestran la información directamente por terminal o los que generan tablas y estructuras de datos más elaboradas. Estos observadores permiten analizar la evolución del proceso de optimización en función del número de evaluaciones realizadas, proporcionando al usuario una visión clara y detallada del comportamiento del algoritmo.
-
------------------------------------------- IDEAS \\
-        Los ChartObservers, generarán varios gráficos, uno que muestre como avanza la calidad de las soluciones junto a las evaluaciones, como avanzan las evaluaciones y uno con las soluciones en general. En el caso de que las soluciones sean un vector bidimensional, un gráfico de puntos, donde estos estén en las coordenadas de los objetivos, en el caso de que no sea un vector, pues un gráfico de barras, con las veces que se ha repetido cada valor y si fuera una vector de más de 2 dimensiones, podriamos generar varios gráficos con los diferentes casos. Se plantea generar un html con toda la información super currado. \\
-        ---------------------
 
     \subsection{Operadores}
         Este componente constituye el núcleo funcional y arquitectónico de la biblioteca de optimización, ya que encapsula la lógica algorítmica fundamental mediante un modelo desacoplado y altamente modular. En lugar de ligar los operadores a algoritmos específicos, la biblioteca implementa un diseño basado en abstracciones y polimorfismo que separa completamente la definición del espacio de búsqueda de los mecanismos de variación y selección. Este modelo permite que cualquier operador sea tratado como una entidad independiente e intercambiable, facilitando la hibridación de técnicas y permitiendo al usuario configurar algoritmos a la carta combinando distintas estrategias.
@@ -503,18 +487,6 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
         Las soluciones representan las estructuras que almacenan el resultado generado por la aplicación iterativa de los operadores dentro de los algoritmos de optimización. Este componente es de vital importancia para la eficiencia global del sistema, dado que constituye la unidad fundamental con la que opera la biblioteca de manera ininterrumpida a lo largo de todo el ciclo de ejecución. El motor de optimización modifica constantemente estas estructuras, gestiona poblaciones masivas de las mismas, evalúa sus atributos en cada iteración y analiza sus valores para guiar la búsqueda. Por consiguiente, cualquier ineficiencia o sobrecarga en su diseño se amplificaría exponencialmente, comprometiendo críticamente el rendimiento temporal y el consumo de memoria de los algoritmos.
         
         Bajo esta premisa, la estructura se ha diseñado siguiendo una filosofía minimalista que prioriza la ligereza y la simplicidad estructural. Sin embargo, alcanzar este equilibrio ha supuesto un desafío de desarrollo complejo debido a la necesidad de dar soporte simultáneo tanto a problemas de un único objetivo como a enfoques multiobjetivo. Mientras que en entornos mono-objetivo basta con asociar al vector de variables un único valor escalar de aptitud, los entornos multiobjetivo exigen gestionar vectores de funciones objetivo, rangos de dominancia y métricas de densidad como la distancia de apilamiento.
-
-    ------- IMplementación ----
-
-        En una primera aproximación del diseño, \texttt{Solution} se definió como un \textit{trait} que declaraba un conjunto de funciones fundamentales, tales como la obtención del valor de \textit{fitness}, el acceso a las variables de la solución o la recuperación de su representación interna. Este \textit{trait} debía ser implementado por distintos \textit{structs}, cada uno adaptado a las necesidades específicas de cada problema.
-
-        Por ejemplo, si el problema requería representar una solución como una permutación binaria, el \textit{struct} correspondiente contendría como atributos un vector binario junto con el valor de calidad asociado a dicha solución. Sin embargo, se observó que esta arquitectura introducía una elevada fragmentación en las implementaciones y dificultaba la generalización de la biblioteca para soportar un mayor número de problemas y algoritmos.
-
-        Por este motivo, se optó por una solución más abstracta y flexible. En el diseño actual, \texttt{Solution} se define como un \textit{struct} genérico parametrizado por dos tipos: \texttt{T} y \texttt{Q}. El tipo \texttt{T} representa el tipo de dato de las variables de decisión almacenadas en la solución, mientras que \texttt{Q} representa el tipo asociado a la evaluación de calidad de dicha solución.
-
-        Para poder comparar soluciones entre sí, el tipo \texttt{Q} debe implementar un \textit{trait} personalizado denominado \texttt{Dominance}. Este \textit{trait} define el comportamiento necesario para establecer relaciones de dominancia entre valores de calidad, proporcionando un método que permite comparar dos instancias del mismo tipo y determinar cuál de ellas representa una solución superior.
-
-        Adicionalmente, la estructura \texttt{Solution} expone un método denominado \texttt{dominates}, cuya implementación delega la comparación en el método definido por el \textit{trait} \texttt{Dominance}. De esta manera, la lógica de comparación queda desacoplada de la representación de la solución, permitiendo soportar tanto optimización monoobjetivo como multiobjetivo mediante diferentes implementaciones del tipo \texttt{Q}.
 
     \subsection{Utilidades}
         Para posibilitar el desarrollo de este proyecto y cumplir el objetivo de mantener una arquitectura con \emph{cero dependencias externas}, se han desarrollado componentes auxiliares ligeros integrados en el núcleo de la biblioteca. Estos submódulos reproducen, de forma optimizada y autocontenida, las funcionalidades estrictamente necesarias de \texttt{crates} estándar del ecosistema Rust, tales como \texttt{rand}~\cite{rand_crate} para la generación estocástica y \texttt{plotters}~\cite{plotters_crate} para la representación gráfica. Esta decisión de diseño permite evitar la inclusión de bibliotecas externas sin renunciar a las capacidades necesarias para el correcto funcionamiento del sistema.
@@ -703,9 +675,62 @@ where
 
         %% ALGORITMOS
         
-    \subsection{ Algoritmos, Checkpoints y Observadores}
+    \subsection{ Funcionamiento concreto de los algoritmos}
 
-        En cuanto a los algoritmos, la lógica de ejecución se implementa mediante un sistema basado en pasos. El punto de entrada principal para iniciar cualquier metaheurística es el método \texttt{run}, cuya firma procedimental e interfaz de rasgos (\textit{trait bounds}) se detalla en el Listado~\ref{lst:run_definition}.
+        Para la configuración e instanciación de cada algoritmo, el sistema se apoya en una estructura de parámetros que actúa como su base configurativa unificada. Esta estructura encapsula toda la información necesaria para la construcción y parametrización de la metaheurística, desempeñando además un papel crucial en el módulo de experimentos. En dicho módulo, se emplea para almacenar y replicar las configuraciones específicas de cada algoritmo que servirán como casos de prueba o vectores de sintonización dentro de los \textit{benchmarks}.
+
+        Con el objetivo de garantizar la integridad y robustez del sistema antes de iniciar el cómputo, se incorpora un mecanismo de verificación estricto gobernado por la función \texttt{validate\_parameters(\&self) -> Result<(), String>}. Este método se invoca de manera sistemática y automatizada antes de comenzar el proceso de resolución, validando que los rangos numéricos, probabilidades y dimensiones introducidos por el usuario sean coherentes y correctos. En caso de detectar anomalías, la función interrumpe la ejecución de forma segura devolviendo un error con un mensaje personalizado, lo que facilita una auditoría precisa y un diagnóstico rápido de la configuración antes de que el motor consuma tiempo de CPU.
+
+        Para llevar a cabo su propósito exploratorio, las metaheurísticas interactúan directamente con los operadores de variación y selección, los cuales realizan transformaciones estocásticas y locales sobre las soluciones de forma iterativa. Gracias al acoplamiento débil que ofrece el diseño arquitectónico, estos operadores son completamente intercambiables; esto permite alterar radicalmente el comportamiento dinámico del algoritmo sin modificar un solo bloque de su implementación interna. Bajo este mismo principio de modularidad y diseño agnóstico, el sistema facilita la sustitución o modificación del problema en evaluación de manera directa y flexible. Asimismo, los algoritmos admiten la inyección de observadores para monitorizar el estado interno de la ejecución en tiempo real, un componente que se detalla minuciosamente en su apartado correspondiente.
+
+        Desde el punto de vista del rendimiento temporal, estas estructuras se han diseñado para ser ejecutadas de forma concurrente o paralela, minimizando la latencia de procesamiento. La biblioteca ofrece al usuario la flexibilidad de especificar manualmente el tamaño del grupo de hilos (\textit{thread pool}) a instanciar o, alternativamente, delegar dicha gestión al propio entorno. En este último escenario, el nivel de concurrencia óptimo se determina dinámicamente en tiempo de ejecución analizando la topología de la máquina del usuario, utilizando para ello la función de la biblioteca estándar \texttt{available\_parallelism()}. Toda esta suite de comportamientos y capacidades operativas queda consolidada formalmente bajo el contrato de interfaz especificado por el \texttt{trait Algorithm}, detallado en el Listado~\ref{lst:algorithm_trait}.
+
+
+        \begin{listing}[H]
+        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+pub trait Algorithm<T, Q = f64>
+where
+    T: Clone + Send + 'static + Display,
+    Q: Clone + Default + Send + 'static + Display,
+{
+    type SolutionSet: SolutionSet<T, Q>;
+    type Parameters;
+    type StepState: StepStateCheckpoint<T, Q>;
+
+    fn new(parameters: Self::Parameters) -> Self;
+
+    fn algorithm_name(&self) -> &str;
+
+    fn termination_criteria(&self) -> TerminationCriteria;
+
+    fn observers_mut(&mut self) -> &mut Vec<Box<dyn AlgorithmObserver<T, Q>>>;
+
+    fn set_solution_set(&mut self, solution_set: Self::SolutionSet);
+
+    fn run<P>(&mut self, problem: &P) -> Result<Self::SolutionSet, String>;
+
+    fn validate_parameters(&self) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn get_solution_set(&self) -> Option<&Self::SolutionSet>;
+
+    fn step(
+        &self,
+        problem: &(impl Problem<T, Q> + Sync),
+        state: &mut Self::StepState,
+    );
+}
+        \end{minted}
+        \caption{Definición del contrato y de los tipos asociados para el componente \texttt{Algorithm}.}
+        \label{lst:algorithm_trait}
+        \end{listing}
+
+        Como se observa en el Listado~\ref{lst:algorithm_trait}, la declaración del \texttt{trait} hace uso de tipos asociados (\texttt{type SolutionSet}, \texttt{type Parameters} y \texttt{type StepState}). Esta decisión de diseño en lugar de recurrir puramente a parámetros genéricos en la cabecera del rasgo resulta fundamental para limpiar las firmas del código, agrupando los tipos dependientes bajo el espacio de nombres del propio algoritmo y garantizando que un algoritmo concreto solo pueda interactuar con su estructura de parámetros y estados compatible.
+
+        Asimismo, es imprescindible destacar la rigurosidad de las restricciones de concurrencia (\textit{trait bounds}) impuestas sobre los parámetros de tipos genéricos \texttt{T} (variables de decisión) y \texttt{Q} (valores de aptitud), que obligan a la implementación de los marcadores \texttt{Send} y \texttt{'static}. En el ecosistema Rust, garantizar de forma estática que las estructuras de datos poblacionales puedan transferirse de forma segura entre las fronteras de distintos hilos de ejecución sin riesgo de provocar condiciones de carrera es una exigencia crítica. La presencia de \texttt{Send} asegura esta transferencia segura de la propiedad (\textit{ownership}) en entornos multitarea, mientras que el ciclo de vida \texttt{'a} implícito en \texttt{'static} certifica que los datos contenidos no poseen referencias locales con hilos que puedan ser destruidos prematuramente, blindando la integridad de la memoria.
+
+        La lógica de ejecución se implementa mediante un sistema basado en pasos. El punto de entrada principal para iniciar cualquier metaheurística es el método \texttt{run}, cuya firma procedimental e interfaz de rasgos se detalla en el Listado~\ref{lst:run_definition}.
 
         \begin{listing}[H]
         \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
@@ -747,8 +772,6 @@ where
     let output = task(&context);
     context.end(output.total_generations, output.total_evaluations);
 
-    // Must be dropped before joining runtime so the channel closes and observer
-    // thread can drain and terminate.
     drop(context);
 
     *observers = runtime.finish();
@@ -795,16 +818,10 @@ while !context.should_terminate()
         \end{listing}
 
 
-        En cada iteración del bucle, el algoritmo avanza mediante el método \texttt{step}, el cual altera el estado de la población o la trayectoria actual. Acto seguido, se extrae un estado intermedio inmutable o captura (\textit{snapshot}) que almacena la evolución temporal de la ejecución. Este reporte intermedio se aprovecha por el sistema de tolerancia a fallos mediante una política de puntos de control o \textit{checkpoints}. Si la frecuencia parametrizada coincide con el módulo de la iteración corriente, se construye un registro (\textit{record}) que se vuelca de forma persistente a disco a través de \texttt{checkpoint\_policy.persist\_record}, permitiendo reanudar la computación en caso de una interrupción imprevista de la máquina. El ciclo concluye con la invocación de \texttt{context.report\_progress}, función encargada de serializar y transmitir el nuevo estado en forma de un mensaje \texttt{ObserverState} hacia el canal del runtime de observadores, garantizando una auditoría en tiempo real del proceso sin penalizar el rendimiento del hilo principal.
-
-
-%%%%%%%
-
-%%%%%%
-
-
-        Como se aprecia en el Fragmento \ref{lst:runtime_logic}, el motor de ejecución gestiona el ciclo de vida completo mediante cuatro fases: inicialización (\texttt{Initialize}), iteración (\texttt{Step}), captura de estado (\texttt{Snapshot}) y finalización (\texttt{Finalize}). Este diseño permite que cualquier algoritmo (ya sea un Genético, PSO o Hill Climbing) pueda ejecutarse dentro del mismo \emph{runtime} siempre que cumpla con estos contratos. 
+        En cada iteración del bucle, el algoritmo avanza mediante el método \texttt{step}, el cual altera el estado de la población o la trayectoria actual. Acto seguido, se extrae un estado intermedio inmutable o captura (\textit{snapshot}) que almacena la evolución temporal de la ejecución. Este reporte intermedio se aprovecha por el sistema de tolerancia a fallos mediante una política de puntos de control o \textit{checkpoints}. Si la frecuencia parametrizada coincide con el módulo de la iteración corriente, se construye un registro (\textit{record}) que se vuelca de forma persistente a disco a través de \texttt{checkpoint\_policy.persist\_record}, permitiendo reanudar la computación en caso de una interrupción imprevista de la máquina. Este sistema es el encargado de guardar la información
         
+        El ciclo concluye con la invocación de \texttt{context.report\_progress}, función encargada de serializar y transmitir el nuevo estado en forma de un mensaje \texttt{ObserverState} hacia el canal del runtime de observadores, garantizando una auditoría en tiempo real del proceso sin penalizar el rendimiento del hilo principal.
+
         El bucle de ejecución persiste mientras el contexto del algoritmo, representado por la estructura \texttt{ExecutionContext}, no determine el cese de la actividad mediante el método \texttt{should\_terminate()}. La decisión de terminación está delegada de forma flexible en el tipo \texttt{TerminationCriterion}, un enumerado que permite al usuario definir condiciones de parada basadas en diversos criterios físicos y lógicos.
         
         \begin{listing}[H]
@@ -829,11 +846,14 @@ while !context.should_terminate()
         
         Esta implementación mediante un \texttt{enum} permite una gran expresividad en la configuración de los experimentos. El usuario puede optar por límites tradicionales, como el número de iteraciones o evaluaciones, o por criterios más avanzados de convergencia y estancamiento (\emph{patience}). La integración de estos criterios en el \texttt{ExecutionContext} garantiza que la comprobación se realice de manera eficiente al finalizar cada paso del algoritmo, permitiendo además que los observadores capturen el progreso en tiempo real antes de cada evaluación de terminación.
 
-        Siguiendo con la arquitectura de ejecución, cobra especial relevancia la función \texttt{run\_with\_observer\_runtime}. Como se puede sobreentender con su denominación, este componente es el encargado de orquestar la interacción entre los observadores y el núcleo del algoritmo durante el proceso de resolución.
+    \subsection{Observadores y checkpoints}
+        Los observadores se basan en el uso de \textit{traits}, los cuales actúan como interfaces abstractas que definen el contrato de comportamiento obligatorio para cualquier componente de monitorización. Este enfoque no solo garantiza un polimorfismo robusto, sino que facilita la extensibilidad del sistema, permitiendo al desarrollador integrar nuevas estrategias de visualización o registro sin necesidad de alterar el núcleo de la biblioteca. Para cubrir las necesidades de monitorización más comunes, el módulo incorpora diversas implementaciones predefinidas con un funcionamiento por defecto. Estas herramientas listas para su uso inmediato abarcan desde la salida formateada por consola estándar (\textit{stdout}) hasta sistemas encargados de estructurar datos evolutivos en tablas, renderizar gráficos dinámicos de rendimiento y generar reportes analíticos detallados en formato HTML. Estas dos últimas variantes permiten examinar minuciosamente la convergencia de las metaheurísticas en función del número acumulado de evaluaciones de la función objetivo.
 
-        Para garantizar que la monitorización no penalice excesivamente el rendimiento del algoritmo y que los observadores puedan procesar la información en tiempo real, se ha implementado un modelo de ejecución basado en la separación de hilos. En este esquema, el sistema mantiene el control de los observadores en el hilo principal (\emph{main thread}), mientras que delega la ejecución íntegra del algoritmo a un hilo secundario asíncrono. Esta arquitectura de hilos permite que la lógica de búsqueda progrese de forma independiente, evitando bloqueos en la interfaz de usuario o en los sistemas de registro de datos.
+        Para integrar este ecosistema, los observadores se asocian de forma dinámica a aquellos algoritmos que satisfacen el contrato del \textit{trait} \texttt{Observable}, interfaz que provee los métodos requeridos para registrar y revocar suscripciones durante el ciclo de vida de la ejecución.
 
-        La comunicación entre ambos hilos se gestiona mediante el uso de canales (\emph{channels}), siguiendo el modelo de paso de mensajes propio de Rust. El hilo del algoritmo actúa como productor, enviando capturas del estado actual (\emph{snapshots}) a través del canal cada vez que se completa una iteración o se alcanza un hito de progreso. Por su parte, el hilo principal actúa como consumidor, recibiendo estos paquetes de datos y distribuyéndolos de manera síncrona a la lista de observadores registrados, tal y como se ilustra en la Figura \ref{fig:concurrencia_observers}.
+        Sin embargo, el diseño del flujo de comunicación entre el motor algorítmico y los observadores adjuntos supuso un reto de diseño de software debido a las restricciones impuestas por el sistema de propiedad y préstamos de Rust (\textit{Borrow Checker}). Inicialmente, se evaluó una implementación clásica basada en el patrón \textit{Observer} convencional, donde el objeto del algoritmo retenía una colección de referencias mutables a sus observadores para notificarlos secuencialmente a través de un método directo. Esta aproximación resultó excesivamente compleja y rígida, ya que las estrictas reglas que prohíben la coexistencia de múltiples alias compartidos con acceso mutable (\textit{aliasing + mutability}) imposibilitaban un manejo limpio de los tiempos de vida en entornos concurrentes.
+
+        Como alternativa de diseño, se optó por un modelo concurrente basado en canales (\textit{channels}), consolidando un patrón idiomático que garantiza la seguridad de memoria sin recurrir a mecanismos costosos de exclusión mutua. En este esquema, el algoritmo de optimización se delega a un hilo de ejecución independiente, mientras que la suite de observadores permanece en el hilo principal a la espera de eventos de forma asíncrona mediante el modelo de paso de mensajes. Bajo este paradigma, el hilo del algoritmo actúa como un productor exclusivo que genera capturas inmutables del estado actual (\textit{snapshots}) al completar cada iteración o alcanzar un hito de progreso, enviándolas a través del canal. El hilo principal asume el rol de consumidor, encargándose de recibir dichos paquetes de datos de forma no bloqueante y distribuirlos síncronamente entre los observadores registrados, tal y como se ilustra en la Figura~\ref{fig:concurrencia_observers}.
 
 
 \begin{figure}[htbp]
@@ -892,7 +912,15 @@ while !context.should_terminate()
     \label{fig:concurrencia_observers}
 \end{figure}
 
-        Este diseño no solo incrementa la robustez del sistema al aislar la ejecución del algoritmo, sino que también favorece la escalabilidad de la biblioteca. El uso de canales asíncronos permite que los observadores ejecuten tareas computacionalmente costosas como la actualización de gráficos en tiempo real o el volcado de datos en disco sin comprometer la latencia ni la velocidad de cómputo del motor heurístico, garantizando así una gestión eficiente de los recursos del hardware. Complementariamente, el sistema de estados no solo asiste a la monitorización externa, sino que constituye el pilar fundamental del mecanismo de puntos de control o \textit{checkpoints}. Estos estados se persisten en disco de forma periódica siguiendo las convenciones y rutas de almacenamiento estándar de cada sistema operativo, empleando directorios específicos como \texttt{LOCAL\_STATE\_ROMA} en entornos Linux, \texttt{HOME\_ROMA} en macOS y \texttt{LOCAL\_APPDATA} en sistemas Windows.
+        Este diseño arquitectónico no solo incrementa la robustez global del sistema, sino que favorece la escalabilidad horizontal de la biblioteca. La incorporación de canales con capacidad de almacenamiento intermedio faculta a los observadores para absorber y ejecutar de forma diferida tareas computacionalmente pesadas o de alta latencia de entrada/salida —como el volcado persistente en disco— en su propio espacio de hilos. Como consecuencia directa, estas operaciones costosas se procesan sin comprometer en ningún momento la velocidad del motor heurístico interno, maximizando la eficiencia temporal y garantizando una gestión óptima de los recursos multi-núcleo de la CPU.
+
+        %%%
+
+        % AQUI ME QUEDE
+
+        %%
+        
+        Complementariamente, el sistema de estados no solo asiste a la monitorización externa, sino que constituye el pilar fundamental del mecanismo de puntos de control o \textit{checkpoints}. Estos estados se persisten en disco de forma periódica siguiendo las convenciones y rutas de almacenamiento estándar de cada sistema operativo, empleando directorios específicos como \texttt{LOCAL\_STATE\_ROMA} en entornos Linux, \texttt{HOME\_ROMA} en macOS y \texttt{LOCAL\_APPDATA} en sistemas Windows.
 
         \begin{figure}[htbp]
     \centering
@@ -991,7 +1019,23 @@ ID   | AGE     | ELAPSED. | INFO
         \label{lst:resume_example}
         \end{listing}
  
+        %%%%%%%%%%%
+
+        %%%%%%%%%%%
+
         
+%%%%%%%
+
+%%%%%%
+
+    \subsection{Experimentos}
+            -------- Implementación
+        
+        Para lograr este grado de flexibilidad y modularidad, el sistema se apoya en abstracciones del lenguaje mediante la definición de \textit{traits} específicos que deben implementar los parámetros de los algoritmos. Estos componentes actúan como interfaces genéricas que habilitan la condición de "experimentable" para cualquier técnica que se integre en la biblioteca, independientemente de sus particularidades internas. Gracias a esta arquitectura, el motor de experimentos puede manipular, instanciar y variar dinámicamente las configuraciones sin necesidad de acoplarse a una implementación concreta.
+
+    ---------        --------
+        La infraestructura encargada de la ejecución incorpora, asimismo, un sistema de paralelización diseñado para optimizar el uso de los recursos computacionales disponibles. Dado que las metaheurísticas poseen una naturaleza estocástica y requieren ejecuciones independientes recurrentes para obtener significancia estadística, el módulo distribuye de forma eficiente estas tareas concurrentes a nivel de hilos o procesos. Finalmente, el ciclo de experimentación concluye con un subsistema de reporte, el cual recopila las métricas de rendimiento y calidad de las soluciones generadas durante las distintas ejecuciones para exportarlas en formatos estructurados que faciliten su posterior análisis estadístico y visualización.
+
         
     \section{Desarrollo de pruebas}
         La utilización de un correcto conjunto de pruebas agiliza en gran medida el trabajo de programación en cualquier fase del desarrollo.

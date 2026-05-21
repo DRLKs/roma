@@ -284,6 +284,16 @@ where
         result.add_solution(state.current);
         result
     }
+
+    fn checkpoint_algorithm_parameters(&self) -> String {
+        format!(
+            "mutation_operator={};mutation_probability={:.6};termination_criteria={:?};mutation_operator={}",
+            self.parameters.mutation_operator.name(),
+            self.parameters.mutation_probability,
+            self.parameters.termination_criteria,
+            self.parameters.mutation_operator.name()
+        )
+    }
 }
 
 impl<T, M, P> ExperimentalCase<T, f64, P> for HillClimbingParameters<T, M>

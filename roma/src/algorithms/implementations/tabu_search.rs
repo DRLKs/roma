@@ -363,13 +363,12 @@ where
 
     fn checkpoint_algorithm_parameters(&self) -> String {
         format!(
-            "mutation={};mutation_probability={:.6};neighborhood_size={};tabu_tenure={};aspiration={};termination={:?}",
+            "mutation={};mutation_probability={:.6};neighborhood_size={};tabu_tenure={};aspiration={}",
             self.parameters.mutation_operator.name(),
             self.parameters.mutation_probability,
             self.parameters.neighborhood_size,
             self.parameters.tabu_tenure,
             self.parameters.aspiration_enabled,
-            self.parameters.termination_criteria
         )
     }
 }

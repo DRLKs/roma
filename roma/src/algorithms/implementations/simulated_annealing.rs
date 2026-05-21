@@ -320,6 +320,17 @@ where
         result.add_solution(state.best);
         result
     }
+
+    fn checkpoint_algorithm_parameters(&self) -> String {
+        format!(
+            "mutation_operator={};mutation_probability={:.6};initial_temperature={:.6};minimum_temperature={:.6};cooling_rate={:.6}",
+            self.parameters.mutation_operator.name(),
+            self.parameters.mutation_probability,
+            self.parameters.initial_temperature,
+            self.parameters.minimum_temperature,
+            self.parameters.cooling_rate,
+        )
+    }
 }
 
 impl<T, M, P> ExperimentalCase<T, f64, P> for SimulatedAnnealingParameters<T, M>

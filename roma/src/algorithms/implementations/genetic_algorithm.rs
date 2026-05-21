@@ -609,6 +609,21 @@ where
     fn finalize_step_state(&self, state: Self::StepState) -> Self::SolutionSet {
         VectorSolutionSet::from_vec(state.population)
     }
+
+    fn checkpoint_algorithm_parameters(&self) -> String {
+
+        format!(
+            "population_size={};crossover_probability={:.6};mutation_probability={:.6};elite_size={};crossover_operator={};mutation_operator={};selection_operator={};termination={:?}",
+            self.parameters.population_size,
+            self.parameters.crossover_probability,
+            self.parameters.mutation_probability,
+            self.parameters.elite_size,
+            self.parameters.crossover_operator.name(),
+            self.parameters.mutation_operator.name(),
+            self.parameters.selection_operator.name(),
+            self.parameters.termination_criteria
+        )
+    }
 }
 
 impl<T, C, M, Sel, P> ExperimentalCase<T, f64, P> for GeneticAlgorithmParameters<T, C, M, Sel>
