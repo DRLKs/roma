@@ -1,11 +1,36 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// Generates a time-based seed from the current UNIX timestamp in nanoseconds.
+/// A small non-cryptographic 64-bit mixer based on SplitMix-like transforms.
+/// Kept private so the public API of `Random` is unchanged while we reuse
+/// the same mixing routine for seeding and output generation.
+#[inline]
+fn mix64(mut z: u64) -> u64 {
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
+    z ^ (z >> 31)
+}
+
+/// Generates a time- and process/stack-influenced seed and mixes it to
+/// reduce any bias when time values are low-entropy (e.g. repeated calls).
 pub fn seed_from_time() -> u64 {
-    SystemTime::now()
+    // Gather several cheap, system-dependent sources of variability and
+    // fold them into a single 64-bit value before mixing.
+    let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
-        .as_nanos() as u64
+        .as_nanos(); // u128
+
+    let now_lo = now as u64;
+    let now_hi = (now >> 64) as u64;
+    let pid = std::process::id() as u64;
+    // address of a local value gives additional low-cost entropy between
+    // rapidly repeated calls (stack pointer / ASLR differences)
+    let stack_addr = (&now as *const _ as usize) as u64;
+
+    let mut seed = now_lo ^ now_hi;
+    seed = seed.wrapping_add(pid.wrapping_mul(0x9E3779B97F4A7C15));
+    seed ^= stack_addr.wrapping_mul(0xBF58476D1CE4E5B9);
+    mix64(seed)
 }
 
 /// Small deterministic pseudo-random number generator used across Roma.
@@ -26,10 +51,9 @@ impl Random {
     /// Derives a reproducible stream seed from a base seed and stream id.
     #[inline]
     pub fn derive_seed(base_seed: u64, stream: u64) -> u64 {
-        let mut z = base_seed ^ stream.wrapping_mul(0x9E37_79B9_7F4A_7C15);
-        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-        z ^ (z >> 31)
+        // Use the same mixer as the generator to ensure small changes in
+        // (base_seed, stream) produce dramatically different derived seeds.
+        mix64(base_seed ^ stream.wrapping_mul(0x9E3779B97F4A7C15))
     }
 
     /// Returns the configured seed or a fresh time-based seed when absent.
@@ -53,11 +77,9 @@ impl Random {
     /// Advances the generator and returns a 64-bit pseudo-random value.
     #[inline]
     pub fn next_u64(&mut self) -> u64 {
+        // Increment state (as in SplitMix) then mix.
         self.state = self.state.wrapping_add(0x9E3779B97F4A7C15);
-        let mut z = self.state;
-        z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
-        z ^ (z >> 31)
+        mix64(self.state)
     }
 
     /// Advances the generator and returns the low 32 bits.
@@ -69,8 +91,9 @@ impl Random {
     /// Returns a floating-point value in the half-open interval `[0, 1)`.
     #[inline]
     pub fn next_f64(&mut self) -> f64 {
-        let x = self.next_u64() >> 11;
-        (x as f64) * (1.0 / ((1u64 << 53) as f64))
+        // Take the top 53 bits and scale into [0,1).
+        let x = (self.next_u64() >> 11) as u64;
+        (x as f64) * (1.0 / 9007199254740992.0) // 1 / 2^53
     }
 
     /// Returns an integer in the half-open interval `[0, max)`.
@@ -81,12 +104,35 @@ impl Random {
         if max == 0 {
             return 0;
         }
-        self.next_u64() % max
+        if max == 1 {
+            return 0;
+        }
+
+        if max.is_power_of_two() {
+            return self.next_u64() & (max - 1);
+        }
+
+        // Lemire-style unbiased reduction: use the high half of a 128-bit
+        // product and only retry when the low half falls in the small biased
+        // zone near zero.
+        let threshold = max.wrapping_neg() % max;
+        loop {
+            let random = self.next_u64();
+            let product = (random as u128) * (max as u128);
+            let low = product as u64;
+            if low >= threshold {
+                return (product >> 64) as u64;
+            }
+        }
     }
 
     /// Returns an integer in the half-open interval `[min, max)`.
     #[inline]
     pub fn range_between(&mut self, min: u64, max: u64) -> u64 {
+        // If range invalid or empty, return `min` as a safe default.
+        if max <= min {
+            return min;
+        }
         min + self.range(max - min)
     }
 
