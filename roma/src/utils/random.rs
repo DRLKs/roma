@@ -1,4 +1,7 @@
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+static SEED_COUNTER: AtomicU64 = AtomicU64::new(0xA0761D6478BD642F);
 
 /// A small non-cryptographic 64-bit mixer based on SplitMix-like transforms.
 /// Kept private so the public API of `Random` is unchanged while we reuse
@@ -10,8 +13,10 @@ fn mix64(mut z: u64) -> u64 {
     z ^ (z >> 31)
 }
 
-/// Generates a time- and process/stack-influenced seed and mixes it to
-/// reduce any bias when time values are low-entropy (e.g. repeated calls).
+/// Generates a time-based seed and folds in cheap per-process variability.
+///
+/// A monotonic atomic counter is mixed in so back-to-back calls still produce
+/// distinct seeds even when the system clock resolution is coarse.
 pub fn seed_from_time() -> u64 {
     // Gather several cheap, system-dependent sources of variability and
     // fold them into a single 64-bit value before mixing.
@@ -23,12 +28,14 @@ pub fn seed_from_time() -> u64 {
     let now_lo = now as u64;
     let now_hi = (now >> 64) as u64;
     let pid = std::process::id() as u64;
+    let counter = SEED_COUNTER.fetch_add(0x9E3779B97F4A7C15, Ordering::Relaxed);
     // address of a local value gives additional low-cost entropy between
     // rapidly repeated calls (stack pointer / ASLR differences)
     let stack_addr = (&now as *const _ as usize) as u64;
 
     let mut seed = now_lo ^ now_hi;
     seed = seed.wrapping_add(pid.wrapping_mul(0x9E3779B97F4A7C15));
+    seed ^= counter;
     seed ^= stack_addr.wrapping_mul(0xBF58476D1CE4E5B9);
     mix64(seed)
 }
@@ -127,9 +134,12 @@ impl Random {
     }
 
     /// Returns an integer in the half-open interval `[min, max)`.
+    ///
+    /// In debug builds, invalid or empty intervals trigger a debug assertion.
+    /// In release builds, `min` is returned as a defensive fallback.
     #[inline]
     pub fn range_between(&mut self, min: u64, max: u64) -> u64 {
-        // If range invalid or empty, return `min` as a safe default.
+        debug_assert!(max > min, "Random::range_between requires max > min");
         if max <= min {
             return min;
         }
@@ -229,5 +239,33 @@ mod test {
         let max: u64 = 200;
         let x: u64 = rng.range_between(min, max);
         assert!(x >= min && x < max);
+    }
+
+    #[test]
+    fn seed_from_time_back_to_back_calls_produce_distinct_seeds() {
+        let first = seed_from_time();
+        let second = seed_from_time();
+
+        assert_ne!(first, second);
+    }
+
+    #[test]
+    fn range_handles_power_of_two_upper_bound() {
+        let mut rng = Random::new(42);
+        let upper_bound = 1024;
+
+        for _ in 0..1024 {
+            assert!(rng.range(upper_bound) < upper_bound);
+        }
+    }
+
+    #[test]
+    fn range_handles_large_upper_bound() {
+        let mut rng = Random::new(42);
+        let upper_bound = u64::MAX;
+
+        for _ in 0..1024 {
+            assert!(rng.range(upper_bound) < upper_bound);
+        }
     }
 }
