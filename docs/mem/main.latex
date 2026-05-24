@@ -826,19 +826,14 @@ while !context.should_terminate()
         
         \begin{listing}[H]
         \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
-        #[derive(Clone, Debug)]
-    pub enum TerminationCriterion {
-        /// Número máximo de iteraciones (generaciones, pasos, etc.).
-        MaxIterations(usize),
-        /// Número máximo de evaluaciones de la función objetivo.
-        MaxEvaluations(usize),
-        /// Criterio de convergencia basado en un umbral de cambio relativo.
-        Convergence { threshold: f64, patience: usize },
-        /// Límite de tiempo real de ejecución.
-        TimeLimit(Duration),
-        /// Parada por estancamiento (falta de mejora en la calidad).
-        NoImprovement { patience: usize },
-    }
+#[derive(Clone, Debug)]
+pub enum TerminationCriterion {
+    MaxIterations(usize),
+    MaxEvaluations(usize),
+    Convergence { threshold: f64, patience: usize },
+    TimeLimit(Duration),
+    NoImprovement { patience: usize },
+}
         \end{minted}
         \caption{Enumerado \texttt{TerminationCriterion} con las condiciones de parada disponibles.}
         \label{lst:termination_enum}
@@ -846,6 +841,35 @@ while !context.should_terminate()
         
         Esta implementación mediante un \texttt{enum} permite una gran expresividad en la configuración de los experimentos. El usuario puede optar por límites tradicionales, como el número de iteraciones o evaluaciones, o por criterios más avanzados de convergencia y estancamiento (\emph{patience}). La integración de estos criterios en el \texttt{ExecutionContext} garantiza que la comprobación se realice de manera eficiente al finalizar cada paso del algoritmo, permitiendo además que los observadores capturen el progreso en tiempo real antes de cada evaluación de terminación.
 
+        \begin{listing}[H]
+        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+#[derive(Clone, Debug)]
+pub struct ExecutionContext<T, Q = f64>
+where
+    T: Clone + Send + 'static,
+    Q: Clone + Send + 'static,
+{
+    sender: ObserverSender<T, Q>,
+    termination: RefCell<TerminationController>,
+    next_snapshot_seq: RefCell<u64>,
+}
+        \end{minted}
+        \caption{Estructura \texttt{ExecutionContext} encargada de la gestión del entorno y el control del ciclo de vida del algoritmo.}
+        \label{lst:execution_context}
+        \end{listing}
+
+        A partir de la definición expuesta en el Listado~\ref{lst:execution_context}, el \texttt{ExecutionContext} se consolida como el componente encargado de centralizar y gobernar de forma unificada el entorno operacional del algoritmo de optimización. Su propósito principal es aislar las tareas de control de la lógica metaheurística pura, asumiendo de forma integrada la gestión del cese de actividad, la canalización hacia el ecosistema de monitorización y la orquestación de la persistencia física en disco.
+
+        En síntesis, estas tres responsabilidades esenciales se materializan a nivel de implementación mediante los siguientes mecanismos técnicos integrados en la estructura:
+        
+        \begin{itemize}
+            \item \textbf{Control de parada:} La evaluación del cese de actividad se resuelve de manera determinista delegando en el controlador interno \texttt{termination}. Este procesa el estado en cada paso iterativo contrastándolo con las variantes del enumerado \texttt{TerminationCriterion}, lo que permite validar de forma unificada criterios físicos (tiempo) y lógicos (evaluaciones o estancamiento).
+            \item \textbf{Canalización de eventos:} La comunicación hacia el ecosistema de monitorización exterior se implementa de forma asíncrona a través del campo \texttt{sender} (\texttt{ObserverSender<T, Q>}). Este canal empaqueta las capturas inmutables del progreso de manera no bloqueante, utilizando el contador secuencial \texttt{next\_snapshot\_seq} para garantizar el orden de los eventos en el hilo consumidor sin añadir latencia al bucle de optimización.
+            \item \textbf{Gestión de persistencia:} La supervisión de la tolerancia a fallos se apoya en la centralización métrica del contexto. Al evaluar de forma transparente la frecuencia de guardado parametrizada respecto a la iteración actual, el componente coordina la captura de datos y ordena el volcado síncrono del registro intermedio en el almacenamiento secundario, abstrayendo al algoritmo de la gestión física de los \textit{checkpoints}.
+        \end{itemize}
+
+        Cabe destacar desde la perspectiva de la ingeniería de software en Rust el uso del contenedor de mutabilidad interna \texttt{RefCell} en sus campos internos. Debido a que el contexto se transfiere a través de referencias inmutables en gran parte de las firmas de la biblioteca para proteger la integridad de los hilos, \texttt{RefCell} permite modificar de forma segura y dinámica el estado del controlador de parada y los índices de secuencia en tiempo de ejecución, eludiendo las restricciones estrictas del sistema de préstamos del compilador sin sacrificar la seguridad de memoria.
+        
     \subsection{Observadores y checkpoints}
         Los observadores se basan en el uso de \textit{traits}, los cuales actúan como interfaces abstractas que definen el contrato de comportamiento obligatorio para cualquier componente de monitorización. Este enfoque no solo garantiza un polimorfismo robusto, sino que facilita la extensibilidad del sistema, permitiendo al desarrollador integrar nuevas estrategias de visualización o registro sin necesidad de alterar el núcleo de la biblioteca. Para cubrir las necesidades de monitorización más comunes, el módulo incorpora diversas implementaciones predefinidas con un funcionamiento por defecto. Estas herramientas listas para su uso inmediato abarcan desde la salida formateada por consola estándar (\textit{stdout}) hasta sistemas encargados de estructurar datos evolutivos en tablas, renderizar gráficos dinámicos de rendimiento y generar reportes analíticos detallados en formato HTML. Estas dos últimas variantes permiten examinar minuciosamente la convergencia de las metaheurísticas en función del número acumulado de evaluaciones de la función objetivo.
 
@@ -1036,6 +1060,124 @@ ID   | AGE     | ELAPSED. | INFO
     ---------        --------
         La infraestructura encargada de la ejecución incorpora, asimismo, un sistema de paralelización diseñado para optimizar el uso de los recursos computacionales disponibles. Dado que las metaheurísticas poseen una naturaleza estocástica y requieren ejecuciones independientes recurrentes para obtener significancia estadística, el módulo distribuye de forma eficiente estas tareas concurrentes a nivel de hilos o procesos. Finalmente, el ciclo de experimentación concluye con un subsistema de reporte, el cual recopila las métricas de rendimiento y calidad de las soluciones generadas durante las distintas ejecuciones para exportarlas en formatos estructurados que faciliten su posterior análisis estadístico y visualización.
 
+
+    \subsection{Utilidades}
+        Para dar cumplimiento estricto al requisito arquitectónico de mantener \emph{cero dependencias externas}, se ha desarrollado un ecosistema robusto de submódulos auxiliares integrados en el núcleo de la biblioteca. Estas utilidades cubren un amplio espectro de necesidades operativas que van desde sistemas de \textit{benchmarking} para auditar tiempos de ejecución, hasta serializadores encargados de transformar estados de texto plano a formatos binarios eficientes para la persistencia. Asimismo, se incorporan motores ligeros de representación gráfica capaces de vectorizar curvas de rendimiento en formato SVG y rutinas avanzadas de entrada y salida por consola. Este último apartado reviste una complejidad notable, ya que la biblioteca confía plenamente en la terminal para interactuar con el usuario de manera interactiva.
+    
+        La parametrización y el control de las ejecuciones se canalizan a través de un analizador de argumentos de línea de comandos implementado a medida, cuya interfaz de control se detalla en el Listado~\ref{lst:cli_args}.
+
+
+        \begin{listing}[H]
+        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CliArgs {
+    args: Vec<String>,
+}
+
+impl CliArgs {
+    pub fn from_env() -> Self {
+        Self::from_iter(std::env::args().skip(1))
+    }
+
+    pub fn has_flag(&self, flag: &str) -> bool {
+        self.args.iter().any(|arg| arg == flag)
+    }
+
+    pub fn argument_value(&self, flag: &str) -> Option<String> {
+        self.argument_value_for_any(&[flag])
+    }
+
+    pub fn seed_or(&self, default_value: u64) -> u64 {
+        self.parse_u64_for_any_or(&[CLI_FLAG_SEED_SHORT, CLI_FLAG_SEED], default_value)
+    }
+
+    pub fn resume_requested(&self) -> bool {
+        self.has_flag(CLI_FLAG_RESUME)
+    }
+
+    pub fn checkpoints_disabled(&self) -> bool {
+        self.has_any_flag(&[CLI_FLAG_NO_CHECKPOINT, CLI_FLAG_NO_CHECKPOINT_SHORT])
+    }
+        \end{minted}
+        \caption{Estructura \texttt{CliArgs} encargada del procesamiento nativo de argumentos por línea de comandos.}        \label{lst:cli_args}
+        \end{listing}
+
+    La estructura \texttt{CliArgs} permite centralizar la captura de banderas (\textit{flags}) operativas de manera ágil. A través de sus métodos, el usuario puede fijar de forma determinista la semilla estocástica del sistema mediante \texttt{seed\_or}, deshabilitar explícitamente la persistencia periódica o solicitar de forma interactiva la reanudación de un experimento a partir de un punto de control previo con \texttt{resume\_requested}. Complementando la ingesta de datos, se han integrado analizadores sintácticos para interpretar configuraciones en formatos estructurados estándar como JSON, CSV o YAML. Esta capacidad facilita la especificación externa de instancias de problemas complejos o baterías de experimentos masivos sin obligar a la recompilación del código fuente.
+
+    Adicionalmente, el módulo de utilidades engloba funciones de dispersión criptográfica para la validación de archivos (\textit{hashing}), primitivas de apoyo para la sincronización y paralelización interna de hilos, herramientas de abstracción de rutas en el sistema de archivos de forma multiplataforma y rutinas matemáticas preparadas para extraer métricas estadísticas de las poblaciones, las cuales nutren tanto al subsistema de observadores como a las funciones de renderizado gráfico.
+
+    No obstante, el componente más crítico y con mayor impacto en el desempeño biológico e informático de la biblioteca es el generador de números pseudoaleatorios (\textit{PRNG}). Al tratarse de metaheurísticas estocásticas, la práctica totalidad de los operadores de variación, las heurísticas constructivas iniciales y las reglas de aceptación y selección dependen por completo de este motor, expuesto en el Listado~\ref{lst:random}.
+
+        \begin{listing}[H]
+        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+pub struct Random {
+    state: u64,
+}
+
+impl Random {
+    pub fn new(seed: u64) -> Self {
+        Self { state: seed }
+    }
+
+    #[inline]
+    pub fn next_u64(&mut self) -> u64 {
+        // Increment state (as in SplitMix) then mix.
+        self.state = self.state.wrapping_add(0x9E3779B97F4A7C15);
+        mix64(self.state)
+    }
+    
+    #[inline]
+    pub fn next_f64(&mut self) -> f64 {
+        // Take the top 53 bits and scale into [0,1).
+        let x = (self.next_u64() >> 11) as u64;
+        (x as f64) * (1.0 / 9007199254740992.0) // 1 / 2^53
+    }
+
+    #[inline]
+    pub fn range_between(&mut self, min: u64, max: u64) -> u64 {
+        // If range invalid or empty, return `min` as a safe default.
+        if max <= min {
+            return min;
+        }
+        min + self.range(max - min)
+    }
+
+    #[inline]
+    pub fn chance(&mut self, p: f64) -> bool {
+        self.next_f64() < p
+    }
+
+    #[inline]
+    pub fn coin_flip(&mut self) -> bool {
+        self.chance(0.5)
+    }
+}
+
+        \end{minted}
+        \caption{Implementación del generador de números pseudoaleatorios (\textit{PRNG}).}
+        \label{lst:random}
+        \end{listing}
+        
+        Como se aprecia en la implementación, el método neurálgico es \texttt{next\_u64}, del cual derivan todas las abstracciones del comportamiento estocástico del software, como el escalado a punto flotante \texttt{next\_f64}, el cálculo acotado de rangos o la evaluación de probabilidades booleanas mediante \texttt{chance} y \texttt{coin\_flip}. Para cumplir simultáneamente con una alta calidad estadística en las secuencias numéricas y un tiempo de cómputo ínfimo, se ha optado por implementar una variante pura del algoritmo \textit{SplitMix64}. Este generador hace avanzar su estado interno mediante la adición modular con desbordamiento controlado (\texttt{wrapping\_add}) de la constante dorada de 64 bits \texttt{0x9E3779B97F4A7C15}, un valor fraccionario derivado de la proporción áurea que garantiza una dispersión uniforme y un período máximo completo de $2^{64}$ estados antes de repetirse.
+
+        Debido a que el avance lineal del estado no es estadísticamente aleatorio por sí mismo, la secuencia se somete inmediatamente a una transformación final de mezcla no lineal implementada en la subrutina \texttt{mix64}, detallada en el Listado~\ref{lst:next_u64}.
+
+        \begin{listing}[H]
+        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+#[inline]
+fn mix64(mut z: u64) -> u64 {
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
+    z ^ (z >> 31)
+}
+        \end{minted}
+        \caption{Función de mezcla no lineal \texttt{mix64} para maximizar la entropía de los bits generados.}
+        \label{lst:next_u64}
+        \end{listing}
+
+        La función \texttt{mix64} aplica de manera secuencial operaciones de desplazamiento de bits a la derecha (\textit{bit-shifts}) combinadas con operaciones XOR ($\wedge$) y multiplicaciones por constantes de alta entropía numéricas fijas (\texttt{0xBF58476D1CE4E5B9} y \texttt{0x94D049BB133111EB}). Esta técnica destruye cualquier correlación lineal latente en el estado, garantizando que incluso variaciones de un solo bit en la semilla original provoquen cambios masivos y pseudoaleatorios en el flujo de salida, superando satisfactoriamente las baterías de pruebas estadísticas más exigentes del sector informático. 
+
+        Finalmente, es crucial resaltar el uso sistemático del atributo descriptor \texttt{\#[inline]} tanto en la función de mezcla como en los métodos del generador. Esta directiva solicita formalmente al compilador de Rust que sustituya la llamada tradicional a la función inyectando directamente su cuerpo de instrucciones binarias en el lugar de la invocación. Dado que los algoritmos evolutivos invocan este generador miles de millones de veces por ejecución para evaluar mutaciones y cruces, la directiva \texttt{\#[inline]} suprime por completo la sobrecarga asociada al salto de subrutina, el guardado de registros en la pila y el retorno procedimental, traduciéndose en una ganancia de rendimiento temporal masiva y crítica para la biblioteca.
         
     \section{Desarrollo de pruebas}
         La utilización de un correcto conjunto de pruebas agiliza en gran medida el trabajo de programación en cualquier fase del desarrollo.
@@ -1306,9 +1448,21 @@ En conclusión, los resultados del TSP confirman que la biblioteca desarrollada 
     
 ----------- PRoblemas ---------
 
-    No determinimo entre máquinas distintas en ejecuciones paralelas, no se si es un problema, pero si una máquina tiene un procesador con más núcleos que otra máquina, al ejecutar paralelamente un algoritmo con la misma semilla, puede dar lugar a ejecucions distintas debido a que el algoritmo generará más hilos concurrentes por los cuales puede llegar a conclusiones distintas. (Creo que es importante recalcarlo)
+    No determinismo entre máquinas distintas en ejecuciones paralelas, no se si es un problema, pero si una máquina tiene un procesador con más núcleos que otra máquina, al ejecutar paralelamente un algoritmo con la misma semilla, puede dar lugar a ejecucions distintas debido a que el algoritmo generará más hilos concurrentes por los cuales puede llegar a conclusiones distintas. (Creo que es importante recalcarlo)
 -----
-
+Código todavía muy difuso.
+Necesidad de refactorizaciones, renaimings
+-----
+Desarrollar más experimentos
+-----
+Se puede optimizar mucho más
+Aunque conseguir que el sistema sea abstracto provoca que la optimización sea muy compleja
+-----
+Intentar seguir una filosofía Zero-Copy
+-----
+Muy tedioso la implementación de algoritmos nuevos
+Usar la biblioteca no considero que sea complejo, pero comparando con el uso de otras bibliotecas se, para poder usar la biblioteca roma se tienen que escribir bastantes más líneas de código que de costumbre en otras bibliotecas, quizás es debido al lenguaje de programación en sí.
+-----
 El desarrollo de este software ha representado un cambio de paradigma respecto a mi formación académica previa. La complejidad técnica no radica meramente en la sintaxis, sino en la comprensión profunda del ecosistema del lenguaje, así como de sus virtudes y limitaciones intrínsecas. \\
 Rust supuso un reto, un lenguaje de sistemas que, si bien permite ciertos patrones de diseño, se aleja de la Programación Orientada a Objetos convencional de lenguajes como Java a la cual estaba acostumbrado. En su lugar, propone un modelo basado en estructuras (structs) y rasgos (traits), estos últimos con una clara influencia de las clases de tipos de Haskell. \\
 Estas variaciones desembocaron en problemas durante el desarrollo de la arquitectura, al no existir tampoco herencia, un factor limitante en el desarrollo de la arquitectura
@@ -1316,10 +1470,11 @@ Estas variaciones desembocaron en problemas durante el desarrollo de la arquitec
  En cuanto a las herramientas de desarrollo, se utilizó \textbf{Visual Studio Code} como entorno de desarrollo integrado (IDE) debido a su flexibilidad, amplia 
     gama de extensiones y soporte para Rust a través de la extensión \textit{rust-analyzer} \cite{rust_analyzer}. Durante el desarrollo más temprano, también se usó \textbf{Rust Rover}, de \textbf{JetBrains},
 
+
+
+
+
 \newpage
-
-
-
 
 %% Apendices
 \begin{umaappendices}
