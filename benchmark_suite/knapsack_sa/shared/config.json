@@ -1,12 +1,12 @@
 {
   "benchmark_id": "knapsack_sa",
   "algorithm_family": "simulated_annealing",
-  "runs": 5,
+  "runs": 28,
   "budget": {
     "type": "evaluations",
-    "value": 2000
+    "value": 3500
   },
-  "seeds": [42, 43, 44, 45, 46],
+  "seeds": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127],
   "roma": {
     "initial_temperature": 30.0,
     "cooling_rate": 0.98,

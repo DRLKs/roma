@@ -1,12 +1,12 @@
 {
   "benchmark_id": "qap_ga",
   "algorithm_family": "genetic_algorithm",
-  "runs": 5,
+  "runs": 28,
   "budget": {
     "type": "evaluations",
-    "value": 5000
+    "value": 3500
   },
-  "seeds": [42, 43, 44, 45, 46],
+  "seeds": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127],
   "roma": {
     "population_size": 100,
     "crossover_probability": 0.9,
