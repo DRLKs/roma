@@ -81,6 +81,10 @@ def compile_local_binary(flags):
         raise SystemExit(completed.returncode)
 
 
+def binary_is_fresh():
+    return BINARY_PATH.exists() and BINARY_PATH.stat().st_mtime >= CPP_SOURCE.stat().st_mtime
+
+
 def benchmark_args(seed):
     return [
         CONFIG["benchmark_id"],
@@ -112,13 +116,13 @@ def run_once(command):
 
 
 if __name__ == "__main__":
-    if BUDGET.get("type") != "evaluations":
-        raise ValueError("This pagmo C++ benchmark runner currently supports only evaluation budgets")
+    if BUDGET.get("type") not in {"evaluations", "time"}:
+        raise ValueError("This pagmo C++ benchmark runner supports only evaluation or time budgets")
 
     if len(SEEDS) < RUNS:
         raise ValueError("config.json must define at least one seed per run")
 
-    if BINARY_PATH.exists():
+    if binary_is_fresh():
         results = [run_once([str(BINARY_PATH), *benchmark_args(SEEDS[index])]) for index in range(RUNS)]
         print(json.dumps(results, indent=2))
         raise SystemExit(0)

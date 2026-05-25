@@ -219,6 +219,11 @@ unsigned generations_from_budget(unsigned budget_value, unsigned population_size
     return std::max(1u, (budget_value - population_size) / population_size);
 }
 
+bool is_time_budget(const std::string &budget_type)
+{
+    return budget_type == "time";
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -247,13 +252,17 @@ int main(int argc, char **argv)
         const auto selection_param = parse_value<unsigned>(argv[16], "selectionParam");
         const auto seed = parse_value<unsigned>(argv[17], "seed");
 
-        if (budget_type != "evaluations") {
-            throw std::invalid_argument("only evaluation budgets are supported");
+        if (budget_type != "evaluations" && budget_type != "time") {
+            throw std::invalid_argument("only evaluation or time budgets are supported");
+        }
+        if (budget_value == 0u) {
+            throw std::invalid_argument("budgetValue must be positive");
         }
 
         const auto coordinates = read_tsplib_coordinates(tsp_path);
         const auto distance_matrix = build_distance_matrix(coordinates);
-        const auto generations = generations_from_budget(budget_value, population_size);
+        const auto generations =
+            is_time_budget(budget_type) ? 1u : generations_from_budget(budget_value, population_size);
 
         pagmo::problem problem{tsp_random_keys_problem(distance_matrix)};
         pagmo::population population{problem, population_size, seed};
@@ -274,7 +283,16 @@ int main(int argc, char **argv)
 
         const auto cpu_start = std::clock();
         const auto wall_start = std::chrono::steady_clock::now();
-        population = algorithm.evolve(population);
+        if (is_time_budget(budget_type)) {
+            const auto deadline = wall_start + std::chrono::seconds(budget_value);
+            bool ran_once = false;
+            while (!ran_once || std::chrono::steady_clock::now() < deadline) {
+                population = algorithm.evolve(population);
+                ran_once = true;
+            }
+        } else {
+            population = algorithm.evolve(population);
+        }
         const auto wall_end = std::chrono::steady_clock::now();
         const auto cpu_end = std::clock();
 

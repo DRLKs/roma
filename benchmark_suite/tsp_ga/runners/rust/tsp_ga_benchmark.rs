@@ -226,6 +226,17 @@ fn run_once(instance: &BenchmarkInstance, config: &BenchmarkConfig, seed: u64) -
     let cpu_start = process_cpu_time_ms();
     let measured: Result<(Duration, (f64, Vec<usize>)), String> = measure_result(|| {
         let problem = build_problem(instance);
+        let termination = match config.budget.r#type.as_str() {
+            "evaluations" => {
+                TerminationCriteria::new(vec![TerminationCriterion::MaxEvaluations(config.budget.value)])
+            }
+            "time" => TerminationCriteria::new(vec![TerminationCriterion::TimeLimit(Duration::from_secs(
+                config.budget.value as u64,
+            ))]),
+            other => {
+                return Err(format!("unsupported budget type '{}'", other));
+            }
+        };
         let parameters = GeneticAlgorithmParameters::new(
             config.population_size,
             config.crossover_probability,
@@ -233,7 +244,7 @@ fn run_once(instance: &BenchmarkInstance, config: &BenchmarkConfig, seed: u64) -
             OrderCrossover::new(),
             SwapMutation::new(),
             BinaryTournamentSelection::new(),
-            TerminationCriteria::new(vec![TerminationCriterion::MaxEvaluations(config.budget.value)]),
+            termination,
         )
         .with_elite_size(config.elite_size)
         .with_seed(seed)
@@ -293,8 +304,12 @@ fn validate_config(instance: &BenchmarkInstance, config: &BenchmarkConfig) -> Re
         return Err("instance.json and config.json must share the same benchmark_id".to_string());
     }
 
-    if config.budget.r#type != "evaluations" {
-        return Err("TSP benchmark runner currently supports only evaluation budgets".to_string());
+    if config.budget.r#type != "evaluations" && config.budget.r#type != "time" {
+        return Err("TSP benchmark runner currently supports only evaluation or time budgets".to_string());
+    }
+
+    if config.budget.value == 0 {
+        return Err("budget value must be positive".to_string());
     }
 
     if config.seeds.len() < config.runs {

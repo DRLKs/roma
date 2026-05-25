@@ -127,8 +127,8 @@ def run_once(seed, jars):
 
 
 if __name__ == "__main__":
-    if BUDGET.get("type") != "evaluations":
-        raise ValueError("This jMetal Java benchmark runner currently supports only evaluation budgets")
+    if BUDGET.get("type") not in {"evaluations", "time"}:
+        raise ValueError("This jMetal Java benchmark runner supports only evaluation or time budgets")
 
     if len(SEEDS) < RUNS:
         raise ValueError("config.json must define at least one seed per run")

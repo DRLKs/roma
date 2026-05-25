@@ -28,8 +28,8 @@ DISTANCE_MATRIX = INSTANCE["distance_matrix"]
 DIMENSION = int(INSTANCE["dimension"])
 
 
-if BUDGET.get("type") != "evaluations":
-    raise ValueError("This DEAP benchmark runner currently supports only evaluation budgets")
+if BUDGET.get("type") not in {"evaluations", "time"}:
+    raise ValueError("This DEAP benchmark runner supports only evaluation or time budgets")
 
 if len(SEEDS) < RUNS:
     raise ValueError("config.json must define at least one seed per run")
@@ -79,15 +79,19 @@ def run_benchmark(seed):
     toolbox = build_toolbox()
     population_size = int(DEAP_CONFIG["population_size"])
     budget_value = int(BUDGET["value"])
+    budget_type = str(BUDGET["type"])
     crossover_probability = float(DEAP_CONFIG["crossover_probability"])
     mutation_probability = float(DEAP_CONFIG["mutation_probability"])
 
-    if budget_value < population_size:
+    if budget_type == "evaluations" and budget_value < population_size:
         raise ValueError("Evaluation budget must be at least the DEAP population size")
+    if budget_type == "time" and budget_value <= 0:
+        raise ValueError("Time budget must be positive")
 
     population = [toolbox.individual() for _ in range(population_size)]
     start_wall = time.perf_counter()
     start_cpu = time.process_time()
+    deadline = start_wall + float(budget_value)
 
     for individual in population:
         individual.fitness.values = toolbox.evaluate(individual)
@@ -97,7 +101,12 @@ def run_benchmark(seed):
     hall_of_fame.update(population)
     population = tools.selBest(population, population_size)
 
-    while evaluations < budget_value:
+    def should_continue():
+        if budget_type == "evaluations":
+            return evaluations < budget_value
+        return time.perf_counter() < deadline
+
+    while should_continue():
         offspring = list(map(toolbox.clone, toolbox.select(population, population_size)))
 
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
@@ -118,8 +127,9 @@ def run_benchmark(seed):
         if not invalid:
             break
 
-        remaining_evaluations = budget_value - evaluations
-        invalid = invalid[:remaining_evaluations]
+        if budget_type == "evaluations":
+            remaining_evaluations = budget_value - evaluations
+            invalid = invalid[:remaining_evaluations]
 
         for individual in invalid:
             individual.fitness.values = toolbox.evaluate(individual)
@@ -143,7 +153,7 @@ def run_benchmark(seed):
         "problem": INSTANCE["problem"],
         "instance_id": INSTANCE["instance_id"],
         "seed": seed,
-        "budget_type": BUDGET["type"],
+        "budget_type": budget_type,
         "budget_value": budget_value,
         "best_fitness": float(best.fitness.values[0]),
         "best_solution": [int(value) for value in best],

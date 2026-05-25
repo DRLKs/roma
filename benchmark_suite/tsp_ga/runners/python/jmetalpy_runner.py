@@ -10,7 +10,7 @@ from jmetal.operator.crossover import PMXCrossover
 from jmetal.operator.mutation import PermutationSwapMutation
 from jmetal.operator.selection import BinaryTournamentSelection
 from jmetal.problem.singleobjective.tsp import TSP
-from jmetal.util.termination_criterion import StoppingByEvaluations
+from jmetal.util.termination_criterion import StoppingByEvaluations, StoppingByTime
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -33,8 +33,8 @@ JMETAL_CONFIG = CONFIG["jmetalpy"]
 TSPLIB_PATH = SHARED_DIR / INSTANCE["tsplib_file"]
 
 
-if BUDGET.get("type") != "evaluations":
-    raise ValueError("This jMetalPy benchmark runner currently supports only evaluation budgets")
+if BUDGET.get("type") not in {"evaluations", "time"}:
+    raise ValueError("This jMetalPy benchmark runner supports only evaluation or time budgets")
 
 if len(SEEDS) < RUNS:
     raise ValueError("config.json must define at least one seed per run")
@@ -48,6 +48,11 @@ def run_benchmark(seed):
     np.random.seed(seed)
 
     problem = TSP(instance=str(TSPLIB_PATH))
+    if BUDGET["type"] == "evaluations":
+        termination = StoppingByEvaluations(int(BUDGET["value"]))
+    else:
+        termination = StoppingByTime(float(BUDGET["value"]))
+
     algorithm = GeneticAlgorithm(
         problem=problem,
         population_size=int(JMETAL_CONFIG["population_size"]),
@@ -55,7 +60,7 @@ def run_benchmark(seed):
         mutation=PermutationSwapMutation(probability=float(JMETAL_CONFIG["mutation_probability"])),
         crossover=PMXCrossover(probability=float(JMETAL_CONFIG["crossover_probability"])),
         selection=BinaryTournamentSelection(),
-        termination_criterion=StoppingByEvaluations(int(BUDGET["value"])),
+        termination_criterion=termination,
     )
 
     start_wall = time.perf_counter()

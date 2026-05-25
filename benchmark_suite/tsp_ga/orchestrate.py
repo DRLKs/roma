@@ -43,6 +43,16 @@ def run_command(command, cwd=ROOT):
     return completed.returncode, completed.stdout, completed.stderr
 
 
+def run_streaming_command(command, cwd=ROOT):
+    completed = subprocess.run(
+        command,
+        cwd=cwd,
+        check=False,
+        text=True,
+    )
+    return completed.returncode
+
+
 def command_to_string(command):
     return " ".join(command)
 
@@ -115,12 +125,9 @@ def run_containerized_orchestration():
         f"{RESULTS_DIR}:{CONTAINER_RESULTS_DIR}",
         DOCKER_IMAGE,
     ]
-    run_code, run_stdout, run_stderr = run_command(run_command_args, cwd=REPO_ROOT)
+    run_code = run_streaming_command(run_command_args, cwd=REPO_ROOT)
     if run_code != 0:
-        sys.stderr.write(run_stderr or run_stdout)
         raise SystemExit(run_code)
-
-    print(run_stdout, end="")
 
 
 def save_json(path, payload):
@@ -280,6 +287,15 @@ def validate_results(results):
     }
 
 
+def print_library_completion(library, status, elapsed_ms, completed_runs=None, reason=None):
+    message = f"[tsp_ga] library={library} status={status} elapsed_s={elapsed_ms / 1000.0:.2f}"
+    if completed_runs is not None:
+        message += f" completed_runs={completed_runs}"
+    if reason:
+        message += f" reason={reason}"
+    print(message, flush=True)
+
+
 def main():
     if os.environ.get(IN_CONTAINER_ENV) != "1":
         run_containerized_orchestration()
@@ -338,6 +354,7 @@ def main():
                 "runner_wall_time_ms": runner_elapsed_ms,
                 "raw_output": str(raw_path.relative_to(ROOT)),
             }
+            print_library_completion(library, "error", runner_elapsed_ms)
             continue
 
         results = json.loads(stdout)
@@ -351,6 +368,12 @@ def main():
                 "reason": results.get("reason"),
                 "raw_output": str(raw_path.relative_to(ROOT)),
             }
+            print_library_completion(
+                library,
+                "skipped",
+                runner_elapsed_ms,
+                reason=results.get("reason"),
+            )
             continue
 
         validation = validate_results(results)
@@ -367,6 +390,12 @@ def main():
                 "aggregate": aggregate,
                 "validation": validation,
             }
+            print_library_completion(
+                library,
+                "ok",
+                runner_elapsed_ms,
+                completed_runs=len(results),
+            )
         else:
             summary["libraries"][library] = {
                 "status": "error",
@@ -378,10 +407,17 @@ def main():
                 "aggregate": aggregate,
                 "validation": validation,
             }
+            print_library_completion(
+                library,
+                "error",
+                runner_elapsed_ms,
+                completed_runs=len(results),
+                reason="validation_failed",
+            )
 
     summary["total_wall_time_ms"] = (time.perf_counter() - start_ts) * 1000.0
     save_json(SUMMARY_PATH, summary)
-    print(json.dumps(summary, indent=2))
+    print(json.dumps(summary, indent=2), flush=True)
 
 
 if __name__ == "__main__":

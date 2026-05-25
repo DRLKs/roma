@@ -3,6 +3,7 @@ import java.lang.management.ThreadMXBean;
 import java.util.List;
 import java.util.logging.Level;
 import org.uma.jmetal.algorithm.Algorithm;
+import org.uma.jmetal.algorithm.singleobjective.geneticalgorithm.GenerationalGeneticAlgorithm;
 import org.uma.jmetal.algorithm.singleobjective.geneticalgorithm.GeneticAlgorithmBuilder;
 import org.uma.jmetal.operator.crossover.impl.PMXCrossover;
 import org.uma.jmetal.operator.mutation.impl.PermutationSwapMutation;
@@ -10,10 +11,39 @@ import org.uma.jmetal.operator.selection.impl.BinaryTournamentSelection;
 import org.uma.jmetal.problem.singleobjective.TSP;
 import org.uma.jmetal.solution.permutationsolution.PermutationSolution;
 import org.uma.jmetal.util.JMetalLogger;
+import org.uma.jmetal.util.evaluator.impl.SequentialSolutionListEvaluator;
 import org.uma.jmetal.util.pseudorandom.JMetalRandom;
 
 public final class TspGeneticAlgorithmBenchmark {
   private TspGeneticAlgorithmBenchmark() {}
+
+  private static final class TimeLimitedGenerationalTspGa
+      extends GenerationalGeneticAlgorithm<PermutationSolution<Integer>> {
+    private final long deadlineNs;
+
+    TimeLimitedGenerationalTspGa(
+        TSP problem,
+        int populationSize,
+        PMXCrossover crossover,
+        PermutationSwapMutation mutation,
+        BinaryTournamentSelection<PermutationSolution<Integer>> selection,
+        long timeLimitMs) {
+      super(
+          problem,
+          Integer.MAX_VALUE,
+          populationSize,
+          crossover,
+          mutation,
+          selection,
+          new SequentialSolutionListEvaluator<>());
+      this.deadlineNs = System.nanoTime() + Math.max(1L, timeLimitMs) * 1_000_000L;
+    }
+
+    @Override
+    protected boolean isStoppingConditionReached() {
+      return System.nanoTime() >= deadlineNs || super.isStoppingConditionReached();
+    }
+  }
 
   private static String jsonEscape(String value) {
     StringBuilder escaped = new StringBuilder(value.length());
@@ -97,8 +127,8 @@ public final class TspGeneticAlgorithmBenchmark {
     double mutationProbability = Double.parseDouble(args[9]);
     long seed = Long.parseLong(args[10]);
 
-    if (!"evaluations".equals(budgetType)) {
-      System.err.println("Only evaluation budgets are supported");
+    if (!"evaluations".equals(budgetType) && !"time".equals(budgetType)) {
+      System.err.println("Only evaluation or time budgets are supported");
       System.exit(2);
     }
 
@@ -111,13 +141,25 @@ public final class TspGeneticAlgorithmBenchmark {
     PermutationSwapMutation mutation = new PermutationSwapMutation(mutationProbability);
     BinaryTournamentSelection<PermutationSolution<Integer>> selection = new BinaryTournamentSelection<>();
 
-    Algorithm<PermutationSolution<Integer>> algorithm =
+    Algorithm<PermutationSolution<Integer>> algorithm;
+    if ("time".equals(budgetType)) {
+      algorithm =
+        new TimeLimitedGenerationalTspGa(
+          problem,
+          populationSize,
+          crossover,
+          mutation,
+          selection,
+          budgetValue * 1000L);
+    } else {
+      algorithm =
         new GeneticAlgorithmBuilder<>(problem, crossover, mutation)
-            .setPopulationSize(populationSize)
-            .setMaxEvaluations(budgetValue)
-            .setSelectionOperator(selection)
-            .setVariant(GeneticAlgorithmBuilder.GeneticAlgorithmVariant.GENERATIONAL)
-            .build();
+          .setPopulationSize(populationSize)
+          .setMaxEvaluations(budgetValue)
+          .setSelectionOperator(selection)
+          .setVariant(GeneticAlgorithmBuilder.GeneticAlgorithmVariant.GENERATIONAL)
+          .build();
+    }
 
     ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
     Double cpuStartMs = currentThreadCpuTimeMs(threadBean);

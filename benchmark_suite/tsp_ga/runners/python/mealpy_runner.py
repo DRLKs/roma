@@ -26,8 +26,8 @@ DISTANCE_MATRIX = INSTANCE["distance_matrix"]
 DIMENSION = int(INSTANCE["dimension"])
 
 
-if BUDGET.get("type") != "evaluations":
-    raise ValueError("This mealpy benchmark runner currently supports only evaluation budgets")
+if BUDGET.get("type") not in {"evaluations", "time"}:
+    raise ValueError("This mealpy benchmark runner supports only evaluation or time budgets")
 
 if len(SEEDS) < RUNS:
     raise ValueError("config.json must define at least one seed per run")
@@ -55,10 +55,13 @@ class TspProblem(Problem):
 def run_benchmark(seed):
     budget_value = int(BUDGET["value"])
     pop_size = int(MEALPY_CONFIG["population_size"])
-    if budget_value < pop_size:
+    budget_type = str(BUDGET["type"])
+    if budget_type == "evaluations" and budget_value < pop_size:
         raise ValueError("Evaluation budget must be at least the mealpy population size")
+    if budget_type == "time" and budget_value <= 0:
+        raise ValueError("Time budget must be positive")
 
-    epoch = max(1, (budget_value - pop_size) // pop_size)
+    epoch = max(1, (budget_value - pop_size) // pop_size) if budget_type == "evaluations" else 100000
     problem = TspProblem(
         bounds=PermutationVar(valid_set=list(range(DIMENSION)), name="per_var"),
         minmax="min",
@@ -80,7 +83,10 @@ def run_benchmark(seed):
     )
 
     start_wall = time.perf_counter()
-    model.solve(problem, seed=seed, mode="single")
+    if budget_type == "time":
+        model.solve(problem, seed=seed, mode="single", termination={"max_time": float(budget_value)})
+    else:
+        model.solve(problem, seed=seed, mode="single")
     end_wall = time.perf_counter()
 
     best_route = [int(value) for value in problem.decode_solution(model.g_best.solution)["per_var"]]
@@ -93,7 +99,7 @@ def run_benchmark(seed):
         "problem": INSTANCE["problem"],
         "instance_id": INSTANCE["instance_id"],
         "seed": seed,
-        "budget_type": BUDGET["type"],
+        "budget_type": budget_type,
         "budget_value": budget_value,
         "best_fitness": best_fitness,
         "best_solution": best_route,
