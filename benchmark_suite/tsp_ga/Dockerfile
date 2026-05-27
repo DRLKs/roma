@@ -27,6 +27,8 @@ RUN apt-get update \
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain stable
 
 COPY roma ./roma
+COPY benchmark_suite/common.py ./benchmark_suite/common.py
+COPY benchmark_suite/reporting.py ./benchmark_suite/reporting.py
 COPY benchmark_suite/tsp_ga ./benchmark_suite/tsp_ga
 
 RUN python3 -m pip install --break-system-packages --no-cache-dir -r /workspace/benchmark_suite/tsp_ga/requirements.txt
