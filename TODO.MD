@@ -129,4 +129,6 @@ Cambiar algorithm.run añadir el argumento resume
 
 [X] 38. Implementar checkpoint_algorithm_parameters para muchos algoritmos. No diferencia entonces por algoritmos con distintos operadores u parámetros de algoritmos
 
-[] 39. Mirar bien CheckpointDirSource
+[ ] 39. Mirar bien CheckpointDirSource
+
+[ ] 40. Cambiar best_solution en los csv por el fitness
