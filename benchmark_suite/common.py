@@ -39,12 +39,6 @@ def load_json(path):
         return json.load(handle)
 
 
-def save_json(path, payload):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2)
-
-
 def save_rows_csv(path, rows, fieldnames=None):
     effective_fieldnames = fieldnames or RESULTS_CSV_FIELDNAMES
     path.parent.mkdir(parents=True, exist_ok=True)

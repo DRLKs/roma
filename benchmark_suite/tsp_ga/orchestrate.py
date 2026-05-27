@@ -32,7 +32,6 @@ from common import (
     load_json,
     prepare_results_directory,
     run_command,
-    save_json,
     save_rows_csv,
     summarize_results,
 )
@@ -41,7 +40,6 @@ from reporting import write_benchmark_reports
 RUNNERS_DIR = ROOT / "runners"
 RESULTS_DIR = ROOT / "results"
 RESULTS_CSV_PATH = RESULTS_DIR / "runs.csv"
-SUMMARY_PATH = RESULTS_DIR / "summary.json"
 IN_CONTAINER_ENV = "ROMA_TSP_GA_IN_CONTAINER"
 DOCKER_IMAGE = "roma-tsp-ga:latest"
 CONTAINER_RESULTS_DIR = "/workspace/benchmark_suite/tsp_ga/results"
@@ -391,7 +389,6 @@ def main():
 
     summary["total_wall_time_ms"] = (time.perf_counter() - start_ts) * 1000.0
     save_rows_csv(RESULTS_CSV_PATH, csv_rows)
-    save_json(SUMMARY_PATH, summary)
     write_benchmark_reports(ROOT, summary)
     print(json.dumps(summary, indent=2), flush=True)
 

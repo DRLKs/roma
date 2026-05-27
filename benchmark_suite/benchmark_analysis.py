@@ -1,16 +1,11 @@
 from __future__ import annotations
 
-import json
 import math
+import shutil
 from itertools import combinations
 from pathlib import Path
 
-from common import read_rows_csv
-
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    plt = None
+from common import prepare_results_directory, read_rows_csv
 
 try:
     import numpy as np
@@ -33,137 +28,122 @@ except ImportError:
     scipy_stats = None
 
 
-RESULTS_SUBDIRS = ["raw", "aggregated", "analysis", "plots", "latex"]
-CD_Q_ALPHA_005 = {
-    2: 1.960,
-    3: 2.344,
-    4: 2.569,
-    5: 2.728,
-    6: 2.850,
-    7: 2.949,
-    8: 3.031,
-    9: 3.102,
-    10: 3.164,
-}
+ANALYSIS_SUBDIRS = ("raw", "aggregated", "analysis")
+STATUS_COLUMNS = [
+    "benchmark_id",
+    "problem",
+    "instance_count",
+    "algorithm_count",
+    "run_count",
+    "ok_run_count",
+    "convergence_row_count",
+    "friedman_status",
+    "friedman_reason",
+]
 
 
-def generate_benchmark_analysis(benchmark_root: Path, summary: dict | None = None):
+def generate_benchmark_analysis(benchmark_root: Path, _summary: dict | None = None):
     results_dir = benchmark_root / "results"
     runs_path = results_dir / "runs.csv"
     if not runs_path.exists():
         return
 
-    _ensure_results_dirs(results_dir)
     if pd is None or np is None:
-        note = (
-            "El analisis estadistico local requiere pandas y numpy. "
-            "Instala benchmark_suite/requirements-analysis.txt para regenerarlo."
+        _prepare_analysis_layout(results_dir)
+        _write_csv(
+            results_dir / "analysis" / "status.csv",
+            STATUS_COLUMNS,
+            [
+                {
+                    "benchmark_id": benchmark_root.name,
+                    "friedman_status": "skipped",
+                    "friedman_reason": "pandas y numpy son obligatorios para generar los CSVs de analisis.",
+                }
+            ],
         )
-        _write_note(results_dir / "latex" / "analysis_notes.tex", note)
-        (results_dir / "report.md").write_text(note + "\n", encoding="utf-8")
         return
 
     raw_rows = read_rows_csv(runs_path)
+    _prepare_analysis_layout(results_dir)
     if not raw_rows:
-        note = "No hay ejecuciones disponibles en results/runs.csv para construir el analisis local."
-        _write_note(results_dir / "latex" / "analysis_notes.tex", note)
-        (results_dir / "report.md").write_text(note + "\n", encoding="utf-8")
+        _write_csv(
+            results_dir / "analysis" / "status.csv",
+            STATUS_COLUMNS,
+            [{"benchmark_id": benchmark_root.name, "friedman_status": "skipped", "friedman_reason": "runs.csv esta vacio."}],
+        )
         return
 
     raw_df = _normalize_raw_dataframe(pd.DataFrame(raw_rows))
-    convergence_df = _extract_convergence_dataframe(raw_df)
-    summary_payload = summary or _load_summary(results_dir / "summary.json")
+    convergence_df = _build_convergence_dataframe(raw_df)
+    algorithm_summary_df = _build_algorithm_summary(raw_df)
+    instance_summary_df = _build_instance_summary(raw_df)
 
-    _write_raw_artifacts(results_dir, raw_df, convergence_df)
+    descriptive_df = algorithm_summary_df[["algorithm", "mean", "median", "std", "best"]].copy()
+    ranks_df, friedman_df, holm_df, nemenyi_df, instance_effect_df = _analyze_instances(instance_summary_df)
+    seed_wilcoxon_df, seed_effect_df = _analyze_paired_seeds(raw_df)
+    effect_sizes_df = _concat_frames(seed_effect_df, instance_effect_df)
 
-    algorithm_summary_df = _aggregate_algorithm(raw_df)
-    instance_summary_df = _aggregate_instance_algorithm(raw_df)
-    descriptive_df = algorithm_summary_df[
-        ["algorithm", "mean", "median", "std", "best"]
-    ].copy()
-
-    ranks_df, friedman_df, holm_df, nemenyi_df, instance_effect_df = _instance_level_analysis(instance_summary_df)
-    seed_wilcoxon_df, seed_effect_df = _seed_level_analysis(raw_df)
-    effect_sizes_df = pd.concat([seed_effect_df, instance_effect_df], ignore_index=True, sort=False)
-
-    _write_aggregated_artifacts(results_dir, algorithm_summary_df, instance_summary_df)
-    _write_analysis_artifacts(
-        results_dir,
-        descriptive_df,
-        friedman_df,
-        ranks_df,
-        holm_df,
-        nemenyi_df,
-        seed_wilcoxon_df,
-        effect_sizes_df,
-    )
-
-    figure_payload = _generate_plots(
-        results_dir,
-        raw_df,
-        convergence_df,
-        algorithm_summary_df,
-        ranks_df,
-        friedman_df,
-    )
-    _write_latex_artifacts(
-        results_dir,
-        raw_df,
-        summary_payload,
-        descriptive_df,
-        friedman_df,
-        ranks_df,
-        holm_df,
-        nemenyi_df,
-        seed_wilcoxon_df,
-        effect_sizes_df,
-        figure_payload,
-    )
-    _write_markdown_report(
-        results_dir,
-        raw_df,
-        descriptive_df,
-        friedman_df,
-        ranks_df,
-        seed_wilcoxon_df,
-        figure_payload,
-    )
+    _write_csv_frame(results_dir / "raw" / "runs.csv", raw_df)
+    _write_csv_frame(results_dir / "raw" / "convergence.csv", convergence_df)
+    _write_csv_frame(results_dir / "aggregated" / "algorithm_summary.csv", algorithm_summary_df)
+    _write_csv_frame(results_dir / "aggregated" / "instance_algorithm_summary.csv", instance_summary_df)
+    _write_csv_frame(results_dir / "analysis" / "descriptive_summary.csv", descriptive_df)
+    _write_csv_frame(results_dir / "analysis" / "friedman.csv", friedman_df)
+    _write_csv_frame(results_dir / "analysis" / "average_ranks.csv", ranks_df)
+    _write_csv_frame(results_dir / "analysis" / "posthoc_holm.csv", holm_df)
+    _write_csv_frame(results_dir / "analysis" / "posthoc_nemenyi.csv", nemenyi_df)
+    _write_csv_frame(results_dir / "analysis" / "pairwise_wilcoxon.csv", seed_wilcoxon_df)
+    _write_csv_frame(results_dir / "analysis" / "effect_sizes.csv", effect_sizes_df)
+    _write_status_csv(results_dir, raw_df, convergence_df, friedman_df)
 
 
-def _ensure_results_dirs(results_dir: Path):
-    for subdir in RESULTS_SUBDIRS:
-        subdir_path = results_dir / subdir
-        if subdir_path.exists() and not subdir_path.is_dir():
-            subdir_path.unlink()
-        if subdir_path.exists() and not _is_writable_directory(subdir_path):
-            stale_path = _next_stale_path(subdir_path)
-            subdir_path.rename(stale_path)
-        subdir_path.mkdir(parents=True, exist_ok=True)
+def _prepare_analysis_layout(results_dir: Path):
+    prepare_results_directory(results_dir)
+    _quarantine_stale_outputs(results_dir)
+    _remove_legacy_output(results_dir / "latex")
+    _remove_legacy_output(results_dir / "plots")
+    _remove_legacy_output(results_dir / "report.md")
+    _remove_legacy_output(results_dir / "summary.json")
+    for subdir in ANALYSIS_SUBDIRS:
+        (results_dir / subdir).mkdir(parents=True, exist_ok=True)
+    _remove_non_csv_children(results_dir / "raw")
+    _remove_non_csv_children(results_dir / "aggregated")
+    _remove_non_csv_children(results_dir / "analysis")
 
 
-def _is_writable_directory(path: Path):
-    probe = path / ".write_test"
-    try:
-        probe.write_text("ok", encoding="utf-8")
-    except OSError:
-        return False
-    probe.unlink()
-    return True
+def _remove_legacy_output(path: Path):
+    if not path.exists():
+        return
+    if path.is_dir():
+        shutil.rmtree(path)
+    else:
+        path.unlink()
 
 
-def _next_stale_path(path: Path):
-    suffix = 1
-    while True:
-        candidate = path.with_name(f"{path.name}.stale_root_{suffix}")
-        if not candidate.exists():
-            return candidate
-        suffix += 1
+def _remove_non_csv_children(directory: Path):
+    if not directory.exists():
+        return
+    for child in list(directory.iterdir()):
+        if child.is_file() and child.suffix.lower() == ".csv":
+            continue
+        _remove_legacy_output(child)
 
 
-def _load_summary(summary_path: Path):
-    if not summary_path.exists():
-        return {}
-    return json.loads(summary_path.read_text(encoding="utf-8"))
+def _quarantine_stale_outputs(results_dir: Path):
+    legacy_dir = results_dir.parent / "_legacy_results"
+    for child in list(results_dir.iterdir()):
+        if ".stale_root_" not in child.name:
+            continue
+        legacy_dir.mkdir(parents=True, exist_ok=True)
+        target = legacy_dir / child.name
+        suffix = 1
+        while target.exists():
+            target = legacy_dir / f"{child.name}.{suffix}"
+            suffix += 1
+        try:
+            child.rename(target)
+        except PermissionError:
+            continue
 
 
 def _normalize_raw_dataframe(df):
@@ -222,11 +202,11 @@ def _normalize_raw_dataframe(df):
     return normalized
 
 
-def _extract_convergence_dataframe(raw_df):
+def _build_convergence_dataframe(raw_df):
     rows = []
     for _, row in raw_df.iterrows():
         history = row.get("convergence_history")
-        if not history:
+        if not isinstance(history, list):
             continue
         for point in history:
             parsed = _parse_history_point(point)
@@ -263,7 +243,7 @@ def _parse_history_point(point):
         return None
 
 
-def _aggregate_algorithm(raw_df):
+def _build_algorithm_summary(raw_df):
     ok_df = raw_df[raw_df["status"] == "ok"].copy()
     if ok_df.empty:
         return pd.DataFrame(columns=["algorithm", "mean", "median", "std", "best"])
@@ -302,7 +282,7 @@ def _aggregate_algorithm(raw_df):
     return pd.DataFrame(rows).sort_values("algorithm").reset_index(drop=True)
 
 
-def _aggregate_instance_algorithm(raw_df):
+def _build_instance_summary(raw_df):
     ok_df = raw_df[raw_df["status"] == "ok"].copy()
     if ok_df.empty:
         return pd.DataFrame()
@@ -339,7 +319,7 @@ def _aggregate_instance_algorithm(raw_df):
     return pd.DataFrame(rows)
 
 
-def _instance_level_analysis(instance_summary_df):
+def _analyze_instances(instance_summary_df):
     if instance_summary_df.empty:
         empty = pd.DataFrame()
         friedman = pd.DataFrame([
@@ -486,7 +466,7 @@ def _instance_level_analysis(instance_summary_df):
     return ranks_df, friedman_df, holm_df, nemenyi_df, pd.DataFrame(effect_rows)
 
 
-def _seed_level_analysis(raw_df):
+def _analyze_paired_seeds(raw_df):
     ok_df = raw_df[raw_df["status"] == "ok"].copy()
     if ok_df.empty:
         return pd.DataFrame(), pd.DataFrame()
@@ -558,472 +538,25 @@ def _seed_level_analysis(raw_df):
     return pd.DataFrame(wilcoxon_rows), pd.DataFrame(effect_rows)
 
 
-def _write_raw_artifacts(results_dir: Path, raw_df, convergence_df):
-    raw_df.to_csv(results_dir / "raw" / "runs.csv", index=False)
-    convergence_df.to_csv(results_dir / "raw" / "convergence.csv", index=False)
-    manifest = {
-        "benchmark_id": _first_non_empty(raw_df, "benchmark_id"),
-        "problem": _first_non_empty(raw_df, "problem"),
-        "instance_count": int(raw_df["instance_key"].nunique()),
-        "algorithm_count": int(raw_df["algorithm"].nunique()),
-        "run_count": int(len(raw_df)),
-        "ok_run_count": int((raw_df["status"] == "ok").sum()),
-        "convergence_rows": int(len(convergence_df)),
-    }
-    _save_json(results_dir / "raw" / "manifest.json", manifest)
-
-
-def _write_aggregated_artifacts(results_dir: Path, algorithm_summary_df, instance_summary_df):
-    algorithm_summary_df.to_csv(results_dir / "aggregated" / "algorithm_summary.csv", index=False)
-    instance_summary_df.to_csv(results_dir / "aggregated" / "instance_algorithm_summary.csv", index=False)
-
-
-def _write_analysis_artifacts(
-    results_dir: Path,
-    descriptive_df,
-    friedman_df,
-    ranks_df,
-    holm_df,
-    nemenyi_df,
-    seed_wilcoxon_df,
-    effect_sizes_df,
-):
-    descriptive_df.to_csv(results_dir / "analysis" / "descriptive_summary.csv", index=False)
-    friedman_df.to_csv(results_dir / "analysis" / "friedman.csv", index=False)
-    ranks_df.to_csv(results_dir / "analysis" / "average_ranks.csv", index=False)
-    holm_df.to_csv(results_dir / "analysis" / "posthoc_holm.csv", index=False)
-    nemenyi_df.to_csv(results_dir / "analysis" / "posthoc_nemenyi.csv", index=False)
-    seed_wilcoxon_df.to_csv(results_dir / "analysis" / "pairwise_wilcoxon.csv", index=False)
-    effect_sizes_df.to_csv(results_dir / "analysis" / "effect_sizes.csv", index=False)
-    _save_json(
-        results_dir / "analysis" / "summary.json",
-        {
-            "descriptive_rows": int(len(descriptive_df)),
-            "friedman_rows": int(len(friedman_df)),
-            "average_rank_rows": int(len(ranks_df)),
-            "holm_rows": int(len(holm_df)),
-            "nemenyi_rows": int(len(nemenyi_df)),
-            "pairwise_wilcoxon_rows": int(len(seed_wilcoxon_df)),
-            "effect_size_rows": int(len(effect_sizes_df)),
-        },
-    )
-
-
-def _generate_plots(results_dir: Path, raw_df, convergence_df, algorithm_summary_df, ranks_df, friedman_df):
-    plot_payload = {
-        "boxplot": None,
-        "convergence": None,
-        "critical_difference": None,
-        "scatter": None,
-    }
-    if plt is None:
-        return plot_payload
-
-    ok_df = raw_df[raw_df["status"] == "ok"].copy()
-    if not ok_df.empty:
-        boxplot_png = results_dir / "plots" / "boxplot_fitness.png"
-        boxplot_svg = results_dir / "plots" / "boxplot_fitness.svg"
-        _plot_boxplot(ok_df, boxplot_png, boxplot_svg)
-        plot_payload["boxplot"] = {
-            "png": boxplot_png,
-            "svg": boxplot_svg,
-            "caption": "Boxplot de final_fitness por biblioteca sobre las seeds del benchmark.",
-            "label": f"fig:{_first_non_empty(raw_df, 'benchmark_id')}:boxplot",
-        }
-
-        scatter_png = results_dir / "plots" / "fitness_vs_time.png"
-        scatter_svg = results_dir / "plots" / "fitness_vs_time.svg"
-        _plot_scatter(algorithm_summary_df, scatter_png, scatter_svg)
-        plot_payload["scatter"] = {
-            "png": scatter_png,
-            "svg": scatter_svg,
-            "caption": "Trade-off entre mediana de fitness y mediana de wall-clock time por biblioteca.",
-            "label": f"fig:{_first_non_empty(raw_df, 'benchmark_id')}:fitness_vs_time",
-        }
-
-    if not convergence_df.empty:
-        convergence_png = results_dir / "plots" / "convergence.png"
-        convergence_svg = results_dir / "plots" / "convergence.svg"
-        _plot_convergence(convergence_df, convergence_png, convergence_svg)
-        plot_payload["convergence"] = {
-            "png": convergence_png,
-            "svg": convergence_svg,
-            "caption": "Curvas de convergencia agregadas como mediana sobre seeds.",
-            "label": f"fig:{_first_non_empty(raw_df, 'benchmark_id')}:convergence",
-        }
-
-    if _can_plot_critical_difference(ranks_df, friedman_df):
-        cd_png = results_dir / "plots" / "critical_difference.png"
-        cd_svg = results_dir / "plots" / "critical_difference.svg"
-        _plot_critical_difference(ranks_df, friedman_df, cd_png, cd_svg)
-        plot_payload["critical_difference"] = {
-            "png": cd_png,
-            "svg": cd_svg,
-            "caption": "Critical difference diagram sobre ranks medios por instancia agregada.",
-            "label": f"fig:{_first_non_empty(raw_df, 'benchmark_id')}:critical_difference",
-        }
-
-    return plot_payload
-
-
-def _write_latex_artifacts(
-    results_dir: Path,
-    raw_df,
-    summary_payload,
-    descriptive_df,
-    friedman_df,
-    ranks_df,
-    holm_df,
-    nemenyi_df,
-    seed_wilcoxon_df,
-    effect_sizes_df,
-    figure_payload,
-):
-    latex_dir = results_dir / "latex"
-    benchmark_id = _first_non_empty(raw_df, "benchmark_id") or results_dir.parent.name
-
-    fitness_rows = []
-    timing_rows = []
-    libraries = summary_payload.get("libraries", {}) if isinstance(summary_payload, dict) else {}
-    if libraries:
-        for algorithm, payload in sorted(libraries.items()):
-            aggregate = payload.get("aggregate", {})
-            fitness_rows.append(
-                [
-                    algorithm,
-                    payload.get("status"),
-                    aggregate.get("ok_runs"),
-                    aggregate.get("best_fitness"),
-                    aggregate.get("mean_fitness"),
-                    aggregate.get("median_fitness"),
-                    aggregate.get("worst_fitness"),
-                    aggregate.get("stddev_fitness"),
-                    aggregate.get("iqr_fitness"),
-                    aggregate.get("mad_fitness"),
-                ]
-            )
-            timing_rows.append(
-                [
-                    algorithm,
-                    payload.get("status"),
-                    payload.get("runner_wall_time_ms"),
-                    aggregate.get("mean_wall_time_ms"),
-                    aggregate.get("median_wall_time_ms"),
-                    aggregate.get("p90_wall_time_ms"),
-                    aggregate.get("mean_cpu_time_ms"),
-                    aggregate.get("median_cpu_time_ms"),
-                ]
-            )
-    else:
-        fitness_rows = descriptive_df.values.tolist()
-
-    write_latex_table(
-        latex_dir / "fitness_summary.tex",
-        "llrrrrrrrr",
-        ["Algorithm", "Status", "OK runs", "Best", "Mean", "Median", "Worst", "Std. dev.", "IQR", "MAD"],
-        fitness_rows,
-        f"Resumen descriptivo de fitness para {benchmark_id}.",
-        f"tab:{benchmark_id}:fitness_summary",
-    )
-    write_latex_table(
-        latex_dir / "timing_summary.tex",
-        "llrrrrrr",
-        ["Algorithm", "Status", "Runner ms", "Mean wall ms", "Median wall ms", "P90 wall ms", "Mean CPU ms", "Median CPU ms"],
-        timing_rows,
-        f"Resumen temporal para {benchmark_id}.",
-        f"tab:{benchmark_id}:timing_summary",
-    )
-    write_latex_table(
-        latex_dir / "descriptive_summary.tex",
-        "lrrrr",
-        ["Algorithm", "Mean", "Median", "Std", "Best"],
-        descriptive_df.values.tolist(),
-        "Tabla descriptiva agregada sobre seeds por biblioteca.",
-        f"tab:{benchmark_id}:descriptive",
-    )
-    write_latex_table(
-        latex_dir / "friedman.tex",
-        "rrrll",
-        ["Instances", "Algorithms", "Statistic", "p-value", "Status/Notes"],
+def _write_status_csv(results_dir: Path, raw_df, convergence_df, friedman_df):
+    friedman_row = friedman_df.iloc[0].to_dict() if not friedman_df.empty else {}
+    _write_csv(
+        results_dir / "analysis" / "status.csv",
+        STATUS_COLUMNS,
         [
-            [
-                row["instance_count"],
-                row["algorithm_count"],
-                row["statistic"],
-                row["p_value"],
-                row["status"] if row.get("reason") is None else row["reason"],
-            ]
-            for row in friedman_df.to_dict(orient="records")
+            {
+                "benchmark_id": _first_non_empty(raw_df, "benchmark_id"),
+                "problem": _first_non_empty(raw_df, "problem"),
+                "instance_count": int(raw_df["instance_key"].nunique()),
+                "algorithm_count": int(raw_df["algorithm"].nunique()),
+                "run_count": int(len(raw_df)),
+                "ok_run_count": int((raw_df["status"] == "ok").sum()),
+                "convergence_row_count": int(len(convergence_df)),
+                "friedman_status": friedman_row.get("status"),
+                "friedman_reason": friedman_row.get("reason"),
+            }
         ],
-        "Resultado del test de Friedman sobre medianas por instancia.",
-        f"tab:{benchmark_id}:friedman",
     )
-    write_latex_table(
-        latex_dir / "average_ranks.tex",
-        "lr",
-        ["Algorithm", "Average rank"],
-        ranks_df[["algorithm", "avg_rank"]].values.tolist() if not ranks_df.empty else [],
-        "Ranks medios por biblioteca sobre instancias agregadas.",
-        f"tab:{benchmark_id}:average_ranks",
-    )
-    write_latex_table(
-        latex_dir / "posthoc_holm.tex",
-        "llrrrrp{4cm}",
-        ["Alg. A", "Alg. B", "Instances", "Statistic", "p-value", "p-Holm", "Notes"],
-        [
-            [
-                row.get("algorithm_a"),
-                row.get("algorithm_b"),
-                row.get("instance_count"),
-                row.get("statistic"),
-                row.get("p_value"),
-                row.get("p_holm"),
-                row.get("reason"),
-            ]
-            for row in holm_df.to_dict(orient="records")
-        ] if not holm_df.empty else [],
-        "Comparaciones post-hoc entre bibliotecas sobre medianas por instancia con correccion de Holm.",
-        f"tab:{benchmark_id}:holm",
-    )
-    write_latex_table(
-        latex_dir / "posthoc_nemenyi.tex",
-        "llr",
-        ["Alg. A", "Alg. B", "Adjusted p-value"],
-        nemenyi_df.values.tolist() if not nemenyi_df.empty else [],
-        "Matriz post-hoc de Nemenyi cuando Friedman rechaza H0.",
-        f"tab:{benchmark_id}:nemenyi",
-    )
-    write_latex_table(
-        latex_dir / "pairwise_wilcoxon.tex",
-        "lllrrp{4cm}",
-        ["Metric", "Alg. A", "Alg. B", "Seeds", "p-value", "Notes"],
-        [
-            [
-                row.get("metric"),
-                row.get("algorithm_a"),
-                row.get("algorithm_b"),
-                row.get("paired_seeds"),
-                row.get("p_value"),
-                row.get("reason"),
-            ]
-            for row in seed_wilcoxon_df.to_dict(orient="records")
-        ] if not seed_wilcoxon_df.empty else [],
-        "Wilcoxon signed-rank sobre seeds pareadas dentro del problema.",
-        f"tab:{benchmark_id}:wilcoxon",
-    )
-    write_latex_table(
-        latex_dir / "effect_sizes.tex",
-        "llllr",
-        ["Scope", "Metric", "Alg. A", "Alg. B", "A12"],
-        effect_sizes_df[["scope", "metric", "algorithm_a", "algorithm_b", "effect_size"]].values.tolist() if not effect_sizes_df.empty else [],
-        "Tamano de efecto Vargha-Delaney A12 para comparaciones pareadas relevantes.",
-        f"tab:{benchmark_id}:effect_sizes",
-    )
-
-    _write_figure_snippet(
-        latex_dir / "boxplot.tex",
-        figure_payload.get("boxplot"),
-        fallback_note="No hay datos suficientes para construir el boxplot de fitness.",
-    )
-    _write_figure_snippet(
-        latex_dir / "convergence.tex",
-        figure_payload.get("convergence"),
-        fallback_note="No hay convergence history en los resultados raw; el benchmark no puede construir la figura de convergencia todavia.",
-    )
-    _write_figure_snippet(
-        latex_dir / "critical_difference.tex",
-        figure_payload.get("critical_difference"),
-        fallback_note="No hay suficientes instancias comparables para un critical difference diagram cientificamente valido; Friedman requiere al menos 2 instancias compartidas y 3 bibliotecas.",
-    )
-    _write_figure_snippet(
-        latex_dir / "scatter_fitness_vs_time.tex",
-        figure_payload.get("scatter"),
-        fallback_note="No hay datos suficientes para construir el scatter fitness vs tiempo.",
-    )
-
-
-def _write_markdown_report(results_dir: Path, raw_df, descriptive_df, friedman_df, ranks_df, seed_wilcoxon_df, figure_payload):
-    benchmark_id = _first_non_empty(raw_df, "benchmark_id") or results_dir.parent.name
-    lines = [
-        f"# {benchmark_id}",
-        "",
-        "## Dataset",
-        f"- Problema: {_first_non_empty(raw_df, 'problem')}",
-        f"- Instancias: {int(raw_df['instance_key'].nunique())}",
-        f"- Bibliotecas: {int(raw_df['algorithm'].nunique())}",
-        f"- Runs raw: {int(len(raw_df))}",
-        f"- Runs OK: {int((raw_df['status'] == 'ok').sum())}",
-        "",
-        "## Descriptivos",
-    ]
-    for row in descriptive_df.to_dict(orient="records"):
-        lines.append(
-            f"- {row['algorithm']}: mean={_format_number(row['mean'])}, median={_format_number(row['median'])}, std={_format_number(row['std'])}, best={_format_number(row['best'])}"
-        )
-
-    lines.extend(["", "## Friedman"])
-    friedman_row = friedman_df.iloc[0].to_dict() if not friedman_df.empty else None
-    if friedman_row is None:
-        lines.append("- No disponible.")
-    elif friedman_row["status"] == "ok":
-        lines.append(
-            f"- statistic={_format_number(friedman_row['statistic'])}, p-value={_format_number(friedman_row['p_value'])}, instances={int(friedman_row['instance_count'])}"
-        )
-    else:
-        lines.append(f"- skipped: {friedman_row['reason']}")
-
-    lines.extend(["", "## Average ranks"])
-    if ranks_df.empty:
-        lines.append("- No disponibles.")
-    else:
-        for row in ranks_df.to_dict(orient="records"):
-            lines.append(f"- {row['algorithm']}: avg_rank={_format_number(row['avg_rank'])}")
-
-    lines.extend(["", "## Wilcoxon por seeds"])
-    if seed_wilcoxon_df.empty:
-        lines.append("- No disponible.")
-    else:
-        for row in seed_wilcoxon_df.to_dict(orient="records"):
-            if row["status"] == "ok":
-                lines.append(
-                    f"- {row['metric']}: {row['algorithm_a']} vs {row['algorithm_b']} p-value={_format_number(row['p_value'])} seeds={int(row['paired_seeds'])}"
-                )
-            else:
-                lines.append(
-                    f"- {row['metric']}: {row['algorithm_a']} vs {row['algorithm_b']} skipped ({row['reason']})"
-                )
-
-    lines.extend(["", "## Figures"])
-    for name in ["boxplot", "convergence", "critical_difference", "scatter"]:
-        payload = figure_payload.get(name)
-        if payload is None:
-            lines.append(f"- {name}: no disponible")
-        else:
-            lines.append(f"- {name}: {payload['png'].name}")
-
-    (results_dir / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-def _write_figure_snippet(path: Path, payload, fallback_note: str):
-    if payload is None:
-        _write_note(path, fallback_note)
-        return
-
-    relative_png = f"../plots/{payload['png'].name}"
-    lines = [
-        "\\begin{figure}[htbp]",
-        "\\centering",
-        f"\\includegraphics[width=0.9\\linewidth]{{{_latex_escape(relative_png)}}}",
-        f"\\caption{{{_latex_escape(payload['caption'])}}}",
-        f"\\label{{{payload['label']}}}",
-        "\\end{figure}",
-        "",
-    ]
-    path.write_text("\n".join(lines), encoding="utf-8")
-
-
-def _plot_boxplot(raw_df, png_path: Path, svg_path: Path):
-    algorithms = sorted(raw_df["algorithm"].unique().tolist())
-    data = [
-        raw_df[raw_df["algorithm"] == algorithm]["final_fitness"].dropna().to_numpy(dtype=float)
-        for algorithm in algorithms
-    ]
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.boxplot(data, labels=algorithms, showmeans=True)
-    ax.set_xlabel("biblioteca")
-    ax.set_ylabel("final_fitness")
-    ax.set_title("Boxplot de final_fitness por biblioteca")
-    ax.tick_params(axis="x", rotation=20)
-    fig.tight_layout()
-    fig.savefig(png_path, dpi=160)
-    fig.savefig(svg_path)
-    plt.close(fig)
-
-
-def _plot_scatter(algorithm_summary_df, png_path: Path, svg_path: Path):
-    fig, ax = plt.subplots(figsize=(8, 5))
-    for _, row in algorithm_summary_df.iterrows():
-        if pd.isna(row["median_wall_time_ms"]) or pd.isna(row["median"]):
-            continue
-        ax.scatter(row["median_wall_time_ms"], row["median"], s=60)
-        ax.annotate(row["algorithm"], (row["median_wall_time_ms"], row["median"]), textcoords="offset points", xytext=(4, 4))
-    ax.set_xlabel("median wall_time_ms")
-    ax.set_ylabel("median final_fitness")
-    ax.set_title("Trade-off fitness vs tiempo")
-    fig.tight_layout()
-    fig.savefig(png_path, dpi=160)
-    fig.savefig(svg_path)
-    plt.close(fig)
-
-
-def _plot_convergence(convergence_df, png_path: Path, svg_path: Path):
-    fig, ax = plt.subplots(figsize=(10, 5))
-    for algorithm, algorithm_df in convergence_df.groupby("algorithm"):
-        series = algorithm_df.groupby("evaluation")["best_fitness_so_far"].median().sort_index()
-        ax.plot(series.index.to_numpy(dtype=float), series.to_numpy(dtype=float), label=algorithm)
-    ax.set_xlabel("evaluation")
-    ax.set_ylabel("best_fitness_so_far")
-    ax.set_title("Convergencia mediana por biblioteca")
-    ax.legend(loc="best")
-    fig.tight_layout()
-    fig.savefig(png_path, dpi=160)
-    fig.savefig(svg_path)
-    plt.close(fig)
-
-
-def _can_plot_critical_difference(ranks_df, friedman_df):
-    if ranks_df.empty or friedman_df.empty or np is None:
-        return False
-    row = friedman_df.iloc[0]
-    return int(row["instance_count"]) >= 2 and int(row["algorithm_count"]) >= 3
-
-
-def _plot_critical_difference(ranks_df, friedman_df, png_path: Path, svg_path: Path):
-    algorithms = ranks_df["algorithm"].tolist()
-    ranks = ranks_df["avg_rank"].to_numpy(dtype=float)
-    algorithm_count = int(friedman_df.iloc[0]["algorithm_count"])
-    instance_count = int(friedman_df.iloc[0]["instance_count"])
-    cd_value = _critical_difference(algorithm_count, instance_count)
-
-    fig, ax = plt.subplots(figsize=(10, 3.5))
-    min_rank = 1.0
-    max_rank = max(float(algorithm_count), float(np.nanmax(ranks)) if len(ranks) else 1.0)
-    ax.hlines(0.5, min_rank, max_rank, color="black")
-    for tick in np.arange(min_rank, max_rank + 0.01, 0.5):
-        ax.vlines(tick, 0.46, 0.54, color="black", linewidth=0.6)
-
-    for index, (algorithm, rank) in enumerate(zip(algorithms, ranks), start=1):
-        y_value = 0.68 + (index % 2) * 0.18
-        ax.plot([rank, rank], [0.5, y_value], color="black", linewidth=1.0)
-        ax.text(rank, y_value + 0.02, f"{algorithm} ({rank:.2f})", rotation=22, ha="center", va="bottom")
-
-    if cd_value is not None:
-        start = min_rank
-        end = min(max_rank, start + cd_value)
-        ax.plot([start, end], [0.22, 0.22], color="black", linewidth=2.0)
-        ax.vlines([start, end], 0.18, 0.26, color="black", linewidth=1.5)
-        ax.text((start + end) / 2.0, 0.1, f"CD = {cd_value:.2f}", ha="center")
-
-    ax.set_xlabel("Average rank (1 = best)")
-    ax.set_yticks([])
-    ax.set_ylim(0.05, 1.2)
-    ax.set_xlim(min_rank - 0.1, max_rank + 0.1)
-    ax.set_title("Critical difference diagram")
-    for spine in ["left", "right", "top"]:
-        ax.spines[spine].set_visible(False)
-    fig.tight_layout()
-    fig.savefig(png_path, dpi=160)
-    fig.savefig(svg_path)
-    plt.close(fig)
-
-
-def _critical_difference(algorithm_count: int, instance_count: int):
-    if algorithm_count < 2 or instance_count < 2:
-        return None
-    q_alpha = CD_Q_ALPHA_005.get(algorithm_count)
-    if q_alpha is None:
-        return None
-    return q_alpha * math.sqrt(algorithm_count * (algorithm_count + 1) / (6.0 * instance_count))
 
 
 def _apply_holm_correction(rows):
@@ -1057,33 +590,6 @@ def _vargha_delaney_a12(sample_a, sample_b, lower_is_better=True):
     return wins / total if total else math.nan
 
 
-def write_latex_table(path: Path, column_spec, header, rows, caption, label):
-    lines = [
-        "\\begin{table}[htbp]",
-        "\\centering",
-        f"\\caption{{{_latex_escape(caption)}}}",
-        f"\\label{{{label}}}",
-        f"\\begin{{tabular}}{{{column_spec}}}",
-        "\\hline",
-        " {} \\\\".format(" & ".join(_latex_escape(cell) for cell in header)),
-        "\\hline",
-    ]
-    for row in rows:
-        lines.append(" {} \\\\".format(" & ".join(_format_cell(cell) for cell in row)))
-    lines.extend(["\\hline", "\\end{tabular}", "\\end{table}", ""])
-    path.write_text("\n".join(lines), encoding="utf-8")
-
-
-def _save_json(path: Path, payload):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-
-
-def _write_note(path: Path, note: str):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(note + "\n", encoding="utf-8")
-
-
 def _first_non_empty(df, column_name):
     if column_name not in df.columns:
         return None
@@ -1093,42 +599,23 @@ def _first_non_empty(df, column_name):
     return series.iloc[0]
 
 
-def _format_cell(value):
-    if value is None:
-        return "--"
-    if isinstance(value, float) and math.isnan(value):
-        return "--"
-    if isinstance(value, (int, float, np.integer, np.floating)):
-        return _format_number(value)
-    return _latex_escape(value)
+def _concat_frames(*frames):
+    non_empty = [frame for frame in frames if frame is not None and not frame.empty]
+    if not non_empty:
+        return pd.DataFrame()
+    return pd.concat(non_empty, ignore_index=True, sort=False)
 
 
-def _format_number(value):
-    numeric_value = float(value)
-    if math.isnan(numeric_value) or math.isinf(numeric_value):
-        return "--"
-    if math.isclose(numeric_value, round(numeric_value), abs_tol=1e-9):
-        return str(int(round(numeric_value)))
-    return f"{numeric_value:.4f}"
+def _write_csv_frame(path: Path, frame):
+    if frame is None or frame.empty:
+        columns = list(frame.columns) if frame is not None else []
+        pd.DataFrame(columns=columns).to_csv(path, index=False)
+        return
+    frame.to_csv(path, index=False)
 
 
-def _latex_escape(value):
-    text = str(value)
-    replacements = {
-        "\\": "\\textbackslash{}",
-        "&": "\\&",
-        "%": "\\%",
-        "$": "\\$",
-        "#": "\\#",
-        "_": "\\_",
-        "{": "\\{",
-        "}": "\\}",
-        "~": "\\textasciitilde{}",
-        "^": "\\textasciicircum{}",
-    }
-    for source, target in replacements.items():
-        text = text.replace(source, target)
-    return text
+def _write_csv(path: Path, fieldnames, rows):
+    pd.DataFrame(rows, columns=fieldnames).to_csv(path, index=False)
 
 
 def _safe_mean(values):
