@@ -1,6 +1,7 @@
 import csv
 import json
 import math
+import os
 import statistics
 import subprocess
 
@@ -18,10 +19,14 @@ RESULTS_CSV_FIELDNAMES = [
     "budget_type",
     "budget_value",
     "status",
+    "final_fitness",
     "best_fitness",
     "wall_time_ms",
     "cpu_time_ms",
+    "success",
+    "evaluations",
     "best_solution",
+    "convergence_history",
     "error",
     "execution_mode",
     "runner_command",
@@ -54,6 +59,14 @@ def read_rows_csv(path):
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
         return [_denormalize_csv_row(dict(row)) for row in reader]
+
+
+def prepare_results_directory(path):
+    path.mkdir(parents=True, exist_ok=True)
+    for child in path.iterdir():
+        if _is_writable_path(child):
+            continue
+        child.rename(_next_stale_path(child))
 
 
 def run_command(command, cwd):
@@ -91,7 +104,11 @@ def summarize_results(results, objective_sense):
     ok_results = [result for result in results if result.get("status") == "ok"]
     error_results = [result for result in results if result.get("status") == "error"]
     skipped_results = [result for result in results if result.get("status") == "skipped"]
-    fitness_values = [float(result["best_fitness"]) for result in ok_results]
+    fitness_values = [
+        float(result.get("final_fitness", result.get("best_fitness")))
+        for result in ok_results
+        if result.get("final_fitness", result.get("best_fitness")) is not None
+    ]
     wall_values = [float(result["wall_time_ms"]) for result in ok_results]
     cpu_values = [
         float(result["cpu_time_ms"])
@@ -151,6 +168,15 @@ def summarize_results(results, objective_sense):
 
 
 def build_result_row(base_row, result, algorithm, runner_command, execution_mode, returncode=None):
+    final_fitness = result.get("final_fitness", result.get("best_fitness"))
+    status = result.get("status", "ok")
+    success = result.get("success")
+    if success is None:
+        success = status == "ok"
+    evaluations = result.get("evaluations")
+    if evaluations is None and status == "ok" and result.get("budget_type", base_row.get("budget_type")) == "evaluations":
+        evaluations = result.get("budget_value", base_row.get("budget_value"))
+
     return {
         **base_row,
         "algorithm": algorithm,
@@ -158,11 +184,15 @@ def build_result_row(base_row, result, algorithm, runner_command, execution_mode
         "seed": result.get("seed"),
         "budget_type": result.get("budget_type", base_row.get("budget_type")),
         "budget_value": result.get("budget_value", base_row.get("budget_value")),
-        "status": result.get("status", "ok"),
-        "best_fitness": result.get("best_fitness"),
+        "status": status,
+        "final_fitness": final_fitness,
+        "best_fitness": result.get("best_fitness", final_fitness),
         "wall_time_ms": result.get("wall_time_ms"),
         "cpu_time_ms": result.get("cpu_time_ms"),
+        "success": success,
+        "evaluations": evaluations,
         "best_solution": result.get("best_solution"),
+        "convergence_history": result.get("convergence_history"),
         "error": result.get("error"),
         "execution_mode": execution_mode,
         "runner_command": runner_command,
@@ -182,10 +212,14 @@ def build_failed_rows(base_row, algorithm, seeds, runner_command, execution_mode
                 "budget_type": base_row.get("budget_type"),
                 "budget_value": base_row.get("budget_value"),
                 "status": status,
+                "final_fitness": None,
                 "best_fitness": None,
                 "wall_time_ms": None,
                 "cpu_time_ms": None,
+                "success": False,
+                "evaluations": None,
                 "best_solution": None,
+                "convergence_history": None,
                 "error": error,
                 "execution_mode": execution_mode,
                 "runner_command": runner_command,
@@ -214,12 +248,17 @@ def _denormalize_csv_row(row):
         if value == "":
             denormalized[fieldname] = None
             continue
-        if fieldname == "best_solution":
+        if fieldname in {"best_solution", "convergence_history"}:
             try:
                 denormalized[fieldname] = json.loads(value)
                 continue
             except json.JSONDecodeError:
                 pass
+        if fieldname == "success":
+            lowered = value.lower()
+            if lowered in {"true", "false"}:
+                denormalized[fieldname] = lowered == "true"
+                continue
         denormalized[fieldname] = value
     return denormalized
 
@@ -236,3 +275,18 @@ def _median_absolute_deviation(values):
     median_value = statistics.median(values)
     deviations = [abs(value - median_value) for value in values]
     return statistics.median(deviations)
+
+
+def _is_writable_path(path):
+    if path.is_dir():
+        return os.access(path, os.W_OK | os.X_OK)
+    return os.access(path, os.W_OK)
+
+
+def _next_stale_path(path):
+    suffix = 1
+    while True:
+        candidate = path.with_name(f"{path.name}.stale_root_{suffix}")
+        if not candidate.exists():
+            return candidate
+        suffix += 1

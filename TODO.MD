@@ -131,4 +131,265 @@ Cambiar algorithm.run añadir el argumento resume
 
 [ ] 39. Mirar bien CheckpointDirSource
 
-[ ] 40. Cambiar best_solution en los csv por el fitness
+[ ] 40. Objetivo:
+Construir un pipeline completo y reproducible de benchmarking estadístico para comparar algoritmos/metaheurísticas estocásticas sobre múltiples problemas e instancias.
+
+REQUISITOS GENERALES
+
+* El benchmark debe ser científicamente correcto.
+* Debe evitar pseudoreplicación.
+* Debe permitir análisis estadísticos estándar en benchmarking de optimización.
+* Debe ser reproducible.
+* Debe soportar múltiples algoritmos, múltiples instancias y múltiples seeds.
+* Debe separar claramente:
+
+  * datos raw,
+  * agregados,
+  * análisis estadístico,
+  * visualizaciones en latex
+
+======================================================================
+
+1. ESTRUCTURA EXPERIMENTAL
+   ======================================================================
+
+Para cada combinación:
+
+(problem, dimension, algorithm)
+
+ejecutar múltiples runs independientes usando distintas seeds.
+
+Recomendación:
+
+* 30 seeds por instancia.
+* mismas seeds para todos los algoritmos.
+
+Ejemplo:
+seeds = [100..129]
+
+IMPORTANTE:
+
+* Las seeds NO son instancias independientes.
+* Friedman NO debe aplicarse directamente sobre seeds.
+* Las seeds solo sirven para estimar robustamente el rendimiento del algoritmo sobre una instancia.
+
+Guardar UN registro por ejecución individual.
+
+Formato recomendado CSV o Parquet.
+
+Columnas mínimas:
+
+problem
+dimension
+instance_id
+algorithm
+seed
+budget_type
+budget_value
+final_fitness
+wall_time_ms
+cpu_time_ms
+success
+evaluations
+
+Ejemplo:
+
+rastrigin,80,rastrigin_dim80,roma,100,evaluations,3500,701.2,28.1,27.8,true,3500
+
+Guardar también convergence history por run.
+
+Formato recomendado:
+
+evaluation,best_fitness_so_far
+
+Ejemplo:
+0,10000
+100,8500
+500,3000
+3500,701
+
+Esto permitirá:
+
+* convergence plots,
+* anytime analysis,
+* AUC convergence,
+* attainment analysis.
+
+Para cada combinación:
+
+(instance_id, algorithm)
+
+agregar las múltiples seeds usando:
+
+* mediana (preferido),
+  o:
+* mean robusta.
+
+Calcular:
+
+* mean
+* median
+* std
+* min
+* max
+* p90
+* IQR
+
+IMPORTANTE:
+
+* Friedman debe usar UN valor agregado por instancia.
+* NO usar las seeds crudas directamente en Friedman.
+
+Construir tabla:
+
+instance_id | alg1 | alg2 | alg3
+
+donde cada celda contiene:
+
+* mediana sobre seeds.
+
+Aplicar:
+
+* Friedman test.
+
+Hipótesis:
+H0: todos los algoritmos tienen el mismo rendimiento.
+H1: al menos uno difiere.
+
+Obtener:
+
+* statistic
+* p-value
+* average ranks
+
+Si Friedman rechaza H0 (p < 0.05):
+
+Aplicar:
+
+* Holm correction
+  o:
+* Nemenyi posthoc.
+
+Obtener:
+
+* comparación pairwise,
+* adjusted p-values.
+
+Calcular:
+
+* Vargha-Delaney A12
+  o:
+* Cliff's Delta.
+
+Para pares relevantes de algoritmos.
+
+Dentro de una instancia concreta:
+
+Comparar algoritmos usando:
+
+* Wilcoxon signed-rank test
+  sobre seeds pareadas.
+
+Como todos los algoritmos usan las mismas seeds:
+(seed_i de alg A vs seed_i de alg B)
+
+Esto sí es válido.
+
+Analizar por separado:
+
+A) Calidad:
+
+* final_fitness
+
+B) Tiempo:
+
+* wall_time_ms
+* cpu_time_ms
+
+C) Trade-off:
+
+* fitness vs tiempo
+
+Generar automáticamente:
+
+* boxplots por algoritmo,
+* convergence plots,
+* average rank tables,
+* critical difference diagrams,
+* scatter fitness vs tiempo.
+
+benchmark/
+raw/
+aggregated/
+analysis/
+plots/
+reports/
+
+Generar automáticamente:
+
+* tablas CSV,
+* tablas LaTeX,
+* Markdown report,
+* JSON summaries,
+* gráficos PNG/SVG,
+* resultados estadísticos.
+
+Usar:
+
+* pandas
+* numpy
+* scipy
+* scikit-posthocs
+* matplotlib
+* seaborn opcional
+* pingouin opcional
+
+Implementar:
+
+A) Friedman:
+scipy.stats.friedmanchisquare
+
+B) Wilcoxon:
+scipy.stats.wilcoxon
+
+C) Posthoc:
+scikit_posthocs.posthoc_nemenyi_friedman
+
+D) Effect size:
+Vargha-Delaney A12
+
+* NO comparar solo mejores valores.
+* NO comparar solo medias globales.
+* NO aplicar Friedman directamente sobre seeds.
+* NO mezclar seeds como si fueran instancias independientes.
+* SIEMPRE usar múltiples instancias benchmark.
+* SIEMPRE usar múltiples runs por instancia.
+* SIEMPRE usar mismas seeds entre algoritmos.
+* Mantener presupuesto idéntico semánticamente entre implementaciones.
+
+El pipeline debe producir automáticamente:
+
+1. Tabla descriptiva:
+   algorithm | mean | median | std | best
+
+2. Friedman:
+   statistic + p-value
+
+3. Average ranks:
+   algorithm | avg_rank
+
+4. Posthoc matrix:
+   pairwise adjusted p-values
+
+5. Effect sizes:
+   A12 pairwise
+
+6. Plots:
+
+* boxplots
+* convergence
+* critical difference diagram
+
+7. Report reproducible completo.
+
+El resultado debe ser un benchmark científicamente defendible y cercano al estándar usado en papers de metaheurísticas y benchmarking de optimización estocástica.

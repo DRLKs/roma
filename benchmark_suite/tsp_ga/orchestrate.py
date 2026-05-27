@@ -30,12 +30,13 @@ from common import (
     build_result_row,
     command_to_string,
     load_json,
+    prepare_results_directory,
     run_command,
     save_json,
     save_rows_csv,
     summarize_results,
 )
-from reporting import generate_suite_reports, write_benchmark_reports
+from reporting import write_benchmark_reports
 
 RUNNERS_DIR = ROOT / "runners"
 RESULTS_DIR = ROOT / "results"
@@ -90,7 +91,7 @@ def build_runners():
 
 
 def run_containerized_orchestration():
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    prepare_results_directory(RESULTS_DIR)
 
     build_command = [
         "docker",
@@ -110,6 +111,12 @@ def run_containerized_orchestration():
         "docker",
         "run",
         "--rm",
+        "--user",
+        f"{os.getuid()}:{os.getgid()}",
+        "-e",
+        "HOME=/tmp/roma-benchmark-home",
+        "-e",
+        "XDG_CACHE_HOME=/tmp/roma-benchmark-cache",
         "-v",
         f"{RESULTS_DIR}:{CONTAINER_RESULTS_DIR}",
         DOCKER_IMAGE,
@@ -117,7 +124,6 @@ def run_containerized_orchestration():
     run_code = run_streaming_command(run_command_args, cwd=REPO_ROOT)
     if run_code != 0:
         raise SystemExit(run_code)
-    generate_suite_reports(ROOT.parent)
 
 
 def route_distance(route):

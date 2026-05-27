@@ -1,6 +1,7 @@
 import math
 from itertools import combinations
 
+from benchmark_analysis import generate_benchmark_analysis
 from common import read_rows_csv, summarize_results
 
 scipy_stats = None
@@ -8,121 +9,30 @@ _SCIPY_IMPORT_ATTEMPTED = False
 
 
 def write_benchmark_reports(benchmark_root, summary):
-    results_dir = benchmark_root / "results"
-    latex_dir = results_dir / "latex"
-    latex_dir.mkdir(parents=True, exist_ok=True)
-
-    fitness_rows = []
-    timing_rows = []
-    for algorithm, payload in sorted(summary.get("libraries", {}).items()):
-        aggregate = payload.get("aggregate", {})
-        fitness_rows.append(
-            [
-                algorithm,
-                payload.get("status"),
-                aggregate.get("ok_runs"),
-                aggregate.get("best_fitness"),
-                aggregate.get("mean_fitness"),
-                aggregate.get("median_fitness"),
-                aggregate.get("worst_fitness"),
-                aggregate.get("stddev_fitness"),
-                aggregate.get("iqr_fitness"),
-                aggregate.get("mad_fitness"),
-            ]
-        )
-        timing_rows.append(
-            [
-                algorithm,
-                payload.get("status"),
-                payload.get("runner_wall_time_ms"),
-                aggregate.get("mean_wall_time_ms"),
-                aggregate.get("median_wall_time_ms"),
-                aggregate.get("p90_wall_time_ms"),
-                aggregate.get("mean_cpu_time_ms"),
-                aggregate.get("median_cpu_time_ms"),
-            ]
-        )
-
-    benchmark_id = summary.get("benchmark_id", benchmark_root.name)
-    write_latex_table(
-        latex_dir / "fitness_summary.tex",
-        column_spec="llrrrrrrrr",
-        header=[
-            "Algorithm",
-            "Status",
-            "OK runs",
-            "Best",
-            "Mean",
-            "Median",
-            "Worst",
-            "Std. dev.",
-            "IQR",
-            "MAD",
-        ],
-        rows=fitness_rows,
-        caption=f"Resumen descriptivo de fitness para {benchmark_id}.",
-        label=f"tab:{benchmark_id}:fitness_summary",
-    )
-    write_latex_table(
-        latex_dir / "timing_summary.tex",
-        column_spec="llrrrrrr",
-        header=[
-            "Algorithm",
-            "Status",
-            "Runner ms",
-            "Mean wall ms",
-            "Median wall ms",
-            "P90 wall ms",
-            "Mean CPU ms",
-            "Median CPU ms",
-        ],
-        rows=timing_rows,
-        caption=f"Resumen temporal para {benchmark_id}.",
-        label=f"tab:{benchmark_id}:timing_summary",
-    )
+    generate_benchmark_analysis(benchmark_root, summary)
 
 
 def generate_suite_reports(benchmark_suite_root):
-    datasets = _load_benchmark_datasets(benchmark_suite_root)
-    reports_root = benchmark_suite_root / "reports"
-    latex_dir = reports_root / "latex"
-    latex_dir.mkdir(parents=True, exist_ok=True)
+    generated = []
+    for child in sorted(benchmark_suite_root.iterdir()):
+        if not child.is_dir():
+            continue
+        if (child / "results" / "runs.csv").exists():
+            generate_benchmark_analysis(child)
+            generated.append(child.name)
 
-    if not datasets:
+    notes_dir = benchmark_suite_root / "reports" / "latex"
+    notes_dir.mkdir(parents=True, exist_ok=True)
+    if not generated:
         _write_note(
-            latex_dir / "suite_notes.tex",
-            "No hay CSVs de benchmark disponibles todavía para construir el análisis transversal.",
+            notes_dir / "suite_notes.tex",
+            "No hay benchmarks con results/runs.csv para regenerar artefactos locales.",
         )
         return
 
-    cohorts = _build_cohorts(datasets)
-    if not cohorts:
-        _write_note(
-            latex_dir / "suite_notes.tex",
-            "No hay suficientes benchmarks comparables para construir cohortes estadísticas.",
-        )
-        return
-
-    overview_rows = []
-    for cohort_index, cohort in enumerate(cohorts, start=1):
-        cohort_slug = f"cohort_{cohort_index:02d}"
-        overview_rows.append(
-            [
-                cohort_slug,
-                len(cohort["benchmarks"]),
-                len(cohort["algorithms"]),
-                ", ".join(cohort["algorithms"]),
-            ]
-        )
-        _write_cohort_reports(latex_dir, cohort_slug, cohort)
-
-    write_latex_table(
-        latex_dir / "suite_cohorts.tex",
-        column_spec="lrrp{8cm}",
-        header=["Cohort", "Benchmarks", "Algorithms", "Algorithms list"],
-        rows=overview_rows,
-        caption="Cohortes de benchmarks comparables detectadas automáticamente.",
-        label="tab:suite:cohorts",
+    _write_note(
+        notes_dir / "suite_notes.tex",
+        "Los artefactos estadisticos se generan por benchmark en <benchmark>/results/{raw,aggregated,analysis,plots,latex}.",
     )
 
 
