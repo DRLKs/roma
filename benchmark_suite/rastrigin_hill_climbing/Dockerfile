@@ -27,6 +27,7 @@ RUN apt-get update \
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain stable
 
 COPY roma ./roma
+COPY benchmark_suite/*.py ./benchmark_suite/
 COPY benchmark_suite/rastrigin_hill_climbing ./benchmark_suite/rastrigin_hill_climbing
 
 RUN python3 -m pip install --break-system-packages --no-cache-dir -r /workspace/benchmark_suite/rastrigin_hill_climbing/requirements.txt

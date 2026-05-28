@@ -1,21 +1,45 @@
 import json
-import math
 import os
 import platform
-import statistics
 import subprocess
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+try:
+    from bootstrap import configure_entrypoint
+except ModuleNotFoundError:
+    for candidate in [
+        Path(__file__).resolve().parent.parent,
+        Path.cwd().resolve(),
+        Path.cwd().resolve() / "benchmark_suite",
+    ]:
+        if (candidate / "bootstrap.py").is_file():
+            if str(candidate) not in sys.path:
+                sys.path.insert(0, str(candidate))
+            break
+    else:
+        raise RuntimeError("Could not locate benchmark_suite bootstrap module")
+    from bootstrap import configure_entrypoint
 
-ROOT = Path(__file__).resolve().parent
-REPO_ROOT = ROOT.parent.parent
+ROOT, BENCHMARK_SUITE_ROOT, REPO_ROOT = configure_entrypoint(__file__)
+
+from common import (
+    build_failed_rows,
+    build_result_row,
+    command_to_string,
+    load_json,
+    prepare_results_directory,
+    run_command,
+    save_rows_csv,
+    summarize_results,
+)
+from reporting import write_benchmark_reports
+
 RUNNERS_DIR = ROOT / "runners"
 RESULTS_DIR = ROOT / "results"
-RAW_DIR = RESULTS_DIR / "raw"
-SUMMARY_PATH = RESULTS_DIR / "summary.json"
+RESULTS_CSV_PATH = RESULTS_DIR / "runs.csv"
 IN_CONTAINER_ENV = "ROMA_TSP_GA_IN_CONTAINER"
 DOCKER_IMAGE = "roma-tsp-ga:latest"
 CONTAINER_RESULTS_DIR = "/workspace/benchmark_suite/tsp_ga/results"
@@ -23,24 +47,8 @@ INSTANCE_PATH = ROOT / "shared" / "instance.json"
 CONFIG_PATH = ROOT / "shared" / "config.json"
 
 
-def load_json(path):
-    with path.open("r", encoding="utf-8") as handle:
-        return json.load(handle)
-
-
 INSTANCE = load_json(INSTANCE_PATH)
 CONFIG = load_json(CONFIG_PATH)
-
-
-def run_command(command, cwd=ROOT):
-    completed = subprocess.run(
-        command,
-        cwd=cwd,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    return completed.returncode, completed.stdout, completed.stderr
 
 
 def run_streaming_command(command, cwd=ROOT):
@@ -51,26 +59,6 @@ def run_streaming_command(command, cwd=ROOT):
         text=True,
     )
     return completed.returncode
-
-
-def command_to_string(command):
-    return " ".join(command)
-
-
-def percentile(values, p):
-    if not values:
-        return None
-    ordered = sorted(values)
-    if len(ordered) == 1:
-        return ordered[0]
-    rank = (len(ordered) - 1) * p
-    lower_idx = int(math.floor(rank))
-    upper_idx = int(math.ceil(rank))
-    if lower_idx == upper_idx:
-        return ordered[lower_idx]
-    lower = ordered[lower_idx]
-    upper = ordered[upper_idx]
-    return lower + (upper - lower) * (rank - lower_idx)
 
 
 def build_runners():
@@ -101,7 +89,7 @@ def build_runners():
 
 
 def run_containerized_orchestration():
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    prepare_results_directory(RESULTS_DIR)
 
     build_command = [
         "docker",
@@ -121,6 +109,12 @@ def run_containerized_orchestration():
         "docker",
         "run",
         "--rm",
+        "--user",
+        f"{os.getuid()}:{os.getgid()}",
+        "-e",
+        "HOME=/tmp/roma-benchmark-home",
+        "-e",
+        "XDG_CACHE_HOME=/tmp/roma-benchmark-cache",
         "-v",
         f"{RESULTS_DIR}:{CONTAINER_RESULTS_DIR}",
         DOCKER_IMAGE,
@@ -128,58 +122,6 @@ def run_containerized_orchestration():
     run_code = run_streaming_command(run_command_args, cwd=REPO_ROOT)
     if run_code != 0:
         raise SystemExit(run_code)
-
-
-def save_json(path, payload):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2)
-
-
-def summarize_results(results):
-    ok_results = [result for result in results if result.get("status") == "ok"]
-    error_results = [result for result in results if result.get("status") == "error"]
-    skipped_results = [result for result in results if result.get("status") == "skipped"]
-    fitness_values = [result["best_fitness"] for result in ok_results]
-    wall_values = [result["wall_time_ms"] for result in ok_results]
-    cpu_values = [
-        result["cpu_time_ms"]
-        for result in ok_results
-        if result.get("cpu_time_ms") is not None
-    ]
-
-    if not ok_results:
-        return {
-            "runs": len(results),
-            "ok_runs": 0,
-            "failed_runs": len(results),
-            "error_runs": len(error_results),
-            "skipped_runs": len(skipped_results),
-            "best_fitness": None,
-            "mean_fitness": None,
-            "worst_fitness": None,
-            "stddev_fitness": None,
-            "mean_wall_time_ms": None,
-            "mean_cpu_time_ms": None,
-        }
-
-    return {
-        "runs": len(results),
-        "ok_runs": len(ok_results),
-        "failed_runs": len(results) - len(ok_results),
-        "error_runs": len(error_results),
-        "skipped_runs": len(skipped_results),
-        "best_fitness": min(fitness_values),
-        "mean_fitness": statistics.fmean(fitness_values),
-        "median_fitness": statistics.median(fitness_values),
-        "worst_fitness": max(fitness_values),
-        "stddev_fitness": statistics.pstdev(fitness_values) if len(fitness_values) > 1 else 0.0,
-        "p90_fitness": percentile(fitness_values, 0.90),
-        "mean_wall_time_ms": statistics.fmean(wall_values),
-        "median_wall_time_ms": statistics.median(wall_values),
-        "p90_wall_time_ms": percentile(wall_values, 0.90),
-        "mean_cpu_time_ms": statistics.fmean(cpu_values) if cpu_values else None,
-    }
 
 
 def route_distance(route):
@@ -304,6 +246,17 @@ def main():
     runners = build_runners()
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     start_ts = time.perf_counter()
+    benchmark_base_row = {
+        "benchmark_id": CONFIG["benchmark_id"],
+        "executed_at_utc": timestamp,
+        "problem": INSTANCE["problem"],
+        "instance_id": INSTANCE["instance_id"],
+        "dimension": INSTANCE["dimension"],
+        "objective_sense": "min",
+        "budget_type": CONFIG["budget"]["type"],
+        "budget_value": CONFIG["budget"]["value"],
+    }
+    csv_rows = []
     summary = {
         "benchmark_id": CONFIG["benchmark_id"],
         "executed_at_utc": timestamp,
@@ -328,45 +281,55 @@ def main():
 
     for library, command in runners.items():
         runner_start_ts = time.perf_counter()
-        returncode, stdout, stderr = run_command(command)
+        returncode, stdout, stderr = run_command(command, cwd=ROOT)
         runner_elapsed_ms = (time.perf_counter() - runner_start_ts) * 1000.0
         mode = "container"
-
-        raw_path = RAW_DIR / f"{timestamp}_{library}.json"
+        runner_command = command_to_string(command)
 
         if returncode != 0:
-            payload = {
-                "library": library,
-                "status": "error",
-                "execution_mode": mode,
-                "runner_command": command,
-                "returncode": returncode,
-                "runner_wall_time_ms": runner_elapsed_ms,
-                "stdout": stdout,
-                "stderr": stderr,
-            }
-            save_json(raw_path, payload)
+            csv_rows.extend(
+                build_failed_rows(
+                    benchmark_base_row,
+                    algorithm=library,
+                    seeds=summary["seeds"],
+                    runner_command=runner_command,
+                    execution_mode=mode,
+                    status="error",
+                    error=stderr or stdout,
+                    returncode=returncode,
+                )
+            )
             summary["libraries"][library] = {
                 "status": "error",
                 "execution_mode": mode,
-                "runner_command": command_to_string(command),
+                "runner_command": runner_command,
                 "returncode": returncode,
                 "runner_wall_time_ms": runner_elapsed_ms,
-                "raw_output": str(raw_path.relative_to(ROOT)),
+                "csv_output": str(RESULTS_CSV_PATH.relative_to(ROOT)),
             }
             print_library_completion(library, "error", runner_elapsed_ms)
             continue
 
         results = json.loads(stdout)
         if isinstance(results, dict) and results.get("status") == "skipped":
-            save_json(raw_path, results)
+            csv_rows.extend(
+                build_failed_rows(
+                    benchmark_base_row,
+                    algorithm=library,
+                    seeds=summary["seeds"],
+                    runner_command=runner_command,
+                    execution_mode=mode,
+                    status="skipped",
+                    error=results.get("reason"),
+                )
+            )
             summary["libraries"][library] = {
                 "status": "skipped",
                 "execution_mode": mode,
-                "runner_command": command_to_string(command),
+                "runner_command": runner_command,
                 "runner_wall_time_ms": runner_elapsed_ms,
                 "reason": results.get("reason"),
-                "raw_output": str(raw_path.relative_to(ROOT)),
+                "csv_output": str(RESULTS_CSV_PATH.relative_to(ROOT)),
             }
             print_library_completion(
                 library,
@@ -376,17 +339,26 @@ def main():
             )
             continue
 
+        csv_rows.extend(
+            build_result_row(
+                benchmark_base_row,
+                result,
+                algorithm=library,
+                runner_command=runner_command,
+                execution_mode=mode,
+            )
+            for result in results
+        )
         validation = validate_results(results)
-        aggregate = summarize_results(results)
-        save_json(raw_path, results)
+        aggregate = summarize_results(results, objective_sense="min")
         if validation["valid"] and aggregate["ok_runs"] > 0:
             summary["libraries"][library] = {
                 "status": "ok",
                 "execution_mode": mode,
-                "runner_command": command_to_string(command),
+                "runner_command": runner_command,
                 "runner_wall_time_ms": runner_elapsed_ms,
                 "completed_runs": len(results),
-                "raw_output": str(raw_path.relative_to(ROOT)),
+                "csv_output": str(RESULTS_CSV_PATH.relative_to(ROOT)),
                 "aggregate": aggregate,
                 "validation": validation,
             }
@@ -400,10 +372,10 @@ def main():
             summary["libraries"][library] = {
                 "status": "error",
                 "execution_mode": mode,
-                "runner_command": command_to_string(command),
+                "runner_command": runner_command,
                 "runner_wall_time_ms": runner_elapsed_ms,
                 "completed_runs": len(results),
-                "raw_output": str(raw_path.relative_to(ROOT)),
+                "csv_output": str(RESULTS_CSV_PATH.relative_to(ROOT)),
                 "aggregate": aggregate,
                 "validation": validation,
             }
@@ -416,7 +388,8 @@ def main():
             )
 
     summary["total_wall_time_ms"] = (time.perf_counter() - start_ts) * 1000.0
-    save_json(SUMMARY_PATH, summary)
+    save_rows_csv(RESULTS_CSV_PATH, csv_rows)
+    write_benchmark_reports(ROOT, summary)
     print(json.dumps(summary, indent=2), flush=True)
 
 

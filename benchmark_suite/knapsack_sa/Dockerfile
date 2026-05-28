@@ -23,15 +23,16 @@ RUN apt-get update \
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain stable
 
 COPY roma ./roma
+COPY benchmark_suite/*.py ./benchmark_suite/
 COPY benchmark_suite/knapsack_sa ./benchmark_suite/knapsack_sa
 
 RUN python3 -m pip install --break-system-packages --no-cache-dir -r /workspace/benchmark_suite/knapsack_sa/requirements.txt
 
 RUN python3 -m venv /opt/mealpy-venv \
 	&& /opt/mealpy-venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel \
-	&& /opt/mealpy-venv/bin/pip install --no-cache-dir -r /workspace/benchmark_suite/knapsack_sa/requirements-mealpy.txt || true
+	&& /opt/mealpy-venv/bin/pip install --no-cache-dir -r /workspace/benchmark_suite/knapsack_sa/requirements-mealpy.txt
 
 RUN cargo build --release --example knapsack_sa_benchmark --manifest-path /workspace/roma/Cargo.toml \
-	&& cp /workspace/roma/target/release/examples/knapsack_sa_benchmark /usr/local/bin/roma_knapsack_sa_benchmark || true
+	&& cp /workspace/roma/target/release/examples/knapsack_sa_benchmark /usr/local/bin/roma_knapsack_sa_benchmark
 
 ENTRYPOINT ["python3", "/workspace/benchmark_suite/knapsack_sa/orchestrate.py"]
