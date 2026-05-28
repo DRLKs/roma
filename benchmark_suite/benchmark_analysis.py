@@ -42,7 +42,7 @@ STATUS_COLUMNS = [
 ]
 
 
-def generate_benchmark_analysis(benchmark_root: Path, _summary: dict | None = None):
+def generate_benchmark_analysis(benchmark_root: Path, summary: dict | None = None):
     results_dir = benchmark_root / "results"
     runs_path = results_dir / "runs.csv"
     if not runs_path.exists():
@@ -75,8 +75,10 @@ def generate_benchmark_analysis(benchmark_root: Path, _summary: dict | None = No
 
     raw_df = _normalize_raw_dataframe(pd.DataFrame(raw_rows))
     convergence_df = _build_convergence_dataframe(raw_df)
+    seed_timing_df = _build_seed_timing_dataframe(raw_df)
     algorithm_summary_df = _build_algorithm_summary(raw_df)
     instance_summary_df = _build_instance_summary(raw_df)
+    execution_time_summary_df = _build_execution_time_summary(raw_df, summary)
 
     descriptive_df = algorithm_summary_df[["algorithm", "mean", "median", "std", "best"]].copy()
     ranks_df, friedman_df, holm_df, nemenyi_df, instance_effect_df = _analyze_instances(instance_summary_df)
@@ -85,8 +87,10 @@ def generate_benchmark_analysis(benchmark_root: Path, _summary: dict | None = No
 
     _write_csv_frame(results_dir / "raw" / "runs.csv", raw_df)
     _write_csv_frame(results_dir / "raw" / "convergence.csv", convergence_df)
+    _write_csv_frame(results_dir / "raw" / "seed_execution_times.csv", seed_timing_df)
     _write_csv_frame(results_dir / "aggregated" / "algorithm_summary.csv", algorithm_summary_df)
     _write_csv_frame(results_dir / "aggregated" / "instance_algorithm_summary.csv", instance_summary_df)
+    _write_csv_frame(results_dir / "aggregated" / "execution_time_summary.csv", execution_time_summary_df)
     _write_csv_frame(results_dir / "analysis" / "descriptive_summary.csv", descriptive_df)
     _write_csv_frame(results_dir / "analysis" / "friedman.csv", friedman_df)
     _write_csv_frame(results_dir / "analysis" / "average_ranks.csv", ranks_df)
@@ -228,6 +232,30 @@ def _build_convergence_dataframe(raw_df):
     return pd.DataFrame(rows)
 
 
+def _build_seed_timing_dataframe(raw_df):
+    columns = [
+        "benchmark_id",
+        "problem",
+        "instance_id",
+        "algorithm",
+        "seed",
+        "status",
+        "success",
+        "wall_time_ms",
+        "cpu_time_ms",
+        "evaluations",
+        "final_fitness",
+        "execution_mode",
+        "returncode",
+    ]
+    if raw_df.empty:
+        return pd.DataFrame(columns=columns)
+
+    available_columns = [column for column in columns if column in raw_df.columns]
+    seed_timing_df = raw_df[available_columns].copy()
+    return seed_timing_df.sort_values(["algorithm", "seed"], na_position="last").reset_index(drop=True)
+
+
 def _parse_history_point(point):
     if isinstance(point, dict):
         evaluation = point.get("evaluation")
@@ -273,13 +301,118 @@ def _build_algorithm_summary(raw_df):
                 "mean_wall_time_ms": _safe_mean(wall_values),
                 "median_wall_time_ms": _safe_median(wall_values),
                 "p90_wall_time_ms": _safe_percentile(wall_values, 90),
+                "total_wall_time_ms": _safe_sum(wall_values),
                 "mean_cpu_time_ms": _safe_mean(cpu_values),
                 "median_cpu_time_ms": _safe_median(cpu_values),
+                "total_cpu_time_ms": _safe_sum(cpu_values),
                 "mean_evaluations": _safe_mean(eval_values),
                 "median_evaluations": _safe_median(eval_values),
             }
         )
     return pd.DataFrame(rows).sort_values("algorithm").reset_index(drop=True)
+
+
+def _build_execution_time_summary(raw_df, summary):
+    columns = [
+        "scope",
+        "benchmark_id",
+        "problem",
+        "instance_id",
+        "algorithm",
+        "run_count",
+        "ok_run_count",
+        "error_run_count",
+        "skipped_run_count",
+        "seed_count",
+        "total_run_wall_time_ms",
+        "mean_run_wall_time_ms",
+        "median_run_wall_time_ms",
+        "total_run_cpu_time_ms",
+        "mean_run_cpu_time_ms",
+        "median_run_cpu_time_ms",
+        "runner_wall_time_ms",
+        "orchestration_overhead_ms",
+        "benchmark_total_wall_time_ms",
+        "timing_source",
+    ]
+    if raw_df.empty:
+        return pd.DataFrame(columns=columns)
+
+    benchmark_id = _first_non_empty(raw_df, "benchmark_id")
+    problem = _first_non_empty(raw_df, "problem")
+    instance_id = _first_non_empty(raw_df, "instance_id")
+    libraries = (summary or {}).get("libraries", {})
+    rows = []
+
+    for algorithm, group_df in raw_df.groupby("algorithm", sort=True, dropna=False):
+        wall_values = group_df["wall_time_ms"].dropna().to_numpy(dtype=float)
+        cpu_values = group_df["cpu_time_ms"].dropna().to_numpy(dtype=float)
+        library_summary = libraries.get(algorithm, {}) if algorithm is not None else {}
+        runner_wall_time_ms = _coerce_float(library_summary.get("runner_wall_time_ms"))
+        total_run_wall_time_ms = _safe_sum(wall_values)
+        rows.append(
+            {
+                "scope": "algorithm",
+                "benchmark_id": benchmark_id,
+                "problem": problem,
+                "instance_id": instance_id,
+                "algorithm": algorithm,
+                "run_count": int(len(group_df)),
+                "ok_run_count": int((group_df["status"] == "ok").sum()),
+                "error_run_count": int((group_df["status"] == "error").sum()),
+                "skipped_run_count": int((group_df["status"] == "skipped").sum()),
+                "seed_count": int(group_df["seed"].dropna().nunique()),
+                "total_run_wall_time_ms": total_run_wall_time_ms,
+                "mean_run_wall_time_ms": _safe_mean(wall_values),
+                "median_run_wall_time_ms": _safe_median(wall_values),
+                "total_run_cpu_time_ms": _safe_sum(cpu_values),
+                "mean_run_cpu_time_ms": _safe_mean(cpu_values),
+                "median_run_cpu_time_ms": _safe_median(cpu_values),
+                "runner_wall_time_ms": runner_wall_time_ms,
+                "orchestration_overhead_ms": _subtract_or_nan(runner_wall_time_ms, total_run_wall_time_ms),
+                "benchmark_total_wall_time_ms": math.nan,
+                "timing_source": "summary" if not math.isnan(runner_wall_time_ms) else "runs_csv",
+            }
+        )
+
+    total_run_wall_time_ms = _safe_sum(raw_df["wall_time_ms"].dropna().to_numpy(dtype=float))
+    total_run_cpu_time_ms = _safe_sum(raw_df["cpu_time_ms"].dropna().to_numpy(dtype=float))
+    runner_wall_times = [_coerce_float(library.get("runner_wall_time_ms")) for library in libraries.values()]
+    runner_wall_times = [value for value in runner_wall_times if not math.isnan(value)]
+    summed_runner_wall_time_ms = sum(runner_wall_times) if runner_wall_times else math.nan
+    benchmark_total_wall_time_ms = _coerce_float((summary or {}).get("total_wall_time_ms"))
+    if math.isnan(benchmark_total_wall_time_ms):
+        benchmark_total_wall_time_ms = total_run_wall_time_ms
+        timing_source = "runs_csv"
+    else:
+        timing_source = "summary"
+
+    rows.append(
+        {
+            "scope": "benchmark",
+            "benchmark_id": benchmark_id,
+            "problem": problem,
+            "instance_id": instance_id,
+            "algorithm": None,
+            "run_count": int(len(raw_df)),
+            "ok_run_count": int((raw_df["status"] == "ok").sum()),
+            "error_run_count": int((raw_df["status"] == "error").sum()),
+            "skipped_run_count": int((raw_df["status"] == "skipped").sum()),
+            "seed_count": int(raw_df["seed"].dropna().nunique()),
+            "total_run_wall_time_ms": total_run_wall_time_ms,
+            "mean_run_wall_time_ms": _safe_mean(raw_df["wall_time_ms"].dropna().to_numpy(dtype=float)),
+            "median_run_wall_time_ms": _safe_median(raw_df["wall_time_ms"].dropna().to_numpy(dtype=float)),
+            "total_run_cpu_time_ms": total_run_cpu_time_ms,
+            "mean_run_cpu_time_ms": _safe_mean(raw_df["cpu_time_ms"].dropna().to_numpy(dtype=float)),
+            "median_run_cpu_time_ms": _safe_median(raw_df["cpu_time_ms"].dropna().to_numpy(dtype=float)),
+            "runner_wall_time_ms": summed_runner_wall_time_ms,
+            "orchestration_overhead_ms": _subtract_or_nan(benchmark_total_wall_time_ms, summed_runner_wall_time_ms),
+            "benchmark_total_wall_time_ms": benchmark_total_wall_time_ms,
+            "timing_source": timing_source,
+        }
+    )
+
+    return pd.DataFrame(rows, columns=columns)
 
 
 def _build_instance_summary(raw_df):
@@ -616,6 +749,27 @@ def _write_csv_frame(path: Path, frame):
 
 def _write_csv(path: Path, fieldnames, rows):
     pd.DataFrame(rows, columns=fieldnames).to_csv(path, index=False)
+
+
+def _coerce_float(value):
+    try:
+        if value is None:
+            return math.nan
+        return float(value)
+    except (TypeError, ValueError):
+        return math.nan
+
+
+def _safe_sum(values):
+    if values is None or len(values) == 0:
+        return math.nan
+    return float(values.sum())
+
+
+def _subtract_or_nan(left, right):
+    if math.isnan(left) or math.isnan(right):
+        return math.nan
+    return float(left - right)
 
 
 def _safe_mean(values):
