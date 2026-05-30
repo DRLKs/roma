@@ -1,0 +1,53 @@
+{
+  "benchmark_id": "zdt1_nsga2",
+  "algorithm_family": "nsga2",
+  "runs": 28,
+  "budget": {
+    "type": "evaluations",
+    "value": 25000
+  },
+  "seeds": [
+    101, 203, 307, 401, 509, 601, 709, 809, 907, 1009,
+    1103, 1201, 1301, 1409, 1511, 1601, 1709, 1801, 1901, 2003,
+    2111, 2203, 2309, 2411, 2503, 2609, 2707, 2801
+  ],
+  "roma": {
+    "population_size": 100,
+    "crossover_probability": 0.9,
+    "mutation_probability": 0.03333333333333333,
+    "sbx_distribution_index": 20.0,
+    "polynomial_distribution_index": 20.0,
+    "threads": 1
+  },
+  "deap": {
+    "population_size": 100,
+    "crossover_probability": 0.9,
+    "mutation_probability": 0.03333333333333333,
+    "sbx_distribution_index": 20.0,
+    "polynomial_distribution_index": 20.0
+  },
+  "jmetalpy": {
+    "population_size": 100,
+    "offspring_population_size": 100,
+    "crossover_probability": 0.9,
+    "mutation_probability": 0.03333333333333333,
+    "sbx_distribution_index": 20.0,
+    "polynomial_distribution_index": 20.0
+  },
+  "jmetal_java": {
+    "version": "5.11",
+    "population_size": 100,
+    "offspring_population_size": 100,
+    "crossover_probability": 0.9,
+    "mutation_probability": 0.03333333333333333,
+    "sbx_distribution_index": 20.0,
+    "polynomial_distribution_index": 20.0
+  },
+  "pagmo2_cpp": {
+    "population_size": 100,
+    "crossover_probability": 0.9,
+    "mutation_probability": 0.03333333333333333,
+    "eta_c": 20.0,
+    "eta_m": 20.0
+  }
+}

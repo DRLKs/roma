@@ -158,6 +158,7 @@ def _normalize_raw_dataframe(df):
         "instance_id",
         "algorithm",
         "objective_sense",
+        "result_metric_name",
         "status",
         "budget_type",
         "final_fitness",
@@ -168,6 +169,7 @@ def _normalize_raw_dataframe(df):
         "budget_value",
         "success",
         "evaluations",
+        "pareto_front",
         "convergence_history",
     ]:
         if column not in normalized.columns:
@@ -175,6 +177,7 @@ def _normalize_raw_dataframe(df):
 
     normalized["final_fitness"] = normalized["final_fitness"].fillna(normalized["best_fitness"])
     normalized["objective_sense"] = normalized["objective_sense"].fillna("min")
+    normalized["result_metric_name"] = normalized["result_metric_name"].fillna("fitness")
     normalized["success"] = normalized["success"].where(normalized["success"].notna(), normalized["status"] == "ok")
     normalized["success"] = normalized["success"].astype(bool)
     normalized["instance_key"] = normalized.apply(
@@ -238,6 +241,7 @@ def _build_seed_timing_dataframe(raw_df):
         "problem",
         "instance_id",
         "algorithm",
+        "result_metric_name",
         "seed",
         "status",
         "success",
@@ -245,6 +249,7 @@ def _build_seed_timing_dataframe(raw_df):
         "cpu_time_ms",
         "evaluations",
         "final_fitness",
+        "pareto_front",
         "execution_mode",
         "returncode",
     ]
@@ -279,6 +284,7 @@ def _build_algorithm_summary(raw_df):
     rows = []
     for algorithm, group_df in ok_df.groupby("algorithm", sort=True):
         objective_sense = group_df["objective_sense"].iloc[0]
+        result_metric_name = group_df["result_metric_name"].iloc[0]
         fitness_values = group_df["final_fitness"].dropna().to_numpy(dtype=float)
         wall_values = group_df["wall_time_ms"].dropna().to_numpy(dtype=float)
         cpu_values = group_df["cpu_time_ms"].dropna().to_numpy(dtype=float)
@@ -287,6 +293,7 @@ def _build_algorithm_summary(raw_df):
             {
                 "algorithm": algorithm,
                 "objective_sense": objective_sense,
+                "result_metric_name": result_metric_name,
                 "run_count": int(len(group_df)),
                 "seed_count": int(group_df["seed"].dropna().nunique()),
                 "success_rate": float(group_df["success"].astype(float).mean()) if len(group_df) else math.nan,
@@ -427,6 +434,7 @@ def _build_instance_summary(raw_df):
         "instance_id",
         "instance_key",
         "objective_sense",
+        "result_metric_name",
         "algorithm",
         "budget_type",
         "budget_value",

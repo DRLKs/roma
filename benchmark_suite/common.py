@@ -13,6 +13,7 @@ RESULTS_CSV_FIELDNAMES = [
     "instance_id",
     "dimension",
     "objective_sense",
+    "result_metric_name",
     "algorithm",
     "algorithm_family",
     "seed",
@@ -26,6 +27,7 @@ RESULTS_CSV_FIELDNAMES = [
     "success",
     "evaluations",
     "best_solution",
+    "pareto_front",
     "convergence_history",
     "error",
     "execution_mode",
@@ -179,6 +181,7 @@ def build_result_row(base_row, result, algorithm, runner_command, execution_mode
         "budget_type": result.get("budget_type", base_row.get("budget_type")),
         "budget_value": result.get("budget_value", base_row.get("budget_value")),
         "status": status,
+        "result_metric_name": result.get("result_metric_name", base_row.get("result_metric_name", "fitness")),
         "final_fitness": final_fitness,
         "best_fitness": result.get("best_fitness", final_fitness),
         "wall_time_ms": result.get("wall_time_ms"),
@@ -186,6 +189,7 @@ def build_result_row(base_row, result, algorithm, runner_command, execution_mode
         "success": success,
         "evaluations": evaluations,
         "best_solution": result.get("best_solution"),
+        "pareto_front": result.get("pareto_front"),
         "convergence_history": result.get("convergence_history"),
         "error": result.get("error"),
         "execution_mode": execution_mode,
@@ -206,6 +210,7 @@ def build_failed_rows(base_row, algorithm, seeds, runner_command, execution_mode
                 "budget_type": base_row.get("budget_type"),
                 "budget_value": base_row.get("budget_value"),
                 "status": status,
+                "result_metric_name": base_row.get("result_metric_name", "fitness"),
                 "final_fitness": None,
                 "best_fitness": None,
                 "wall_time_ms": None,
@@ -213,6 +218,7 @@ def build_failed_rows(base_row, algorithm, seeds, runner_command, execution_mode
                 "success": False,
                 "evaluations": None,
                 "best_solution": None,
+                "pareto_front": None,
                 "convergence_history": None,
                 "error": error,
                 "execution_mode": execution_mode,
@@ -242,7 +248,7 @@ def _denormalize_csv_row(row):
         if value == "":
             denormalized[fieldname] = None
             continue
-        if fieldname in {"best_solution", "convergence_history"}:
+        if fieldname in {"best_solution", "pareto_front", "convergence_history"}:
             try:
                 denormalized[fieldname] = json.loads(value)
                 continue
