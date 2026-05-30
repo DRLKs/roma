@@ -1,0 +1,33 @@
+{
+  "benchmark_id": "ackley_de",
+  "algorithm_family": "differential_evolution",
+  "runs": 30,
+  "budget": {
+    "type": "evaluations",
+    "value": 6400
+  },
+  "seeds": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129],
+  "roma": {
+    "population_size": 80,
+    "crossover_rate": 0.9,
+    "differential_weight": 0.7
+  },
+  "deap": {
+    "population_size": 80,
+    "crossover_rate": 0.9,
+    "differential_weight": 0.7
+  },
+  "scipy": {
+    "population_multiplier": 2,
+    "strategy": "best1bin",
+    "recombination": 0.9,
+    "mutation_min": 0.5,
+    "mutation_max": 0.9
+  },
+  "pagmo2_cpp": {
+    "population_size": 80,
+    "crossover_rate": 0.9,
+    "differential_weight": 0.7,
+    "variant": 2
+  }
+}

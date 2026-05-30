@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import math
 import shutil
 from itertools import combinations
@@ -756,7 +757,16 @@ def _write_csv_frame(path: Path, frame):
 
 
 def _write_csv(path: Path, fieldnames, rows):
-    pd.DataFrame(rows, columns=fieldnames).to_csv(path, index=False)
+    if pd is not None:
+        pd.DataFrame(rows, columns=fieldnames).to_csv(path, index=False)
+        return
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({fieldname: row.get(fieldname) for fieldname in fieldnames})
 
 
 def _coerce_float(value):

@@ -1,0 +1,8 @@
+{
+  "benchmark_id": "ackley_de",
+  "problem": "ackley",
+  "instance_id": "ackley_dim_35",
+  "dimension": 35,
+  "lower_bound": -32.768,
+  "upper_bound": 32.768
+}
