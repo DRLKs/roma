@@ -1,9 +1,11 @@
 # Knapsack Simulated Annealing Benchmark
 
 Benchmark that compares Roma's Simulated Annealing implementation on a
-knapsack instance with other Python baselines (DEAP GA and a simple greedy
-baseline). The goal is to add an algorithm not yet used in the suite
-(Simulated Annealing) and compare Roma against other common libraries.
+harder strongly-correlated 0/1 knapsack instance with other Python baselines
+(DEAP GA and a simple greedy baseline). The goal is to add an algorithm not
+yet used in the suite (Simulated Annealing) and compare Roma against other
+common libraries on a problem that is now aligned in difficulty with the
+Binary PSO knapsack benchmark.
 
 Run:
 

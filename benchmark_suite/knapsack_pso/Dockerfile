@@ -1,0 +1,34 @@
+FROM ubuntu:24.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+ENV CARGO_HOME=/usr/local/cargo
+ENV RUSTUP_HOME=/usr/local/rustup
+ENV PATH=/usr/local/cargo/bin:${PATH}
+ENV ROMA_KNAPSACK_PSO_IN_CONTAINER=1
+
+WORKDIR /workspace
+
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends \
+		build-essential \
+		ca-certificates \
+		curl \
+		git \
+		python3-venv \
+		python3-pip \
+		python3 \
+	&& rm -rf /var/lib/apt/lists/*
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain stable
+
+COPY roma ./roma
+COPY benchmark_suite/*.py ./benchmark_suite/
+COPY benchmark_suite/knapsack_pso ./benchmark_suite/knapsack_pso
+
+RUN python3 -m pip install --break-system-packages --no-cache-dir -r /workspace/benchmark_suite/knapsack_pso/requirements.txt
+
+RUN cargo build --release --example knapsack_pso_benchmark --manifest-path /workspace/roma/Cargo.toml \
+	&& cp /workspace/roma/target/release/examples/knapsack_pso_benchmark /usr/local/bin/roma_knapsack_pso_benchmark
+
+ENTRYPOINT ["python3", "/workspace/benchmark_suite/knapsack_pso/orchestrate.py"]
