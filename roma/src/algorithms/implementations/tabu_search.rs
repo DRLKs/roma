@@ -7,7 +7,7 @@ use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
-use crate::operator::traits::MutationOperator;
+use crate::operator::traits::{NeighborhoodOperator, SolutionTabuMemory, TabuMemoryOperator};
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
@@ -16,12 +16,14 @@ use crate::utils::random::{seed_from_time, Random};
 
 /// Configuration for [`TabuSearch`].
 #[derive(Clone)]
-pub struct TabuSearchParameters<T, M>
+pub struct TabuSearchParameters<T, N, Mem = SolutionTabuMemory>
 where
-    T: Clone,
-    M: MutationOperator<T>,
+    T: Clone + Display,
+    N: NeighborhoodOperator<T>,
+    Mem: TabuMemoryOperator<T>,
 {
-    pub mutation_operator: M,
+    pub mutation_operator: N,
+    pub memory_operator: Mem,
     pub mutation_probability: f64,
     pub neighborhood_size: usize,
     pub tabu_tenure: usize,
@@ -31,14 +33,14 @@ where
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T, M> TabuSearchParameters<T, M>
+impl<T, N> TabuSearchParameters<T, N, SolutionTabuMemory>
 where
-    T: Clone,
-    M: MutationOperator<T>,
+    T: Clone + Display,
+    N: NeighborhoodOperator<T>,
 {
     /// Creates a new Tabu Search parameter set.
     pub fn new(
-        mutation_operator: M,
+        mutation_operator: N,
         mutation_probability: f64,
         neighborhood_size: usize,
         tabu_tenure: usize,
@@ -46,12 +48,38 @@ where
     ) -> Self {
         Self {
             mutation_operator,
+            memory_operator: SolutionTabuMemory::new(),
             mutation_probability,
             neighborhood_size,
             tabu_tenure,
             aspiration_enabled: true,
             termination_criteria,
             random_seed: None,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T, N, Mem> TabuSearchParameters<T, N, Mem>
+where
+    T: Clone + Display,
+    N: NeighborhoodOperator<T>,
+    Mem: TabuMemoryOperator<T>,
+{
+    /// Replaces the short-term memory policy used by Tabu Search.
+    pub fn with_memory_operator<NewMem>(self, memory_operator: NewMem) -> TabuSearchParameters<T, N, NewMem>
+    where
+        NewMem: TabuMemoryOperator<T>,
+    {
+        TabuSearchParameters {
+            mutation_operator: self.mutation_operator,
+            memory_operator,
+            mutation_probability: self.mutation_probability,
+            neighborhood_size: self.neighborhood_size,
+            tabu_tenure: self.tabu_tenure,
+            aspiration_enabled: self.aspiration_enabled,
+            termination_criteria: self.termination_criteria,
+            random_seed: self.random_seed,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -70,12 +98,13 @@ where
 }
 
 /// Tabu Search optimizer for discrete and combinatorial problems.
-pub struct TabuSearch<T, M>
+pub struct TabuSearch<T, N, Mem = SolutionTabuMemory>
 where
-    T: Clone,
-    M: MutationOperator<T>,
+    T: Clone + Display,
+    N: NeighborhoodOperator<T>,
+    Mem: TabuMemoryOperator<T>,
 {
-    parameters: TabuSearchParameters<T, M>,
+    parameters: TabuSearchParameters<T, N, Mem>,
     solution_set: Option<VectorSolutionSet<T>>,
     observers: Vec<Box<dyn AlgorithmObserver<T>>>,
 }
@@ -176,10 +205,11 @@ where
     }
 }
 
-impl<T, M> Observable<T> for TabuSearch<T, M>
+impl<T, N, Mem> Observable<T> for TabuSearch<T, N, Mem>
 where
-    T: Clone + Send + 'static,
-    M: MutationOperator<T>,
+    T: Clone + Display + Send + 'static,
+    N: NeighborhoodOperator<T>,
+    Mem: TabuMemoryOperator<T>,
 {
     fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<T>>) {
         self.observers.push(observer);
@@ -190,23 +220,14 @@ where
     }
 }
 
-impl<T, M> TabuSearch<T, M>
+impl<T, N, Mem> Algorithm<T> for TabuSearch<T, N, Mem>
 where
     T: Clone + Send + Sync + 'static + Display + FromStr + Debug,
-    M: MutationOperator<T> + Send + Sync,
-{
-    fn purge_expired_tabu_entries(tabu_memory: &mut HashMap<String, usize>, iteration: usize) {
-        tabu_memory.retain(|_, expiry| *expiry > iteration);
-    }
-}
-
-impl<T, M> Algorithm<T> for TabuSearch<T, M>
-where
-    T: Clone + Send + Sync + 'static + Display + FromStr + Debug,
-    M: MutationOperator<T> + Send + Sync,
+    N: NeighborhoodOperator<T> + Send + Sync,
+    Mem: TabuMemoryOperator<T> + Send + Sync,
 {
     type SolutionSet = VectorSolutionSet<T>;
-    type Parameters = TabuSearchParameters<T, M>;
+    type Parameters = TabuSearchParameters<T, N, Mem>;
     type StepState = TabuSearchState<T>;
 
     fn new(parameters: Self::Parameters) -> Self {
@@ -261,9 +282,11 @@ where
         let mut rng = Random::new(self.parameters.random_seed.unwrap_or_else(seed_from_time));
         let mut current = problem.create_solution(&mut rng);
         problem.evaluate(&mut current);
-        let current_signature = current.encode();
-        let mut tabu_memory = HashMap::new();
-        tabu_memory.insert(current_signature, self.parameters.tabu_tenure);
+        let tabu_memory = self.parameters.memory_operator.initialize_memory(
+            &current,
+            0,
+            self.parameters.tabu_tenure,
+        );
 
         Self::StepState {
             best: current.copy(),
@@ -282,16 +305,17 @@ where
     ) {
         state.iteration += 1;
         let real_bounds = problem.real_bounds();
-        Self::purge_expired_tabu_entries(&mut state.tabu_memory, state.iteration);
+        self.parameters
+            .memory_operator
+            .purge_expired(&mut state.tabu_memory, state.iteration);
 
         let mut best_any_candidate: Option<Solution<T>> = None;
         let mut best_admissible_candidate: Option<Solution<T>> = None;
         let best_quality = state.best.quality_value();
 
         for _ in 0..self.parameters.neighborhood_size {
-            let mut candidate = state.current.copy();
-            self.parameters.mutation_operator.execute(
-                &mut candidate,
+            let mut candidate = self.parameters.mutation_operator.generate_neighbor(
+                &state.current,
                 self.parameters.mutation_probability,
                 real_bounds,
                 &mut state.rng,
@@ -299,11 +323,11 @@ where
             problem.evaluate(&mut candidate);
             state.evaluations += 1;
 
-            let candidate_signature = candidate.encode();
-            let is_tabu = state
-                .tabu_memory
-                .get(&candidate_signature)
-                .is_some_and(|expiry| *expiry > state.iteration);
+            let is_tabu = self.parameters.memory_operator.is_tabu(
+                &state.tabu_memory,
+                &candidate,
+                state.iteration,
+            );
             let aspiration = self.parameters.aspiration_enabled
                 && problem.is_better_fitness(candidate.quality_value(), best_quality);
             let admissible = !is_tabu || aspiration;
@@ -328,10 +352,11 @@ where
             .expect("neighborhood_size > 0 guarantees at least one candidate");
 
         state.current = selected;
-        let selected_signature = state.current.encode();
-        state.tabu_memory.insert(
-            selected_signature,
-            state.iteration + self.parameters.tabu_tenure,
+        self.parameters.memory_operator.remember(
+            &mut state.tabu_memory,
+            &state.current,
+            state.iteration,
+            self.parameters.tabu_tenure,
         );
 
         if problem.is_better_fitness(state.current.quality_value(), state.best.quality_value()) {
@@ -363,8 +388,9 @@ where
 
     fn checkpoint_algorithm_parameters(&self) -> String {
         format!(
-            "mutation={};mutation_probability={:.6};neighborhood_size={};tabu_tenure={};aspiration={}",
+            "mutation={};memory={};mutation_probability={:.6};neighborhood_size={};tabu_tenure={};aspiration={}",
             self.parameters.mutation_operator.name(),
+            self.parameters.memory_operator.name(),
             self.parameters.mutation_probability,
             self.parameters.neighborhood_size,
             self.parameters.tabu_tenure,
@@ -373,10 +399,11 @@ where
     }
 }
 
-impl<T, M, P> ExperimentalCase<T, f64, P> for TabuSearchParameters<T, M>
+impl<T, N, Mem, P> ExperimentalCase<T, f64, P> for TabuSearchParameters<T, N, Mem>
 where
     T: Clone + Send + Sync + 'static + Display + FromStr + Debug,
-    M: MutationOperator<T> + Clone + Send + Sync + 'static,
+    N: NeighborhoodOperator<T> + Clone + Send + Sync + 'static,
+    Mem: TabuMemoryOperator<T> + Clone + Send + Sync + 'static,
     P: Problem<T, f64> + Sync,
 {
     fn algorithm_name(&self) -> &str {
@@ -393,6 +420,7 @@ where
     fn parameters(&self) -> Vec<CaseParameter> {
         vec![
             CaseParameter::new("mutation_operator", self.mutation_operator.name()),
+            CaseParameter::new("memory_operator", self.memory_operator.name()),
             CaseParameter::new(
                 "mutation_probability",
                 format!("{:.6}", self.mutation_probability),

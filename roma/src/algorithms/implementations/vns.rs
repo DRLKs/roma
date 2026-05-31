@@ -6,7 +6,7 @@ use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
-use crate::operator::traits::MutationOperator;
+use crate::operator::traits::NeighborhoodOperator;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
@@ -15,12 +15,12 @@ use crate::utils::random::{seed_from_time, Random};
 
 /// Configuration for [`VNS`].
 #[derive(Clone)]
-pub struct VNSParameters<T, M>
+pub struct VNSParameters<T, N>
 where
     T: Clone,
-    M: MutationOperator<T>,
+    N: NeighborhoodOperator<T>,
 {
-    pub neighborhoods: Vec<M>,
+    pub neighborhoods: Vec<N>,
     pub mutation_probability: f64,
     pub local_search_trials: usize,
     pub termination_criteria: TerminationCriteria,
@@ -28,14 +28,14 @@ where
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T, M> VNSParameters<T, M>
+impl<T, N> VNSParameters<T, N>
 where
     T: Clone,
-    M: MutationOperator<T>,
+    N: NeighborhoodOperator<T>,
 {
     /// Creates a new Variable Neighborhood Search parameter set.
     pub fn new(
-        neighborhoods: Vec<M>,
+        neighborhoods: Vec<N>,
         mutation_probability: f64,
         local_search_trials: usize,
         termination_criteria: TerminationCriteria,
@@ -57,13 +57,13 @@ where
     }
 }
 
-/// Variable Neighborhood Search optimizer parameterized by mutation-based neighborhoods.
-pub struct VNS<T, M>
+/// Variable Neighborhood Search optimizer parameterized by explicit neighborhood operators.
+pub struct VNS<T, N>
 where
     T: Clone,
-    M: MutationOperator<T>,
+    N: NeighborhoodOperator<T>,
 {
-    parameters: VNSParameters<T, M>,
+    parameters: VNSParameters<T, N>,
     solution_set: Option<VectorSolutionSet<T>>,
     observers: Vec<Box<dyn AlgorithmObserver<T>>>,
 }
@@ -145,10 +145,10 @@ where
     }
 }
 
-impl<T, M> Observable<T> for VNS<T, M>
+impl<T, N> Observable<T> for VNS<T, N>
 where
     T: Clone + Send + 'static,
-    M: MutationOperator<T>,
+    N: NeighborhoodOperator<T>,
 {
     fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<T>>) {
         self.observers.push(observer);
@@ -159,13 +159,13 @@ where
     }
 }
 
-impl<T, M> Algorithm<T> for VNS<T, M>
+impl<T, N> Algorithm<T> for VNS<T, N>
 where
     T: Clone + Send + Sync + 'static + Display + FromStr + Debug,
-    M: MutationOperator<T> + Send + Sync,
+    N: NeighborhoodOperator<T> + Send + Sync,
 {
     type SolutionSet = VectorSolutionSet<T>;
-    type Parameters = VNSParameters<T, M>;
+    type Parameters = VNSParameters<T, N>;
     type StepState = VNSState<T>;
 
     fn new(parameters: Self::Parameters) -> Self {
@@ -240,9 +240,8 @@ where
         let real_bounds = problem.real_bounds();
 
         let mutation = &self.parameters.neighborhoods[state.neighborhood_index];
-        let mut candidate = state.current.copy();
-        mutation.execute(
-            &mut candidate,
+        let mut candidate = mutation.generate_neighbor(
+            &state.current,
             self.parameters.mutation_probability,
             real_bounds,
             &mut state.rng,
@@ -252,9 +251,8 @@ where
 
         let mut local_best = candidate;
         for _ in 0..self.parameters.local_search_trials {
-            let mut improved_candidate = local_best.copy();
-            mutation.execute(
-                &mut improved_candidate,
+            let mut improved_candidate = mutation.generate_neighbor(
+                &local_best,
                 self.parameters.mutation_probability,
                 real_bounds,
                 &mut state.rng,
@@ -322,10 +320,10 @@ where
     }
 }
 
-impl<T, M, P> ExperimentalCase<T, f64, P> for VNSParameters<T, M>
+impl<T, N, P> ExperimentalCase<T, f64, P> for VNSParameters<T, N>
 where
     T: Clone + Send + Sync + 'static + Display + FromStr + Debug,
-    M: MutationOperator<T> + Clone + Send + Sync + 'static,
+    N: NeighborhoodOperator<T> + Clone + Send + Sync + 'static,
     P: Problem<T, f64> + Sync,
 {
     fn algorithm_name(&self) -> &str {

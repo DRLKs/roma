@@ -1,4 +1,4 @@
-//! Variation and selection operators used by algorithms.
+//! Variation, neighborhood, selection, and memory operators used by algorithms.
 //!
 //! This module includes concrete mutation, crossover, and selection operators,
 //! plus trait interfaces for custom operator implementations.
@@ -11,7 +11,10 @@ pub(crate) mod mutation_operator_implementations;
 pub(crate) mod selection_operator_implementations;
 pub(crate) mod traits;
 
-pub use traits::{CrossoverOperator, MutationOperator, Operator, SelectionOperator};
+pub use traits::{
+    CrossoverOperator, MutationOperator, NeighborhoodOperator, Operator, SelectionOperator,
+    SolutionTabuMemory, TabuMemoryOperator,
+};
 
 pub use mutation_operator_implementations::{
     bit_flip_mutation::BitFlipMutation, polynomial_mutation::PolynomialMutation,

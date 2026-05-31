@@ -6,7 +6,7 @@ use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
-use crate::operator::traits::MutationOperator;
+use crate::operator::traits::NeighborhoodOperator;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
@@ -14,12 +14,12 @@ use crate::solution_set::traits::SolutionSet;
 use crate::utils::random::{seed_from_time, Random};
 
 #[derive(Clone)]
-pub struct SimulatedAnnealingParameters<T, M>
+pub struct SimulatedAnnealingParameters<T, N>
 where
     T: Clone,
-    M: MutationOperator<T>,
+    N: NeighborhoodOperator<T>,
 {
-    pub mutation_operator: M,
+    pub mutation_operator: N,
     pub mutation_probability: f64,
     pub initial_temperature: f64,
     pub minimum_temperature: f64,
@@ -29,13 +29,13 @@ where
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T, M> SimulatedAnnealingParameters<T, M>
+impl<T, N> SimulatedAnnealingParameters<T, N>
 where
     T: Clone,
-    M: MutationOperator<T>,
+    N: NeighborhoodOperator<T>,
 {
     pub fn new(
-        mutation_operator: M,
+        mutation_operator: N,
         mutation_probability: f64,
         initial_temperature: f64,
         cooling_rate: f64,
@@ -64,12 +64,12 @@ where
     }
 }
 
-pub struct SimulatedAnnealing<T, M>
+pub struct SimulatedAnnealing<T, N>
 where
     T: Clone,
-    M: MutationOperator<T>,
+    N: NeighborhoodOperator<T>,
 {
-    parameters: SimulatedAnnealingParameters<T, M>,
+    parameters: SimulatedAnnealingParameters<T, N>,
     solution_set: Option<VectorSolutionSet<T>>,
     observers: Vec<Box<dyn AlgorithmObserver<T>>>,
 }
@@ -158,10 +158,10 @@ where
     }
 }
 
-impl<T, M> Observable<T> for SimulatedAnnealing<T, M>
+impl<T, N> Observable<T> for SimulatedAnnealing<T, N>
 where
     T: Clone + Send + 'static,
-    M: MutationOperator<T>,
+    N: NeighborhoodOperator<T>,
 {
     fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<T>>) {
         self.observers.push(observer);
@@ -172,13 +172,13 @@ where
     }
 }
 
-impl<T, M> Algorithm<T> for SimulatedAnnealing<T, M>
+impl<T, N> Algorithm<T> for SimulatedAnnealing<T, N>
 where
     T: Clone + Send + Sync + 'static + Display + FromStr,
-    M: MutationOperator<T> + Send + Sync,
+    N: NeighborhoodOperator<T> + Send + Sync,
 {
     type SolutionSet = VectorSolutionSet<T>;
-    type Parameters = SimulatedAnnealingParameters<T, M>;
+    type Parameters = SimulatedAnnealingParameters<T, N>;
     type StepState = SimulatedAnnealingState<T>;
 
     fn new(parameters: Self::Parameters) -> Self {
@@ -260,9 +260,8 @@ where
         state.iteration += 1;
         let real_bounds = problem.real_bounds();
 
-        let mut candidate = state.current.copy();
-        self.parameters.mutation_operator.execute(
-            &mut candidate,
+        let mut candidate = self.parameters.mutation_operator.generate_neighbor(
+            &state.current,
             self.parameters.mutation_probability,
             real_bounds,
             &mut state.rng,
@@ -333,10 +332,10 @@ where
     }
 }
 
-impl<T, M, P> ExperimentalCase<T, f64, P> for SimulatedAnnealingParameters<T, M>
+impl<T, N, P> ExperimentalCase<T, f64, P> for SimulatedAnnealingParameters<T, N>
 where
     T: Clone + Send + Sync + 'static + Display + FromStr,
-    M: MutationOperator<T> + Clone + Send + Sync + 'static,
+    N: NeighborhoodOperator<T> + Clone + Send + Sync + 'static,
     P: Problem<T, f64> + Sync,
 {
     fn algorithm_name(&self) -> &str {

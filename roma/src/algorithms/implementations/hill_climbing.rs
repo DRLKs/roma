@@ -7,7 +7,7 @@ use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::AlgorithmObserver;
 use crate::observer::Observable;
-use crate::operator::traits::MutationOperator;
+use crate::operator::traits::NeighborhoodOperator;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
@@ -18,33 +18,33 @@ use crate::utils::random::{seed_from_time, Random};
 ///
 /// # Type Parameters
 /// - `T`: decision variable type of the solution.
-/// - `M`: mutation operator used to generate neighbor solutions.
+/// - `N`: neighborhood operator used to generate neighbor solutions.
 #[derive(Clone)]
-pub struct HillClimbingParameters<T, M>
+pub struct HillClimbingParameters<T, N>
 where
     T: Clone,
-    M: MutationOperator<T>,
+    N: NeighborhoodOperator<T>,
 {
-    pub mutation_operator: M,
+    pub mutation_operator: N,
     pub mutation_probability: f64,
     pub termination_criteria: TerminationCriteria,
     pub random_seed: Option<u64>,
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T, M> HillClimbingParameters<T, M>
+impl<T, N> HillClimbingParameters<T, N>
 where
     T: Clone,
-    M: MutationOperator<T>,
+    N: NeighborhoodOperator<T>,
 {
     /// Creates a new parameter set.
     ///
     /// # Arguments
-    /// - `mutation_operator`: operator used to mutate the current solution.
+    /// - `mutation_operator`: operator used to sample a neighbor of the current solution.
     /// - `mutation_probability`: per-variable mutation probability in the range `[0.0, 1.0]`.
     /// - `termination_criteria`: criteria to stop the algorithm.
     pub fn new(
-        mutation_operator: M,
+        mutation_operator: N,
         mutation_probability: f64,
         termination_criteria: TerminationCriteria,
     ) -> Self {
@@ -75,13 +75,13 @@ where
 ///
 /// # Type Parameters
 /// - `T`: decision variable type of the solution.
-/// - `M`: mutation operator used to generate neighbor solutions.
-pub struct HillClimbing<T, M>
+/// - `N`: neighborhood operator used to generate neighbor solutions.
+pub struct HillClimbing<T, N>
 where
     T: Clone,
-    M: MutationOperator<T>,
+    N: NeighborhoodOperator<T>,
 {
-    parameters: HillClimbingParameters<T, M>,
+    parameters: HillClimbingParameters<T, N>,
     solution_set: Option<VectorSolutionSet<T>>,
     observers: Vec<Box<dyn AlgorithmObserver<T>>>,
 }
@@ -152,10 +152,10 @@ where
     }
 }
 
-impl<T, M> Observable<T> for HillClimbing<T, M>
+impl<T, N> Observable<T> for HillClimbing<T, N>
 where
     T: Clone + Send + 'static,
-    M: MutationOperator<T>,
+    N: NeighborhoodOperator<T>,
 {
     fn add_observer(&mut self, observer: Box<dyn AlgorithmObserver<T>>) {
         self.observers.push(observer);
@@ -166,13 +166,13 @@ where
     }
 }
 
-impl<T, M> Algorithm<T> for HillClimbing<T, M>
+impl<T, N> Algorithm<T> for HillClimbing<T, N>
 where
     T: Clone + Send + Sync + 'static + Display + FromStr + Debug,
-    M: MutationOperator<T> + Send + Sync,
+    N: NeighborhoodOperator<T> + Send + Sync,
 {
     type SolutionSet = VectorSolutionSet<T>;
-    type Parameters = HillClimbingParameters<T, M>;
+    type Parameters = HillClimbingParameters<T, N>;
     type StepState = HillClimbingState<T>;
 
     /// Creates a new Hill Climbing instance.    /// Creates a new Hill Climbing instance.
@@ -181,7 +181,7 @@ where
     /// # Arguments
     /// - `parameters`: algorithm configuration.
     /// - `maximization`: `true` for maximization, `false` for minimization.
-    fn new(parameters: HillClimbingParameters<T, M>) -> Self {
+    fn new(parameters: HillClimbingParameters<T, N>) -> Self {
         Self {
             parameters,
             solution_set: None,
@@ -245,9 +245,8 @@ where
         state.iteration += 1;
         let real_bounds = problem.real_bounds();
 
-        let mut neighbor = state.current.copy();
-        self.parameters.mutation_operator.execute(
-            &mut neighbor,
+        let mut neighbor = self.parameters.mutation_operator.generate_neighbor(
+            &state.current,
             self.parameters.mutation_probability,
             real_bounds,
             &mut state.rng,
@@ -296,10 +295,10 @@ where
     }
 }
 
-impl<T, M, P> ExperimentalCase<T, f64, P> for HillClimbingParameters<T, M>
+impl<T, N, P> ExperimentalCase<T, f64, P> for HillClimbingParameters<T, N>
 where
     T: Clone + Send + Sync + 'static + Display + FromStr + Debug,
-    M: MutationOperator<T> + Clone + Send + Sync + 'static,
+    N: NeighborhoodOperator<T> + Clone + Send + Sync + 'static,
     P: Problem<T, f64> + Sync,
 {
     fn algorithm_name(&self) -> &str {

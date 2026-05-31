@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::fmt::Display;
+
 use crate::solution::{RealBounds, Solution};
 use crate::utils::random::Random;
 
@@ -31,6 +34,61 @@ where
         bounds: Option<&RealBounds>,
         rng: &mut Random,
     );
+}
+
+/// Trait for neighborhood operators that sample the local search space around a solution.
+///
+/// A neighborhood operator is the natural abstraction for local-search methods
+/// such as hill climbing, simulated annealing, tabu search, or VNS.
+pub trait NeighborhoodOperator<T, Q = f64>: Operator
+where
+    T: Clone,
+    Q: Clone,
+{
+    /// Applies one neighborhood move to a solution, modifying it in place.
+    ///
+    /// # Arguments
+    /// * `solution` - The base solution from which the neighborhood move is sampled
+    /// * `exploration_strength` - Algorithm-controlled move intensity or per-variable rate
+    /// * `bounds` - Optional solution-space bounds for bounded real-valued operators
+    /// * `rng` - Random generator provided by the algorithm
+    fn explore(
+        &self,
+        solution: &mut Solution<T, Q>,
+        exploration_strength: f64,
+        bounds: Option<&RealBounds>,
+        rng: &mut Random,
+    );
+
+    /// Generates a new neighbor from the provided source solution.
+    fn generate_neighbor(
+        &self,
+        source: &Solution<T, Q>,
+        exploration_strength: f64,
+        bounds: Option<&RealBounds>,
+        rng: &mut Random,
+    ) -> Solution<T, Q> {
+        let mut neighbor = source.clone();
+        self.explore(&mut neighbor, exploration_strength, bounds, rng);
+        neighbor
+    }
+}
+
+impl<T, Q, M> NeighborhoodOperator<T, Q> for M
+where
+    T: Clone,
+    Q: Clone,
+    M: MutationOperator<T, Q>,
+{
+    fn explore(
+        &self,
+        solution: &mut Solution<T, Q>,
+        exploration_strength: f64,
+        bounds: Option<&RealBounds>,
+        rng: &mut Random,
+    ) {
+        <M as MutationOperator<T, Q>>::execute(self, solution, exploration_strength, bounds, rng);
+    }
 }
 
 /// Trait for crossover operators that combine two parent solutions.
@@ -133,4 +191,83 @@ where
             .map(|_| self.execute(population, rng, &dominates))
             .collect()
     }
+}
+
+/// Default tabu-memory policy based on solution signatures.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SolutionTabuMemory;
+
+impl SolutionTabuMemory {
+    /// Creates a default solution-signature-based tabu memory policy.
+    pub const fn new() -> Self {
+        Self
+    }
+}
+
+impl Operator for SolutionTabuMemory {
+    fn name(&self) -> &str {
+        "SolutionTabuMemory"
+    }
+}
+
+/// Trait for short-term memory policies used by memory-based search methods.
+///
+/// The default representation models a classical tabu list keyed by solution
+/// signatures with iteration-based expiration.
+pub trait TabuMemoryOperator<T, Q = f64>: Operator
+where
+    T: Clone + Display,
+    Q: Clone + Display,
+{
+    /// Returns the memory signature used to represent a solution inside the tabu list.
+    fn signature(&self, solution: &Solution<T, Q>) -> String {
+        solution.encode()
+    }
+
+    /// Creates the initial tabu memory from the starting solution.
+    fn initialize_memory(
+        &self,
+        initial_solution: &Solution<T, Q>,
+        iteration: usize,
+        tabu_tenure: usize,
+    ) -> HashMap<String, usize> {
+        let mut memory = HashMap::new();
+        self.remember(&mut memory, initial_solution, iteration, tabu_tenure);
+        memory
+    }
+
+    /// Removes expired entries from the tabu list.
+    fn purge_expired(&self, tabu_memory: &mut HashMap<String, usize>, iteration: usize) {
+        tabu_memory.retain(|_, expiry| *expiry > iteration);
+    }
+
+    /// Returns whether the candidate is currently tabu.
+    fn is_tabu(
+        &self,
+        tabu_memory: &HashMap<String, usize>,
+        candidate: &Solution<T, Q>,
+        iteration: usize,
+    ) -> bool {
+        tabu_memory
+            .get(&self.signature(candidate))
+            .is_some_and(|expiry| *expiry > iteration)
+    }
+
+    /// Stores a solution in the tabu list until the configured expiration iteration.
+    fn remember(
+        &self,
+        tabu_memory: &mut HashMap<String, usize>,
+        solution: &Solution<T, Q>,
+        iteration: usize,
+        tabu_tenure: usize,
+    ) {
+        tabu_memory.insert(self.signature(solution), iteration + tabu_tenure);
+    }
+}
+
+impl<T, Q> TabuMemoryOperator<T, Q> for SolutionTabuMemory
+where
+    T: Clone + Display,
+    Q: Clone + Display,
+{
 }
