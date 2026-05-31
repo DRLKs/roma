@@ -1,0 +1,27 @@
+{
+  "benchmark_id": "knapsack_pso",
+  "algorithm_family": "particle_swarm_optimization",
+  "runs": 30,
+  "budget": {
+    "type": "evaluations",
+    "value": 6000
+  },
+  "seeds": [200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229],
+  "roma": {
+    "swarm_size": 40,
+    "inertia_weight": 0.72,
+    "cognitive_coefficient": 1.7,
+    "social_coefficient": 1.7,
+    "velocity_clamp": 4.0,
+    "threads": 1
+  },
+  "pyswarms": {
+    "swarm_size": 40,
+    "inertia_weight": 0.72,
+    "cognitive_coefficient": 1.7,
+    "social_coefficient": 1.7,
+    "velocity_clamp": 4.0,
+    "neighborhood_size": 40,
+    "minkowski_p": 2
+  }
+}
