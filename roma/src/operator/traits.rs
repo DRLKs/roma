@@ -36,58 +36,62 @@ where
     );
 }
 
-/// Trait for neighborhood operators that sample the local search space around a solution.
+/// Trait for neighborhood operators that define the structure of the local
+/// search space around a solution.
 ///
-/// A neighborhood operator is the natural abstraction for local-search methods
-/// such as hill climbing, simulated annealing, tabu search, or VNS.
+/// A neighborhood operator answers: "What solutions are reachable from this
+/// one via a single move?" It defines the **set** of neighbors, and provides
+/// methods to sample from or enumerate that set.
+///
+/// This is fundamentally different from [`MutationOperator`]:
+/// - **Neighborhood**: defines the set of reachable solutions (the structure).
+/// - **Mutation**: randomly applies a perturbation to create a new solution
+///   (stochastic, probability-driven, used in population-based methods).
+///
+/// # Example
+/// - Neighborhood "all single-swap permutations": defines $\binom{n}{2}$ neighbors.
+/// - Mutation "swap two random positions with probability p": picks one and applies it.
 pub trait NeighborhoodOperator<T, Q = f64>: Operator
 where
     T: Clone,
     Q: Clone,
 {
-    /// Applies one neighborhood move to a solution, modifying it in place.
+    /// Returns the number of neighbors reachable from `solution` via one move,
+    /// if the neighborhood is finite and computable.
+    ///
+    /// Returns `None` for infinite or intractable neighborhoods (e.g., continuous spaces).
+    fn neighborhood_size(&self, solution: &Solution<T, Q>) -> Option<usize> {
+        let _ = solution;
+        None
+    }
+
+    /// Samples one neighbor uniformly at random from the defined neighborhood.
+    ///
+    /// This is the primary method used by local-search algorithms (HC, SA, TS, VNS).
+    /// The move is chosen uniformly among all valid moves in the neighborhood.
     ///
     /// # Arguments
-    /// * `solution` - The base solution from which the neighborhood move is sampled
-    /// * `exploration_strength` - Algorithm-controlled move intensity or per-variable rate
-    /// * `bounds` - Optional solution-space bounds for bounded real-valued operators
+    /// * `solution` - The current solution whose neighborhood is being explored
+    /// * `bounds` - Optional real-valued bounds for continuous operators
     /// * `rng` - Random generator provided by the algorithm
-    fn explore(
+    fn random_neighbor(
         &self,
-        solution: &mut Solution<T, Q>,
-        exploration_strength: f64,
+        solution: &Solution<T, Q>,
         bounds: Option<&RealBounds>,
         rng: &mut Random,
-    );
+    ) -> Solution<T, Q>;
 
-    /// Generates a new neighbor from the provided source solution.
-    fn generate_neighbor(
+    /// Enumerates all neighbors of the given solution, if feasible.
+    ///
+    /// Returns `None` if the neighborhood is too large or infinite.
+    /// Useful for exhaustive local search or small combinatorial spaces.
+    fn all_neighbors(
         &self,
-        source: &Solution<T, Q>,
-        exploration_strength: f64,
+        solution: &Solution<T, Q>,
         bounds: Option<&RealBounds>,
-        rng: &mut Random,
-    ) -> Solution<T, Q> {
-        let mut neighbor = source.clone();
-        self.explore(&mut neighbor, exploration_strength, bounds, rng);
-        neighbor
-    }
-}
-
-impl<T, Q, M> NeighborhoodOperator<T, Q> for M
-where
-    T: Clone,
-    Q: Clone,
-    M: MutationOperator<T, Q>,
-{
-    fn explore(
-        &self,
-        solution: &mut Solution<T, Q>,
-        exploration_strength: f64,
-        bounds: Option<&RealBounds>,
-        rng: &mut Random,
-    ) {
-        <M as MutationOperator<T, Q>>::execute(self, solution, exploration_strength, bounds, rng);
+    ) -> Option<Vec<Solution<T, Q>>> {
+        let _ = (solution, bounds);
+        None
     }
 }
 

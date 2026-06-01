@@ -36,7 +36,7 @@
 //!     TerminationCriteria,
 //!     TerminationCriterion,
 //! };
-//! use roma_lib::operator::BitFlipMutation;
+//! use roma_lib::operator::BitFlipNeighborhood;
 //! use roma_lib::problem::KnapsackBuilder;
 //! use roma_lib::solution_set::SolutionSet;
 //!
@@ -46,8 +46,7 @@
 //!     .build();
 //!
 //! let parameters = HillClimbingParameters::new(
-//!     BitFlipMutation::new(),
-//!     0.2,
+//!     BitFlipNeighborhood::new(),
 //!     TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(25)]),
 //! )
 //! .with_seed(7);
@@ -95,11 +94,12 @@ pub use observer::{
     Observable,
 };
 pub use operator::{
-    BinaryTournamentSelection, BitFlipMutation, CrossoverOperator,
+    AttributeTabuMemory, BinaryTournamentSelection, BitFlipMutation, BitFlipNeighborhood,
+    CrossoverOperator, FrequencyTabuMemory, GaussianNeighborhood, InsertionNeighborhood,
     MultiObjectiveTournamentSelection, MutationOperator, NeighborhoodOperator, Operator,
     OrderCrossover, PolynomialMutation, RealPerturbationMutation, SBXCrossover,
     SelectionOperator, SinglePointCrossover, SolutionTabuMemory, SwapMutation,
-    TabuMemoryOperator,
+    TabuMemoryOperator, TwoOptNeighborhood,
 };
 pub use problem::{
     build_knapsack_from_records, build_tsp_from_records, AckleyProblem, KnapsackBuilder,
@@ -133,11 +133,12 @@ pub mod prelude {
     };
 
     pub use crate::operator::{
-        BinaryTournamentSelection, BitFlipMutation, CrossoverOperator,
+        AttributeTabuMemory, BinaryTournamentSelection, BitFlipMutation, BitFlipNeighborhood,
+        CrossoverOperator, FrequencyTabuMemory, GaussianNeighborhood, InsertionNeighborhood,
         MultiObjectiveTournamentSelection, MutationOperator, NeighborhoodOperator, Operator,
         OrderCrossover, PolynomialMutation, RealPerturbationMutation, SBXCrossover,
         SelectionOperator, SinglePointCrossover, SolutionTabuMemory, SwapMutation,
-        TabuMemoryOperator,
+        TabuMemoryOperator, TwoOptNeighborhood,
     };
 
     pub use crate::problem::{

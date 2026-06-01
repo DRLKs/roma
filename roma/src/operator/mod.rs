@@ -8,7 +8,9 @@
 
 pub(crate) mod crossover_operator_implementations;
 pub(crate) mod mutation_operator_implementations;
+pub(crate) mod neighborhood_operator_implementations;
 pub(crate) mod selection_operator_implementations;
+pub(crate) mod tabu_memory_operator_implementations;
 pub(crate) mod traits;
 
 pub use traits::{
@@ -31,6 +33,15 @@ pub use selection_operator_implementations::{
     multi_objective_tournament_selection::MultiObjectiveTournamentSelection,
 };
 
+pub use neighborhood_operator_implementations::{
+    bit_flip_neighborhood::BitFlipNeighborhood, gaussian_neighborhood::GaussianNeighborhood,
+    insertion_neighborhood::InsertionNeighborhood, two_opt_neighborhood::TwoOptNeighborhood,
+};
+
+pub use tabu_memory_operator_implementations::{
+    attribute_tabu_memory::AttributeTabuMemory, frequency_tabu_memory::FrequencyTabuMemory,
+};
+
 /// Idiomatic short aliases for operator groups.
 pub mod mutation {
     pub use super::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
@@ -50,4 +61,18 @@ pub mod crossover {
 pub mod selection {
     pub use super::selection_operator_implementations::binary_tournament_selection::BinaryTournamentSelection;
     pub use super::selection_operator_implementations::multi_objective_tournament_selection::MultiObjectiveTournamentSelection;
+}
+
+/// Idiomatic short aliases for neighborhood operator types.
+pub mod neighborhood {
+    pub use super::neighborhood_operator_implementations::bit_flip_neighborhood::BitFlipNeighborhood;
+    pub use super::neighborhood_operator_implementations::gaussian_neighborhood::GaussianNeighborhood;
+    pub use super::neighborhood_operator_implementations::insertion_neighborhood::InsertionNeighborhood;
+    pub use super::neighborhood_operator_implementations::two_opt_neighborhood::TwoOptNeighborhood;
+}
+
+/// Idiomatic short aliases for tabu memory types.
+pub mod memory {
+    pub use super::tabu_memory_operator_implementations::attribute_tabu_memory::AttributeTabuMemory;
+    pub use super::tabu_memory_operator_implementations::frequency_tabu_memory::FrequencyTabuMemory;
 }
