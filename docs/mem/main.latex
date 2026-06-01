@@ -42,6 +42,65 @@
 \pgfplotsset{compat=1.18}       % Recomendado para controlar la retrocompatibilidad
 \usepackage{subcaption}         % Obligatorio para separar en figuras (a) y (b)
 
+%%%%
+% Código
+\usepackage{caption}
+\renewcommand{\lstlistingname}{Código}
+
+\usepackage{xcolor} % Debe ir SIEMPRE antes de listings
+\usepackage{listings}
+
+% Definición de colores mediante HTML (Hexadecimal) para evitar corrupciones
+\definecolor{rustbg}{HTML}{F8F9FA}      % Fondo gris muy clarito (opcional)
+\definecolor{rustcomment}{HTML}{008000} % Verde oscuro para comentarios
+\definecolor{rustkeyword}{HTML}{0000FF} % Azul puro para palabras reservadas
+\definecolor{ruststring}{HTML}{A31515}  % Rojo oscuro para textos
+\definecolor{rusttype}{HTML}{2B91AF}    % Azul turquesa para tipos de datos
+
+% Definición robusta del lenguaje Rust
+\lstdefinelanguage{Rust}{
+  keywords={fn, let, mut, use, pub, struct, enum, impl, trait, for, in, match, if, else, while, loop, return, crate, super, self, Box, String, Option, Vec, Some, None, true, false, expect, println},
+  keywordstyle=\color{rustkeyword}\bfseries,
+  ndkeywords={bool, i32, u32, f64, usize, isize},
+  ndkeywordstyle=\color{rusttype}\bfseries,
+  sensitive=true,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  commentstyle=\color{rustcomment}\itshape,
+  stringstyle=\color{ruststring},
+  morestring=[b]",
+  morestring=[b]'
+}
+
+% Configuración global limpia
+\lstset{
+  language=Rust,
+  backgroundcolor=\color{rustbg}, % Fondo para que el código destaque
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{lightgray}, % Borde sutil
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  showstringspaces=false,
+  tabsize=4,
+  captionpos=b % El título (caption) se pone debajo
+}
+
+% Configuración general para que el código quede bonito
+\lstset{
+  language=Rust,
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  showstringspaces=false,
+  tabsize=4
+}
+
+
+
 %======================================================================
 \begin{document}
 
@@ -76,9 +135,9 @@
 %────────────────────── Resumen / Abstract ─────────────────────────────
 \renewcommand{\abstractname}{Resumen}
 \begin{abstract}
-El presente Trabajo de Fin de Grado tiene como objetivo principal el diseño, desarrollo e implementación de una biblioteca de optimización metaheurística de alto rendimiento, caracterizada por una arquitectura extensible, modular y completamente autocontenida bajo una filosofía de cero dependencias externas. Para cumplir con estas directrices de diseño, el sistema ha sido programado íntegramente en Rust, un lenguaje de programación moderno que garantiza la seguridad de memoria y la ausencia de carreras de datos sin comprometer la eficiencia temporal ni el consumo de recursos de la máquina.
+El presente Trabajo de Fin de Grado tiene como objetivo principal el diseño, desarrollo e implementación de una biblioteca de optimización metaheurística de alto rendimiento, caracterizada por una arquitectura extensible, modular y completamente autocontenida bajo una filosofía de cero dependencias externas. Para cumplir con estas directrices de diseño, el sistema ha sido programado íntegramente en Rust, un lenguaje de programación moderno que garantiza la seguridad de memoria y la ausencia de condiciones de carreras sobre los datos sin comprometer la eficiencia temporal ni el consumo de recursos de la máquina.
 
-Con el fin de materializar este propósito principal, el proyecto se articula en torno a una serie de objetivos específicos destinados a aportar valor tanto desde el prisma de la ingeniería de software como de la computación evolutiva. En primer lugar, se persigue la definición de abstracciones sólidas mediante contratos de interfaz flexibles que desacoplen por completo la representación del dominio de los problemas de la lógica intrínseca de las metaheurísticas y sus operadores. En segundo lugar, se establece el objetivo de dar soporte nativo y transparente a escenarios de optimización tanto mono-objetivo como multiobjetivo, superando las rigideces estructurales comunes en plataformas tradicionales. Por último, la biblioteca busca proveer un motor de experimentación robusto y paralelizado, dotado de mecanismos de tolerancia a fallos y sistemas de monitorización en tiempo real, que facilite la sintonización de hiperparámetros y la realización de análisis comparativos frente a las principales herramientas de referencia de la literatura científica.
+Con el fin de materializar este propósito principal, el proyecto se articula en torno a una serie de objetivos específicos destinados a aportar valor tanto desde el prisma de la ingeniería de software como de la computación evolutiva. En primer lugar, se persigue la definición de abstracciones sólidas mediante contratos de interfaz flexibles que desacoplen por completo la representación del dominio de los problemas de la lógica intrínseca de las metaheurísticas y sus operadores. En segundo lugar, se establece el objetivo de dar soporte nativo y transparente a escenarios de optimización tanto mono-objetivo como multi-objetivo, superando las rigideces estructurales comunes en plataformas tradicionales. Por último, la biblioteca busca proveer un motor de experimentación robusto y paralelizado, dotado de mecanismos de tolerancia a fallos y sistemas de monitorización en tiempo real, que facilite el ajuste de hiperparámetros y la realización de análisis comparativos frente a las principales herramientas de referencia de la literatura científica.
 
 \medskip
 \noindent\textbf{Palabras clave: Rust, Metaheurísticas, Optimización, Biblioteca} 
@@ -144,8 +203,10 @@ In order to achieve this core purpose, the project is structured around a series
 
 %────────────────────── Índice y listas ────────────────────────────────
 \clearpage
+{
+\fontsize{14}{16}\selectfont
 \tableofcontents
-\clearpage
+}\clearpage
 \listoffigures
 \clearpage
 \listoftables
@@ -162,7 +223,7 @@ In order to achieve this core purpose, the project is structured around a series
 
     La optimización metaheurística constituye una herramienta fundamental para la resolución de problemas complejos en aquellos ámbitos donde los métodos exactos resultan inviables, ya sea debido al elevado coste computacional o a la naturaleza no lineal y no convexa de los espacios de búsqueda. Este tipo de técnicas ha demostrado su utilidad en una amplia variedad de aplicaciones, como la planificación y asignación de recursos, la optimización de rutas, el diseño de sistemas, la inteligencia artificial, el aprendizaje automático y la ingeniería en general \cite{blum2003metaheuristics}.
 
-    En distintos lenguajes de programación existen bibliotecas maduras que facilitan la utilización de técnicas metaheurísticas. Por ejemplo, \textit{jMetal} es un framework desarrollado por investigadores de la Universidad de Málaga, ampliamente reconocido para la optimización multiobjetivo con metaheurísticas \cite{jmetal}. Su versión en Python, \textit{jMetalPy}, ofrece un entorno extensible y orientado a objetos para experimentar con técnicas clásicas y avanzadas de optimización \cite{jmetalpy}. Asimismo, \textit{MEALPY} (MEta-heuristic ALgorithms in PYthon) proporciona implementaciones de numerosos algoritmos inspirados en la naturaleza, tanto clásicos como híbridos, para abordar problemas complejos \cite{mealpy}. Sin embargo, dentro del ecosistema de Rust~\cite{rust_language}, el soporte para la optimización metaheurística es todavía limitado, lo que dificulta la adopción de estas metodologías en proyectos desarrollados en dicho lenguaje y pone de manifiesto la necesidad de disponer de herramientas nativas que se integren de forma natural con sus principios de diseño, especialmente en lo relativo al rendimiento, la seguridad de memoria y el control de recursos.
+    En distintos lenguajes de programación existen bibliotecas maduras que facilitan la utilización de técnicas metaheurísticas. Por ejemplo, \textit{jMetal} es un framework desarrollado por investigadores de la Universidad de Málaga, ampliamente reconocido para la optimización multi-objetivo con metaheurísticas \cite{jmetal}. Su versión en Python, \textit{jMetalPy}, ofrece un entorno extensible y orientado a objetos para experimentar con técnicas clásicas y avanzadas de optimización \cite{jmetalpy}. Asimismo, \textit{MEALPY} (MEta-heuristic ALgorithms in PYthon) proporciona implementaciones de numerosos algoritmos inspirados en la naturaleza, tanto clásicos como híbridos, para abordar problemas complejos \cite{mealpy}. Sin embargo, dentro del ecosistema de Rust~\cite{rust_language}, el soporte para la optimización metaheurística es todavía limitado, lo que dificulta la adopción de estas metodologías en proyectos desarrollados en dicho lenguaje y pone de manifiesto la necesidad de disponer de herramientas nativas que se integren de forma natural con sus principios de diseño, especialmente en lo relativo al rendimiento, la seguridad de memoria y el control de recursos.
 
     
     Este Trabajo de Fin de Grado surge con la motivación de dar respuesta a esta necesidad mediante el desarrollo de una biblioteca de optimización metaheurística modular y extensible. No obstante, abordar un proyecto de esta envergadura resulta especialmente desafiante en las etapas iniciales, particularmente en ausencia de experiencia previa tanto en las técnicas de optimización como en el lenguaje de programación Rust. Afrontar un grado de fin de carrera implica recopilar y consolidar los conocimientos adquiridos a lo largo de la titulación y aplicarlos en un proyecto real, lo cual supone una tarea de notable complejidad. Por ello, la elección de un tema que despierte interés, curiosidad y motivación personal resulta un factor clave para el desarrollo del proyecto.
@@ -172,7 +233,7 @@ In order to achieve this core purpose, the project is structured around a series
     Como se ha comentado, en el momento de inicio de este proyecto, no existían bibliotecas consolidadas orientadas al desarrollo de este tipo de soluciones en el lenguaje Rust, lo que constituyó una motivación adicional para su realización. Asimismo, el propio lenguaje Rust actuó como detonante del proyecto, al tratarse de una tecnología moderna y en auge, diseñada con un fuerte énfasis en la seguridad de memoria y el rendimiento, y especialmente adecuada tanto para el aprendizaje como para el desarrollo de software robusto y eficiente.
 
 \section{Objetivos}
-    El objetivo principal de este proyecto es desarrollar una biblioteca en Rust que implemente algoritmos metaheurísticos para la optimización de problemas complejos. Debe ser capaz de resolver correctamente gran variedad de problemas de único objetivo y un conjunto de problemas multiobjetivo. 
+    El objetivo principal de este proyecto es desarrollar una biblioteca en Rust que implemente algoritmos metaheurísticos para la optimización de problemas complejos. Debe ser capaz de resolver correctamente gran variedad de problemas de único objetivo y un conjunto de problemas multi-objetivo. 
     
     Idealmente, esta biblioteca debería ser fácil de usar, eficiente y extensible, permitiendo a los usuarios adaptar los algoritmos a sus necesidades específicas. 
 
@@ -184,7 +245,7 @@ In order to achieve this core purpose, the project is structured around a series
     \label{sec:tecnologías-herramientas}
     Como lenguaje de programación, se ha elegido \textbf{Rust}, debido a su enfoque en el rendimiento, por su capacidad de manejo eficiente de la concurrencia y diferentes hilos, lo que lo hace ideal para la implementación de algoritmos metaheurísticos complejos que a menudo requieren un procesamiento paralelo intensivo.
     Además, su creciente ecosistema y su tipo de sistema robusto nos permiten construir soluciones de optimización escalables y de alto rendimiento.
-    También, Rust ha comenzado a consolidarse como uno de los lenguajes de programación utilizados en el desarrollo del \emph{kernel} de Linux, dejando atrás su carácter experimental y siendo aprobado oficialmente para la implementación de determinados componentes del núcleo, lo que refuerza su madurez, fiabilidad y adecuación para sistemas críticos \cite{leemhuis2025rustlinux}.   
+    También, Rust ha comenzado a consolidarse como uno de los lenguajes de programación utilizados en el desarrollo del \emph{kernel} de Linux, dejando atrás su carácter experimental y siendo aprobado oficialmente para la implementación de determinados componentes del núcleo, lo que refuerza su madurez y fiabilidad para sistemas críticos \cite{leemhuis2025rustlinux}.   
     
     Uno de los principales motivos por el que Rust es tan buena elección es por su gestor de paquetes y compilación, \textbf{Cargo}, que facilita la gestión de dependencias y la construcción de proyectos, permitiendo a los desarrolladores centrarse en la implementación de algoritmos en lugar de en la configuración del entorno.
     
@@ -199,20 +260,40 @@ In order to achieve this core purpose, the project is structured around a series
     
     En cuanto a las herramientas de desarrollo, se utilizó \textbf{Visual Studio Code}~\cite{visual_studio_code} como entorno de desarrollo integrado (IDE) debido a su flexibilidad, amplia gama de extensiones y soporte para Rust a través de la extensión \textit{rust-analyzer} \cite{rust_analyzer}. Durante el desarrollo más temprano, también se usó \textbf{Rust Rover}~\cite{rustrover_ide}, de \textbf{JetBrains}~\cite{jetbrains_toolbox}, que es un IDE específico para Rust. Esto fue debido a que en ese momento los conocimientos sobre Rust eran muy limitados y se necesitaba un entorno más guiado e invasivo para poder progresar.
     
-    Para la gestión del proyecto se ha utilizado \textbf{Jira}~\cite{jira_tool}. La documentación y redacción del proyecto se han realizado mediante \LaTeX~\cite{latex_project}. 
     Por otro lado, el control de versiones se ha llevado a cabo utilizando \textbf{Git}~\cite{git_tool}, empleando \textbf{GitHub}~\cite{github_tool} como plataforma de alojamiento remoto del repositorio.
 
     La gestión y planificación temporal de las tareas se ha articulado mediante \textbf{Jira}~\cite{jira_tool}, mientras que la composición y redacción de la memoria técnica se han elaborado en \LaTeX~\cite{latex_project}. En lo relativo a la ingeniería de software, el control de versiones se ha estructurado en torno al sistema descentralizado \textbf{Git}~\cite{git_tool}, empleando la plataforma \textbf{GitHub}~\cite{github_tool} para el alojamiento del repositorio remoto. 
 
     La adopción de este ecosistema responde a la necesidad de garantizar la integridad y la trazabilidad del código fuente durante el ciclo de vida del desarrollo. Por un lado, la naturaleza distribuida de Git permite la experimentación segura y el aislamiento de nuevos algoritmos sin comprometer la estabilidad de la rama principal de la biblioteca. Por otro lado, GitHub aporta una infraestructura robusta para la persistencia de los datos, optimizando el seguimiento de las líneas de desarrollo e introduciendo un marco idóneo para la futura automatización de pruebas.
 
+\section{Estructura del documento}
+    La presente memoria está organizada en ocho capítulos y dos apéndices, estructurados de manera secuencial para guiar al lector desde la concepción teórica y metodológica del proyecto hasta su implementación técnica y validación empírica. El contenido de los mismos se distribuye de la siguiente manera:
+
+    En el \textbf{Capítulo 1} (el actual) se establece el contexto general del proyecto, detallando la motivación que origina el trabajo, los objetivos trazados para su consecución y el conjunto de tecnologías seleccionadas para el desarrollo.
+
+    En el \textbf{Capítulo 2} se describe la metodología de trabajo adoptada, desglosando el ecosistema de desarrollo, las fases del ciclo de vida del software (investigación, planificación e implementación técnica) y el modelo de licenciamiento del código fuente.
+    
+    En el \textbf{Capítulo 3} se asienta el marco teórico del proyecto. En él se exponen los fundamentos de la optimización matemática, se contrastan los métodos exactos frente a los aproximados, y se profundiza en la taxonomía de las metaheurísticas (basadas en trayectoria y en población), concluyendo con una introducción a la optimización multiobjetivo y al algoritmo NSGA-II.
+    
+    En el \textbf{Capítulo 4} se aborda la especificación y el diseño de la biblioteca. Se presenta la arquitectura general del sistema y se detalla el modelado de los distintos módulos que conforman su núcleo (algoritmos, operadores, problemas, estructuras de soluciones, observadores y utilidades).
+    
+    En el \textbf{Capítulo 5} se profundiza en los detalles de la implementación técnica en el lenguaje Rust. Se explica cómo se han resuelto los desafíos arquitectónicos mediante abstracciones de alto nivel, el funcionamiento interno de los motores algorítmicos y el sistema de recolección de métricas. Asimismo, se documenta la batería de pruebas unitarias y de integración desarrolladas para asegurar la robustez del código.
+    
+    En el \textbf{Capítulo 6} se presenta la validación experimental inicial mediante casos de uso funcionales, certificando la correcta interconexión de los módulos y evaluando componentes periféricos como los analizadores sintácticos (\textit{parsers}) de entrada y salida de datos.
+    
+    En el \textbf{Capítulo 7} se expone el núcleo analítico del trabajo: la evaluación comparativa y el análisis de rendimiento. A través de un riguroso banco de pruebas estandarizado (Rastrigin, TSP, Knapsack, ZDT1 y Ackley), se contrasta el rendimiento computacional y la calidad de convergencia de la biblioteca frente a herramientas líderes de la industria (jMetal, pagmo2, DEAP, entre otras), respaldando los resultados mediante contrastes de significancia estadística.
+    
+    En el \textbf{Capítulo 8} se exponen las conclusiones finales extraídas tras el desarrollo y la experimentación. Se reflexiona sobre el cambio de paradigma que supone la adopción de Rust, se identifican las limitaciones de la versión actual y se proponen líneas de trabajo futuras para la evolución del proyecto.
+    
+    En el \textbf{Apéndice A} contiene el manual de usuario, proporcionando los requisitos previos y las instrucciones necesarias para la instalación y compilación de la biblioteca desde su repositorio oficial. 
+
+    Finalmente, el \textbf{Apéndice B} incluye un manual que explica cómo configurar un problema de optimización metaheurístico sencillo, con el objetivo de facilitar la inicialización y el uso de la biblioteca.
+
 \chapter{Metodología de trabajo}
-    En esta sección se describen los procedimientos, herramientas y fases seguidas para la consecución de los objetivos del proyecto.
+    En este capítulo se describen los procedimientos, herramientas y fases seguidas para la consecución de los objetivos del proyecto.
 
     \section{Modelo y ecosistema de desarrollo}
         Para el desarrollo del proyecto se ha adoptado una metodología iterativa, inspirada en el marco de trabajo SCRUM, pero adaptada a las particularidades de un entorno de trabajo unipersonal. Esta adaptación permite conservar las ventajas de la planificación incremental y la revisión continua, ajustándolas a la naturaleza y alcance del proyecto. 
-        
-        Como herramienta de apoyo a la gestión y seguimiento de las tareas, se ha utilizado JIRA~\cite{jira_tool}, cuyo uso y configuración dentro del proyecto se detallarán con mayor profundidad en el apartado siguiente.
         
         Por otra parte, las herramientas de desarrollo empleadas en este proyecto corresponden a las descritas conceptualmente en la \textbf{Sección~\ref{sec:tecnologías-herramientas}}. La selección de este ecosistema técnico se orientó a maximizar la eficiencia en la detección de errores y la navegación por el código fuente, consolidando a Visual Studio Code como el entorno de desarrollo principal debido a su versatilidad y al robusto soporte proporcionado por la extensión \textit{rust-analyzer}~\cite{rust_analyzer}.
 
@@ -224,7 +305,7 @@ In order to achieve this core purpose, the project is structured around a series
     
         Paralelamente, se desarrolló un repositorio de pruebas a modo de entorno de experimentación, destinado a la implementación de pequeños módulos funcionales que permitieron dominar aún más el lenguaje. Esta etapa de formación técnica se complementó con un estudio exhaustivo sobre metaheurísticas, especialmente, sobre algoritmos genéticos, sentando las bases teóricas necesarias para el posterior diseño de la biblioteca.
         
-        Dentro del estudio técnico, cobró especial relevancia el análisis del repositorio y de la arquitectura de jMetal \cite{jmetal}, un framework de optimización metaheuristica multiobjetivo escrita en Java por investigadores de la Universidad de Málaga, ayudó a comprender los patrones de diseño y las estructuras de datos necesarias para implementar metaheurísticas de forma extensible.
+        Dentro del estudio técnico, cobró especial relevancia el análisis del repositorio y de la arquitectura de jMetal \cite{jmetal}, un framework de optimización metaheuristica multi-objetivo escrita en Java por investigadores de la Universidad de Málaga, ayudó a comprender los patrones de diseño y las estructuras de datos necesarias para implementar metaheurísticas de forma extensible.
     
     
     \subsection{Definición de requisitos y planificación}
@@ -288,8 +369,6 @@ In order to achieve this core purpose, the project is structured around a series
 
     El conjunto $\Omega$ denota el espacio de búsqueda o la región factible del problema. Lejos de ser un espacio infinito o arbitrario, en los escenarios de ingeniería y del mundo real, este espacio está delimitado geométrica y matemáticamente por un conjunto de restricciones que el vector $x$ debe cumplir de manera estricta. Estas restricciones imponen límites físicos, lógicos o económicos al sistema, y suelen expresarse mediante funciones de desigualdad ($g_i(x) \leq 0, i = 1, \dots, m$) y de igualdad ($h_j(x) = 0, j = 1, \dots, p$). 
 
-    Por consiguiente, $\Omega$ está constituido única y exclusivamente por aquellos vectores que satisfacen simultáneamente todas estas condiciones. Si un algoritmo de optimización genera una solución que recae fuera de las fronteras de $\Omega$, dicha solución se considera infactible. En el diseño de algoritmos y metaheurísticas, las soluciones infactibles suponen un desafío; por lo general, son descartadas inmediatamente o, de forma más sofisticada, se les aplica una penalización severa en su valor de $f(x)$ para guiar la búsqueda iterativa de vuelta hacia el interior de la región factible.
-
     Por consiguiente, $\Omega$ está constituido única y exclusivamente por aquellos vectores que satisfacen simultáneamente todas estas condiciones. Si un algoritmo de optimización genera una solución que recae fuera de las fronteras de $\Omega$, dicha solución se considera infactible. En el diseño de algoritmos y metaheurísticas, las soluciones infactibles suponen un desafío; por lo general, son descartadas inmediatamente, aunque se les puede aplicar de forma más sofisticada una penalización severa en su valor de $f(x)$ para guiar la búsqueda iterativa de vuelta hacia el interior de la región factible o en tercer lugar, se puede intentar su reparación mediante un proceso normalmente determinista pero subóptimo que las transforma en soluciones factibles.
 
  \section{Métodos Exactos frente a Métodos Aproximados}
@@ -320,13 +399,18 @@ In order to achieve this core purpose, the project is structured around a series
 
 A lo largo de las últimas décadas, la literatura científica ha propuesto numerosas metaheurísticas, muchas de ellas inspiradas en procesos naturales, biológicos o físicos. La clasificación más extendida en la comunidad académica divide estos algoritmos según el número de soluciones con las que trabajan simultáneamente en cada iteración:
 
+
 \subsection{Metaheurísticas basadas en trayectoria}
-También conocidas como métodos de búsqueda puntual, estos algoritmos mantienen y modifican una única solución a lo largo del tiempo, describiendo una trayectoria a través del espacio de búsqueda. En cada iteración, la solución actual se reemplaza por otra proveniente de su vecindario si se cumple un determinado criterio de aceptación. Ejemplos clásicos de esta categoría son la Búsqueda Local, el Recocido Simulado (\textit{Simulated Annealing}) y la Búsqueda Tabú.
+    También conocidas como métodos de búsqueda puntual o de solución única, estos algoritmos mantienen y modifican una única solución candidata a lo largo del tiempo, describiendo una trayectoria secuencial a través del espacio de búsqueda. Matemáticamente, el proceso se define mediante una función de vecindad $\mathcal{N}(x)$ que mapea una solución actual $x_t$ hacia un conjunto de soluciones adyacentes. En cada iteración, el algoritmo selecciona una candidata $x' \in \mathcal{N}(x_t)$ y la evalúa; si se cumple un determinado criterio de aceptación, la transición se consolida ($x_{t+1} = x'$). Aunque esta dinámica intrínseca posee un alto poder de explotación para descender rápidamente hacia el fondo de un valle topológico, sufre un riesgo crítico de convergencia prematura al quedar atrapada en óptimos locales. Para evadir este estancamiento, la literatura ha desarrollado metodologías consolidadas que alteran el criterio de aceptación o la propia topología del vecindario. 
+
+    Uno de los enfoques probabilísticos más célebres es el Recocido Simulado (\textit{Simulated Annealing, SA})~\cite{kirkpatrick1983optimization}, inspirado en la termodinámica del enfriamiento metalúrgico. En lugar de aplicar un descenso estricto, el algoritmo permite transiciones hacia soluciones de peor calidad evaluando la diferencia de aptitud ($\Delta f$) a través de la distribución de Boltzmann. La probabilidad de aceptar una degradación se define como $P \approx e^{-\Delta f / T}$, donde $T$ es un parámetro de temperatura que decrece asintóticamente con el tiempo, permitiendo gran exploración en las fases iniciales y forzando la explotación en las etapas finales. Por el contrario, la Búsqueda Tabú (\textit{Tabu Search})~\cite{glover1986future} opta por una estrategia determinista basada en memoria restrictiva. Para forzar la salida de una cuenca de atracción, el algoritmo registra las últimas transiciones en una estructura de memoria a corto plazo (\textit{lista tabú}), redefiniendo matemáticamente el vecindario explorable como $\mathcal{N}(x_t) \setminus Tabu$. De este modo, se prohíbe temporalmente el retorno a estados recientemente visitados, evitando la formación de ciclos infinitos.
+
+    Otras estrategias de trayectoria centran su formulación matemática en la alteración directa del espacio de búsqueda o de la posición de la solución. La Búsqueda Local Iterada (\textit{Iterated Local Search, ILS})~\cite{lourenco2003iterated} asume que el gradiente local ya ha sido agotado y aplica una función de perturbación estocástica a la solución actual para realizar un "salto" forzoso hacia otra región del hipervolumen, seguido inmediatamente de una nueva fase de descenso determinista. Finalmente, la Búsqueda en Vecindario Variable (\textit{Variable Neighborhood Search, VNS})~\cite{hansen2001variable} se fundamenta en el principio matemático de que un óptimo local definido bajo una métrica de distancia concreta no tiene por qué serlo bajo otra. Este método define un conjunto finito de estructuras de vecindad $\{\mathcal{N}_1, \mathcal{N}_2, \dots, \mathcal{N}_{k_{max}}\}$ y transita sistemáticamente entre ellas; cuando la búsqueda se estanca en $\mathcal{N}_k$, el algoritmo cambia la topología evaluando $\mathcal{N}_{k+1}$, expandiendo progresivamente el radio de exploración hasta hallar una cuenca de atracción que contenga un óptimo de mayor calidad.
 
 \subsection{Metaheurísticas basadas en población}
-    A diferencia de los métodos de trayectoria, estas técnicas mantienen en memoria un conjunto (o población) de soluciones que evolucionan de manera simultánea en cada iteración. Esta característica les confiere una mayor robustez y una capacidad de exploración superior, ya que las soluciones pueden interactuar e intercambiar información entre sí. Dentro de este paradigma destacan los Algoritmos Evolutivos (como los Algoritmos Genéticos) y la Optimización por Enjambre de Partículas (PSO).
+    A diferencia de los métodos de trayectoria, estas técnicas mantienen en memoria un conjunto (o población) de soluciones que evolucionan de manera simultánea en cada iteración. Esta característica les confiere una mayor robustez y una capacidad de exploración superior, ya que las soluciones pueden interactuar e intercambiar información entre sí. Dentro de este paradigma destacan los Algoritmos Evolutivos (como los Algoritmos Genéticos) y la Optimización por Enjambre de Partículas \textit{Particle Search Optimization (PSO)}.
 
-    Los Algoritmos Genéticos, fuertemente fundamentados en la teoría de la evolución biológica y la genética de poblaciones, abordan la búsqueda iterando sobre un conjunto de soluciones codificadas como individuos o cromosomas. El progreso hacia la región factible y óptima del espacio de búsqueda se dirige mediante tres mecanismos fundamentales aplicados de forma secuencial. Inicialmente, un mecanismo de selección evalúa la función objetivo de la población y discrimina probabilísticamente a los individuos más aptos, asegurando la supervivencia del mejor material genético. A continuación, el operador de cruce fomenta la explotación del espacio mediante el intercambio de segmentos del vector de variables entre pares de individuos seleccionados, generando una descendencia que hereda características de sus progenitores. Finalmente, un operador de mutación introduce perturbaciones de carácter aleatorio en la configuración genética de la descendencia; esta inyección de variabilidad constituye la principal herramienta de exploración del algoritmo, mitigando el riesgo de convergencia prematura en mínimos locales. Tras la aplicación de estos operadores, se ejecuta una política de reemplazo que define la transición hacia la siguiente generación, incorporando frecuentemente mecanismos de elitismo para retener incondicionalmente la mejor solución descubierta.
+    Los Algoritmos Evolutivos \textit{(AE)}, fuertemente fundamentados en la teoría de la evolución biológica y la genética de poblaciones, abordan la búsqueda iterando sobre un conjunto de soluciones codificadas como individuos o cromosomas. El progreso hacia la región factible y óptima del espacio de búsqueda se dirige mediante tres mecanismos fundamentales aplicados de forma secuencial. Inicialmente, un mecanismo de selección evalúa la función objetivo de la población y discrimina probabilísticamente a los individuos más aptos, asegurando la supervivencia del mejor material genético. A continuación, el operador de cruce fomenta la explotación del espacio mediante el intercambio de segmentos del vector de variables entre pares de individuos seleccionados, generando una descendencia que hereda características de sus progenitores. Finalmente, un operador de mutación introduce perturbaciones de carácter aleatorio en la configuración genética de la descendencia; esta inyección de variabilidad constituye la principal herramienta de exploración del algoritmo, mitigando el riesgo de convergencia prematura en mínimos locales. Tras la aplicación de estos operadores, se ejecuta una política de reemplazo que define la transición hacia la siguiente generación, incorporando frecuentemente mecanismos de elitismo para retener incondicionalmente la mejor solución descubierta.
 
     Por su parte, la Optimización por Enjambre de Partículas (PSO) modela una dinámica sustancialmente distinta, inspirada en el comportamiento colectivo exhibido por agregaciones biológicas, tales como el vuelo sincronizado de bandadas de aves o el nado de bancos de peces. En este modelo, la población se conceptualiza como un enjambre y las soluciones candidatas actúan como partículas que se desplazan de manera continua y autónoma a lo largo del hiperespacio de búsqueda de dimensión $n$. A diferencia de los modelos evolutivos, en PSO no existe la destrucción ni creación de nuevos individuos, sino la perturbación guiada de sus trayectorias. 
 
@@ -343,11 +427,11 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
     Este esquema de actualización garantiza un equilibrio dinámico entre la autonomía exploratoria de cada solución y la convergencia acelerada inducida por el conocimiento topológico compartido por toda la red de la población.
 
 
-\section{Extensión a la Optimización Multiobjetivo}
+\section{Extensión a la Optimización Multi-Objetivo}
 
     En gran parte de las aplicaciones del mundo real, los problemas no presentan un único objetivo a optimizar, sino múltiples objetivos que a menudo se encuentran en conflicto directo (por ejemplo, maximizar el rendimiento de un componente a la par que se minimiza su coste de fabricación).
     
-    En estos escenarios, denominados Problemas de Optimización Multiobjetivo (MOP), el concepto de «solución óptima» desaparece para dar paso al concepto de \textit{Dominancia de Pareto}. El objetivo de las metaheurísticas multiobjetivo no es encontrar un único punto, sino aproximar el Frente de Pareto: un conjunto de soluciones no dominadas que representan los mejores compromisos posibles entre los diferentes objetivos evaluados, permitiendo finalmente al tomador de decisiones elegir la alternativa que mejor se adapte a sus necesidades.
+    En estos escenarios, denominados Problemas de Optimización Multi-objetivo (MOP), el concepto de «solución óptima» desaparece para dar paso al concepto de \textit{Dominancia de Pareto}. El objetivo de las metaheurísticas multi-objetivo no es encontrar un único punto, sino aproximar el Frente de Pareto: un conjunto de soluciones no dominadas que representan los mejores compromisos posibles entre los diferentes objetivos evaluados, permitiendo finalmente al tomador de decisiones elegir la alternativa que mejor se adapte a sus necesidades.
 
 \begin{figure}[htbp]
     \centering
@@ -389,7 +473,7 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
 \end{figure}
 
     \subsection{Formulación Matemática del Problema y Dominancia}
-        Matemáticamente, un Problema de Optimización Multiobjetivo (MOP) sin restricciones se define como la minimización simultánea de un vector de $M$ funciones objetivo, expresado de la forma $\min \vec{f}(\vec{x}) = [f_1(\vec{x}), f_2(\vec{x}), \dots, f_M(\vec{x})]^T$, donde $\vec{x} \in \Omega$ es el vector de variables de decisión dentro del espacio de búsqueda factible. En este contexto analítico, se establece que una solución $\vec{x}_1$ domina a otra solución $\vec{x}_2$, lo cual se denota formalmente como $\vec{x}_1 \prec \vec{x}_2$, si y solo si $\vec{x}_1$ no es peor que $\vec{x}_2$ en ninguno de los objetivos, es decir, $\forall i \in \{1, \dots, M\}, f_i(\vec{x}_1) \leq f_i(\vec{x}_2)$, y además es estrictamente superior en al menos un objetivo, lo que implica que $\exists j \in \{1, \dots, M\} \mid f_j(\vec{x}_1) < f_j(\vec{x}_2)$.
+        Matemáticamente, un Problema de Optimización Multi-objetivo (MOP) sin restricciones se define como la minimización simultánea de un vector de $M$ funciones objetivo, expresado de la forma $\min \vec{f}(\vec{x}) = [f_1(\vec{x}), f_2(\vec{x}), \dots, f_M(\vec{x})]^T$, donde $\vec{x} \in \Omega$ es el vector de variables de decisión dentro del espacio de búsqueda factible. En este contexto analítico, se establece que una solución $\vec{x}_1$ domina a otra solución $\vec{x}_2$, lo cual se denota formalmente como $\vec{x}_1 \prec \vec{x}_2$, si y solo si $\vec{x}_1$ no es peor que $\vec{x}_2$ en ninguno de los objetivos, es decir, $\forall i \in \{1, \dots, M\}, f_i(\vec{x}_1) \leq f_i(\vec{x}_2)$, y además es estrictamente superior en al menos un objetivo, lo que implica que $\exists j \in \{1, \dots, M\} \mid f_j(\vec{x}_1) < f_j(\vec{x}_2)$.
     
     \subsection{Algoritmo NSGA-II (Non-dominated Sorting Genetic Algorithm II)}
         Para resolver este tipo de escenarios, uno de los algoritmos más extendidos e influyentes en la literatura científica es el NSGA-II, propuesto por K. Deb et al~\cite{deb2002fast}. Este algoritmo genético basa su eficacia en dos pilares matemáticos fundamentales que guían la evolución de la población: un mecanismo de ordenación rápida no dominada (Fast Non-Dominated Sort) y un estimador de la densidad del entorno denominado distancia de apilamiento (Crowding Distance).
@@ -411,11 +495,11 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
     
     La arquitectura desacopla la definición del problema de la lógica del optimizador. Los límites del espacio de búsqueda y las restricciones se encapsulan en una estructura específica. Esta entidad es referenciada por el motor de ejecución, permitiendo que el algoritmo identifique el dominio de las variables. De este modo, el algoritmo puede realizar las evaluaciones e iteraciones pertinentes respetando estrictamente las directrices del sistema a optimizar.
 
-    Los algoritmos se han diseñado de forma modular, fundamentándose en el uso de operadores genéricos que se configuran durante la fase de instanciación. Estos operadores son los responsables de la transformación y evolución de las soluciones. Se distinguen tres categorías principales, operadores de mutación, de cruce y de selección.
+    Los algoritmos se han diseñado de forma modular, fundamentándose en el uso de operadores genéricos que se configuran durante la fase de instanciación. Estos operadores son los responsables de la transformación y evolución de las soluciones. Se distinguen cinco categorías principales, operadores de mutación, de cruce, de vecindad, de selección y de memoria.
 
     Todas las implementaciones de los algoritmos tienen varias estructuras asociadas. Estas son los \textbf{parámetros}, que definen el comportamiento del algoritmo, el \textbf{estado de ejecución}, que permite la trazabilidad de cada paso, dado que el sistema emplea un modelo de ejecución secuencial por etapas y luego el \textbf{conjunto de soluciones}, que representa el resultado final.
 
-    Un componente diferenciador es su sistema de experimentación integrado. A partir de la parametrización de los algoritmos, la biblioteca facilita la ejecución comparativa de múltiples configuraciones sobre un mismo problema. Este módulo automatiza la obtención de métricas, tales como tiempos de ejecución y calidad de la solución obtenida, facilitando así la elección del algoritmo más adecuado para solventar un problema específico.
+    \sloppy Un componente diferenciador es su sistema de experimentación integrado. A partir de la parametrización de los algoritmos, la biblioteca facilita la ejecución comparativa de múltiples configuraciones sobre un mismo problema. Este módulo automatiza la obtención de métricas, tales como tiempos de ejecución y calidad de la solución obtenida, facilitando así la elección del algoritmo más adecuado para solventar un problema específico.
 
     El estado de ejecución actúa como el mecanismo principal para actualizar el contexto del algoritmo, permitiendo verificar de forma continua si se han cumplido los criterios de terminación definidos en la parametrización inicial. Este contexto no solo regula el flujo de control del proceso, sino que sirve como intermediario crítico para la comunicación con los observadores del sistema. Mediante el uso de hilos de ejecución independientes, el contexto transmite los datos de la evolución del algoritmo en tiempo real, facilitando tanto la monitorización por parte del usuario como el almacenamiento persistente de métricas para la generación posterior de reportes de rendimiento.
 
@@ -425,11 +509,11 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
       \centering
         \includegraphics[width=1.1\textwidth]{images/architecture.png}
       \caption{Arquitectura de la biblioteca. Diagrama de clases, UML. Visual Paradigm 17.0  ~\cite{visual_paradigm_tool}.}
+    \label{fig:uml_architecture}
     \end{figure}
 
 \section{Módulos}
-    
-    A continuación, se describen los distintos módulos que componen la biblioteca y las responsabilidades asociadas a cada uno de ellos.
+    A partir de la arquitectura mostrada en la Figura~\ref{fig:uml_architecture}, se definen los distintos módulos que componen la biblioteca, junto con las responsabilidades asociadas a cada uno de ellos.
     
     \subsection{Algoritmos}
 
@@ -443,7 +527,7 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
         \item \textbf{Infraestructura de ejecución:} submódulos encargados de la gestión del ciclo de vida de un experimento/ejecución, incluyendo el \emph{runtime}, la terminación y mecanismos de ejecución asíncrona o en paralelo. Se agrupan aquí las piezas que controlan cuándo y cómo se ejecutan los algoritmos sobre instancias de problema.
         \item \textbf{Persistencia y recuperación:} componentes destinados a checkpointing y mecanismos relacionados que facilitan la recuperación de ejecuciones largas o interrumpidas, y que permiten auditoría y análisis posteriores.
         \item \textbf{Definición de objetivos:} submódulo que centraliza la representación de funciones objetivo y métricas relacionadas, separado de las implementaciones concretas para mantener una clara distinción entre problema y algoritmo.
-        \item \textbf{Implementaciones concretas:} paquete separado que contiene las implementaciones específicas de algoritmos (por ejemplo, enfoques evolutivos, heurísticos y de optimización ensamblados). Agruparlas en un submódulo permite añadir, probar y comparar algoritmos sin alterar la infraestructura común.
+        \item \textbf{Implementaciones concretas:} paquete separado que contiene las implementaciones específicas de algoritmos de optimización basados en metaheurísticas, incluyendo enfoques evolutivos y poblacionales. Agruparlas en un submódulo permite añadir, probar y comparar algoritmos sin alterar la infraestructura común.
         \item \textbf{Terminación y políticas:} lógica que alberga criterios de parada y políticas asociadas (por tiempo, por número de iteraciones, por convergencia, etc.), definida aparte para facilitar la composición y reutilización.
         \end{itemize}
 
@@ -463,9 +547,9 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
     \subsection{Operadores}
         Este componente constituye el núcleo funcional y arquitectónico de la biblioteca de optimización, ya que encapsula la lógica algorítmica fundamental mediante un modelo desacoplado y altamente modular. En lugar de ligar los operadores a algoritmos específicos, la biblioteca implementa un diseño basado en abstracciones y polimorfismo que separa completamente la definición del espacio de búsqueda de los mecanismos de variación y selección. Este modelo permite que cualquier operador sea tratado como una entidad independiente e intercambiable, facilitando la hibridación de técnicas y permitiendo al usuario configurar algoritmos a la carta combinando distintas estrategias.
 
-        Más allá de su flexibilidad arquitectónica, la eficiencia computacional de estos operadores es un factor crítico para el éxito de la biblioteca. Debido a la naturaleza iterativa de las metaheurísticas, en cada ciclo del algoritmo se invocan de manera encadenada múltiples operadores que realizan cálculos y mutaciones directas sobre las estructuras de las soluciones.
+        Más allá de su flexibilidad arquitectónica, la eficiencia computacional de estos operadores es un factor crítico para el éxito de la biblioteca. Debido a la naturaleza iterativa de las metaheurísticas, en cada ciclo del algoritmo se invocan de manera encadenada múltiples operadores que realizan cálculos y modificaciones directas sobre las estructuras de las soluciones.
 
-        Dentro de esta arquitectura flexible y de alto rendimiento, los componentes se clasifican en tres tipos principales de operadores, diseñados para interactuar perfectamente sobre las estructuras de datos poblacionales:
+        Dentro de esta arquitectura, los componentes se clasifican en cinco categorías principales de operadores, diseñados para interactuar perfectamente sobre las estructuras de datos de las soluciones, tanto en enfoques poblacionales como de trayectoria:
     
     \begin{itemize}
         \item \textbf{Operadores de mutación:} Introducen variaciones aleatorias en los individuos de la población con el objetivo de mantener la diversidad genética y evitar la convergencia prematura hacia soluciones subóptimas. Estos operadores permiten explorar nuevas regiones del espacio de búsqueda mediante modificaciones controladas de las soluciones existentes.
@@ -473,6 +557,10 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
         \item \textbf{Operadores de selección:} Se encargan de elegir los individuos que participarán en la generación de nuevas soluciones, generalmente en función de su calidad o valor de aptitud. Su función principal es favorecer la propagación de las mejores soluciones encontradas hasta el momento, equilibrando la presión selectiva con la preservación de la diversidad poblacional.
             
         \item \textbf{Operadores de cruce:} Combinan la información de dos o más individuos seleccionados para generar nuevos descendientes. A través de este proceso se busca explotar las características favorables de las soluciones existentes, recombinándolas de manera que puedan dar lugar a individuos con un mejor desempeño.
+        
+        \item \textbf{Operadores de vecindad:} Definen y exploran el entorno inmediato de una solución actual para generar candidatas adyacentes. Son el motor principal de las metaheurísticas basadas en trayectoria (como la Escalada Simple o el Enfriamiento Simulado), dictando las transiciones permitidas (mediante intercambios, inversiones o perturbaciones locales) para navegar eficientemente por la topología del espacio de búsqueda.
+        
+        \item \textbf{Operadores de memoria:} Gestionan el registro histórico del proceso de optimización para guiar las decisiones futuras del algoritmo. Resultan fundamentales para evitar ciclos repetitivos (como la lista tabú en la Búsqueda Tabú), explotar el conocimiento colectivo (como el registro del mejor individuo local y global en la Optimización por Enjambre de Partículas) o mantener un archivo elitista de soluciones no dominadas en problemas multiobjetivo.
     \end{itemize}
 
     
@@ -480,7 +568,7 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
     \subsection{Problemas}
         Este módulo constituye la abstracción que define y modela el dominio del escenario de optimización concreto que se desea resolver. Dentro de la arquitectura de la biblioteca, el componente de problemas actúa como un intermediario o contrato formal que desacopla la lógica genérica de las metaheurísticas de los detalles particulares de cada aplicación. Estas estructuras no solo almacenan los datos de entrada o las instancias del problema, sino también las reglas matemáticas y las restricciones que gobiernan el espacio de búsqueda, guiando de manera activa tanto a los algoritmos poblacionales como a los operadores de variación hacia los objetivos definidos. Para cumplir con esta función de guía y control, el módulo asume de forma integrada la responsabilidad de orquestar la creación de soluciones y su respectiva evaluación.
         
-        En primer lugar, el módulo define los mecanismos necesarios para construir configuraciones de partida válidas dentro del espacio de búsqueda, soluciones puramente aleatorias, esenciales para garantizar la diversidad en las primeras etapas de las metaheurísticas. Conectado directamente con este proceso, el componente implementa la lógica matemática de la función u objetivos $f(x)$ que miden el desempeño de cada vector de decisión. El módulo es, por tanto, el responsable de transformar una solución abstracta en un valor numérico cualitativo o en un vector de valores si se trabaja en entornos multiobjetivo, gestionando además el cálculo de las penalizaciones en caso de que la solución generada vulnere alguna de las restricciones de frontera impuestas por el modelo.
+        En primer lugar, el módulo define los mecanismos necesarios para construir configuraciones de partida válidas dentro del espacio de búsqueda, soluciones puramente aleatorias, esenciales para garantizar la diversidad en las primeras etapas de las metaheurísticas. Conectado directamente con este proceso, el componente implementa la lógica matemática de la función u objetivos $f(x)$ que miden el desempeño de cada vector de decisión. El módulo es, por tanto, el responsable de transformar una solución abstracta en un valor numérico cualitativo o en un vector de valores si se trabaja en entornos multi-objetivo, gestionando además el cálculo de las penalizaciones en caso de que la solución generada vulnere alguna de las restricciones de frontera impuestas por el modelo.
         
         Finalmente, al conocer en detalle cómo se manejan y se relacionan internamente los datos del dominio, este componente proporciona la información estructural indispensable para que los operadores echen mano de las características del problema. Esto permite determinar de manera analítica la vecindad de una solución, facilitando que las perturbaciones y las variaciones locales se realicen con un sentido semántico preciso —como el intercambio de aristas en problemas de rutas o la asignación de tareas en problemas de planificación— en lugar de ejecutar modificaciones ciegas que comprometan la eficiencia del proceso de optimización.
 
@@ -492,7 +580,7 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
     \subsection{Soluciones}
         Las soluciones representan las estructuras que almacenan el resultado generado por la aplicación iterativa de los operadores dentro de los algoritmos de optimización. Este componente es de vital importancia para la eficiencia global del sistema, dado que constituye la unidad fundamental con la que opera la biblioteca de manera ininterrumpida a lo largo de todo el ciclo de ejecución. El motor de optimización modifica constantemente estas estructuras, gestiona poblaciones masivas de las mismas, evalúa sus atributos en cada iteración y analiza sus valores para guiar la búsqueda. Por consiguiente, cualquier ineficiencia o sobrecarga en su diseño se amplificaría exponencialmente, comprometiendo críticamente el rendimiento temporal y el consumo de memoria de los algoritmos.
         
-        Bajo esta premisa, la estructura se ha diseñado siguiendo una filosofía minimalista que prioriza la ligereza y la simplicidad estructural. Sin embargo, alcanzar este equilibrio ha supuesto un desafío de desarrollo complejo debido a la necesidad de dar soporte simultáneo tanto a problemas de un único objetivo como a enfoques multiobjetivo. Mientras que en entornos mono-objetivo basta con asociar al vector de variables un único valor escalar de aptitud, los entornos multiobjetivo exigen gestionar vectores de funciones objetivo, rangos de dominancia y métricas de densidad como la distancia de apilamiento.
+        Bajo esta premisa, la estructura se ha diseñado siguiendo una filosofía minimalista que prioriza la ligereza y la simplicidad estructural. Sin embargo, alcanzar este equilibrio ha supuesto un desafío de desarrollo complejo debido a la necesidad de dar soporte simultáneo tanto a problemas de un único objetivo como a enfoques multi-objetivo. Mientras que en entornos mono-objetivo basta con asociar al vector de variables un único valor escalar de aptitud, los entornos multi-objetivo exigen gestionar vectores de funciones objetivo, rangos de dominancia y métricas de densidad como la distancia de apilamiento.
 
     \subsection{Utilidades}
         Para posibilitar el desarrollo de este proyecto y cumplir el objetivo de mantener una arquitectura con \emph{cero dependencias externas}, se han desarrollado componentes auxiliares ligeros integrados en el núcleo de la biblioteca. Estos submódulos reproducen, de forma optimizada y autocontenida, las funcionalidades estrictamente necesarias de \texttt{crates} estándar del ecosistema Rust, tales como \texttt{rand}~\cite{rand_crate} para la generación estocástica y \texttt{plotters}~\cite{plotters_crate} para la representación gráfica. Esta decisión de diseño permite evitar la inclusión de bibliotecas externas sin renunciar a las capacidades necesarias para el correcto funcionamiento del sistema.
@@ -510,26 +598,24 @@ También conocidas como métodos de búsqueda puntual, estos algoritmos mantiene
 
         En una primera aproximación del diseño, \texttt{Solution} se definió como un \textit{trait} que declaraba un conjunto de funciones fundamentales, tales como la obtención del valor de \textit{fitness}, el acceso a las variables de la solución o la recuperación de su representación interna. Este \textit{trait} debía ser implementado por distintos \textit{structs}, cada uno adaptado a las necesidades específicas de cada problema.
 
-        Por ejemplo, si el problema requería representar una solución como una permutación binaria, el \textit{struct} correspondiente contendría como atributos un vector binario junto con el valor de calidad asociado a dicha solución. Sin embargo, se observó que esta arquitectura introducía una elevada fragmentación en las implementaciones y dificultaba la generalización de la biblioteca para soportar un mayor número de problemas y algoritmos.
+        Por ejemplo, si el problema requería representar una solución como una permutación binaria \ref{lst:binary_solution}, el \textit{struct} correspondiente contendría como atributos un vector binario junto con el valor de calidad asociado a dicha solución. Sin embargo, se observó que esta arquitectura introducía una elevada fragmentación en las implementaciones y dificultaba la generalización de la biblioteca para soportar un mayor número de problemas y algoritmos.
 
         Por este motivo, se optó por una solución más abstracta y flexible. En el diseño actual \ref{lst:solution}, \texttt{Solution} se define como un \textit{struct} genérico parametrizado por dos tipos: \texttt{T} y \texttt{Q}. El tipo \texttt{T} representa el tipo de dato de las variables de decisión almacenadas en la solución, mientras que \texttt{Q} representa el tipo asociado a la evaluación de calidad de dicha solución. De forma predeterminada, este último toma el tipo \texttt{f64}.
 
-        \begin{listing}[H]
-        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
+    \noindent
+    \begin{minipage}{\linewidth}
+    \begin{lstlisting}[language=Rust, caption={Estructura desarrollada para las Soluciones}, label={lst:solution}]
 #[derive(Clone, Debug)]
 pub struct Solution<T, Q = f64> {
     variables: Vec<T>,
     value: Option<Q>,
 }
-        \end{minted}
-        \caption{Estructura desarrollada para las Soluciones}
-        \label{lst:solution}
-        \end{listing}
+    \end{lstlisting}
+    \end{minipage}
 
-        Sobre esta estructura, en lugar de recurrir a implementaciones rígidas o acopladas de manera convencional, se optó por diseñar fábricas de inicialización mediante constructores específicos para entornos mono-objetivo y multiobjetivo capaces de adaptarse a una amplia variedad de problemas. Este enfoque modular permite instanciar estados con una sintaxis fluida y desacoplada del núcleo del algoritmo. Un caso representativo de esta estrategia se ilustra en el Listado~\ref{lst:binary_solution}, donde se muestra el código reducido para la construcción de soluciones binarias (cuyas variables se definen mediante valores booleanos). En este fragmento de código se aprecia cómo el patrón \textit{Builder} facilita la inicialización homogénea de la estructura —ya sea de forma aleatoria estocástica, parametrizada a ceros o a unos— antes de consolidar el objeto de tipo \texttt{Solution<bool>} definitivo a través del método de finalización.
+        Sobre esta estructura, en lugar de recurrir a implementaciones rígidas o acopladas de manera convencional, se optó por diseñar fábricas de inicialización mediante constructores específicos para entornos mono-objetivo y multi-objetivo capaces de adaptarse a una amplia variedad de problemas. Este enfoque modular permite instanciar estados con una sintaxis fluida y desacoplada del núcleo del algoritmo. Un caso representativo de esta estrategia se ilustra en el Código~\ref{lst:binary_solution}, donde se muestra el código reducido para la construcción de soluciones binarias (cuyas variables se definen mediante valores booleanos). En este fragmento de código se aprecia cómo el patrón \textit{Builder} facilita la inicialización homogénea de la estructura —ya sea de forma aleatoria estocástica, parametrizada a ceros o a unos— antes de consolidar el objeto de tipo \texttt{Solution<bool>} definitivo a través del método de finalización.
 
-\begin{listing}[H]
-\begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
+\begin{lstlisting}[language=Rust, caption={Código reducido sobre el constructor de soluciones o permutaciones binarias}\label{lst:binary_solution}]
 pub struct BinarySolutionBuilder {
     variables: Vec<bool>,
     quality: Option<f64>,
@@ -556,7 +642,10 @@ impl BinarySolutionBuilder {
         } else {
             Random::new(seed_from_time())
         };
-        let variables: Vec<bool> = (0..size).map(|_| rng.coin_flip()).collect();
+        let variables: Vec<bool> = (0..size)
+            .map(|_| rng.coin_flip())
+            .collect();
+            
         Self {
             variables,
             quality: None,
@@ -573,18 +662,15 @@ impl BinarySolutionBuilder {
         finalize_scalar_solution(self.variables, self.quality)
     }
 }
-\end{minted}
-\caption{Código reducido sobre el constructor de soluciones binarias}
-\label{lst:binary_solution}
-\end{listing}
+\end{lstlisting}
 
     \subsection{Abstracción de Problemas y Operadores}
         Posteriormente se abordó la implementación de los \textbf{problemas}, definidos mediante un \texttt{trait} que actúa como el contrato de interfaz para cualquier modelo de optimización que se desee resolver. Para garantizar que la biblioteca fuera lo suficientemente flexible como para soportar diversos dominios de problemas —desde optimización continua hasta combinatoria—, se diseñó una estructura altamente genérica. 
         
-        La interfaz que deben satisfacer todos los modelos se ha proyectado bajo un enfoque minimalista y cohesivo. Este contrato obliga a la implementación de métodos específicos destinados a la obtención de metadatos identificativos de la instancia, los cuales sirven como identificadores unívocos en los sistemas de persistencia y puntos de control (\textit{checkpoints}). Asimismo, exige la definición de funciones para la evaluación cuantitativa de las soluciones y un mecanismo de inicialización estocástica que dote a los algoritmos de un punto de partida válido en el espacio de búsqueda. Esta especificación formal se detalla en el Listado~\ref{lst:problem_trait}.
+        La interfaz que deben satisfacer todos los modelos se ha proyectado bajo un enfoque minimalista y cohesivo. Este contrato obliga a la implementación de métodos específicos destinados a la obtención de metadatos identificativos de la instancia, los cuales sirven como identificadores unívocos en los sistemas de persistencia y puntos de control (\textit{checkpoints}). Asimismo, exige la definición de funciones para la evaluación cuantitativa de las soluciones y un mecanismo de inicialización estocástica que dote a los algoritmos de un punto de partida válido en el espacio de búsqueda. Esta especificación formal se detalla en el código~\ref{cod:problem_trait}.
 
-\begin{listing}[H]
-\begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
+
+\begin{lstlisting}[language=Rust, caption={Muestra la implementación del \texttt{trait} problema.}\label{cod:problem_trait}]
 pub trait Problem<T, Q = f64>
 where
     T: Clone,
@@ -598,7 +684,11 @@ where
         
     fn create_solution(&self, _rng: &mut Random) -> Solution<T, Q>;
         
-    fn dominates(&self, solution_a: &Solution<T, Q>, solution_b: &Solution<T, Q>) -> bool;
+    fn dominates(
+        &self, 
+        solution_a: &Solution<T, Q>, 
+        solution_b: &Solution<T, Q>
+    ) -> bool;
     
     fn get_improvement_direction(&self) -> ImprovementDirection;
 
@@ -606,31 +696,24 @@ where
 
     fn format_solution(&self, solution: &Solution<T, Q>) -> String;
 }
-\end{minted}
-\caption{Definición genérica del \texttt{trait Problem} para la abstracción de problemas de optimización.}
-\label{lst:problem_trait}
-\end{listing}
+\end{lstlisting}
 
-        Como se observa en la definición conceptual expuesta en el Listado~\ref{lst:problem_trait}, el uso de tipos genéricos permite desacoplar por completo la lógica del problema de la representación interna de los datos. El parámetro \texttt{T} representa el tipo de la variable de decisión, mientras que \texttt{Q} define el tipo de la evaluación (u objetivo), cuya especialización por defecto se establece como \texttt{f64}. Esta abstracción delega en la concreción del usuario la responsabilidad de definir aspectos críticos como la dirección de mejora (\texttt{better\_fitness\_fn} e \texttt{get\_improvement\_direction}), permitiendo configurar de manera flexible los criterios de ordenación e idoneidad de las soluciones. 
+        Como se observa en la definición conceptual expuesta en el Código~\ref{cod:problem_trait}, el uso de tipos genéricos permite desacoplar por completo la lógica del problema de la representación interna de los datos. El parámetro \texttt{T} representa el tipo de la variable de decisión, mientras que \texttt{Q} define el tipo de la evaluación (u objetivo), cuya especialización por defecto se establece como \texttt{f64}. Esta abstracción delega en la concreción del usuario la responsabilidad de definir aspectos críticos como la dirección de mejora (\texttt{better\_fitness\_fn} e \texttt{get\_improvement\_direction}), permitiendo configurar de manera flexible los criterios de ordenación e idoneidad de las soluciones. 
 
         Asimismo, el \texttt{trait} estandariza la forma en que los algoritmos interactúan con el dominio del problema: la función \texttt{evaluate} califica la calidad de un espécimen mediante efectos colaterales controlados en su estado, mientras que \texttt{create\_solution} define el mecanismo de generación inicial parametrizado por un generador de números pseudoaleatorios. Esta arquitectura asegura que las metaheurísticas puedan operar de forma agnóstica al problema concreto, potenciando la extensibilidad y reutilización del sistema. Una vez consolidada esta base, el desarrollo prosiguió con la implementación de los operadores y los algoritmos, encargados de explotar estas definiciones para guiar la búsqueda hacia soluciones óptimas.
 
         En lo que respecta a los operadores, se definió el \texttt{trait Operator} como la abstracción base de la jerarquía del módulo de variación. Aunque su estructura se ha mantenido intencionadamente mínima para no sobrecargar el tiempo de cómputo, actúa como una interfaz común que unifica la gestión de metadatos esenciales, tales como el nombre del operador o su firma procedimental. Esto facilita la trazabilidad de las transformaciones genéticas, la auditoría del comportamiento del algoritmo y la posterior estructuración de los reportes estadísticos de resultados.
-        
-        \begin{listing}[H]
-        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
+
+    \begin{lstlisting}[language=Rust, caption={Interfaz base \texttt{Operator} para la identificación de componentes.}
+        \label{lst:base_operator}]
     pub trait Operator {
         fn name(&self) -> &str;
     }
-        \end{minted}
-        \caption{Interfaz base \texttt{Operator} para la identificación de componentes.}
-        \label{lst:base_operator}
-        \end{listing}
+    \end{lstlisting}
 
-        A partir de esta interfaz fundamental, se especializa la jerarquía en tres categorías que representan los pilares de las metaheurísticas: los operadores de \textbf{mutación}, \textbf{cruce} (\emph{crossover}) y \textbf{selección}. Esta especialización mediante subtipos de \texttt{traits} permite que los algoritmos manipulen las soluciones de forma genérica, independientemente del tipo de dato subyacente (\texttt{T}) o de la métrica de evaluación (\texttt{Q}), tal y como se detalla en el Listado~\ref{lst:operators_hierarchy}.
+        A partir de esta interfaz fundamental, se especializa la jerarquía en tres categorías que representan los pilares de las metaheurísticas: los operadores de \textbf{mutación}, \textbf{cruce} (\emph{crossover}) y \textbf{selección}. Esta especialización mediante subtipos de \texttt{traits} permite que los algoritmos manipulen las soluciones de forma genérica, independientemente del tipo de dato subyacente (\texttt{T}) o de la métrica de evaluación (\texttt{Q}), tal y como se detalla en el Código~\ref{cod:operators_hierarchy}.
 
-        \begin{listing}[H]
-        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
+    \begin{lstlisting}[language=Rust, caption={Muestra del desarrollo de los diferentes tipos de \texttt{traits} sobre los operadores.}\label{cod:operators_hierarchy}]
 pub trait MutationOperator<T, Q = f64>: Operator
 where
     T: Clone,
@@ -643,6 +726,19 @@ where
         bounds: Option<&RealBounds>,
         rng: &mut Random,
     );
+}
+
+pub trait NeighborhoodOperator<T, Q = f64>: Operator
+where
+    T: Clone,
+    Q: Clone,
+{
+    fn random_neighbor(
+        &self,
+        solution: &Solution<T, Q>,
+        bounds: Option<&RealBounds>,
+        rng: &mut Random,
+    ) -> Solution<T, Q>;
 }
 
 pub trait CrossoverOperator<T, Q = f64>: Operator
@@ -671,13 +767,38 @@ where
         dominates: &dyn Fn(&Solution<T, Q>, &Solution<T, Q>) -> bool,
     ) -> &'a Solution<T, Q>;
 }
-        \end{minted}
-        \caption{Muestra del desarrollo de los diferentes tipos de \texttt{traits} sobre los operadores.}        \label{lst:operators_hierarchy}
-        \end{listing} 
 
-        Como se puede apreciar en el Listado~\ref{lst:operators_hierarchy}, cada contrato especifica formalmente los requisitos para su cometido. Un aspecto clave en el diseño de las firmas de \texttt{MutationOperator} y \texttt{CrossoverOperator} es la inclusión opcional de los límites espaciales del problema mediante el parámetro \texttt{bounds: Option<\&RealBounds>}. Esta adición es de vital importancia para garantizar la validez matemática y la abstracción de la biblioteca cuando se opera en espacios de búsqueda continuos de números reales. Operadores paradigmáticos de la literatura, tales como el cruce binario simulado (\textit{Simulated Binary Crossover}, SBX) o la mutación polinomial (\textit{Polynomial Mutation}), calculan las nuevas posiciones basándose estrictamente en distribuciones de probabilidad acotadas por las fronteras del espacio factible $\Omega$. Al pasar estos límites de manera genérica y opcional, la biblioteca es capaz de reutilizar el mismo flujo computacional tanto para problemas combinatorios o discretos (donde los límites reales no aplican y se evalúan como \texttt{None}) como para optimización continua de alta dimensionalidad.
+pub trait TabuMemoryOperator<T, Q = f64>: Operator
+where
+    T: Clone + Display,
+    Q: Clone + Display,
+{
+    fn is_tabu(
+        &self,
+        tabu_memory: &HashMap<String, usize>,
+        candidate: &Solution<T, Q>,
+        iteration: usize,
+    ) -> bool {
+        tabu_memory
+            .get(&self.signature(candidate))
+            .is_some_and(|expiry| *expiry > iteration)
+    }
 
-        Por otra parte, destaca la gestión de los tiempos de vida o \textit{lifetimes} (\texttt{'a}) implementada en la firma del método de ejecución de \texttt{SelectionOperator}. En lenguajes de programación tradicionales, retornar un elemento elegido de una colección suele implicar o bien la copia íntegra del objeto en memoria o bien el uso de punteros desprotegidos que amenazan la estabilidad del hilo de ejecución. A través del parámetro genérico de ciclo de vida \texttt{'a}, el compilador de Rust valida estáticamente que la referencia de la solución seleccionada devuelta por el operador posea exactamente la misma persistencia temporal que el vector de la población original (\texttt{population: \&'a [Solution<T, Q>]}). Esta restricción asegura de forma matemática que no se produzcan punteros colgados (\textit{dangling pointers}) si la población se destruye, eliminando por completo la necesidad de realizar clonaciones pesadas de memoria (\textit{overhead} por asignación en el \textit{heap}) y optimizando drásticamente la velocidad en cada iteración del algoritmo.
+    fn remember(
+        &self,
+        tabu_memory: &mut HashMap<String, usize>,
+        solution: &Solution<T, Q>,
+        iteration: usize,
+        tabu_tenure: usize,
+    ) {
+        tabu_memory.insert(self.signature(solution), iteration + tabu_tenure);
+    }
+}
+\end{lstlisting}
+
+        Como se puede apreciar en el Código~\ref{cod:operators_hierarchy}, cada contrato especifica formalmente los requisitos para su cometido. Un aspecto clave en el diseño de las firmas de \texttt{MutationOperator} y \texttt{CrossoverOperator} es la inclusión opcional de los límites espaciales del problema mediante el parámetro \texttt{bounds: Option<\&RealBounds>}. Esta adición es de vital importancia para garantizar la validez matemática y la abstracción de la biblioteca cuando se opera en espacios de búsqueda continuos de números reales. Operadores paradigmáticos de la literatura, tales como el cruce binario simulado (\textit{Simulated Binary Crossover}, SBX) o la mutación polinomial (\textit{Polynomial Mutation}), calculan las nuevas posiciones basándose estrictamente en distribuciones de probabilidad acotadas por las fronteras del espacio factible $\Omega$. Al pasar estos límites de manera genérica y opcional, la biblioteca es capaz de reutilizar el mismo flujo computacional tanto para problemas combinatorios o discretos (donde los límites reales no aplican y se evalúan como \texttt{None}) como para optimización continua de alta dimensionalidad.
+
+        Por otra parte, destaca la gestión de los tiempos de vida o \textit{lifetimes} (\texttt{'a}) implementada en la firma del método de ejecución de \texttt{SelectionOperator}. En lenguajes de programación tradicionales, retornar un elemento elegido de una colección suele implicar o bien la copia íntegra del objeto en memoria o bien el uso de punteros desprotegidos que amenazan la estabilidad del hilo de ejecución. A través del parámetro genérico de ciclo de vida \texttt{'a}, el compilador de Rust valida estáticamente que la referencia de la solución seleccionada devuelta por el operador posea exactamente la misma persistencia temporal que el vector de la población original (\texttt{population: \&'a [Solution<T, Q>]}). Esta restricción asegura que no se produzcan punteros colgados si la población se destruye, eliminando por completo la necesidad de realizar clonaciones pesadas de memoria (\textit{overhead} por asignación en el \textit{heap}) y optimizando drásticamente la velocidad en cada iteración del algoritmo.
 
         %% ALGORITMOS
         
@@ -689,11 +810,10 @@ where
 
         Para llevar a cabo su propósito exploratorio, las metaheurísticas interactúan directamente con los operadores de variación y selección, los cuales realizan transformaciones estocásticas y locales sobre las soluciones de forma iterativa. Gracias al acoplamiento débil que ofrece el diseño arquitectónico, estos operadores son completamente intercambiables; esto permite alterar radicalmente el comportamiento dinámico del algoritmo sin modificar un solo bloque de su implementación interna. Bajo este mismo principio de modularidad y diseño agnóstico, el sistema facilita la sustitución o modificación del problema en evaluación de manera directa y flexible. Asimismo, los algoritmos admiten la inyección de observadores para monitorizar el estado interno de la ejecución en tiempo real, un componente que se detalla minuciosamente en su apartado correspondiente.
 
-        Desde el punto de vista del rendimiento temporal, estas estructuras se han diseñado para ser ejecutadas de forma concurrente o paralela, minimizando la latencia de procesamiento. La biblioteca ofrece al usuario la flexibilidad de especificar manualmente el tamaño del grupo de hilos (\textit{thread pool}) a instanciar o, alternativamente, delegar dicha gestión al propio entorno. En este último escenario, el nivel de concurrencia óptimo se determina dinámicamente en tiempo de ejecución analizando la topología de la máquina del usuario, utilizando para ello la función de la biblioteca estándar \texttt{available\_parallelism()}. Toda esta suite de comportamientos y capacidades operativas queda consolidada formalmente bajo el contrato de interfaz especificado por el \texttt{trait Algorithm}, detallado en el Listado~\ref{lst:algorithm_trait}.
+        Desde el punto de vista del rendimiento temporal, estas estructuras se han diseñado para ser ejecutadas de forma concurrente o paralela, minimizando la latencia de procesamiento. La biblioteca ofrece al usuario la flexibilidad de especificar manualmente el tamaño del grupo de hilos (\textit{thread pool}) a instanciar o, alternativamente, delegar dicha gestión al propio entorno. En este último escenario, el nivel de concurrencia óptimo se determina dinámicamente en tiempo de ejecución analizando la topología de la máquina del usuario, utilizando para ello la función de la biblioteca estándar \texttt{available\_parallelism()}. Toda esta suite de comportamientos y capacidades operativas queda consolidada formalmente bajo el contrato de interfaz especificado por el \texttt{trait Algorithm}, detallado en el Código~\ref{lst:algorithm_trait}.
 
 
-        \begin{listing}[H]
-        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+    \begin{lstlisting}[language=Rust, caption={Definición del contrato y de los tipos asociados para el componente \texttt{Algorithm}.}\label{lst:algorithm_trait}]
 pub trait Algorithm<T, Q = f64>
 where
     T: Clone + Send + 'static + Display,
@@ -727,36 +847,31 @@ where
         state: &mut Self::StepState,
     );
 }
-        \end{minted}
-        \caption{Definición del contrato y de los tipos asociados para el componente \texttt{Algorithm}.}
-        \label{lst:algorithm_trait}
-        \end{listing}
+    \end{lstlisting}
 
-        Como se observa en el Listado~\ref{lst:algorithm_trait}, la declaración del \texttt{trait} hace uso de tipos asociados (\texttt{type SolutionSet}, \texttt{type Parameters} y \texttt{type StepState}). Esta decisión de diseño en lugar de recurrir puramente a parámetros genéricos en la cabecera del rasgo resulta fundamental para limpiar las firmas del código, agrupando los tipos dependientes bajo el espacio de nombres del propio algoritmo y garantizando que un algoritmo concreto solo pueda interactuar con su estructura de parámetros y estados compatible.
+        Como se observa en el Código~\ref{lst:algorithm_trait}, la declaración del \texttt{trait} hace uso de tipos asociados (\texttt{type SolutionSet}, \texttt{type Parameters} y \texttt{type StepState}). Esta decisión de diseño en lugar de recurrir puramente a parámetros genéricos en la cabecera del rasgo resulta fundamental para limpiar las firmas del código, agrupando los tipos dependientes bajo el espacio de nombres del propio algoritmo y garantizando que un algoritmo concreto solo pueda interactuar con su estructura de parámetros y estados compatible.
 
         Asimismo, es imprescindible destacar la rigurosidad de las restricciones de concurrencia (\textit{trait bounds}) impuestas sobre los parámetros de tipos genéricos \texttt{T} (variables de decisión) y \texttt{Q} (valores de aptitud), que obligan a la implementación de los marcadores \texttt{Send} y \texttt{'static}. En el ecosistema Rust, garantizar de forma estática que las estructuras de datos poblacionales puedan transferirse de forma segura entre las fronteras de distintos hilos de ejecución sin riesgo de provocar condiciones de carrera es una exigencia crítica. La presencia de \texttt{Send} asegura esta transferencia segura de la propiedad (\textit{ownership}) en entornos multitarea, mientras que el ciclo de vida \texttt{'a} implícito en \texttt{'static} certifica que los datos contenidos no poseen referencias locales con hilos que puedan ser destruidos prematuramente, blindando la integridad de la memoria.
 
-        La lógica de ejecución se implementa mediante un sistema basado en pasos. El punto de entrada principal para iniciar cualquier metaheurística es el método \texttt{run}, cuya firma procedimental e interfaz de rasgos se detalla en el Listado~\ref{lst:run_definition}.
+        La lógica de ejecución se implementa mediante un sistema basado en pasos. El punto de entrada principal para iniciar cualquier metaheurística es el método \texttt{run}, cuya firma procedimental e interfaz de rasgos se detalla en el Código~\ref{lst:run_definition}.
 
-        \begin{listing}[H]
-        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+    \noindent
+    \begin{minipage}{\linewidth}
+    \begin{lstlisting}[language=Rust, caption={Definición de la firma genérica del método principal \texttt{run}.} \label{lst:run_definition}]
 fn run<P>(&mut self, problem: &P) -> Result<Self::SolutionSet, String>
 where
     Self: Sized,
     Self::SolutionSet: Clone,
     P: Problem<T, Q> + Sync,
 {
-        \end{minted}
-        \caption{Definición de la firma genérica del método principal \texttt{run}.}
-        \label{lst:run_definition}
-        \end{listing}
+    \end{lstlisting}
+    \end{minipage}
+    
+        El diseño de la función \texttt{run} aprovecha las ventajas de los sistemas de tipos avanzados de Rust. Destaca en su declaración el uso del límite restrictivo \texttt{Self: Sized}. En Rust, por defecto, los \textit{traits} pueden ser implementados por tipos cuyo tamaño en tiempo de compilación no sea conocido de forma estática (como los objetos de rasgo o \textit{trait objects}). Al imponer el \textit{bound} \texttt{Sized}, se garantiza que el algoritmo concreto posee un tamaño fijo y conocido en tiempo de compilación. Esto es un requisito indispensable para permitir el polimorfismo estático, asegurando que el compilador optimice las llamadas a funciones eliminando el coste de la resolución dinámica en tiempo de ejecución. Asimismo, la restricción \texttt{Sync} sobre el parámetro genérico del problema (\texttt{P}) asegura que la estructura del modelo matemático sea segura para ser accedida concurrentemente desde múltiples hilos de ejecución, habilitando el paralelismo a nivel del motor experimental.
 
-        El diseño de la función \texttt{run} aprovecha las ventajas de los sistemas de tipos avanzados de Rust. Destaca en su declaración el uso del límite restrictivo \texttt{Self: Sized}. En Rust, por defecto, los \textit{traits} pueden ser implementados por tipos cuyo tamaño en tiempo de compilación no sea conocido de forma estática (como los objetos de rasgo o \textit{trait objects}). Al imponer el \textit{bound} \texttt{Sized}, se garantiza que el algoritmo concreto posee un tamaño fijo y conocido en tiempo de compilación. Esto es un requisito indispensable para permitir el polimorfismo estático, asegurando que el compilador optimice las llamadas a funciones eliminando el coste de la resolución dinámica en tiempo de ejecución (*dynamic dispatch*). Asimismo, la restricción \texttt{Sync} sobre el parámetro genérico del problema (\texttt{P}) asegura que la estructura del modelo matemático sea segura para ser accedida concurrentemente desde múltiples hilos de ejecución, habilitando el paralelismo a nivel del motor experimental.
+        Desde una perspectiva arquitectónica, \texttt{run} delega la orquestación y el control de eventos en una función interna especializada de la biblioteca denominada \texttt{run\_with\_observer\_runtime}, detallada en el Código~\ref{lst:run_with_observer_runtime}. El método \texttt{run} actúa bajo un enfoque de programación funcional, encapsulando el comportamiento interactivo de la metaheurística en una \textit{closure} o función anónima que se inyecta a través del argumento \texttt{task}. El motor central evalúa de forma transparente esta tarea, aislando los mecanismos de monitorización del algoritmo en sí.
 
-        Desde una perspectiva arquitectónica, \texttt{run} delega la orquestación y el control de eventos en una función interna especializada de la biblioteca denominada \texttt{run\_with\_observer\_runtime}, detallada en el Listado~\ref{lst:run_with_observer_runtime}. El método \texttt{run} actúa bajo un enfoque de programación funcional, encapsulando el comportamiento interactivo de la metaheurística en una \textit{closure} o función anónima que se inyecta a través del argumento \texttt{task}. El motor central evalúa de forma transparente esta tarea, aislando los mecanismos de monitorización del algoritmo en sí.
-
-        \begin{listing}[H]
-        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+    \begin{lstlisting}[language=Rust, caption={Implementación del motor de ejecución y el entorno de comunicación para los observadores.} \label{lst:run_with_observer_runtime}]
 pub fn run_with_observer_runtime<T, Q, R, F>(
     observers: &mut Vec<Box<dyn AlgorithmObserver<T, Q>>>,
     criteria: TerminationCriteria,
@@ -783,18 +898,14 @@ where
     *observers = runtime.finish();
     output.result
 }
-        \end{minted}
-        \caption{Implementación del motor de ejecución y el entorno de comunicación para los observadores.}
-        \label{lst:run_with_observer_runtime}
-        \end{listing}
+        \end{lstlisting}
 
-        Como se aprecia en la lógica de \texttt{run\_with\_observer\_runtime}, la función asume el control del ciclo de vida del proceso de optimización. Inicialmente extrae los observadores mediante \texttt{std::mem::take} para evitar copias costosas y configura un canal de comunicación asíncrono gestionado a través de un \texttt{ExecutionContext}. Tras arrancar formalmente el contexto, se invoca la \textit{closure} \texttt{task}, transfiriéndole una referencia del contexto de ejecución para que el algoritmo pueda reportar sus progresos. Una vez finalizada la tarea, es de vital importancia la llamada explícita a \texttt{drop(context)}. Este paso destruye el contexto de forma controlada, provocando el cierre definitivo del extremo emisor del canal (*channel*). Al cerrarse el flujo, el hilo secundario encargado de procesar la lógica de los observadores puede consumir los mensajes restantes en cola (*drain*) y concluir de manera limpia su ciclo de ejecución, evitando interbloqueos (*deadlocks*) antes de recuperar los observadores a través de \texttt{runtime.finish()}.
+        Como se aprecia en la lógica de \texttt{run\_with\_observer\_runtime}, la función asume el control del ciclo de vida del proceso de optimización. Inicialmente extrae los observadores mediante \texttt{std::mem::take} para evitar copias costosas y configura un canal de comunicación asíncrono gestionado a través de un \texttt{ExecutionContext}. Tras arrancar formalmente el contexto, se invoca la \textit{closure} \texttt{task}, transfiriéndole una referencia del contexto de ejecución para que el algoritmo pueda reportar sus progresos. Una vez finalizada la tarea, es de vital importancia la llamada explícita a \texttt{drop(context)}. Este paso destruye el contexto de forma controlada, provocando el cierre definitivo del extremo emisor del canal. Al cerrarse el flujo, el hilo secundario encargado de procesar la lógica de los observadores puede consumir los mensajes restantes en cola y concluir de manera limpia su ciclo de ejecución, evitando interbloqueos antes de recuperar los observadores a través de \texttt{runtime.finish()}.
 
-        Finalmente, la sustancia algorítmica de la tarea inyectada se despliega en un bucle iterativo controlado por las condiciones de parada, cuyo comportamiento se describe en el Listado~\ref{lst:run_algorithm_loop}.
+        Finalmente, la sustancia algorítmica de la tarea inyectada se despliega en un bucle iterativo controlado por las condiciones de parada, cuyo comportamiento se describe en el Código~\ref{lst:run_algorithm_loop}.
 
 
-        \begin{listing}[H]
-        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+    \begin{lstlisting}[language=Rust, caption={Bucle de ejecución del interior de la función \textbf{run}} \label{lst:run_algorithm_loop}]
 while !context.should_terminate() 
 {
     algorithm.step(problem, &mut state);
@@ -818,10 +929,7 @@ while !context.should_terminate()
         ObserverState::from_snapshot(&step_snapshot, context.seq_id())
     );
 }
-        \end{minted}
-        \caption{Bucle de ejecución del interior de la función \textbf{run}}
-        \label{lst:run_algorithm_loop}
-        \end{listing}
+    \end{lstlisting}
 
 
         En cada iteración del bucle, el algoritmo avanza mediante el método \texttt{step}, el cual altera el estado de la población o la trayectoria actual. Acto seguido, se extrae un estado intermedio inmutable o captura (\textit{snapshot}) que almacena la evolución temporal de la ejecución. Este reporte intermedio se aprovecha por el sistema de tolerancia a fallos mediante una política de puntos de control o \textit{checkpoints}. Si la frecuencia parametrizada coincide con el módulo de la iteración corriente, se construye un registro (\textit{record}) que se vuelca de forma persistente a disco a través de \texttt{checkpoint\_policy.persist\_record}, permitiendo reanudar la computación en caso de una interrupción imprevista de la máquina. Este sistema es el encargado de guardar la información
@@ -829,9 +937,10 @@ while !context.should_terminate()
         El ciclo concluye con la invocación de \texttt{context.report\_progress}, función encargada de serializar y transmitir el nuevo estado en forma de un mensaje \texttt{ObserverState} hacia el canal del runtime de observadores, garantizando una auditoría en tiempo real del proceso sin penalizar el rendimiento del hilo principal.
 
         El bucle de ejecución persiste mientras el contexto del algoritmo, representado por la estructura \texttt{ExecutionContext}, no determine el cese de la actividad mediante el método \texttt{should\_terminate()}. La decisión de terminación está delegada de forma flexible en el tipo \texttt{TerminationCriterion}, un enumerado que permite al usuario definir condiciones de parada basadas en diversos criterios físicos y lógicos.
-        
-        \begin{listing}[H]
-        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+
+    \noindent
+    \begin{minipage}{\linewidth}
+    \begin{lstlisting}[language=Rust, caption={Enumerado \texttt{TerminationCriterion} con las condiciones de parada disponibles.}\label{lst:termination_enum}]
 #[derive(Clone, Debug)]
 pub enum TerminationCriterion {
     MaxIterations(usize),
@@ -840,15 +949,14 @@ pub enum TerminationCriterion {
     TimeLimit(Duration),
     NoImprovement { patience: usize },
 }
-        \end{minted}
-        \caption{Enumerado \texttt{TerminationCriterion} con las condiciones de parada disponibles.}
-        \label{lst:termination_enum}
-        \end{listing}
+    \end{lstlisting}
+    \end{minipage}
         
         Esta implementación mediante un \texttt{enum} permite una gran expresividad en la configuración de los experimentos. El usuario puede optar por límites tradicionales, como el número de iteraciones o evaluaciones, o por criterios más avanzados de convergencia y estancamiento (\emph{patience}). La integración de estos criterios en el \texttt{ExecutionContext} garantiza que la comprobación se realice de manera eficiente al finalizar cada paso del algoritmo, permitiendo además que los observadores capturen el progreso en tiempo real antes de cada evaluación de terminación.
 
-        \begin{listing}[H]
-        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+    \noindent
+    \begin{minipage}{\linewidth}
+    \begin{lstlisting}[language=Rust, caption={Estructura \texttt{ExecutionContext} encargada de la gestión del entorno y el control del ciclo de vida del algoritmo.} \label{lst:execution_context}]
 #[derive(Clone, Debug)]
 pub struct ExecutionContext<T, Q = f64>
 where
@@ -859,12 +967,10 @@ where
     termination: RefCell<TerminationController>,
     next_snapshot_seq: RefCell<u64>,
 }
-        \end{minted}
-        \caption{Estructura \texttt{ExecutionContext} encargada de la gestión del entorno y el control del ciclo de vida del algoritmo.}
-        \label{lst:execution_context}
-        \end{listing}
+    \end{lstlisting}
+    \end{minipage}
 
-        A partir de la definición expuesta en el Listado~\ref{lst:execution_context}, el \texttt{ExecutionContext} se consolida como el componente encargado de centralizar y gobernar de forma unificada el entorno operacional del algoritmo de optimización. Su propósito principal es aislar las tareas de control de la lógica metaheurística pura, asumiendo de forma integrada la gestión del cese de actividad, la canalización hacia el ecosistema de monitorización y la orquestación de la persistencia física en disco.
+        A partir de la definición expuesta en el Código~\ref{lst:execution_context}, el \texttt{ExecutionContext} se consolida como el componente encargado de centralizar y gobernar de forma unificada el entorno operacional del algoritmo de optimización. Su propósito principal es aislar las tareas de control de la lógica metaheurística pura, asumiendo de forma integrada la gestión del cese de actividad, la canalización hacia el ecosistema de monitorización y la orquestación de la persistencia física en disco.
 
         En síntesis, estas tres responsabilidades esenciales se materializan a nivel de implementación mediante los siguientes mecanismos técnicos integrados en la estructura:
         
@@ -952,10 +1058,10 @@ where
         
         Complementariamente, el sistema de estados no solo asiste a la monitorización externa, sino que constituye el pilar fundamental del mecanismo de puntos de control o \textit{checkpoints}. Estos estados se persisten en disco de forma periódica siguiendo las convenciones y rutas de almacenamiento estándar de cada sistema operativo, empleando directorios específicos como \texttt{LOCAL\_STATE\_ROMA} en entornos Linux, \texttt{HOME\_ROMA} en macOS y \texttt{LOCAL\_APPDATA} en sistemas Windows.
 
-        \begin{figure}[htbp]
+    \begin{figure}[htbp]
     \centering
-    \begin{tikzpicture}[
-        node distance=1.1cm and 0.8cm,
+    \begin{tikzpicture}[scale=0.70, transform shape,        
+    node distance=1.1cm and 0.8cm,
         >=Stealth,
         % Estilos optimizados
         start/.style={draw, fill=gray!15, rounded corners=10pt, font=\small\bfseries, minimum width=6em, minimum height=2cm, align=center},
@@ -1010,7 +1116,7 @@ where
     
     % Retorno de actualización al disco (sin cruzar líneas de flujo)
     \draw [arrow] (exec.east) -- ++(6,0) |- (storage.east) 
-        node[pos=0.2, right, font=\tiny, align=left] {Actualización\\periódica};
+        node[pos=0.2, right, font=\footnotesize, align=left] {Actualización\\periódica};
 
     % Bucle de ejecución (No terminado)
     \draw [arrow] (finish.west) -- ++(-1,0) |- (exec.west)
@@ -1053,11 +1159,10 @@ ID   | AGE     | ELAPSED. | INFO
     \subsection{Utilidades y experimentos }
         Para dar cumplimiento estricto al requisito arquitectónico de mantener \emph{cero dependencias externas}, se ha desarrollado un ecosistema robusto de submódulos auxiliares integrados en el núcleo de la biblioteca. Estas utilidades cubren un amplio espectro de necesidades operativas que van desde sistemas de \textit{benchmarking} para auditar tiempos de ejecución, hasta serializadores encargados de transformar estados de texto plano a formatos binarios eficientes para la persistencia. Asimismo, se incorporan motores ligeros de representación gráfica capaces de vectorizar curvas de rendimiento en formato SVG y rutinas avanzadas de entrada y salida por consola. Este último apartado reviste una complejidad notable, ya que la biblioteca confía plenamente en la terminal para interactuar con el usuario de manera interactiva.
     
-        La parametrización y el control de las ejecuciones se canalizan a través de un analizador de argumentos de línea de comandos implementado a medida, cuya interfaz de control se detalla en el Listado~\ref{lst:cli_args}.
+        La parametrización y el control de las ejecuciones se canalizan a través de un analizador de argumentos de línea de comandos implementado a medida, cuya interfaz de control se detalla en el Código~\ref{lst:cli_args}.
 
 
-        \begin{listing}[H]
-        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+    \begin{lstlisting}[language=Rust, caption={Estructura \texttt{CliArgs} encargada del procesamiento nativo de argumentos por línea de comandos.}    \label{lst:cli_args}]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CliArgs {
     args: Vec<String>,
@@ -1087,9 +1192,7 @@ impl CliArgs {
     pub fn checkpoints_disabled(&self) -> bool {
         self.has_any_flag(&[CLI_FLAG_NO_CHECKPOINT, CLI_FLAG_NO_CHECKPOINT_SHORT])
     }
-        \end{minted}
-        \caption{Estructura \texttt{CliArgs} encargada del procesamiento nativo de argumentos por línea de comandos.}        \label{lst:cli_args}
-        \end{listing}
+    \end{lstlisting}
 
     La estructura \texttt{CliArgs} permite centralizar la captura de banderas (\textit{flags}) operativas de manera ágil. A través de sus métodos, el usuario puede fijar de forma determinista la semilla estocástica del sistema mediante \texttt{seed\_or}, deshabilitar explícitamente la persistencia periódica o solicitar de forma interactiva la reanudación de un experimento a partir de un punto de control previo con \texttt{resume\_requested}. 
     
@@ -1097,10 +1200,9 @@ impl CliArgs {
 
     Adicionalmente, el módulo de utilidades engloba funciones de dispersión criptográfica para la validación de archivos (\textit{hashing}), primitivas de apoyo para la sincronización y paralelización interna de hilos, herramientas de abstracción de rutas en el sistema de archivos de forma multiplataforma y rutinas matemáticas preparadas para extraer métricas estadísticas de las poblaciones, las cuales nutren tanto al subsistema de observadores como a las funciones de renderizado gráfico.
 
-    No obstante, el componente más crítico y con mayor impacto en el desempeño biológico e informático de la biblioteca es el generador de números pseudoaleatorios (\textit{PRNG}). Al tratarse de metaheurísticas estocásticas, la práctica totalidad de los operadores de variación, las heurísticas constructivas iniciales y las reglas de aceptación y selección dependen por completo de este motor, expuesto en el Listado~\ref{lst:random}.
+    No obstante, el componente más crítico y con mayor impacto en el desempeño biológico e informático de la biblioteca es el generador de números pseudoaleatorios (\textit{PRNG}). Al tratarse de metaheurísticas estocásticas, la práctica totalidad de los operadores de variación, las heurísticas constructivas iniciales y las reglas de aceptación y selección dependen por completo de este motor, expuesto en el Código~\ref{lst:random}.
 
-        \begin{listing}[H]
-        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+    \begin{lstlisting}[language=Rust, caption={Implementación del generador de números pseudoaleatorios (\textit{PRNG}).} \label{lst:random}]
 pub struct Random {
     state: u64,
 }
@@ -1141,27 +1243,23 @@ impl Random {
     }
 }
 
-        \end{minted}
-        \caption{Implementación del generador de números pseudoaleatorios (\textit{PRNG}).}
-        \label{lst:random}
-        \end{listing}
+    \end{lstlisting}
         
         Como se aprecia en la implementación, el método neurálgico es \texttt{next\_u64}, del cual derivan todas las abstracciones del comportamiento estocástico del software, como el escalado a punto flotante \texttt{next\_f64}, el cálculo acotado de rangos o la evaluación de probabilidades booleanas mediante \texttt{chance} y \texttt{coin\_flip}. Para cumplir simultáneamente con una alta calidad estadística en las secuencias numéricas y un tiempo de cómputo ínfimo, se ha optado por implementar una variante pura del algoritmo \textit{SplitMix64}. Este generador hace avanzar su estado interno mediante la adición modular con desbordamiento controlado (\texttt{wrapping\_add}) de la constante dorada de 64 bits \texttt{0x9E3779B97F4A7C15}, un valor fraccionario derivado de la proporción áurea que garantiza una dispersión uniforme y un período máximo completo de $2^{64}$ estados antes de repetirse.
 
-        Debido a que el avance lineal del estado no es estadísticamente aleatorio por sí mismo, la secuencia se somete inmediatamente a una transformación final de mezcla no lineal implementada en la subrutina \texttt{mix64}, detallada en el Listado~\ref{lst:next_u64}.
+        Debido a que el avance lineal del estado no es estadísticamente aleatorio por sí mismo, la secuencia se somete inmediatamente a una transformación final de mezcla no lineal implementada en la subrutina \texttt{mix64}, detallada en el Código~\ref{lst:next_u64}.
 
-        \begin{listing}[H]
-        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+    \noindent
+    \begin{minipage}{\linewidth}
+    \begin{lstlisting}[language=Rust, caption={Función de mezcla no lineal \texttt{mix64} para maximizar la entropía de los bits generados.} \label{lst:next_u64}]
 #[inline]
 fn mix64(mut z: u64) -> u64 {
     z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
     z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
     z ^ (z >> 31)
 }
-        \end{minted}
-        \caption{Función de mezcla no lineal \texttt{mix64} para maximizar la entropía de los bits generados.}
-        \label{lst:next_u64}
-        \end{listing}
+    \end{lstlisting}
+    \end{minipage}
 
         La función \texttt{mix64} aplica de manera secuencial operaciones de desplazamiento de bits a la derecha (\textit{bit-shifts}) combinadas con operaciones XOR ($\wedge$) y multiplicaciones por constantes de alta entropía numéricas fijas (\texttt{0xBF58476D1CE4E5B9} y \texttt{0x94D049BB133111EB}). Esta técnica destruye cualquier correlación lineal latente en el estado, garantizando que incluso variaciones de un solo bit en la semilla original provoquen cambios masivos y pseudoaleatorios en el flujo de salida, superando satisfactoriamente las baterías de pruebas estadísticas más exigentes del sector informático. 
 
@@ -1171,10 +1269,9 @@ fn mix64(mut z: u64) -> u64 {
     
         El módulo de experimentos constituye el último bloque funcional de la arquitectura y se especifica en estrecha correlación junto al módulo de utilidades. Esta disposición responde a una necesidad puramente integradora, dado que actúa como la cúspide de abstracción encargada de unificar y explotar todas las implementaciones descritas con anterioridad. El motor de experimentación consolida en un único entorno operativo el despliegue de las metaheurísticas, la definición formal de los problemas, la inyección del generador de números pseudoaleatorios y el uso coordinado de las utilidades de \textit{benchmarking}, persistencia y entrada/salida, permitiendo ejecutar y evaluar de forma automatizada baterías complejas de pruebas.
 
-        Para garantizar la máxima flexibilidad y modularidad, el sistema elude cualquier acoplamiento rígido apoyándose en abstracciones avanzadas del lenguaje mediante la definición de \textit{traits} específicos. Este diseño unifica el comportamiento de los parámetros bajo interfaces genéricas, habilitando la condición de "experimentable" para cualquier algoritmo que se integre en la biblioteca, independientemente de sus particularidades algorítmicas internas. Gracias a esta arquitectura polimórfica, el motor de experimentos puede manipular, instanciar, monitorizar y variar dinámicamente las configuraciones operativas de las técnicas sin necesidad de acoplarse a una implementación concreta. Este contrato formal queda materializado a través del \texttt{trait ExperimentalCase}, detallado en el Listado~\ref{lst:experimentable_trait}.
-        
-        \begin{listing}[H]
-        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+        Para garantizar la máxima flexibilidad y modularidad, el sistema elude cualquier acoplamiento rígido apoyándose en abstracciones avanzadas del lenguaje mediante la definición de \textit{traits} específicos. Este diseño unifica el comportamiento de los parámetros bajo interfaces genéricas, habilitando la condición de "experimentable" para cualquier algoritmo que se integre en la biblioteca, independientemente de sus particularidades algorítmicas internas. Gracias a esta arquitectura polimórfica, el motor de experimentos puede manipular, instanciar, monitorizar y variar dinámicamente las configuraciones operativas de las técnicas sin necesidad de acoplarse a una implementación concreta. Este contrato formal queda materializado a través del \texttt{trait ExperimentalCase}, detallado en el Código~\ref{lst:experimentable_trait}.
+
+    \begin{lstlisting}[language=Rust, caption={Definición del \texttt{trait ExperimentalCase} para la abstracción y ejecución genérica de casos de prueba.} \label{lst:experimentable_trait}]
 pub trait ExperimentalCase<T, Q, P>: Send + Sync
 where
     T: Clone + Send + 'static,
@@ -1195,12 +1292,9 @@ where
 
     fn run(&self, problem: &P) -> Result<Box<dyn SolutionSet<T, Q>>, String>;
 }
-        \end{minted}
-        \caption{Definición del \texttt{trait ExperimentalCase} para la abstracción y ejecución genérica de casos de prueba.}
-        \label{lst:experimentable_trait}
-        \end{listing}
+    \end{lstlisting}    
 
-        Como se aprecia en la firma de rasgos expuesta en el Listado~\ref{lst:experimentable_trait}, la interfaz \texttt{ExperimentalCase} define los métodos indispensables para identificar la metaheurística de forma textual (\texttt{algorithm\_name}) y extraer o serializar sus vectores de hiperparámetros (\texttt{parameters} y \texttt{parameters\_as\_text}). Sin embargo, la rutina crítica es el método \texttt{run}, el cual asume la responsabilidad de instanciar el bucle generacional del algoritmo ante una referencia del problema genérico \texttt{P} y retornar el conjunto de resultados envueltos de forma opaca en un objeto de rasgo dinámico (\texttt{Box<dyn SolutionSet<T, Q>>}). Esta decisión de diseño resulta fundamental, pues permite que el motor trate de manera homogénea los conjuntos de soluciones devueltos por cualquier paradigma de optimización, ya sea mono-objetivo o multiobjetivo, sin necesidad de conocer su tipo concreto en tiempo de compilación.
+        Como se aprecia en la firma de rasgos expuesta en el Código~\ref{lst:experimentable_trait}, la interfaz \texttt{ExperimentalCase} define los métodos indispensables para identificar la metaheurística de forma textual (\texttt{algorithm\_name}) y extraer o serializar sus vectores de hiperparámetros (\texttt{parameters} y \texttt{parameters\_as\_text}). Sin embargo, la rutina crítica es el método \texttt{run}, el cual asume la responsabilidad de instanciar el bucle generacional del algoritmo ante una referencia del problema genérico \texttt{P} y retornar el conjunto de resultados envueltos de forma opaca en un objeto de rasgo dinámico (\texttt{Box<dyn SolutionSet<T, Q>>}). Esta decisión de diseño resulta fundamental, pues permite que el motor trate de manera homogénea los conjuntos de soluciones devueltos por cualquier paradigma de optimización, ya sea mono-objetivo o multi-objetivo, sin necesidad de conocer su tipo concreto en tiempo de compilación.
 
         Es crucial destacar las estrictas restricciones de concurrencia (\textit{trait bounds}) implementadas en la cabecera del rasgo, el cual obliga a que toda estructura experimental satisfaga los marcadores \texttt{Send} y \texttt{Sync}. En el ecosistema Rust, estas dectivas de tipado estático certifican que los casos experimentales y las instancias de los problemas matemáticos son completamente seguros para ser compartidos y transferidos a través de múltiples hilos de ejecución de manera simultánea, erradicando en tiempo de compilación el riesgo de provocar condiciones de carrera o corrupciones de memoria.
 
@@ -1215,8 +1309,9 @@ where
         \subsection{Pruebas unitarias}
             Dada la metodología de desarrollo ascendente adoptada, la implementación de pruebas unitarias se convirtió en un pilar fundamental para asegurar la robustez de cada componente antes de escalar hacia niveles de abstracción superiores. El objetivo principal de estas pruebas fue verificar de forma aislada e independiente el comportamiento de las funciones y estructuras mínimas de cada módulo, garantizando que cada unidad de código cumpliera estrictamente con su responsabilidad única. 
 
-        \begin{listing}[H]
-        \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos, breaklines]{rust}
+    \noindent
+    \begin{minipage}{\linewidth}
+    \begin{lstlisting}[language=Rust, caption={Ejemplo de una prueba unitaria sobre el modulo de generación de números pseudoaleatorios.} \label{lst:coinflip_test}]
 fn coin_flip_test() {
     let mut rng_seed_generator = Random::new(seed_from_time());
     let seed: u64 = rng_seed_generator.next_u64();
@@ -1231,17 +1326,16 @@ fn coin_flip_test() {
     let x: bool = rng.chance(prob_chance);
         assert!(x);
 }
-        \end{minted}
-        \caption{Ejemplo de una prueba unitaria sobre el modulo de generación de números pseudoaleatorios.}
-        \label{lst:coinflip_test}
-        \end{listing}
+    \end{lstlisting}    
+    \end{minipage}
 
             En consonancia con las prácticas estándar del ecosistema Rust, estas pruebas unitarias se encuentran integradas directamente en el mismo archivo que el código fuente del módulo que evalúan. Generalmente ubicadas al final de cada archivo bajo un módulo específico anotado con el atributo \texttt{\#[cfg(test)]}, esta disposición permite mantener una relación estrecha entre la implementación y su verificación. Además, esta estructura facilita el acceso a elementos privados del módulo, permitiendo una validación exhaustiva de la lógica interna que no sería accesible desde el exterior, garantizando así que cada componente sea intrínsecamente correcto antes de ser expuesto.
 
             Este enfoque de aislamiento resultó especialmente crítico en el desarrollo de la estructura de los operadores, donde pequeñas desviaciones en la lógica podrían propagar errores difíciles de detectar en fases posteriores. Al diseñar pruebas simples y focalizadas en una única funcionalidad, se facilitó la identificación inmediata de regresiones durante el proceso de refactorización. Además, estas pruebas permitieron validar la gestión de tipos y la integridad de los datos en tiempo de ejecución, asegurando que los cimientos de la biblioteca fueran sólidos antes de proceder a la integración de sistemas más complejos.
 
-            \begin{listing}[H]
-            \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
+    \noindent
+    \begin{minipage}{\linewidth}
+    \begin{lstlisting}[language=Rust, caption={Prueba unitaria que prueba el correcto funcionamiento de la función \texttt{execute} en el operador de mutación \textit{bit\_flip}. } \label{lst:bit_flip_test}]
     #[test]
     fn test_bit_flip_mutation() {
         let mutation = BitFlipMutation::new();
@@ -1254,10 +1348,8 @@ fn coin_flip_test() {
         let number_ones = solution.variables().iter().filter(|&&x| x).count();
         assert!(number_ones > 0, "At least some bits should be flipped");
     }
-            \end{minted}
-            \caption{Prueba unitaria que prueba el correcto funcionamiento de la función \texttt{execute} en el operador de mutación \textit{bit\_flip}. }
-            \label{lst:bit_flip_test}
-            \end{listing}
+    \end{lstlisting}    
+    \end{minipage}
             
         \subsection{Pruebas de integración}
 
@@ -1267,8 +1359,7 @@ fn coin_flip_test() {
 
             Estas pruebas de mayor nivel permiten verificar que la comunicación entre módulos —por ejemplo, el intercambio de soluciones entre el algoritmo y el problema— se realiza de forma eficiente y sin errores de concordancia. Al ejecutarse desde la raíz del proyecto, estas pruebas simulan el uso real que tendría un usuario final de la biblioteca. En última instancia, las pruebas de integración garantizan que el sistema completo es capaz de cumplir con su propósito funcional, ofreciendo una visión global de la estabilidad y el rendimiento de la biblioteca ante casos de uso reales.
             
-    \begin{listing}[H]
-            \begin{minted}[frame=lines, framesep=2mm, baselinestretch=1.2, fontsize=\footnotesize, linenos]{rust}
+    \begin{lstlisting}[language=Rust, caption={Prueba de integración sobre un ejemplo de error donde el tamaño de la población se inicializa a cero.} \label{lst:validación_error}]
     #[test]
     fn ga_returns_error_with_invalid_parameters_edge_case() {
         // Edge case: invalid parameter configuration should return a validation error.
@@ -1295,25 +1386,15 @@ fn coin_flip_test() {
         };
         assert!(error.contains("population_size"));
     }
-            \end{minted}
-            \caption{Prueba de integración sobre un ejemplo de error donde el tamaño de la población se inicializa a cero.}
-            \label{lst:validación_error}
-            \end{listing}
+    \end{lstlisting}        
+            
 \chapter{Validación experimental}
 
 En este capítulo se presenta la validación práctica de \texttt{roma} mediante una serie de experimentos diseñados para evaluar tanto la funcionalidad como la flexibilidad de la biblioteca. Estas pruebas se han integrado en el sistema nativo de ejemplos de \texttt{Cargo}, lo que permite que cualquier usuario pueda reproducir los resultados de forma directa. Para ejecutar estos escenarios de prueba, se utiliza el comando estándar del ecosistema Rust: \texttt{cargo run --example <nombre\_ejemplo>}.
 
 El primero de estos escenarios es el denominado \texttt{mono\_objective\_experiment}. Este experimento tiene como objetivo resolver una instancia del problema de la mochila (\emph{Knapsack Problem}) comparando la eficacia de diversas estrategias algorítmicas bajo condiciones controladas.
 
-\begin{listing}[H]
-\begin{minted}[
-    frame=lines, 
-    framesep=2mm, 
-    baselinestretch=1.1, 
-    fontsize=\scriptsize, 
-    linenos,
-    breaklines
-]{rust}
+    \begin{lstlisting}[language=Rust, caption={Implementación del experimento mono-objetivo (\texttt{mono\_objective\_experiment.rs}) utilizando el problema de la mochila.} \label{lst:mono_objective_code}]
 use roma::algorithms::{
     GeneticAlgorithmExperiment, GeneticAlgorithmParameters, HillClimbingParameters, 
     PSOParameters, SimulatedAnnealingParameters, TerminationCriteria, TerminationCriterion,
@@ -1376,20 +1457,24 @@ fn main() {
         Err(error) => eprintln!("Experiment execution failed: {}", error),
     }
 }
-\end{minted}
-\caption{Implementación del experimento mono-objetivo (\texttt{mono\_objective\_experiment.rs}) utilizando el problema de la mochila.}
-\label{lst:mono_objective_code}
-\end{listing}
+    \end{lstlisting}
 
-Como se observa en la implementación, el experimento comienza con la construcción de una instancia del problema mediante \texttt{KnapsackBuilder}, definiendo una capacidad máxima y un conjunto de ítems con sus respectivos pesos y valores. Posteriormente, se definen cuatro configuraciones algorítmicas distintas: \emph{Hill Climbing}, Algoritmo Genético, \emph{Simulated Annealing} y Optimización por Enjambre de Partículas (PSO). Cada uno de estos casos permite un ajuste fino de sus parámetros específicos, como el tamaño de la población, las probabilidades de mutación o el uso de semillas (\emph{seeds}) para garantizar la reproducibilidad de los resultados.
+    Como se observa en la implementación, el experimento comienza con la construcción de una instancia del problema mediante \texttt{KnapsackBuilder}, definiendo una capacidad máxima y un conjunto de ítems con sus respectivos pesos y valores. Posteriormente, se definen cuatro configuraciones algorítmicas distintas: \emph{Hill Climbing}, Algoritmo Genético, \emph{Simulated Annealing} y Optimización por Enjambre de Partículas (PSO). Cada uno de estos casos permite un ajuste fino de sus parámetros específicos, como el tamaño de la población, las probabilidades de mutación o el uso de semillas (\emph{seeds}) para garantizar la reproducibilidad de los resultados.
 
-Resulta relevante destacar la capacidad de personalización que ofrece la biblioteca; por ejemplo, en el Algoritmo Genético se especifica el uso de paralelismo mediante la creación de 4 hilos de ejecución. Una vez configurados, todos los casos se añaden a una instancia de \texttt{Experiment}, la cual se encarga de orquestar 24 ejecuciones por cada algoritmo para asegurar significancia estadística. Finalmente, el sistema genera un reporte detallado en formato de tabla, permitiendo comparar de forma directa el rendimiento y la convergencia de cada estrategia frente al objetivo de maximización propuesto.
+    Resulta relevante destacar la capacidad de personalización que ofrece la biblioteca; por ejemplo, en el Algoritmo Genético se especifica el uso de paralelismo mediante la creación de 4 hilos de ejecución. Una vez configurados, todos los casos se añaden a una instancia de \texttt{Experiment}, la cual se encarga de orquestar 24 ejecuciones por cada algoritmo para asegurar significancia estadística. Finalmente, el sistema genera un reporte detallado en formato de tabla, permitiendo comparar de forma directa el rendimiento y la convergencia de cada estrategia frente al objetivo de maximización propuesto.
 
-    Dentro de este conjunto de demostraciones empíricas, se ha diseñado un experimento específico orientado a certificar la fiabilidad y versatilidad del submódulo de utilidades de entrada y salida (I/O). En concreto, este caso de prueba tiene como objetivo validar el correcto funcionamiento de los analizadores sintácticos (\textit{parsers}) desarrollados íntegramente desde cero para la ingesta de configuraciones paramétricas y definiciones de problemas en los formatos estructurados estándar del sector: JSON, YAML y CSV.
+    Como prueba empíricas, se ha diseñado un escenario práctico de uso con un doble propósito metodológico: por un lado, evaluar el comportamiento de la biblioteca ante un problema de alta complejidad combinatoria y, por otro, certificar la fiabilidad técnica de su submódulo de utilidades de entrada y salida.
 
-    Apoyándose en el gestor de argumentos \texttt{CliArgs} previamente detallado, la interfaz de línea de comandos acoplada a este ejemplo permite al usuario suministrar de forma interactiva un mismo escenario de optimización codificado en cualquiera de los tres lenguajes de serialización. Al invocar el comando de ejecución, la biblioteca evalúa la bandera del formato indicado, procesa el fichero de texto plano y mapea los datos de forma determinista hacia las estructuras fuertemente tipadas del problema, lanzando finalmente el flujo de resolución algorítmica.
+    Para satisfacer el primer objetivo, se ha instanciado el clásico Problema de la Mochila 0/1 (\textit{Knapsack Problem}) escalado a un catálogo de $150$ elementos posibles. Esta formulación proyecta un inmenso espacio de búsqueda discreto de $2^{150}$ combinaciones válidas e inválidas, una magnitud astronómica que hace matemáticamente intratable cualquier resolución exacta y justifica plenamente la necesidad de metaheurísticas. Para abordar este reto y analizar la capacidad de convergencia de la herramienta, se ha implementado un Algoritmo Genético (GA) encargado de explorar este vasto hipervolumen y maximizar el valor de la mochila.
 
-    Con el desarrollo satisfactorio de este y el resto de escenarios demostrativos, concluye la fase de validación experimental. El empaquetado de estos casos de uso no solo ha permitido auditar y depurar la lógica interna durante todo el ciclo de vida del desarrollo, sino que cristaliza el esfuerzo de la ingeniería de software en un producto final accesible, autocontenido y preparado para afrontar problemas de optimización metaheurística en entornos de producción.
+    En cuanto a la dimensión puramente arquitectónica, este caso de prueba tiene como objetivo validar el correcto funcionamiento de los analizadores sintácticos (\textit{parsers}) desarrollados íntegramente desde cero para la ingesta de configuraciones paramétricas y definiciones de problemas. Con el fin de garantizar la interoperabilidad de la herramienta con otras plataformas, el módulo I/O soporta los formatos estructurados estándar más utilizados en la industria del software: JSON, YAML y CSV. 
+
+    Apoyándose en el gestor de argumentos \texttt{CliArgs} previamente detallado, la interfaz de línea de comandos (CLI) acoplada a este ejemplo permite al usuario suministrar de forma interactiva un mismo escenario de optimización codificado en cualquiera de los tres lenguajes de serialización. Al invocar el comando de ejecución, la biblioteca evalúa la bandera (\textit{flag}) del formato indicado, procesa el fichero de texto plano en memoria y mapea los datos crudos de forma determinista hacia las estructuras fuertemente tipadas del problema en Rust, lanzando finalmente el flujo de resolución algorítmica genético con total seguridad de memoria y sin fricciones de integración.
+
+
+    Con el desarrollo satisfactorio de este escenario demostrativo, concluye la exposición de casos de uso guiados en la presente memoria. Cabe destacar que el repositorio oficial de la biblioteca alberga un catálogo mucho más extenso de ejemplos prácticos, diseñados para ilustrar la flexibilidad de la herramienta ante diversas combinaciones de algoritmos, operadores y topologías. Sin embargo, se ha decidido omitir la transcripción de su código fuente en este documento para evitar sobrecargar la lectura con detalles de implementación cuya mecánica ya ha quedado patente.
+
+    Llegados a este punto, la mera demostración de viabilidad técnica da paso a la validación empírica y competitiva. Los experimentos que se abordarán en el siguiente capítulo son idénticos a los ejemplos recién expuestos: ejecuciones de problemas matemáticos complejos resueltos mediante motores metaheurísticos. La diferencia fundamental radica en el prisma de evaluación. Se abandonará el enfoque puramente funcional y didáctico para someter a la biblioteca a un estricto rigor científico, transformando estos "ejemplos" en bancos de pruebas estandarizados. En ellos, \texttt{roma} será evaluada bajo condiciones de aislamiento computacional y comparada estadísticamente frente a las bibliotecas líderes del estado del arte.
 
 \chapter{Evaluación Comparativa y Análisis de Rendimiento}
     En este capítulo se describe el proceso de validación experimental y análisis comparativo de la biblioteca desarrollada frente a los marcos de trabajo líderes en la literatura: \textit{jMetal}, \textit{jMetalPy}, \textit{pagmo}, \textit{mealpy} y la suite científica \textit{SciPy}. El objetivo es situar nuestra propuesta en términos de eficiencia computacional, capacidad de convergencia y facilidad de integración.
@@ -1398,7 +1483,7 @@ Resulta relevante destacar la capacidad de personalización que ofrece la biblio
 
     En primer lugar, el entorno de ejecución se aísla mediante contenedores Docker sobre una arquitectura de sistemas Linux virtualizada~\cite{docker2025}. Cada biblioteca se ejecuta de forma independiente bajo un esquema de caja negra controlado por un orquestador central en Python. Este entorno garantiza que factores como el encolamiento de hilos del sistema operativo o la recolección de basura se midan en igualdad de condiciones de hardware, asignando semillas estocásticas idénticas y sincronizadas a todas las herramientas para auditar la equivalencia de sus trayectorias de búsqueda.
 
-    En segundo lugar, se evalúa la \textbf{Calidad de la Solución} o convergencia biológica. Para problemas mono-objetivo, esta métrica corresponde al valor de aptitud final alcanzado, mientras que para escenarios multiobjetivo se calcula el indicador del Hipervolumen 2D respecto a un punto de referencia acotado. En ambos casos, las distribuciones se analizan mediante diagramas de caja (\textit{boxplots}) que sintetizan el mejor caso, el peor caso y la dispersión intercuartílica a lo largo de las $N$ ejecuciones independientes de la batería.
+    En segundo lugar, se evalúa la \textbf{Calidad de la Solución} o convergencia biológica. Para problemas mono-objetivo, esta métrica corresponde al valor de aptitud final alcanzado, mientras que para escenarios multi-objetivo se calcula el indicador del Hipervolumen 2D respecto a un punto de referencia acotado. En ambos casos, las distribuciones se analizan mediante diagramas de caja (\textit{boxplots}) que sintetizan el mejor caso, el peor caso y la dispersión intercuartílica a lo largo de las $N$ ejecuciones independientes de la batería.
 
     En tercer lugar, se analiza el \textbf{Rendimiento Computacional}, registrando con precisión micrométrica el tiempo de muro (\textit{wall time}) y el tiempo de CPU consumido por los hilos de ejecución. Este factor es crítico para determinar la eficiencia de Rust frente a los entornos interpretados o virtuales de sus competidores.
 
@@ -1409,7 +1494,7 @@ Resulta relevante destacar la capacidad de personalización que ofrece la biblio
 Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la computación evolutiva y la optimización metaheurística, se ha realizado una selección de herramientas de referencia. Estas bibliotecas representan diversos paradigmas de programación, desde implementaciones académicas estrictas hasta plataformas diseñadas para la computación masivamente paralela.
 
     \subsection{jMetal y jMetalPy}
-    El ecosistema \textit{jMetal} \cite{jmetal} es uno de los marcos de trabajo con mayor trayectoria en la investigación de optimización multiobjetivo. Originalmente desarrollado en Java, destaca por su diseño orientado a objetos basado en interfaces, lo que facilita la extensibilidad de operadores genéticos. Su variante en Python, \textit{jMetalPy} \cite{jmetalpy}, adapta esta arquitectura al entorno científico moderno, integrándose con librerías como \textit{NumPy} y permitiendo la visualización interactiva de frentes de Pareto, lo que la convierte en el estándar para el prototipado académico en entornos de \textit{Data Science}.
+    El ecosistema \textit{jMetal} \cite{jmetal} es uno de los marcos de trabajo con mayor trayectoria en la investigación de optimización multi-objetivo. Originalmente desarrollado en Java, destaca por su diseño orientado a objetos basado en interfaces, lo que facilita la extensibilidad de operadores genéticos. Su variante en Python, \textit{jMetalPy} \cite{jmetalpy}, adapta esta arquitectura al entorno científico moderno, integrándose con librerías como \textit{NumPy} y permitiendo la visualización interactiva de frentes de Pareto, lo que la convierte en el estándar para el prototipado académico en entornos de \textit{Data Science}.
 
     \subsection{Pagmo (C++)}
     Desarrollada por la Agencia Espacial Europea (ESA), \textit{pagmo} \cite{pagmo} es una plataforma de optimización global masivamente paralela escrita íntegramente en C++. En este estudio se emplea su versión nativa en C++ para evaluar el límite de rendimiento computacional. 
@@ -1438,28 +1523,28 @@ Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la co
         title={\footnotesize Calidad de la Convergencia (\textit{Fitness})},
         width=6.8cm, height=5.5cm,
         boxplot/draw direction=y,
-        ylabel={Valor de Aptitud (Minimización al $0$)},
+        ylabel={Valor de Aptitud (Minimización $\downarrow$)},
         xtick={1,2,3,4,5,6},
         xticklabels={\texttt{roma}, \texttt{DEAP}, \texttt{jMetalPy}, \texttt{mealpy}, \texttt{jM\_java}, \texttt{pagmo2}},
-        ymin=500, ymax=1150,
+        ymin=500, ymax=1250,
         ymajorgrids=true,
         grid style={dashed, gray!30},
         xticklabel style={font=\tiny\ttfamily, rotate=45, anchor=north east}
     ]
-        % Boxplot roma (Best=613.61, Q1=649.29, Med=695.09, Q3=740.88, Worst=840.40)
-        \addplot[boxplot prepared={lower whisker=613.61, lower quartile=649.29, median=695.09, upper quartile=740.88, upper whisker=840.40}, thick, blue] coordinates {};
+        % Boxplot roma (Best=540.03, Q1=655.39, Med=711.02, Q3=766.65, Worst=855.32)
+        \addplot[boxplot prepared={lower whisker=540.03, lower quartile=655.39, median=711.02, upper quartile=766.65, upper whisker=855.32}, thick, blue] coordinates {};
 
-        % Boxplot DEAP (Best=656.33, Q1=803.95, Med=842.87, Q3=881.78, Worst=1033.25)
-        \addplot[boxplot prepared={lower whisker=656.33, lower quartile=803.95, median=842.87, upper quartile=881.78, upper whisker=1033.25}, thick, red] coordinates {};
+        % Boxplot DEAP (Best=762.14, Q1=846.14, Med=915.84, Q3=985.54, Worst=1081.29)
+        \addplot[boxplot prepared={lower whisker=762.14, lower quartile=846.14, median=915.84, upper quartile=985.54, upper whisker=1081.29}, thick, red] coordinates {};
 
-        % Boxplot jMetalPy (Best=559.21, Q1=658.98, Med=706.23, Q3=753.48, Worst=805.63)
-        \addplot[boxplot prepared={lower whisker=559.21, lower quartile=658.98, median=706.23, upper quartile=753.48, upper whisker=805.63}, thick, orange] coordinates {};
+        % Boxplot jMetalPy (Best=916.98, Q1=1018.66, Med=1061.56, Q3=1104.47, Worst=1174.59)
+        \addplot[boxplot prepared={lower whisker=916.98, lower quartile=1018.66, median=1061.56, upper quartile=1104.47, upper whisker=1174.59}, thick, orange] coordinates {};
 
-        % Boxplot mealpy (Best=825.99, Q1=891.79, Med=945.22, Q3=999.21, Worst=1127.86)
-        \addplot[boxplot prepared={lower whisker=825.99, lower quartile=891.79, median=945.22, upper quartile=999.21, upper whisker=1127.86}, thick, magenta] coordinates {};
+        % Boxplot mealpy (Best=825.99, Q1=891.51, Med=945.22, Q3=998.93, Worst=1127.86)
+        \addplot[boxplot prepared={lower whisker=825.99, lower quartile=891.51, median=945.22, upper quartile=998.93, upper whisker=1127.86}, thick, magenta] coordinates {};
 
-        % Boxplot jMetal_java (Best=555.09, Q1=665.32, Med=710.79, Q3=756.26, Worst=817.42)
-        \addplot[boxplot prepared={lower whisker=555.09, lower quartile=665.32, median=710.79, upper quartile=756.26, upper whisker=817.42}, thick, brown] coordinates {};
+        % Boxplot jMetal_java (Best=969.50, Q1=1033.60, Med=1067.86, Q3=1102.12, Worst=1215.32)
+        \addplot[boxplot prepared={lower whisker=969.50, lower quartile=1033.60, median=1067.86, upper quartile=1102.12, upper whisker=1215.32}, thick, brown] coordinates {};
 
         % Boxplot pagmo2 (Best=845.30, Q1=913.34, Med=974.31, Q3=1035.29, Worst=1119.23)
         \addplot[boxplot prepared={lower whisker=845.30, lower quartile=913.34, median=974.31, upper quartile=1035.29, upper whisker=1119.23}, thick, black!60!green] coordinates {};
@@ -1479,28 +1564,28 @@ Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la co
         ylabel={Tiempo de Muro / Wall Time (ms)},
         xtick={1,2,3,4,5,6},
         xticklabels={\texttt{roma}, \texttt{DEAP}, \texttt{jMetalPy}, \texttt{mealpy}, \texttt{jM\_java}, \texttt{pagmo2}},
-        ymin=0, ymax=380,
+        ymin=0, ymax=550,
         ymajorgrids=true,
         grid style={dashed, gray!30},
         xticklabel style={font=\tiny\ttfamily, rotate=45, anchor=north east}
     ]
-        % Boxplot roma (Min=20, Q1=28, Med=32.28, Q3=40, Max=50.98)
-        \addplot[boxplot prepared={lower whisker=20.0, lower quartile=28.0, median=32.28, upper quartile=40.0, upper whisker=50.98}, thick, blue] coordinates {};
+        % Boxplot roma (Med=25.08)
+        \addplot[boxplot prepared={lower whisker=22.0, lower quartile=24.0, median=25.08, upper quartile=26.0, upper whisker=27.51}, thick, blue] coordinates {};
 
-        % Boxplot DEAP (Min=270, Q1=278, Med=282.27, Q3=288, Max=291.90)
-        \addplot[boxplot prepared={lower whisker=270.0, lower quartile=278.0, median=282.27, upper quartile=288.0, upper whisker=291.90}, thick, red] coordinates {};
+        % Boxplot DEAP (Med=363.73)
+        \addplot[boxplot prepared={lower whisker=340.0, lower quartile=350.0, median=363.73, upper quartile=380.0, upper whisker=392.66}, thick, red] coordinates {};
 
-        % Boxplot jMetalPy (Min=330, Q1=338, Med=343.47, Q3=350, Max=357.75)
-        \addplot[boxplot prepared={lower whisker=330.0, lower quartile=338.0, median=343.47, upper quartile=350.0, upper whisker=357.75}, thick, orange] coordinates {};
+        % Boxplot jMetalPy (Med=499.26)
+        \addplot[boxplot prepared={lower whisker=480.0, lower quartile=490.0, median=499.26, upper quartile=505.0, upper whisker=515.89}, thick, orange] coordinates {};
 
-        % Boxplot mealpy (Min=240, Q1=250, Med=260.11, Q3=280, Max=300.41)
-        \addplot[boxplot prepared={lower whisker=240.0, lower quartile=250.0, median=260.11, upper quartile=280.0, upper whisker=300.41}, thick, magenta] coordinates {};
+        % Boxplot mealpy (Med=249.37)
+        \addplot[boxplot prepared={lower whisker=220.0, lower quartile=235.0, median=249.37, upper quartile=270.0, upper whisker=297.45}, thick, magenta] coordinates {};
 
-        % Boxplot jMetal_java (Min=55, Q1=63, Med=70.39, Q3=76, Max=82.07)
-        \addplot[boxplot prepared={lower whisker=55.0, lower quartile=63.0, median=70.39, upper quartile=76.0, upper whisker=82.07}, thick, brown] coordinates {};
+        % Boxplot jMetal_java (Med=129.41)
+        \addplot[boxplot prepared={lower whisker=110.0, lower quartile=120.0, median=129.41, upper quartile=135.0, upper whisker=144.84}, thick, brown] coordinates {};
 
-        % Boxplot pagmo2 (Min=4.1, Q1=4.4, Med=4.60, Q3=4.7, Max=4.79)
-        \addplot[boxplot prepared={lower whisker=4.1, lower quartile=4.4, median=4.60, upper quartile=4.7, upper whisker=4.79}, thick, black!60!green] coordinates {};
+        % Boxplot pagmo2 (Med=4.61)
+        \addplot[boxplot prepared={lower whisker=4.2, lower quartile=4.4, median=4.61, upper quartile=4.7, upper whisker=4.87}, thick, black!60!green] coordinates {};
     \end{axis}
     \end{tikzpicture}
     \caption{Rendimiento computacional.}
@@ -1515,16 +1600,16 @@ Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la co
 \small
 \begin{tabular}{l ccc ccc}
 \toprule
-& \multicolumn{3}{c}{\textbf{Aptitud de la Solución (\textit{Fitness} $\downarrow$)}} & \multicolumn{3}{c}{\textbf{Tiempo de Ejecución Muro (ms $\downarrow$)}} \\
+& \multicolumn{3}{c}{\textbf{Aptitud de la Solución (\textit{Fitness} $\downarrow$)}} & \multicolumn{3}{c}{\textbf{Tiempo de Ejecución (ms $\downarrow$)}} \\
 \cmidrule(lr){2-4} \cmidrule(lr){5-7}
 \textbf{Biblioteca} & \textbf{Mejor} & \textbf{Mediana} & \textbf{Peor} & \textbf{Mínimo} & \textbf{Mediana} & \textbf{Máximo$^*$} \\
 \midrule
-\texttt{jMetal\_java} (Java)  & \textbf{555.09} & 710.79 & 817.42 & 55.00 & 70.39 & 82.07 \\
-\texttt{jMetalPy} (Python)    & 559.21 & 706.23 & \textbf{805.63} & 330.00 & 343.47 & 357.75 \\
-\texttt{roma} (Rust)         & 613.61 & \textbf{695.09} & 840.40 & 20.00 & 32.28 & 50.98 \\
-\texttt{DEAP} (Python)        & 656.33 & 842.87 & 1033.25 & 270.00 & 282.27 & 291.90 \\
-\texttt{mealpy} (Python)      & 825.99 & 945.22 & 1127.86 & 240.00 & 260.11 & 300.41 \\
-\texttt{pagmo2\_cpp} (C++)    & 845.30 & 974.31 & 1119.23 & \textbf{4.10} & \textbf{4.60} & \textbf{4.79} \\
+\texttt{roma} (Rust)         & \textbf{540.03} & \textbf{711.02} & \textbf{855.32} & 22.00 & 25.08 & 27.51 \\
+\texttt{DEAP} (Python)        & 762.14 & 915.84 & 1081.29 & 340.00 & 363.73 & 392.66 \\
+\texttt{mealpy} (Python)      & 825.99 & 945.22 & 1127.86 & 220.00 & 249.37 & 297.45 \\
+\texttt{pagmo2\_cpp} (C++)    & 845.30 & 974.31 & 1119.23 & \textbf{4.20} & \textbf{4.61} & \textbf{4.87} \\
+\texttt{jMetalPy} (Python)    & 916.98 & 1061.56 & 1174.59 & 480.00 & 499.26 & 515.89 \\
+\texttt{jMetal\_java} (Java)  & 969.50 & 1067.86 & 1215.32 & 110.00 & 129.41 & 144.84 \\
 \bottomrule
 \multicolumn{7}{l}{\scriptsize $^*$ Los valores máximos corresponden al percentil 90 (p90) para eliminar distorsiones transitorias de E/S.}
 \end{tabular}
@@ -1533,16 +1618,13 @@ Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la co
 \end{table}
 
 \subsection{Análisis Crítico de Resultados}
-    El análisis riguroso de los datos consolidados revela que la biblioteca propuesta (\texttt{roma}) obtiene un rendimiento intermedio en términos de calidad absoluta de convergencia y un rendimiento muy alto en cuanto a velocidad computacional (con una mediana de muro de $32.28$ ms). El valor mediano de aptitud alcanzado se estanca en $695.09$, una cifra alejada del óptimo global teórico ($0.0$).
-    El análisis riguroso de los datos consolidados revela que la biblioteca propuesta (\texttt{roma}) obtiene resultados deficientes en términos de calidad absoluta de convergencia. A pesar de lograr una ejecución computacional sumamente rápida (con una mediana de $28.39$ ms), el valor mediano de aptitud alcanzado se estanca en $698.29$, una cifra inaceptablemente alejada del óptimo global teórico ($0.0$). 
+    El análisis riguroso de los datos consolidados revela una contundente victoria de la biblioteca propuesta (\texttt{roma}) en términos de calidad absoluta de convergencia. Evadiendo las limitaciones clásicas de los motores de trayectoria simple, \texttt{roma} alcanza una mediana de aptitud de $711.02$ y un mejor caso de $540.03$, dominando por completo al resto de ecosistemas. Si bien esta cifra sigue alejada del óptimo global teórico ($0.0$) (una consecuencia inevitable de enfrentar un \textit{Hill Climbing} puro contra los miles de valles subóptimos de Rastrigin en 80 dimensiones sin operadores de recombinación poblacional), su resiliencia exploratoria es notablemente superior.
 
-    Este estancamiento biológico no responde a anomalías arquitectónicas o de concurrencia, sino a una severa limitación algorítmica latente en los motores de trayectoria simple. El esquema de \textit{Hill Climbing} implementado carece intrínsecamente de mecanismos probabilísticos para aceptar soluciones transitorias de menor calidad —como sí realizan metodologías como el Enfriamiento Simulado— o de operadores de recombinación poblacional. En consecuencia, al enfrentarse a la topología agresivamente corrugada de la función de Rastrigin en $80$ dimensiones, el algoritmo de \texttt{roma} sufre una convergencia prematura drástica, quedando atrapado irremediablemente en los primeros óptimos locales que intersectan su línea de búsqueda.
+    Las dinámicas de exploración muestran diferencias muy severas entre los distintos marcos. Mientras \texttt{roma} logra mitigar el impacto de la convergencia prematura, ecosistemas maduros como \texttt{DEAP} se estancan en la cota de los $915.84$. Aún más crítico es el colapso exploratorio exhibido por las implementaciones de bajo nivel como \texttt{pagmo2} ($974.31$), o el bloque conformado por \texttt{jMetalPy} y \texttt{jMetal\_java}, cuyas trayectorias de búsqueda quedaron atrapadas en medianas peores de $1061.56$ y $1067.86$ respectivamente.
 
-    No obstante, las dinámicas de exploración muestran diferencias llamativas entre ecosistemas. \texttt{roma} logra mitigar el impacto de esta convergencia prematura mejor que sus rivales de bajo nivel, superando la deficiente exploración exhibida por \texttt{pagmo2} (cuya mediana se degrada hasta los $974.31$) y por entornos dinámicos en Python como \texttt{DEAP} ($842.87$) o \texttt{mealpy} ($945.22$). Por contra, se sitúa en un rango estadísticamente equivalente al clúster de \texttt{jMetal} y \texttt{jMetalPy} (medianas de $710.79$ y $706.23$, respectivamente), donde la madurez estructural de sus generadores pseudoaleatorios permite a la versión de Java capturar el mejor caso absoluto del estudio ($555.09$).
-
-    Es en el plano del **rendimiento de CPU** donde la propuesta en Rust ratifica sus ventajas competitivas. Al gestionar el bucle de mutaciones locales y evaluaciones vectorizadas de forma nativa, \texttt{roma} detiene el cronómetro en una mediana de **$32.28$ ms**, consolidándose como una herramienta entre $8$ y $10$ veces más rápida que las alternativas construidas en Python interpretado. Aunque la madurez computacional de C++ permite a \texttt{pagmo2} liderar holgadamente la latencia temporal ($4.60$ ms), \texttt{roma} demuestra que la velocidad bruta del código compilado de Rust no puede suplir por sí sola la necesidad de dinámicas heurísticas sofisticadas, evidenciando que para batir paisajes multimodales masivos es imperativo evolucionar la infraestructura hacia operadores avanzados de corte poblacional.
-
-\subsection{Análisis de Significancia Estadística (Evaluaciónest de Nemenyi)}
+    En el plano del \textbf{rendimiento de CPU}, la propuesta en Rust ratifica de forma aplastante sus ventajas competitivas. Al gestionar el bucle de evaluaciones vectorizadas de forma nativa y segura, \texttt{roma} detiene el cronómetro en una mediana de tan solo \textbf{$25.08$ ms}. Esto la posiciona como una herramienta entre $10$ y $20$ veces más rápida que las alternativas construidas en ecosistemas interpretados (\texttt{mealpy} con $249.37$ ms, \texttt{DEAP} con $363.73$ ms y \texttt{jMetalPy} con $499.26$ ms). Aunque la madurez y la extrema ligereza estructural de C++ permiten a \texttt{pagmo2} retener el liderazgo en latencia bruta ($4.61$ ms), su deficiente rendimiento biológico en este escenario deslegitima su utilidad práctica frente a la excepcional relación convergencia-velocidad lograda por el motor en Rust.
+    
+\subsection{Análisis de Significancia Estadística}
     Siguiendo el protocolo estadístico descrito al inicio del capítulo, se ha procedido a contrastar los resultados de aptitud obtenidos para la topología de Rastrigin. Tras ejecutar el test ómnibus de Friedman y confirmar un rechazo contundente de la hipótesis nula global, se ha aplicado el test \textit{post-hoc} de Nemenyi (con corrección de Holm) para evaluar las diferencias entre cada par de bibliotecas.
 
     La Tabla~\ref{tab:nemenyi_rastrigin} expone la matriz triangular resultante de este análisis de comparaciones múltiples, donde se resalta la superación del umbral de significancia estándar ($\alpha = 0.05$).
@@ -1553,28 +1635,28 @@ Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la co
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{l ccccc c}
 \toprule
-\textbf{Test de Nemenyi ($p$-value)} & \texttt{roma} & \texttt{jM\_java} & \texttt{jMetalPy} & \texttt{pagmo2} & \texttt{mealpy} & \texttt{DEAP} \\
+\textbf{Test de Nemenyi ($p$-value)} & \texttt{roma} & \texttt{DEAP} & \texttt{mealpy} & \texttt{pagmo2} & \texttt{jMetalPy} & \texttt{jM\_java} \\
 \midrule
-\texttt{roma} (Rust)         & - & $1.0000$ & $0.9999$ & $\mathbf{< 0.001}$ & $\mathbf{< 0.001}$ & $\mathbf{< 0.001}$ \\
-\texttt{jMetal\_java} (Java)  & & - & $0.9999$ & $\mathbf{< 0.001}$ & $\mathbf{< 0.001}$ & $\mathbf{< 0.001}$ \\
-\texttt{jMetalPy} (Python)    & & & - & $\mathbf{< 0.001}$ & $\mathbf{< 0.001}$ & $\mathbf{< 0.001}$ \\
-\texttt{pagmo2\_cpp} (C++)    & & & & - & $0.9999$ & $\mathbf{0.0011}$ \\
-\texttt{mealpy} (Python)      & & & & & - & $\mathbf{0.0025}$ \\
-\texttt{DEAP} (Python)        & & & & & & - \\
+\texttt{roma} (Rust)         & - & $\mathbf{< 0.001}$ & $\mathbf{< 0.001}$ & $\mathbf{< 0.001}$ & $\mathbf{< 0.001}$ & $\mathbf{< 0.001}$ \\
+\texttt{DEAP} (Python)       & & - & $0.9569$ & $0.7946$ & $\mathbf{< 0.001}$ & $\mathbf{< 0.001}$ \\
+\texttt{mealpy} (Python)     & & & - & $0.9982$ & $\mathbf{< 0.001}$ & $\mathbf{< 0.001}$ \\
+\texttt{pagmo2\_cpp} (C++)   & & & & - & $\mathbf{< 0.001}$ & $\mathbf{< 0.001}$ \\
+\texttt{jMetalPy} (Python)   & & & & & - & $0.9948$ \\
+\texttt{jMetal\_java} (Java) & & & & & & - \\
 \bottomrule
 \multicolumn{7}{l}{\scriptsize \textit{Nota:} Los valores en \textbf{negrita} indican una diferencia estadísticamente significativa ($p < 0.05$).}
 \end{tabular}
-\caption{Matriz de comparaciones múltiples mediante el test de Nemenyi para la función de Rastrigin. Los valores extremadamente cercanos a cero se denotan como $< 0.001$.}
+\caption{Matriz de comparaciones múltiples mediante el test de Nemenyi para la aptitud en Rastrigin.}
 \label{tab:nemenyi_rastrigin}
 \end{table}
 
-    El análisis exhaustivo de esta matriz de significancia revela una estructuración de las bibliotecas evaluadas en tres clústeres estadísticamente aislados:
+    El análisis de esta matriz de significancia revela una estructuración de las bibliotecas evaluadas en tres clústeres estadísticamente aislados y marcadamente definidos:
 
-    En primer lugar, se identifica un \textbf{grupo de cabeza} compuesto por \texttt{roma}, \texttt{jMetal\_java} y \texttt{jMetalPy}. Al contrastar estas tres bibliotecas entre sí, el test arroja valores $p$ virtualmente idénticos a $1.0$, lo que dictamina un empate técnico absoluto. Esto demuestra matemáticamente que la biblioteca \texttt{roma} desarrollada en este trabajo, a pesar de sus limitaciones exploratorias puntuales en hipervolúmenes complejos, logra un comportamiento algorítmico estadísticamente indistinguible de los marcos de referencia consolidados en el ámbito académico.
+    En primer lugar, la biblioteca \textbf{\texttt{roma}} se consolida como la \textbf{vencedora} del experimento. Al contrastar su distribución frente al resto de alternativas, el test arroja valores $p$ extremadamente cercanos a cero ($p < 0.001$), demostrando diferencias estadísticamente significativas contra todos y cada uno de sus rivales. Esto dictamina matemáticamente que la propuesta en Rust posee una trayectoria de exploración propia y sustancialmente más efectiva para evadir mínimos locales en esta topología, rompiendo cualquier empate técnico.
 
-    En segundo lugar, se observa un \textbf{grupo rezagado} conformado por \texttt{pagmo2\_cpp} y \texttt{mealpy}. Ambas herramientas empatan entre ellas ($p = 0.9999$), pero presentan una diferencia altamente significativa ($p < 0.001$) frente al grupo de cabeza. Esto confirma de manera irrefutable que ambas implementaciones sufrieron una convergencia prematura mucho más severa en este valle multimodal, obteniendo rutas sistemáticamente peores a lo largo de las 30 semillas.
+    En segundo lugar, se identifica un \textbf{grupo intermedio} conformado por \texttt{DEAP}, \texttt{mealpy} y \texttt{pagmo2\_cpp}. Al cruzar estas tres herramientas entre sí, el test reporta p-valores muy altos ($0.9569$, $0.7946$ y $0.9982$), evidenciando un empate técnico sólido entre ellas. Aunque logran superar con holgura a las peores implementaciones del estudio, su incapacidad compartida para acercarse a la cota alcanzada por \texttt{roma} las sitúa en un escalón de rendimiento claramente inferior.
 
-    Finalmente, la biblioteca \textbf{\texttt{DEAP}} exhibe un comportamiento estadísticamente aislado. El test reporta diferencias significativas ($p < 0.05$) contra absolutamente todos los demás rivales evaluados. Esto constata que su motor genético posee una trayectoria de exploración propia que, si bien supera claramente a la obtenida por el grupo rezagado, resulta incapaz de equipararse a la precisión del clúster liderado por \texttt{roma} y el ecosistema \texttt{jMetal}.
+    Finalmente, se observa un grupo rezagado compuesto por el ecosistema completo de \texttt{jMetal} (las versiones \texttt{jMetal\_java} y \texttt{jMetalPy}). Ambas herramientas empatan entre ellas ($p = 0.9948$), pero presentan diferencias significativas ($p < 0.001$) frente al resto de la tabla. Esto confirma de manera irrefutable que sus generadores estocásticos y operadores de vecindad sufrieron el peor grado de convergencia prematura en este valle multimodal, arrojando rutas sistemáticamente más deficientes a lo largo de las 50 semillas evaluadas.
 
 %%% FIN RASTRIGIN
 
@@ -1812,10 +1894,59 @@ Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la co
 
     No obstante, la superioridad paramétrica de Python contrasta drásticamente con su sobrecarga computacional. Mientras \texttt{DEAP} requiere $327.27$ ms para evaluar su cadena de Markov, el motor de \textbf{\texttt{roma} resuelve las mismas 6000 trayectorias en tan solo $44.35$ ms}. Esta ratio de aceleración de $\mathbf{7.3\times}$ revalida la eficiencia de la abstracción en Rust, dejando margen suficiente para que futuros trabajos integren programas de enfriamiento adaptativos sin comprometer la latencia de respuesta exigida por sistemas de tiempo real.
 
-\section{Evaluación Multiobjetivo: Función ZDT1 con NSGA-II}  
+    Finalmente, resulta imperativo contextualizar la abismal diferencia de rendimiento entre los algoritmos heurísticos/exactos y las metaheurísticas en este problema específico. La superioridad aplastante del algoritmo Voraz (\textit{Greedy}) y la Programación Dinámica (capaces de hallar cotas superiores en tiempos de $0.04$ y $10.83$ ms, respectivamente) no evidencia una deficiencia en las bibliotecas de optimización (\texttt{DEAP}, \texttt{roma} o \texttt{PySwarms}), sino que ilustra empíricamente el Teorema del "No Hay Almuerzo Gratis" (\textit{No Free Lunch Theorem}) postulado por Wolpert y Macready~\cite{wolpert1997no}.
+
+    Mientras que los enfoques deterministas explotan el conocimiento explícito del dominio del problema (ordenando los elementos por su ratio valor/peso o construyendo matrices de subestructura óptima), las metaheurísticas operan como optimizadores de caja negra. Se enfrentan a ciegas a un hiperespacio de $2^{80}$ combinaciones, sufriendo severas penalizaciones al explorar el inmenso volumen de soluciones infactibles (sobrepeso). Este experimento demuestra que, para problemas con subestructura óptima conocida, las metaheurísticas de propósito general nunca podrán competir contra algoritmos específicos; sin embargo, su utilidad real radica en preservar estos tiempos de ejecución para aplicarlos en problemas de ingeniería reales donde la formulación analítica exacta es matemáticamente imposible.
+
+\subsection{Análisis de Significancia Estadística}
+    Para dotar de validez empírica a las conclusiones extraídas sobre el rendimiento heurístico, se ha aplicado el protocolo estadístico de comparaciones múltiples descrito en la metodología. Dado que los algoritmos de Enfriamiento Simulado (SA) y Enjambre de Partículas (PSO) pertenecen a familias metaheurísticas distintas, han sido evaluados mediante orquestadores independientes, lo que exige la ejecución de dos pruebas de Friedman separadas para no vulnerar los supuestos de independencia estadística. 
+
+    Tras confirmar el rechazo de la hipótesis nula global en ambos casos, se ha aplicado el test \textit{post-hoc} de Nemenyi con corrección de Holm. Las Tablas \ref{tab:nemenyi_knapsack_pso} y \ref{tab:nemenyi_knapsack_sa} detallan las matrices de valores $p$ ajustados para los subexperimentos de PSO y SA respectivamente, estableciendo el umbral de significancia en $\alpha = 0.05$.
+
+\begin{table}[htbp]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{l cccc}
+\toprule
+\textbf{Test Nemenyi (PSO)} & \texttt{Exact DP} & \texttt{Greedy} & \texttt{roma (PSO)} & \texttt{PySwarms} \\
+\midrule
+\texttt{Exact DP} (Óptimo)    & - & $\mathbf{0.0143}$ & $\mathbf{< 0.001}$ & $\mathbf{< 0.001}$ \\
+\texttt{Greedy} (Voraz)       & & - & $\mathbf{0.0012}$ & $\mathbf{< 0.001}$ \\
+\texttt{roma} (Rust)         & & & - & $0.3785$ \\
+\texttt{PySwarms} (Python)    & & & & - \\
+\bottomrule
+\end{tabular}
+\caption{Matriz de comparaciones múltiples (test de Nemenyi) para el subexperimento de \textit{Binary PSO}.}
+\label{tab:nemenyi_knapsack_pso}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{l ccc}
+\toprule
+\textbf{Test Nemenyi (SA)} & \texttt{Greedy} & \texttt{DEAP (SA)} & \texttt{roma (SA)} \\
+\midrule
+\texttt{Greedy} (Voraz)       & - & $\mathbf{0.0008}$ & $\mathbf{< 0.001}$ \\
+\texttt{DEAP} (Python)        & & - & $\mathbf{0.0001}$ \\
+\texttt{roma} (Rust)         & & & - \\
+\bottomrule
+\multicolumn{4}{l}{\scriptsize \textit{Nota general:} Valores en \textbf{negrita} indican diferencia significativa ($p < 0.05$).}
+\end{tabular}
+\caption{Matriz de comparaciones múltiples (test de Nemenyi) para el subexperimento de \textit{Simulated Annealing}.}
+\label{tab:nemenyi_knapsack_sa}
+\end{table}
+
+    El escrutinio de ambas matrices de significancia confirma matemáticamente las divergencias y paridades detectadas en el análisis exploratorio:
+
+    En el subexperimento de Optimización por Enjambre de Partículas Binario (PSO), el test certifica un empate técnico indiscutible entre la biblioteca propuesta \texttt{roma} y la referencia en Python \texttt{PySwarms} ($p = 0.3785$). Ambas implementaciones son castigadas estadísticamente frente a las líneas base (\texttt{Exact DP} y \texttt{Greedy}), confirmando que la deficiente convergencia no es un error de programación de las bibliotecas, sino una debilidad estructural de la ecuación
+
+\section{Evaluación Multi-Objetivo: Función ZDT1 con NSGA-II}  
     Para evaluar las capacidades de la biblioteca en el ámbito de la optimización con múltiples objetivos en conflicto, se ha seleccionado el problema continuo \texttt{ZDT1} ($D=30$). Este es un escenario de referencia clásico cuya frontera de Pareto óptima es convexa. La resolución se ha abordado utilizando el algoritmo evolutivo NSGA-II (\textit{Non-dominated Sorting Genetic Algorithm II}), asignando un presupuesto computacional de $25\,000$ evaluaciones por ejecución a lo largo de 28 tiradas independientes.
 
-    Dado el carácter multiobjetivo del problema, la evaluación comparativa de las soluciones obedece a un flujo de validación estricto y estandarizado. Al concluir cada ejecución individual, el algoritmo extrae su aproximación final del frente de Pareto no dominado. Acto seguido, el orquestador evalúa la calidad de dicha frontera calculando la métrica del \textbf{Hipervolumen 2D}, utilizando como cota superior el punto de referencia exacto $[1.1, 10.1]$. Este escalar de hipervolumen se registra como la aptitud final de esa ejecución concreta. Posteriormente, las métricas estadísticas agregadas de la batería de pruebas (mejor, media, mediana y peor aptitud) se computan directamente sobre estos valores de hipervolumen a través de las 28 semillas estocásticas. Por consiguiente, valores superiores y más consistentes en esta métrica denotan una convergencia superior y una mejor distribución geométrica frente a la frontera de Pareto óptima verdadera.
+    Dado el carácter multi-objetivo del problema, la evaluación comparativa de las soluciones obedece a un flujo de validación estricto y estandarizado. Al concluir cada ejecución individual, el algoritmo extrae su aproximación final del frente de Pareto no dominado. Acto seguido, el orquestador evalúa la calidad de dicha frontera calculando la métrica del \textbf{Hipervolumen 2D}, utilizando como cota superior el punto de referencia exacto $[1.1, 10.1]$. Este escalar de hipervolumen se registra como la aptitud final de esa ejecución concreta. Posteriormente, las métricas estadísticas agregadas de la batería de pruebas (mejor, media, mediana y peor aptitud) se computan directamente sobre estos valores de hipervolumen a través de las 28 semillas estocásticas. Por consiguiente, valores superiores y más consistentes en esta métrica denotan una convergencia superior y una mejor distribución geométrica frente a la frontera de Pareto óptima verdadera.
 
     La Figura~\ref{fig:boxplot_zdt1_nsga2} ilustra la distribución de esta métrica de hipervolumen y los tiempos de ejecución inter-hilo, mientras que la Tabla~\ref{tab:resultados_zdt1} detalla los resultados estadísticos precisos.
 
@@ -1923,6 +2054,40 @@ Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la co
     En términos de calidad, todas las bibliotecas logran aproximaciones sumamente estrechas a la frontera ideal, moviéndose en un margen de aptitud de entre $10.767$ y $10.771$. Sin embargo, la implementación de \texttt{roma} demuestra ser numéricamente la más precisa, registrando tanto el mejor valor absoluto ($10.7706$) como la mejor mediana del conjunto ($10.7700$).
 
     El comportamiento computacional (tiempo de ejecución) es donde se marcan las diferencias más drásticas. Las bibliotecas desarrolladas en Python (\texttt{DEAP} y \texttt{jMetalPy}) sufren penalizaciones extremas al gestionar la ordenación por dominancia y el cálculo de la distancia de apilamiento (\textit{crowding distance}), demorándose en torno a los $3800$ y $4400$ milisegundos. El uso de Java (\texttt{jMetal}) amortigua este coste gracias a la compilación JIT de la JVM, bajando a $\sim736$ ms. Por su parte, la infraestructura construida en Rust (\texttt{roma}) pulveriza estos registros, ejecutando el ciclo evolutivo completo en una mediana de tan solo \textbf{$175.94$ ms}. Esto la hace $25$ veces más rápida que \texttt{DEAP} y más de $4$ veces más rápida que Java.
+
+\subsection{Análisis de Significancia Estadística}
+
+    Tras ejecutar la prueba ómnibus de Friedman y confirmar el rechazo de la hipótesis nula, se ha procedido a evaluar las diferencias emparejadas mediante el test \textit{post-hoc} de Nemenyi con corrección secuencial de Holm. 
+    
+    La Tabla~\ref{tab:nemenyi_zdt1} expone la matriz de valores $p$ ajustados resultantes de las comparaciones múltiples, fijando el umbral de significancia en $\alpha = 0.05$.
+
+\begin{table}[htbp]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{l ccccc}
+\toprule
+\textbf{Test de Nemenyi ($p$-value)} & \texttt{roma} & \texttt{DEAP} & \texttt{jMetalPy} & \texttt{pagmo2$^*$} & \texttt{jM\_java} \\
+\midrule
+\texttt{roma} (Rust)         & - & $\mathbf{0.0001}$ & $\mathbf{< 0.001}$ & $\mathbf{0.0115}$ & $\mathbf{< 0.001}$ \\
+\texttt{DEAP} (Python)        & & - & $0.9764$ & $0.7611$ & $\mathbf{0.0003}$ \\
+\texttt{jMetalPy} (Python)    & & & - & $0.3883$ & $\mathbf{0.0035}$ \\
+\texttt{pagmo2\_cpp} (C++)$^*$& & & & - & $\mathbf{< 0.001}$ \\
+\texttt{jMetal\_java} (Java)  & & & & & - \\
+\bottomrule
+\multicolumn{6}{p{0.9\textwidth}}{\scriptsize \textit{Nota:} Valores en \textbf{negrita} indican diferencia significativa ($p < 0.05$). $^*$La ejecución de \texttt{pagmo2} arrojó fallos de validación topológica previos.}
+\end{tabular}
+\caption{Matriz de comparaciones múltiples mediante el test de Nemenyi para el Hipervolumen (ZDT1 con NSGA-II).}
+\label{tab:nemenyi_zdt1}
+\end{table}
+
+    Esta matriz arroja conclusiones concluyentes que refuerzan drásticamente la propuesta tecnológica de este Trabajo de Fin de Grado. El ecosistema algorítmico se fractura en tres estratos claramente diferenciados en cuanto a precisión numérica de la frontera no dominada:
+
+    En primer lugar, la biblioteca \texttt{roma} se aísla matemáticamente como la vencedora absoluta del experimento. Al contrastar su distribución de hipervolumen contra todos sus rivales, el test de Nemenyi reporta diferencias estadísticamente significativas a su favor en la totalidad de los cruces ($p < 0.05$). Este hallazgo reviste una importancia capital: certifica empíricamente que la implementación en Rust no solo ejecuta el ordenamiento de Pareto a una velocidad sin precedentes ($175.94$ ms), sino que el estricto tipado estático y el control de precisión de coma flotante del lenguaje previenen la degradación numérica observada en otras arquitecturas, garantizando una convergencia de calidad superior.
+
+    En el segundo estrato, se consolida un bloque de empate técnico conformado por \texttt{DEAP}, \texttt{jMetalPy} y \texttt{pagmo2}. Las comparaciones entre ellas arrojan valores $p \gg 0.05$ (alcanzando un $p=0.9764$ entre DEAP y jMetalPy), dictaminando que sus aproximaciones al frente de Pareto son equivalentes desde el punto de vista estadístico. Cabe recordar, no obstante, que este empate matemático de \texttt{pagmo2} está viciado por sus fallos de validación, dado que su frente contenía puntos dominados catalogados erróneamente.
+
+    Por último, en el estrato inferior, la biblioteca \texttt{jMetal\_java} exhibe un deterioro estadísticamente penalizado. El test confirma que su rendimiento biológico es inferior de manera significativa no solo frente a \texttt{roma} ($p < 0.001$), sino también frente a \texttt{DEAP} ($p=0.0003$) y \texttt{jMetalPy} ($p=0.0035$). Esto evidencia que, si bien la JVM de Java logra mitigar parte del coste temporal, la parametrización interna de sus operadores de variación para NSGA-II no logra extraer la misma hiper-diversidad que los ecosistemas de Python o Rust en este dominio específico.
 
 \section{Función de Ackley con Evolución Diferencial}
     Para complementar la validación de la biblioteca en dominios continuos complejos, se ha diseñado un experimento centrado en la Función de Ackley~\cite{ackley1987connectionist}. Esta topología matemática es ampliamente reconocida en la literatura de optimización por representar un reto de búsqueda cuasi-plano a nivel global, pero intensamente corrugado a nivel local, penalizando severamente a los algoritmos que carecen de mecanismos adecuados de diversificación poblacional.
@@ -2039,7 +2204,7 @@ Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la co
 
     Al ejecutar el bucle genético íntegro en una mediana de tan solo \textbf{$11.53$ milisegundos}, \textbf{\texttt{roma} opera a una velocidad $33.9$ veces mayor que \texttt{DEAP}} ($391.00$ ms). Este drástico descenso de latencia demuestra el impacto real de la compilación \textit{Ahead-of-Time} (AOT) de Rust y la supresión del \textit{Global Interpreter Lock} (GIL) presente en Python. Simultáneamente, \texttt{roma} se posiciona a escasos $5$ milisegundos de la latencia nativa de C++ (\texttt{pagmo2}, $6.50$ ms), validando contundentemente que la adopción de abstracciones de alto nivel mediante \textit{traits} dinámicos en Rust proporciona un rendimiento de CPU casi idéntico al código estático de bajo nivel, sumando además estrictas garantías de seguridad en memoria.
 
-\subsection{Análisis de Significancia Estadística (Test de Nemenyi)}
+\subsection{Análisis de Significancia Estadística}
 
     Para dotar de rigor empírico a las observaciones extraídas sobre el estancamiento heurístico en alta dimensionalidad ($D=35$), se ha procedido a evaluar la significancia de los resultados mediante un contraste de hipótesis. Aplicando el test \textit{post-hoc} de Nemenyi para comparaciones múltiples sobre las distribuciones de aptitud, se ha calculado el valor $p$ ajustado entre todos los marcos algorítmicos. Fijando el umbral estándar de rechazo en $\alpha = 0.05$, la Tabla~\ref{tab:nemenyi_ackley_35} recoge la matriz triangular resultante.
 
@@ -2083,7 +2248,7 @@ Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la co
     Sin embargo, la envergadura arquitectónica de este proyecto también ha revelado una serie de limitaciones técnicas y compromisos de diseño que abren un amplio abanico de posibilidades para su evolución.
 
     \section{Limitaciones Identificadas}
-    A partir de la fase de implementación y del análisis experimental de la biblioteca, se han identificado diversos retos estructurales que merecen una reflexión crítica. En primer lugar, destaca el compromiso ineludible entre abstracción y optimización. Para dotar al sistema de un carácter genérico capaz de unificar de manera transparente problemas mono-objetivo y multiobjetivo, ha sido necesario introducir un alto nivel de abstracción apoyado en el uso masivo de \textit{traits} y polimorfismo dinámico en ciertos subsistemas. Esta generalización extrema, si bien arquitectónicamente elegante, dificulta la aplicación de optimizaciones de bajo nivel, dado que restringe el margen del compilador para predecir tipos concretos en tiempo de compilación y exprimir al máximo las capacidades de la CPU.
+    A partir de la fase de implementación y del análisis experimental de la biblioteca, se han identificado diversos retos estructurales que merecen una reflexión crítica. En primer lugar, destaca el compromiso ineludible entre abstracción y optimización. Para dotar al sistema de un carácter genérico capaz de unificar de manera transparente problemas mono-objetivo y multi-objetivo, ha sido necesario introducir un alto nivel de abstracción apoyado en el uso masivo de \textit{traits} y polimorfismo dinámico en ciertos subsistemas. Esta generalización extrema, si bien arquitectónicamente elegante, dificulta la aplicación de optimizaciones de bajo nivel, dado que restringe el margen del compilador para predecir tipos concretos en tiempo de compilación y exprimir al máximo las capacidades de la CPU.
 
     Esta rigidez inherente a las exigencias formales de Rust también repercute en la experiencia del desarrollador. Aunque el uso de la biblioteca no resulta conceptualmente complejo, la configuración e instanciación de sus componentes exige una verbosidad significativamente mayor que en ecosistemas dinámicos como Python (\textit{DEAP} o \textit{mealpy}), convirtiendo la implementación de nuevos algoritmos en un proceso en ocasiones tedioso. Adicionalmente, al tratarse de una primera iteración completa de la biblioteca, se asume una cierta deuda técnica; el código base aún presenta secciones difusas que requerirán refactorizaciones, unificación de convenciones de nomenclatura (\textit{renaming}) y una mejora general en su legibilidad.
 
@@ -2098,7 +2263,7 @@ Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la co
 
         En cuanto a la operativa y robustez de la biblioteca, se proyecta una reestructuración del módulo de persistencia para conferir a los \textit{checkpoints} un carácter totalmente opcional durante la fase de experimentos, eliminando así los cuellos de botella de entrada/salida (I/O) en disco. Esta mejora técnica vendrá acompañada del diseño de una CLI más amigable, moderna y robusta para la gestión, recuperación y limpieza del histórico de ejecuciones. 
 
-        Por último, para apuntalar la madurez y utilidad del proyecto en el ámbito científico, se ampliará el ecosistema experimental incrementando exhaustivamente la cobertura de pruebas unitarias y de integración (\textit{test coverage}). De forma complementaria, se nutrirá la biblioteca con una batería más extensa de problemas continuos y combinatorios, operadores avanzados y la incorporación de metaheurísticas multiobjetivo del estado del arte, tales como NSGA-III o MOEA/D, culminando así su preparación para entornos de investigación competitivos.
+        Por último, para apuntalar la madurez y utilidad del proyecto en el ámbito científico, se ampliará el ecosistema experimental incrementando exhaustivamente la cobertura de pruebas unitarias y de integración (\textit{test coverage}). De forma complementaria, se nutrirá la biblioteca con una batería más extensa de problemas continuos y combinatorios, operadores avanzados y la incorporación de metaheurísticas multi-objetivo del estado del arte, tales como NSGA-III o MOEA/D, culminando así su preparación para entornos de investigación competitivos.
 
     \section{Conclusion}
 
@@ -2179,7 +2344,138 @@ Si bien la implementación actual de \texttt{roma} cumple satisfactoriamente con
 
     Este mecanismo de distribución facilita la reutilización del software desarrollado y permite mantener actualizada la biblioteca de forma sencilla a medida que se publiquen nuevas versiones.
 
+\umaappendix{Manual de uso}
     
+El propósito de este apéndice es ilustrar la metodología de trabajo y la interfaz de programación (\textit{API}) que ofrece la biblioteca desarrollada. Para ello, se expone un escenario de uso autocontenido donde se resuelve una instancia reducida del problema de la mochila 0/1 (\textit{Knapsack Problem}) empleando el algoritmo de Escalada Simple (\textit{Hill Climbing}).
+
+La filosofía de diseño de la herramienta busca separar de forma clara la definición del problema matemático, la configuración de la metaheurística y la recolección de métricas. El flujo de programación estándar se articula mediante las siguientes fases metodológicas:
+
+\section*{1. Inicialización y definición del problema}
+El punto de partida de cualquier ejecución requiere modelar el escenario de optimización. La biblioteca emplea el patrón de diseño de \textit{software} \textit{Builder} para facilitar esta tarea, permitiendo instanciar el problema de forma declarativa. 
+
+En el fragmento expuesto a continuación, se captura una semilla estocástica a través del gestor de argumentos por línea de comandos (\texttt{CliArgs}) para asegurar la reproducibilidad determinista. Seguidamente, se define una mochila con una capacidad máxima de $90.0$ unidades y se registran secuencialmente tres elementos, especificando para cada uno de ellos su peso y su valor asociado.
+
+\begin{lstlisting}[language=Rust, caption={Captura de semilla y construcción del problema de la mochila.}]
+// 1. Obtencion de la semilla y definicion del problema
+let seed = CliArgs::from_env().seed_or(42);
+
+let problem = KnapsackBuilder::new()
+    .with_capacity(90.0)
+    .add_item(12.0, 24.0)
+    .add_item(22.0, 33.0)
+    .add_item(41.0, 80.0)
+    .build();
+\end{lstlisting}
+
+\section*{2. Configuración del motor heurístico}
+Una vez establecido el dominio del problema, se procede a ensamblar el motor de búsqueda. En este caso particular, la parametrización de la Escalada Simple exige dos componentes estructurales básicos:
+\begin{itemize}
+    \item \textbf{Operador de vecindad}: Se inyecta la utilidad \texttt{BitFlipNeighborhood}, encargada de generar soluciones candidatas adyacentes invirtiendo puntualmente valores en la representación binaria.
+    \item \textbf{Criterio de parada}: Se define una política de interrupción (\texttt{TerminationCriteria}), instruyendo al motor para que detenga la búsqueda al completar exactamente 120 iteraciones.
+\end{itemize}
+
+Estos elementos se empaquetan en una estructura de configuración unificada (\texttt{HillClimbingParameters}), con la cual se instancia de forma definitiva el algoritmo.
+
+\begin{lstlisting}[language=Rust, caption={Parametrización e instanciación del algoritmo de Escalada Simple.}]
+// 2. Configuracion de la metaheuristica
+let parameters = HillClimbingParameters::new(
+    BitFlipNeighborhood::new(),
+    TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
+)
+.with_seed(seed);
+
+let mut algorithm = HillClimbing::new(parameters);
+\end{lstlisting}
+
+\section*{3. Acoplamiento de Observadores}
+Uno de los rasgos más potentes de la arquitectura de la biblioteca es su sistema de monitorización o telemetría pasiva. En lugar de forzar la impresión intrusiva de datos durante la evaluación, el desarrollador puede vincular múltiples observadores al algoritmo antes de iniciar la ejecución. 
+
+El siguiente bloque adjunta tres mecanismos de registro simultáneos: salida por terminal (\texttt{ConsoleObserver}), trazado de gráficas (\texttt{ChartObserver}) y generación de un documento web (\texttt{HtmlReportObserver}).
+
+\begin{lstlisting}[language=Rust, caption={Inyección de observadores para la recolección de métricas.}]
+// 3. Inyeccion de las herramientas de monitorizacion
+algorithm.add_observer(Box::new(ConsoleObserver::new(true)));
+algorithm.add_observer(Box::new(ChartObserver::new_default()));
+algorithm.add_observer(Box::new(HtmlReportObserver::new_default()));
+\end{lstlisting}
+
+\section*{4. Ejecución y extracción de resultados}
+El ciclo de vida del bloque de código culmina con la invocación del método \texttt{run}. Este proceso vincula el algoritmo con el problema matemático definido en el primer paso y desencadena el proceso de búsqueda en el procesador. 
+
+Al finalizar, la función devuelve un objeto que consolida el histórico de la prueba, a partir del cual se extrae la mejor solución encontrada en el espacio de búsqueda y se imprime su métrica de aptitud (\textit{fitness}).
+
+\begin{lstlisting}[language=Rust, caption={Ejecución de la búsqueda y extracción de la mejor solución.}]
+// 4. Ejecucion y recoleccion de los resultados
+let result = algorithm
+    .run(&problem)
+    .expect("Fallo interno en la ejecucion del Hill Climbing");
+
+if let Some(best) = result.best_solution(&problem) {
+    println!(
+        "Optimizacion finalizada (semilla={}). Mejor aptitud={:.4}",
+        seed,
+        best.quality_value()
+    );
+} else {
+    println!("Optimizacion finalizada sin soluciones validas (semilla={})", seed);
+}
+\end{lstlisting}
+
+\section*{5. Ensamblaje final del programa}
+Para facilitar la comprensión global y asegurar la reproducibilidad del ejemplo, se presenta a continuación el código fuente íntegro. Este bloque incluye las sentencias de importación (\texttt{use}) necesarias y encapsula el flujo de trabajo descrito anteriormente dentro de la función principal de ejecución (\texttt{main}).
+
+\begin{lstlisting}[language=Rust, caption={Implementación íntegra del flujo de trabajo.}, label={lst:ejemplo_basico_completo}]
+use roma_lib::HtmlReportObserver;
+use roma_lib::algorithms::{
+    Algorithm,
+    HillClimbing,
+    HillClimbingParameters,
+    TerminationCriteria,
+    TerminationCriterion,
+};
+use roma_lib::observer::{ChartObserver, ConsoleObserver, Observable};
+use roma_lib::operator::BitFlipNeighborhood;
+use roma_lib::problem::KnapsackBuilder;
+use roma_lib::solution_set::SolutionSet;
+use roma_lib::utils::cli::CliArgs;
+
+fn main() {
+    let seed = CliArgs::from_env().seed_or(42);
+    
+    let problem = KnapsackBuilder::new()
+        .with_capacity(90.0)
+        .add_item(12.0, 24.0)
+        .add_item(22.0, 33.0)
+        .add_item(41.0, 80.0)
+        .build();
+    
+    let parameters = HillClimbingParameters::new(
+        BitFlipNeighborhood::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
+    )
+    .with_seed(seed);
+    
+    let mut algorithm = HillClimbing::new(parameters);
+    
+    algorithm.add_observer(Box::new(ConsoleObserver::new(true)));
+    algorithm.add_observer(Box::new(ChartObserver::new_default()));
+    algorithm.add_observer(Box::new(HtmlReportObserver::new_default()));
+    
+    let result = algorithm
+        .run(&problem)
+        .expect("Fallo interno en la ejecucion del Hill Climbing");
+    
+    if let Some(best) = result.best_solution(&problem) {
+        println!(
+            "Optimizacion finalizada (semilla={}). Mejor aptitud={:.4}",
+            seed,
+            best.quality_value()
+        );
+    } else {
+        println!("Optimizacion finalizada sin soluciones validas (semilla={})", seed);
+    }
+}
+\end{lstlisting}
 
 \end{umaappendices}
 
