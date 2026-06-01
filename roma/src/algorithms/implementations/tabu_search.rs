@@ -22,10 +22,9 @@ where
     N: NeighborhoodOperator<T>,
     Mem: TabuMemoryOperator<T>,
 {
-    pub mutation_operator: N,
+    pub neighborhood: N,
     pub memory_operator: Mem,
-    pub mutation_probability: f64,
-    pub neighborhood_size: usize,
+    pub candidates_per_step: usize,
     pub tabu_tenure: usize,
     pub aspiration_enabled: bool,
     pub termination_criteria: TerminationCriteria,
@@ -40,17 +39,15 @@ where
 {
     /// Creates a new Tabu Search parameter set.
     pub fn new(
-        mutation_operator: N,
-        mutation_probability: f64,
-        neighborhood_size: usize,
+        neighborhood: N,
+        candidates_per_step: usize,
         tabu_tenure: usize,
         termination_criteria: TerminationCriteria,
     ) -> Self {
         Self {
-            mutation_operator,
+            neighborhood,
             memory_operator: SolutionTabuMemory::new(),
-            mutation_probability,
-            neighborhood_size,
+            candidates_per_step,
             tabu_tenure,
             aspiration_enabled: true,
             termination_criteria,
@@ -72,10 +69,9 @@ where
         NewMem: TabuMemoryOperator<T>,
     {
         TabuSearchParameters {
-            mutation_operator: self.mutation_operator,
+            neighborhood: self.neighborhood,
             memory_operator,
-            mutation_probability: self.mutation_probability,
-            neighborhood_size: self.neighborhood_size,
+            candidates_per_step: self.candidates_per_step,
             tabu_tenure: self.tabu_tenure,
             aspiration_enabled: self.aspiration_enabled,
             termination_criteria: self.termination_criteria,
@@ -255,12 +251,8 @@ where
     }
 
     fn validate_parameters(&self) -> Result<(), String> {
-        if !(0.0..=1.0).contains(&self.parameters.mutation_probability) {
-            return Err("mutation_probability must be in [0,1]".to_string());
-        }
-
-        if self.parameters.neighborhood_size == 0 {
-            return Err("neighborhood_size must be > 0".to_string());
+        if self.parameters.candidates_per_step == 0 {
+            return Err("candidates_per_step must be > 0".to_string());
         }
 
         if self.parameters.tabu_tenure == 0 {
@@ -313,10 +305,9 @@ where
         let mut best_admissible_candidate: Option<Solution<T>> = None;
         let best_quality = state.best.quality_value();
 
-        for _ in 0..self.parameters.neighborhood_size {
-            let mut candidate = self.parameters.mutation_operator.generate_neighbor(
+        for _ in 0..self.parameters.candidates_per_step {
+            let mut candidate = self.parameters.neighborhood.random_neighbor(
                 &state.current,
-                self.parameters.mutation_probability,
                 real_bounds,
                 &mut state.rng,
             );
@@ -349,7 +340,7 @@ where
 
         let selected = best_admissible_candidate
             .or(best_any_candidate)
-            .expect("neighborhood_size > 0 guarantees at least one candidate");
+            .expect("candidates_per_step > 0 guarantees at least one candidate");
 
         state.current = selected;
         self.parameters.memory_operator.remember(
@@ -388,11 +379,10 @@ where
 
     fn checkpoint_algorithm_parameters(&self) -> String {
         format!(
-            "mutation={};memory={};mutation_probability={:.6};neighborhood_size={};tabu_tenure={};aspiration={}",
-            self.parameters.mutation_operator.name(),
+            "neighborhood={};memory={};candidates_per_step={};tabu_tenure={};aspiration={}",
+            self.parameters.neighborhood.name(),
             self.parameters.memory_operator.name(),
-            self.parameters.mutation_probability,
-            self.parameters.neighborhood_size,
+            self.parameters.candidates_per_step,
             self.parameters.tabu_tenure,
             self.parameters.aspiration_enabled,
         )
@@ -412,20 +402,16 @@ where
 
     fn case_name(&self) -> String {
         format!(
-            "TabuSearch(neighbors={}, tenure={})",
-            self.neighborhood_size, self.tabu_tenure
+            "TabuSearch(candidates={}, tenure={})",
+            self.candidates_per_step, self.tabu_tenure
         )
     }
 
     fn parameters(&self) -> Vec<CaseParameter> {
         vec![
-            CaseParameter::new("mutation_operator", self.mutation_operator.name()),
+            CaseParameter::new("neighborhood", self.neighborhood.name()),
             CaseParameter::new("memory_operator", self.memory_operator.name()),
-            CaseParameter::new(
-                "mutation_probability",
-                format!("{:.6}", self.mutation_probability),
-            ),
-            CaseParameter::new("neighborhood_size", self.neighborhood_size.to_string()),
+            CaseParameter::new("candidates_per_step", self.candidates_per_step.to_string()),
             CaseParameter::new("tabu_tenure", self.tabu_tenure.to_string()),
             CaseParameter::new("aspiration_enabled", self.aspiration_enabled.to_string()),
             CaseParameter::new(
@@ -444,7 +430,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::operator::SwapMutation;
+    use crate::operator::neighborhood_operator_implementations::two_opt_neighborhood::TwoOptNeighborhood;
     use crate::problem::QapProblem;
     use crate::solution_set::traits::SolutionSet;
     use crate::TerminationCriterion;
@@ -452,8 +438,7 @@ mod tests {
     #[test]
     fn tabu_search_rejects_zero_tenure() {
         let parameters = TabuSearchParameters::new(
-            SwapMutation::new(),
-            1.0,
+            TwoOptNeighborhood::new(),
             8,
             0,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(5)]),
@@ -484,8 +469,7 @@ mod tests {
         );
 
         let parameters = TabuSearchParameters::new(
-            SwapMutation::new(),
-            1.0,
+            TwoOptNeighborhood::new(),
             10,
             4,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(20)]),

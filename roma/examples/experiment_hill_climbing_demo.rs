@@ -5,7 +5,7 @@ use roma_lib::algorithms::{
     TerminationCriterion,
 };
 use roma_lib::experiment::Experiment;
-use roma_lib::operator::SwapMutation;
+use roma_lib::operator::{InsertionNeighborhood, TwoOptNeighborhood};
 
 fn main() {
     let problem = TspProblem::with_distance_matrix(vec![
@@ -18,14 +18,12 @@ fn main() {
     .with_open_route();
 
     let case_a = HillClimbingParameters::new(
-            SwapMutation::new(),
-            0.08,
+            TwoOptNeighborhood::new(),
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
         );
 
     let case_b = HillClimbingParameters::new(
-            SwapMutation::new(),
-            0.20,
+            InsertionNeighborhood::new(),
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
         );
 

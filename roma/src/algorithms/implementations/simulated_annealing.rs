@@ -19,8 +19,7 @@ where
     T: Clone,
     N: NeighborhoodOperator<T>,
 {
-    pub mutation_operator: N,
-    pub mutation_probability: f64,
+    pub neighborhood: N,
     pub initial_temperature: f64,
     pub minimum_temperature: f64,
     pub cooling_rate: f64,
@@ -35,15 +34,13 @@ where
     N: NeighborhoodOperator<T>,
 {
     pub fn new(
-        mutation_operator: N,
-        mutation_probability: f64,
+        neighborhood: N,
         initial_temperature: f64,
         cooling_rate: f64,
         termination_criteria: TerminationCriteria,
     ) -> Self {
         Self {
-            mutation_operator,
-            mutation_probability,
+            neighborhood,
             initial_temperature,
             minimum_temperature: 1e-8,
             cooling_rate,
@@ -210,10 +207,6 @@ where
             return Err("termination_criteria must not be empty".to_string());
         }
 
-        if !(0.0..=1.0).contains(&self.parameters.mutation_probability) {
-            return Err("mutation_probability must be in [0,1]".to_string());
-        }
-
         if !(0.0 < self.parameters.cooling_rate && self.parameters.cooling_rate <= 1.0) {
             return Err("cooling_rate must be in (0,1]".to_string());
         }
@@ -260,9 +253,8 @@ where
         state.iteration += 1;
         let real_bounds = problem.real_bounds();
 
-        let mut candidate = self.parameters.mutation_operator.generate_neighbor(
+        let mut candidate = self.parameters.neighborhood.random_neighbor(
             &state.current,
-            self.parameters.mutation_probability,
             real_bounds,
             &mut state.rng,
         );
@@ -322,9 +314,8 @@ where
 
     fn checkpoint_algorithm_parameters(&self) -> String {
         format!(
-            "mutation_operator={};mutation_probability={:.6};initial_temperature={:.6};minimum_temperature={:.6};cooling_rate={:.6}",
-            self.parameters.mutation_operator.name(),
-            self.parameters.mutation_probability,
+            "neighborhood={};initial_temperature={:.6};minimum_temperature={:.6};cooling_rate={:.6}",
+            self.parameters.neighborhood.name(),
             self.parameters.initial_temperature,
             self.parameters.minimum_temperature,
             self.parameters.cooling_rate,
@@ -344,9 +335,8 @@ where
 
     fn case_name(&self) -> String {
         format!(
-            "{}(mut={:.4}, t0={:.3}, cooling={:.4})",
-            "SimulatedAnnealing",
-            self.mutation_probability,
+            "SimulatedAnnealing(neighborhood={}, t0={:.3}, cooling={:.4})",
+            self.neighborhood.name(),
             self.initial_temperature,
             self.cooling_rate,
         )
@@ -354,11 +344,7 @@ where
 
     fn parameters(&self) -> Vec<CaseParameter> {
         vec![
-            CaseParameter::new("mutation_operator", self.mutation_operator.name()),
-            CaseParameter::new(
-                "mutation_probability",
-                format!("{:.6}", self.mutation_probability),
-            ),
+            CaseParameter::new("neighborhood", self.neighborhood.name()),
             CaseParameter::new(
                 "initial_temperature",
                 format!("{:.6}", self.initial_temperature),
@@ -385,7 +371,7 @@ where
 mod tests {
     use super::*;
     use crate::algorithms::termination::TerminationCriterion;
-    use crate::operator::mutation_operator_implementations::swap_mutation::SwapMutation;
+    use crate::operator::neighborhood_operator_implementations::two_opt_neighborhood::TwoOptNeighborhood;
     use crate::problem::implementations::tsp_problem::TspProblem;
     use crate::solution_set::traits::SolutionSet;
 
@@ -400,8 +386,7 @@ mod tests {
         let problem = TspProblem::with_distance_matrix(matrix);
 
         let params = SimulatedAnnealingParameters::new(
-            SwapMutation::new(),
-            0.4,
+            TwoOptNeighborhood::new(),
             100.0,
             0.99,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(50)]),

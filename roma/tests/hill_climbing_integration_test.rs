@@ -1,11 +1,11 @@
 use roma_lib::{
     AckleyProblem,
     Algorithm,
-    BitFlipMutation,
+    BitFlipNeighborhood,
+    GaussianNeighborhood,
     HillClimbing,
     HillClimbingParameters,
     KnapsackBuilder,
-    RealPerturbationMutation,
     SolutionSet,
     TerminationCriteria,
     TerminationCriterion,
@@ -17,8 +17,7 @@ fn hill_climbing_handles_empty_problem_edge_case() {
     let problem = KnapsackBuilder::new().with_capacity(100.0).build();
 
     let parameters = HillClimbingParameters::new(
-        BitFlipMutation::new(),
-        1.0,
+        BitFlipNeighborhood::new(),
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(5)]),
     )
     .with_seed(7);
@@ -35,12 +34,11 @@ fn hill_climbing_handles_empty_problem_edge_case() {
 }
 
 #[test]
-fn hill_climbing_runs_with_real_perturbation_mutation() {
+fn hill_climbing_runs_with_gaussian_neighborhood() {
     let problem = AckleyProblem::new(6, -5.0, 5.0);
 
     let parameters = HillClimbingParameters::new(
-        RealPerturbationMutation::new(0.1, 0.75),
-        1.0,
+        GaussianNeighborhood::new(0.3),
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(12)]),
     )
     .with_seed(13);
@@ -48,7 +46,7 @@ fn hill_climbing_runs_with_real_perturbation_mutation() {
     let mut algorithm = HillClimbing::new(parameters);
     let result = algorithm
         .run(&problem)
-        .expect("Hill Climbing with real perturbation mutation should succeed");
+        .expect("Hill Climbing with gaussian neighborhood should succeed");
 
     assert_eq!(result.size(), 1);
     let best = result.get(0).expect("Expected one solution");

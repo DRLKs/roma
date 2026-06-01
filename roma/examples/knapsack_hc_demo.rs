@@ -7,7 +7,7 @@ use roma_lib::algorithms::{
     TerminationCriterion,
 };
 use roma_lib::observer::{ChartObserver, ConsoleObserver, Observable};
-use roma_lib::operator::BitFlipMutation;
+use roma_lib::operator::BitFlipNeighborhood;
 use roma_lib::problem::KnapsackBuilder;
 use roma_lib::solution_set::SolutionSet;
 use roma_lib::utils::cli::CliArgs;
@@ -23,8 +23,7 @@ fn main() {
         .build();
 
     let parameters = HillClimbingParameters::new(
-        BitFlipMutation::new(),
-        0.10,
+        BitFlipNeighborhood::new(),
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
     )
     .with_seed(seed);

@@ -13,6 +13,7 @@ use roma_lib::{
     TerminationCriteria,
     TerminationCriterion,
     TspProblem,
+    TwoOptNeighborhood,
 };
 
 #[test]
@@ -25,8 +26,7 @@ fn hill_climbing_runs_on_tsp_and_returns_valid_distance() {
     ]);
 
     let parameters = HillClimbingParameters::new(
-        SwapMutation::new(),
-        0.25,
+        TwoOptNeighborhood::new(),
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(50)]),
     )
     .with_seed(42);
@@ -52,8 +52,7 @@ fn simulated_annealing_runs_on_tsp_open_route() {
     .with_open_route();
 
     let parameters = SimulatedAnnealingParameters::new(
-        SwapMutation::new(),
-        0.3,
+        TwoOptNeighborhood::new(),
         60.0,
         0.99,
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(60)]),
@@ -84,8 +83,7 @@ fn hill_climbing_respects_fixed_start_city_constraint() {
     .with_fixed_start_city(fixed_start_city);
 
     let parameters = HillClimbingParameters::new(
-        SwapMutation::new(),
-        0.0,
+        TwoOptNeighborhood::new(),
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(20)]),
     )
     .with_seed(99);

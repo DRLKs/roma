@@ -2,7 +2,7 @@ use roma_lib::algorithms::{
     Algorithm, HillClimbing, HillClimbingParameters, TerminationCriteria, TerminationCriterion,
 };
 use roma_lib::observer::{AlgorithmEvent, AlgorithmObserver, Observable};
-use roma_lib::operator::BitFlipMutation;
+use roma_lib::operator::BitFlipNeighborhood;
 use roma_lib::problem::Problem;
 use roma_lib::solution::Solution;
 use roma_lib::utils::Random;
@@ -90,8 +90,7 @@ impl Problem<bool> for FormattedBinaryProblem {
 fn observer_receives_problem_specific_solution_presentation() {
     let problem = FormattedBinaryProblem::new();
     let parameters = HillClimbingParameters::new(
-        BitFlipMutation::new(),
-        0.3,
+        BitFlipNeighborhood::new(),
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(4)]),
     )
     .with_seed(42);

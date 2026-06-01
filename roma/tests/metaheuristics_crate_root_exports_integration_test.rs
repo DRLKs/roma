@@ -5,16 +5,17 @@ use roma_lib::{
     Algorithm,
     DifferentialEvolution,
     DifferentialEvolutionParameters,
+    GaussianNeighborhood,
     MutationOperator,
     Problem,
     QapProblem,
     RealPerturbationMutation,
     SolutionSet,
-    SwapMutation,
     TabuSearch,
     TabuSearchParameters,
     TerminationCriteria,
     TerminationCriterion,
+    TwoOptNeighborhood,
     VNS,
     VNSParameters,
 };
@@ -60,8 +61,7 @@ fn tabu_search_solves_qap_via_crate_root_exports() {
     );
 
     let parameters = TabuSearchParameters::new(
-        SwapMutation::new(),
-        1.0,
+        TwoOptNeighborhood::new(),
         12,
         5,
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(20)]),
@@ -85,10 +85,9 @@ fn vns_solves_ackley_via_crate_root_exports() {
     let problem = AckleyProblem::new(8, -4.0, 4.0);
     let parameters = VNSParameters::new(
         vec![
-            RealPerturbationMutation::new(0.05, 0.5),
-            RealPerturbationMutation::new(0.15, 0.75),
+            GaussianNeighborhood::new(0.1),
+            GaussianNeighborhood::new(0.5),
         ],
-        1.0,
         5,
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(18)]),
     )

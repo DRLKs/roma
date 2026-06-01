@@ -70,7 +70,7 @@ mod tests {
     use crate::algorithms::implementations::hill_climbing::{HillClimbing, HillClimbingParameters};
     use crate::algorithms::termination::{TerminationCriteria, TerminationCriterion};
     use crate::algorithms::traits::Algorithm;
-    use crate::operator::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
+    use crate::operator::neighborhood_operator_implementations::bit_flip_neighborhood::BitFlipNeighborhood;
     use crate::problem::traits::Problem;
     use crate::solution::Solution;
     use crate::solution_set::traits::SolutionSet;
@@ -124,22 +124,20 @@ mod tests {
         let problem = Arc::new(MinOnesProblem::new());
 
         let params_a = HillClimbingParameters::new(
-            BitFlipMutation::new(),
-            0.2,
+            BitFlipNeighborhood::new(),
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(8)]),
         )
         .with_seed(11);
 
         let params_b = HillClimbingParameters::new(
-            BitFlipMutation::new(),
-            0.2,
+            BitFlipNeighborhood::new(),
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(8)]),
         )
         .with_seed(22);
 
         let algorithms = vec![HillClimbing::new(params_a), HillClimbing::new(params_b)];
         let results =
-            run_algorithm_instances_async::<HillClimbing<bool, BitFlipMutation>, bool, f64, _>(
+            run_algorithm_instances_async::<HillClimbing<bool, BitFlipNeighborhood>, bool, f64, _>(
                 Arc::clone(&problem),
                 algorithms,
             );

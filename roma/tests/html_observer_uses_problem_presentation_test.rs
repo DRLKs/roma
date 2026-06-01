@@ -2,7 +2,7 @@ use roma_lib::algorithms::{
     Algorithm, HillClimbing, HillClimbingParameters, TerminationCriteria, TerminationCriterion,
 };
 use roma_lib::observer::{HtmlReportObserver, Observable};
-use roma_lib::operator::BitFlipMutation;
+use roma_lib::operator::BitFlipNeighborhood;
 use roma_lib::problem::Problem;
 use roma_lib::solution::Solution;
 use roma_lib::utils::Random;
@@ -68,8 +68,7 @@ fn html_report_includes_problem_specific_best_solution_rendering() {
 
     let observer = HtmlReportObserver::new(output_dir.clone()).with_flat_output();
     let parameters = HillClimbingParameters::new(
-        BitFlipMutation::new(),
-        0.35,
+        BitFlipNeighborhood::new(),
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(3)]),
     )
     .with_seed(7);

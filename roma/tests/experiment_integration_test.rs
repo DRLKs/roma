@@ -1,5 +1,5 @@
 use roma_lib::{
-    BinaryTournamentSelection, BitFlipMutation, Experiment,
+    BinaryTournamentSelection, BitFlipMutation, BitFlipNeighborhood, Experiment,
     GeneticAlgorithmParameters, HillClimbingParameters, KnapsackBuilder, SinglePointCrossover,
     TerminationCriteria, TerminationCriterion,
 };
@@ -19,8 +19,7 @@ fn experiment_compares_hill_climbing_and_ga_end_to_end() {
         .build();
 
     let hill_climbing_case = HillClimbingParameters::new(
-        BitFlipMutation::new(),
-        0.15,
+        BitFlipNeighborhood::new(),
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(20)]),
     )
     .with_seed(111);

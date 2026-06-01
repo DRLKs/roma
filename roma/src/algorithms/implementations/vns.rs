@@ -21,7 +21,6 @@ where
     N: NeighborhoodOperator<T>,
 {
     pub neighborhoods: Vec<N>,
-    pub mutation_probability: f64,
     pub local_search_trials: usize,
     pub termination_criteria: TerminationCriteria,
     pub random_seed: Option<u64>,
@@ -36,13 +35,11 @@ where
     /// Creates a new Variable Neighborhood Search parameter set.
     pub fn new(
         neighborhoods: Vec<N>,
-        mutation_probability: f64,
         local_search_trials: usize,
         termination_criteria: TerminationCriteria,
     ) -> Self {
         Self {
             neighborhoods,
-            mutation_probability,
             local_search_trials,
             termination_criteria,
             random_seed: None,
@@ -197,10 +194,6 @@ where
             return Err("neighborhoods must not be empty".to_string());
         }
 
-        if !(0.0..=1.0).contains(&self.parameters.mutation_probability) {
-            return Err("mutation_probability must be in [0,1]".to_string());
-        }
-
         if self.parameters.local_search_trials == 0 {
             return Err("local_search_trials must be > 0".to_string());
         }
@@ -239,10 +232,9 @@ where
         state.iteration += 1;
         let real_bounds = problem.real_bounds();
 
-        let mutation = &self.parameters.neighborhoods[state.neighborhood_index];
-        let mut candidate = mutation.generate_neighbor(
+        let neighborhood = &self.parameters.neighborhoods[state.neighborhood_index];
+        let mut candidate = neighborhood.random_neighbor(
             &state.current,
-            self.parameters.mutation_probability,
             real_bounds,
             &mut state.rng,
         );
@@ -251,9 +243,8 @@ where
 
         let mut local_best = candidate;
         for _ in 0..self.parameters.local_search_trials {
-            let mut improved_candidate = mutation.generate_neighbor(
+            let mut improved_candidate = neighborhood.random_neighbor(
                 &local_best,
-                self.parameters.mutation_probability,
                 real_bounds,
                 &mut state.rng,
             );
@@ -302,18 +293,17 @@ where
     }
 
     fn checkpoint_algorithm_parameters(&self) -> String {
-        let mutation_names = self
+        let neighborhood_names = self
             .parameters
             .neighborhoods
             .iter()
-            .map(|mutation| mutation.name().to_string())
+            .map(|n| n.name().to_string())
             .collect::<Vec<_>>()
             .join(",");
 
         format!(
-            "mutations=[{}];mutation_probability={:.6};local_search_trials={};termination={:?}",
-            mutation_names,
-            self.parameters.mutation_probability,
+            "neighborhoods=[{}];local_search_trials={};termination={:?}",
+            neighborhood_names,
             self.parameters.local_search_trials,
             self.parameters.termination_criteria
         )
@@ -340,11 +330,7 @@ where
 
     fn parameters(&self) -> Vec<CaseParameter> {
         vec![
-            CaseParameter::new("mutation_count", self.neighborhoods.len().to_string()),
-            CaseParameter::new(
-                "mutation_probability",
-                format!("{:.6}", self.mutation_probability),
-            ),
+            CaseParameter::new("neighborhood_count", self.neighborhoods.len().to_string()),
             CaseParameter::new("local_search_trials", self.local_search_trials.to_string()),
             CaseParameter::new(
                 "termination_criteria",
@@ -362,16 +348,15 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::operator::RealPerturbationMutation;
+    use crate::operator::neighborhood_operator_implementations::gaussian_neighborhood::GaussianNeighborhood;
     use crate::problem::AckleyProblem;
     use crate::solution_set::traits::SolutionSet;
     use crate::TerminationCriterion;
 
     #[test]
     fn vns_rejects_empty_neighborhoods() {
-        let parameters: VNSParameters<f64, RealPerturbationMutation> = VNSParameters::new(
+        let parameters: VNSParameters<f64, GaussianNeighborhood> = VNSParameters::new(
             Vec::new(),
-            1.0,
             3,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(5)]),
         );
@@ -388,10 +373,9 @@ mod tests {
         let problem = AckleyProblem::new(6, -5.0, 5.0);
         let parameters = VNSParameters::new(
             vec![
-                RealPerturbationMutation::new(0.05, 0.5),
-                RealPerturbationMutation::new(0.15, 0.75),
+                GaussianNeighborhood::new(0.1),
+                GaussianNeighborhood::new(0.5),
             ],
-            1.0,
             4,
             TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(15)]),
         )

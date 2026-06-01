@@ -18,15 +18,14 @@ use crate::utils::random::{seed_from_time, Random};
 ///
 /// # Type Parameters
 /// - `T`: decision variable type of the solution.
-/// - `N`: neighborhood operator used to generate neighbor solutions.
+/// - `N`: neighborhood operator that defines reachable neighbors.
 #[derive(Clone)]
 pub struct HillClimbingParameters<T, N>
 where
     T: Clone,
     N: NeighborhoodOperator<T>,
 {
-    pub mutation_operator: N,
-    pub mutation_probability: f64,
+    pub neighborhood: N,
     pub termination_criteria: TerminationCriteria,
     pub random_seed: Option<u64>,
     _phantom: std::marker::PhantomData<T>,
@@ -40,17 +39,14 @@ where
     /// Creates a new parameter set.
     ///
     /// # Arguments
-    /// - `mutation_operator`: operator used to sample a neighbor of the current solution.
-    /// - `mutation_probability`: per-variable mutation probability in the range `[0.0, 1.0]`.
+    /// - `neighborhood`: defines the set of reachable neighbors from any solution.
     /// - `termination_criteria`: criteria to stop the algorithm.
     pub fn new(
-        mutation_operator: N,
-        mutation_probability: f64,
+        neighborhood: N,
         termination_criteria: TerminationCriteria,
     ) -> Self {
         Self {
-            mutation_operator,
-            mutation_probability,
+            neighborhood,
             termination_criteria,
             random_seed: None,
             _phantom: std::marker::PhantomData,
@@ -66,16 +62,16 @@ where
 
 /// Hill Climbing optimization algorithm.
 ///
-/// This implementation keeps one current solution, mutates it to generate a
-/// neighbor, and replaces the current solution only when the neighbor is
-/// strictly better according to the optimization direction.
+/// This implementation keeps one current solution, samples a neighbor from
+/// the defined neighborhood, and replaces the current solution only when
+/// the neighbor is strictly better according to the optimization direction.
 ///
 /// The final result is a `VectorSolutionSet` containing one solution: the best
 /// solution found during the run.
 ///
 /// # Type Parameters
 /// - `T`: decision variable type of the solution.
-/// - `N`: neighborhood operator used to generate neighbor solutions.
+/// - `N`: neighborhood operator that defines reachable neighbors.
 pub struct HillClimbing<T, N>
 where
     T: Clone,
@@ -212,10 +208,6 @@ where
             return Err("termination_criteria must not be empty".to_string());
         }
 
-        if !(0.0..=1.0).contains(&self.parameters.mutation_probability) {
-            return Err("mutation_probability must be in [0,1]".to_string());
-        }
-
         Ok(())
     }
 
@@ -245,9 +237,8 @@ where
         state.iteration += 1;
         let real_bounds = problem.real_bounds();
 
-        let mut neighbor = self.parameters.mutation_operator.generate_neighbor(
+        let mut neighbor = self.parameters.neighborhood.random_neighbor(
             &state.current,
-            self.parameters.mutation_probability,
             real_bounds,
             &mut state.rng,
         );
@@ -286,11 +277,9 @@ where
 
     fn checkpoint_algorithm_parameters(&self) -> String {
         format!(
-            "mutation_operator={};mutation_probability={:.6};termination_criteria={:?};mutation_operator={}",
-            self.parameters.mutation_operator.name(),
-            self.parameters.mutation_probability,
+            "neighborhood={};termination_criteria={:?}",
+            self.parameters.neighborhood.name(),
             self.parameters.termination_criteria,
-            self.parameters.mutation_operator.name()
         )
     }
 }
@@ -307,18 +296,14 @@ where
 
     fn case_name(&self) -> String {
         format!(
-            "{}(mutation_prob={:.4})",
-            "HillClimbing", self.mutation_probability,
+            "HillClimbing(neighborhood={})",
+            self.neighborhood.name(),
         )
     }
 
     fn parameters(&self) -> Vec<CaseParameter> {
         vec![
-            CaseParameter::new("mutation_operator", self.mutation_operator.name()),
-            CaseParameter::new(
-                "mutation_probability",
-                format!("{:.6}", self.mutation_probability),
-            ),
+            CaseParameter::new("neighborhood", self.neighborhood.name()),
             CaseParameter::new(
                 "termination_criteria",
                 format!("{:?}", self.termination_criteria),
