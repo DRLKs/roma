@@ -10,13 +10,10 @@
   "roma": {
     "initial_temperature": 30.0,
     "cooling_rate": 0.98,
-    "mutation_probability": 0.2,
     "minimum_temperature": 1e-8
   },
   "deap": {
-    "population_size": 100,
-    "crossover_probability": 0.9,
-    "mutation_probability": 0.05,
-    "tournament_size": 3
+    "initial_temperature": 30.0,
+    "cooling_rate": 0.98
   }
 }

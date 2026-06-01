@@ -113,7 +113,6 @@ def run_once(seed, jars):
             str(INSTANCE["dimension"]),
             BUDGET["type"],
             str(BUDGET["value"]),
-            str(JMETAL_CONFIG["mutation_rate"]),
             str(JMETAL_CONFIG["distribution_index"]),
             str(seed),
         ]

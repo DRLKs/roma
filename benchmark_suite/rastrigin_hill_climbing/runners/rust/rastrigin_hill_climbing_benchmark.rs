@@ -8,7 +8,7 @@ use roma_lib::algorithms::{
     TerminationCriteria,
     TerminationCriterion,
 };
-use roma_lib::operator::PolynomialMutation;
+use roma_lib::operator::GaussianNeighborhood;
 use roma_lib::problem::RastriginProblem;
 use roma_lib::solution_set::SolutionSet;
 use roma_lib::utils::json_adapter::{get_json_array_values, get_json_value};
@@ -34,8 +34,7 @@ struct BenchmarkConfig {
     runs: usize,
     budget: BudgetSpec,
     seeds: Vec<u64>,
-    mutation_rate: f64,
-    distribution_index: f64,
+    sigma: f64,
 }
 
 struct BenchmarkResult {
@@ -110,8 +109,7 @@ fn load_config(path: &Path) -> Result<BenchmarkConfig, String> {
             value: required_json_parsed(path, "budget.value")?,
         },
         seeds,
-        mutation_rate: required_json_parsed(path, "roma.mutation_rate")?,
-        distribution_index: required_json_parsed(path, "roma.distribution_index")?,
+        sigma: required_json_parsed(path, "roma.sigma")?,
     })
 }
 
@@ -195,8 +193,8 @@ fn run_once(instance: &BenchmarkInstance, config: &BenchmarkConfig, seed: u64) -
     let measured: Result<(Duration, (f64, Vec<f64>)), String> = measure_result(|| {
         let problem = build_problem(instance);
         let parameters = HillClimbingParameters::new(
-            PolynomialMutation::new(config.distribution_index),
-            config.mutation_rate,
+            GaussianNeighborhood::new(config.sigma)
+                .with_per_variable_probability(1.0 / instance.dimension as f64),
             TerminationCriteria::new(vec![TerminationCriterion::MaxEvaluations(config.budget.value)]),
         )
         .with_seed(seed);
@@ -264,8 +262,8 @@ fn validate_config(instance: &BenchmarkInstance, config: &BenchmarkConfig) -> Re
         return Err("config.json must define at least one seed per run".to_string());
     }
 
-    if !(0.0..=1.0).contains(&config.mutation_rate) {
-        return Err("roma.mutation_rate must be in [0,1]".to_string());
+    if config.sigma <= 0.0 {
+        return Err("roma.sigma must be > 0".to_string());
     }
 
     if instance.dimension == 0 {

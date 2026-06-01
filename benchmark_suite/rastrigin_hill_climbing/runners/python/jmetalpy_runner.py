@@ -46,8 +46,9 @@ def run_benchmark(seed):
     np.random.seed(seed)
 
     problem = Rastrigin(DIMENSION)
+    # Probability 1.0 ensures ALL variables are perturbed (neighborhood semantics).
     mutation = PolynomialMutation(
-        probability=float(JMETAL_CONFIG["mutation_rate"]),
+        probability=1.0,
         distribution_index=float(JMETAL_CONFIG["distribution_index"]),
     )
     algorithm = LocalSearch(

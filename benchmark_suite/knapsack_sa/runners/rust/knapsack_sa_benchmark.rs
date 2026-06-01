@@ -8,7 +8,7 @@ use roma_lib::algorithms::{
     TerminationCriteria,
     TerminationCriterion,
 };
-use roma_lib::operator::BitFlipMutation;
+use roma_lib::operator::BitFlipNeighborhood;
 use roma_lib::problem::KnapsackBuilder;
 use roma_lib::solution_set::SolutionSet;
 use roma_lib::utils::json_adapter::{get_json_array_values, get_json_value};
@@ -36,7 +36,6 @@ struct BenchmarkConfig {
     seeds: Vec<u64>,
     roma_initial_temperature: f64,
     roma_cooling_rate: f64,
-    roma_mutation_probability: f64,
 }
 
 struct BenchmarkResult {
@@ -134,7 +133,6 @@ fn load_config(path: &Path) -> Result<BenchmarkConfig, String> {
         seeds,
         roma_initial_temperature: required_json_parsed(path, "roma.initial_temperature")?,
         roma_cooling_rate: required_json_parsed(path, "roma.cooling_rate")?,
-        roma_mutation_probability: required_json_parsed(path, "roma.mutation_probability")?,
     })
 }
 
@@ -229,8 +227,7 @@ fn run_once(instance: &BenchmarkInstance, config: &BenchmarkConfig, seed: u64) -
         let problem = build_problem(instance);
 
         let parameters = SimulatedAnnealingParameters::new(
-            BitFlipMutation::new(),
-            config.roma_mutation_probability,
+            BitFlipNeighborhood::new(),
             config.roma_initial_temperature,
             config.roma_cooling_rate,
             TerminationCriteria::new(vec![TerminationCriterion::MaxEvaluations(config.budget.value)]),

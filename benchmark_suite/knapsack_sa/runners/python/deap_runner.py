@@ -1,5 +1,6 @@
 import copy
 import json
+import math
 import random
 import time
 from pathlib import Path
@@ -55,87 +56,53 @@ def evaluate(individual):
     return (float(value),)
 
 
-def build_toolbox():
-    toolbox = base.Toolbox()
-    toolbox.register("attr_bool", random.randint, 0, 1)
-    toolbox.register("individual", tools.initRepeat, creator.KnapsackIndividual, toolbox.attr_bool, n=NUM_ITEMS)
-    toolbox.register("clone", copy.deepcopy)
-    toolbox.register("evaluate", evaluate)
-    toolbox.register("mate", tools.cxTwoPoint)
-    toolbox.register(
-        "mutate",
-        tools.mutFlipBit,
-        indpb=float(DEAP_CONFIG["mutation_probability"]),
-    )
-    toolbox.register(
-        "select",
-        tools.selTournament,
-        tournsize=int(DEAP_CONFIG["tournament_size"]),
-    )
-    return toolbox
+def bit_flip_neighbor(individual):
+    """Generate a neighbor by flipping exactly one random bit (Hamming-1 neighborhood)."""
+    neighbor = copy.deepcopy(individual)
+    index = random.randint(0, len(neighbor) - 1)
+    neighbor[index] = 1 - neighbor[index]
+    return neighbor
 
 
 def run_benchmark(seed):
     random.seed(seed)
-    toolbox = build_toolbox()
-    population_size = int(DEAP_CONFIG["population_size"])
     budget_value = int(BUDGET["value"])
-    crossover_probability = float(DEAP_CONFIG["crossover_probability"])
+    initial_temperature = float(DEAP_CONFIG["initial_temperature"])
+    cooling_rate = float(DEAP_CONFIG["cooling_rate"])
 
-    if budget_value < population_size:
-        raise ValueError("Evaluation budget must be at least the DEAP population size")
+    # Create initial solution
+    current = creator.KnapsackIndividual([random.randint(0, 1) for _ in range(NUM_ITEMS)])
+    current.fitness.values = evaluate(current)
+    best = copy.deepcopy(current)
+    best.fitness.values = current.fitness.values
 
-    population = [toolbox.individual() for _ in range(population_size)]
+    temperature = initial_temperature
+
     start_wall = time.perf_counter()
     start_cpu = time.process_time()
 
-    for individual in population:
-        individual.fitness.values = toolbox.evaluate(individual)
-    evaluations = population_size
+    for _ in range(budget_value):
+        candidate = bit_flip_neighbor(current)
+        candidate = creator.KnapsackIndividual(candidate)
+        candidate.fitness.values = evaluate(candidate)
 
-    hall_of_fame = tools.HallOfFame(1)
-    hall_of_fame.update(population)
-    population = tools.selBest(population, population_size)
+        delta = candidate.fitness.values[0] - current.fitness.values[0]
 
-    while evaluations < budget_value:
-        offspring = list(map(toolbox.clone, toolbox.select(population, population_size)))
+        if delta >= 0:
+            current = candidate
+        elif temperature > 0:
+            acceptance = math.exp(delta / temperature)
+            if random.random() < acceptance:
+                current = candidate
 
-        for child1, child2 in zip(offspring[::2], offspring[1::2]):
-            if random.random() < crossover_probability:
-                toolbox.mate(child1, child2)
-                if hasattr(child1.fitness, "values"):
-                    del child1.fitness.values
-                if hasattr(child2.fitness, "values"):
-                    del child2.fitness.values
+        if current.fitness.values[0] > best.fitness.values[0]:
+            best = copy.deepcopy(current)
+            best.fitness.values = current.fitness.values
 
-        for mutant in offspring:
-            # mutFlipBit returns a tuple (individual,)
-            if random.random() < 1.0:
-                toolbox.mutate(mutant)
-                if hasattr(mutant.fitness, "values"):
-                    del mutant.fitness.values
-
-        invalid = [individual for individual in offspring if not individual.fitness.valid]
-        if not invalid:
-            break
-
-        remaining_evaluations = budget_value - evaluations
-        invalid = invalid[:remaining_evaluations]
-
-        for individual in invalid:
-            individual.fitness.values = toolbox.evaluate(individual)
-        evaluations += len(invalid)
-
-        offspring = [individual for individual in offspring if individual.fitness.valid]
-        if not offspring:
-            break
-
-        population = tools.selBest(population + offspring, population_size)
-        hall_of_fame.update(population)
+        temperature *= cooling_rate
 
     end_cpu = time.process_time()
     end_wall = time.perf_counter()
-    best = hall_of_fame[0] if len(hall_of_fame) > 0 else tools.selBest(population, 1)[0]
 
     return {
         "benchmark_id": CONFIG["benchmark_id"],

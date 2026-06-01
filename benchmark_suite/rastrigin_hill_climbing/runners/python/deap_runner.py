@@ -54,12 +54,13 @@ def evaluate(individual):
     return (rastrigin_value(individual),)
 
 
-def bounded_gaussian_mutation(individual, sigma, indpb):
-    tools.mutGaussian(individual, mu=0.0, sigma=sigma, indpb=indpb)
-    for index, value in enumerate(individual):
-        if value < LOWER_BOUND:
+def gaussian_neighborhood(individual, sigma):
+    """Generate a neighbor by perturbing ALL variables with Gaussian noise."""
+    for index in range(len(individual)):
+        individual[index] += random.gauss(0.0, sigma)
+        if individual[index] < LOWER_BOUND:
             individual[index] = LOWER_BOUND
-        elif value > UPPER_BOUND:
+        elif individual[index] > UPPER_BOUND:
             individual[index] = UPPER_BOUND
     return (individual,)
 
@@ -77,10 +78,9 @@ def build_toolbox():
     toolbox.register("clone", copy.deepcopy)
     toolbox.register("evaluate", evaluate)
     toolbox.register(
-        "mutate",
-        bounded_gaussian_mutation,
+        "neighbor",
+        gaussian_neighborhood,
         sigma=float(DEAP_CONFIG["sigma"]),
-        indpb=float(DEAP_CONFIG["mutation_rate"]),
     )
     return toolbox
 
@@ -97,7 +97,7 @@ def run_benchmark(seed):
 
     for _ in range(int(BUDGET["value"])):
         candidate = toolbox.clone(current)
-        candidate, = toolbox.mutate(candidate)
+        candidate, = toolbox.neighbor(candidate)
         candidate.fitness.values = toolbox.evaluate(candidate)
 
         if candidate.fitness.values[0] <= current.fitness.values[0]:

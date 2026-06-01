@@ -78,9 +78,9 @@ public final class RastriginLocalSearchBenchmark {
   }
 
   public static void main(String[] args) {
-    if (args.length != 10) {
+    if (args.length != 9) {
       System.err.println(
-          "Usage: <benchmarkId> <algorithmFamily> <problem> <instanceId> <dimension> <budgetType> <budgetValue> <mutationRate> <distributionIndex> <seed>");
+          "Usage: <benchmarkId> <algorithmFamily> <problem> <instanceId> <dimension> <budgetType> <budgetValue> <distributionIndex> <seed>");
       System.exit(1);
     }
 
@@ -91,9 +91,8 @@ public final class RastriginLocalSearchBenchmark {
     int dimension = Integer.parseInt(args[4]);
     String budgetType = args[5];
     int budgetValue = Integer.parseInt(args[6]);
-    double mutationRate = Double.parseDouble(args[7]);
-    double distributionIndex = Double.parseDouble(args[8]);
-    long seed = Long.parseLong(args[9]);
+    double distributionIndex = Double.parseDouble(args[7]);
+    long seed = Long.parseLong(args[8]);
 
     if (!"evaluations".equals(budgetType)) {
       System.err.println("Only evaluation budgets are supported");
@@ -105,7 +104,8 @@ public final class RastriginLocalSearchBenchmark {
     JMetalRandom.getInstance().setSeed(seed);
 
     var problem = new Rastrigin(dimension);
-    var mutation = new PolynomialMutation(mutationRate, distributionIndex);
+    // Probability 1.0: ALL variables perturbed (neighborhood semantics).
+    var mutation = new PolynomialMutation(1.0, distributionIndex);
     Comparator<DoubleSolution> comparator = new ObjectiveComparator<>(0);
 
     DoubleSolution initialSolution = problem.createSolution();
