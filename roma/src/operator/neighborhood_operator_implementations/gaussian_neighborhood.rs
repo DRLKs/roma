@@ -25,7 +25,7 @@ pub struct GaussianNeighborhood {
 impl GaussianNeighborhood {
     /// Creates a new Gaussian neighborhood operator.
     ///
-    /// All variables are perturbed by default. Use [`with_per_variable_probability`]
+    /// All variables are perturbed by default. Use [`Self::with_per_variable_probability`]
     /// to restrict perturbation to a subset of dimensions.
     ///
     /// # Arguments

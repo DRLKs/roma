@@ -1,6 +1,6 @@
 [package]
 name = "roma_lib"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 rust-version = "1.90"
 authors = ["David Muñoz del Valle <davidmunvalle@gmail.com>"]

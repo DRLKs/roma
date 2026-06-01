@@ -21,6 +21,12 @@
 ]{biblatex}
 \addbibresource{references.bib}
 
+
+
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{float}
+
 % Paquete para notación matemática
 \usepackage{amssymb}
 % Código
@@ -30,7 +36,7 @@
 % Diagramas 
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
-\usepackage{pgfplots} \pgfplotsset{compat=1.18}
+\usepackage{pgfplots} \pgfplotsset{compat=1.18} % Recomendado para controlar la retrocompatibilidad
 \usepackage{pgfplotstable}
 \tikzset{
     block/.style = {rectangle, draw, fill=blue!5, text width=10em, text centered, rounded corners, minimum height=3em},
@@ -39,7 +45,6 @@
     arrow/.style = {-{Stealth[scale=1.2]}, thick}
 }
 \usepgfplotslibrary{statistics} % Obligatorio para poder usar "boxplot prepared"
-\pgfplotsset{compat=1.18}       % Recomendado para controlar la retrocompatibilidad
 \usepackage{subcaption}         % Obligatorio para separar en figuras (a) y (b)
 
 %%%%
@@ -69,7 +74,6 @@
   commentstyle=\color{rustcomment}\itshape,
   stringstyle=\color{ruststring},
   morestring=[b]",
-  morestring=[b]'
 }
 
 % Configuración global limpia
@@ -87,17 +91,7 @@
   captionpos=b % El título (caption) se pone debajo
 }
 
-% Configuración general para que el código quede bonito
-\lstset{
-  language=Rust,
-  basicstyle=\ttfamily\footnotesize,
-  breaklines=true,
-  frame=single,
-  numbers=left,
-  numberstyle=\tiny\color{gray},
-  showstringspaces=false,
-  tabsize=4
-}
+
 
 
 
@@ -157,37 +151,37 @@ In order to achieve this core purpose, the project is structured around a series
 
 %──────────────── Agradecimientos ──────────────────────────────────────
 \begin{umaacknowledgments}
-    El único apartado donde hablaré en primera persona y no porque sea en el único donde se me permite esta práctica, sino porque es el único donde realmente lo escribiré yo. 
+    Este es el único apartado en el que utilizaré la primera persona. No porque sea el único en el que esté permitido hacerlo, sino porque es el único donde realmente escribiré yo. 
 
     En este capítulo voy a resumir mi paso por la facultad, pero no quiero hablar sobre lo académico, más bien sobre las personas que me acompañaron.
 
-    Que viniera aquí no estaba entre mis planes, fue el sitio donde pude entrar con mi nota de selectividad, nunca tampoco tuve muy claro lo que estudiar y de rebote acabé cursando Ingeniería Informática en Málaga. 
-    Llegué solo, ningún amigo, nadie que conocía estudiaría en Málaga, sin embargo aquí, me esperaba muchísima gente increíble. 
+    Que viniera aquí no estaba entre mis planes, fue el sitio donde pude entrar con mi nota de selectividad. Nunca tuve muy claro lo que estudiar y de rebote acabé cursando Ingeniería Informática en Málaga. 
+    Llegué solo, nadie que conocía estudiaría en Málaga, sin embargo aquí, me esperaba muchísima gente increíble. 
 
-    Los primeros días hice migas con los que todavía son mis amigos, un grupo maravilloso a los que les debo muchísimo, sin ellos no hubiera aguantado el primer cuatrimestre. El cuatrimestre que tan complicado se nos hizo con cálculo impartida por \textbf{Yadira} o electrónica, de la cual mejor no doy más detalles.
+    Los primeros días hice migas con los que todavía son mis amigos, un grupo maravilloso a los que les debo muchísimo, sin ellos no hubiera aguantado el primer cuatrimestre. El cuatrimestre que tan complicado se nos hizo con cálculo impartida por \textbf{Yadira} o por electrónica, de la cual mejor no doy más detalles.
     
     Aquí conocí a \textbf{Carlos}, pocas personas me hacen reír tanto. También a \textbf{Tomás}, que aunque ya no nos veamos mucho, aprendí mucho de él. Luego a \textbf{Suito} que con su amabilidad, su sonrisa y ahora con su gorra nos cautiva a todos, \textbf{Dino}, la persona más bondadosa que existe, no exagero, nunca he visto un ápice de maldad en este chico. \textbf{Sofía}, nuestra China, luego \textbf{Salma}, la persona con más imaginación que conozco y la chica con mas calle de la ETSII. La \textbf{Marta}, la señora de los viajes, se ha tirado más tiempo en aviones que estudiando, es una crack, ahora te corre 20K y se la pela. \textbf{Jose}, se describe a si mismo como un pato galáctico pero es imposible ser más listo y más gafas, te habla en 100 idiomas y siempre está para todos. Por último \textbf{Roberto}, un rondeño de ojos bonitos. La vida nos puso en el mismo gimnasio y en la misma clase.
 
-    Avanzaron los cursos, perdí el contacto con muchos y en tercero decidí cambiarme de modalidad, tuve que adaptarme a una nueva clase, a un nuevo conjunto de personas. En este cambio me acompañó Suito. Con él tenía una manía rara, nos gustaba tocarnos cariñosamente las piernas, por tanto no nos quedó otra que colarnos en un grupo para camuflarnos entre ellos y no parecer \textit{raritos}. Este realmente no era un grupo, era el equipo JAJER.
+    Avanzaron los cursos, perdí el contacto con muchos y en tercero decidí cambiarme de modalidad, tuve que adaptarme a una nueva clase, a un nuevo conjunto de personas. En este cambio me acompañó Suito. Con él tenía una manía rara, nos gustaba tocarnos cariñosamente las piernas, por tanto no nos quedó otra que mezclarnos con un grupo para camuflarnos entre ellos y no parecer \textit{raritos}. Este realmente no era un grupo, era el equipo JAJER.
 
-    Con nuestra incorporación el equipo se transformó en JAJERDA, ya que el nombre se forma de las iniciales de los miembros que lo componen. La primera J, de \textbf{Joge}, una bestia de la programación, enamorado del baloncesto, la A de \textbf{Artu}, el rey del grupo, siempre con una sonrisa, el cortisol le teme a él. La siguiente J le pertenece a \textbf{Juan Manuel}. Juanma tiene varias pasiones; derrapar, los bocadillos baratos, las Ondas de Elliot, el monte, la playa y la novia de Eduardo, ... yo sinceramente soy el fan número uno de Juanma. La E obviamente, de \textbf{Eduardo}. Un cordobés pila pila fuerte, \texttt{gym rat science based}, le gusta mucho el color negro y está potente. La última letra antes de las que nos corresponden a mi y a Suito, es la R, de ni más ni menos que de \textbf{Rubén}, el G.O.A.T del equipo, la mente pensante, mi compañero del \texttt{Bar Avilés}, el friki de los perífericos, el humano en el loop (vibecodea mucho), la humildad y la generosidad personificada. Este hombre nos pasará a todos por la izquierda, en unos meses lo veremos muy alto. 
+    Con nuestra incorporación el equipo se transformó en JAJERDA, ya que el nombre se forma de las iniciales de los miembros que lo componen. La primera J, de \textbf{Joge}, una bestia de la programación, enamorado del baloncesto, la A de \textbf{Artu}, el rey del grupo, siempre con una sonrisa, el cortisol le teme a él. La siguiente J le pertenece a \textbf{Juan Manuel}. Juanma tiene varias pasiones; derrapar, los bocadillos baratos, las Ondas de Elliot, el monte, la playa y la novia de Eduardo, ... yo sinceramente soy el fan número uno de Juanma. La E obviamente, de \textbf{Eduardo}. Un cordobés pila pila fuerte, \texttt{gym rat science based}, le gusta mucho el color negro y está potente. La última letra antes de las que nos corresponden a mi y a Suito(Alejandro), es la R, de ni más ni menos que de \textbf{Rubén}, el G.O.A.T del equipo, la mente pensante, mi compañero del \texttt{Bar Avilés}, el friki de los perífericos, el humano en el loop (vibecodea mucho), la humildad y la generosidad personificada. Este hombre nos pasará a todos por la izquierda, en unos meses lo veremos muy alto. 
 
     Durante este año me mudé, empecé a compartir piso con Sofía, la famosa china. Durante la convivencia la conocí mucho mejor y realmente me llevé una grata sorpresa, me sorprendió para bien. Sofía es increíble y realmente es capaz de lo que se proponga, tiene una capacidad de inimaginable de enfocarse y conseguir siempre lo que quiere.
 
     Al año siguiente, en mi último curso, me volví a mudar y cambiaron de nuevo mis compañeros de piso. Estos eran Roberto, el cual ya conocéis y \textbf{Pablo}. La convivencia durante este curso fue inmejorable y esto es gracias a que ellos también lo eran. Pablo es un crack absoluto, es un futuro mayordomo de Montejaque y el fan número uno del Málaga FC. Servicial y siempre está para sus allegados. Sobre Roberto ya está todo dicho, el más cariñoso de toda ronda, le da miedo conseguir dopamina de una fuente que no sea mirar a una pared durante treinta minutos, futura medalla olímpica de tiro con honda y apasionado número uno de la tortilla francesa con patatas fritas, pero aun así, es el mejor. 
     
-    En esta nueva edición del piso Software, se vivieron grandes incendios, grandes partidos del Albacete, intensas jornadas de repostería y escenas espirituales..... Sobre esta última debo agradecer a \textbf{Rosa}, quien me enseñó sobre la importancia de estar relajado durante estas jornadas espirituales.
+    En esta nueva edición del piso Software, se vivieron incendios, grandes partidos del Albacete, intensas jornadas de repostería y escenas espirituales..... Sobre esta última debo agradecer a \textbf{Rosa}, quien me enseñó sobre la importancia de estar relajado durante estas jornadas.
 
-    Este último curso me matriculé en la asignatura donde cursaría mis prácticas curriculares, donde hice migas con \textbf{María} la gigante de los datos, con \textbf{Marta}, con \textbf{Matteo}, con \textbf{Pedro} y con \textbf{Álvaro}, la persona que más sabe de todo, literalmente, de todo. Todos son unos cracks en toda regla. Aunque con ellos fuera con los que más hablara por estar en la misma condición de becario, no me quiero ir sin agradecer a todo el equipo de \textbf{BHS Corrugated Spain}, que son todos geniales de verdad, creo que no podría haber tenido más suerte con ellos. Echaré de menos el \textit{Antojitos} y el bocadillo de Pata de los jueves .
+    Este último curso me matriculé en la asignatura donde cursaría mis prácticas curriculares, donde hice migas con \textbf{María} la gigante de los datos, con \textbf{Marta}, con \textbf{Matteo}, con \textbf{Pedro} y con \textbf{Álvaro}, la persona que más sabe de todo, literalmente, de todo. Todos son unos \textit{cracks} en toda regla. Aunque con ellos fuera con los que más hablara por estar en la misma condición de becario, no me quiero ir sin agradecer a todo el equipo de \textbf{BHS Corrugated Spain}, que son todos geniales. Creo que no podría haber tenido más suerte con ellos. Echaré de menos el \textit{Antojitos} y el bocadillo de Pata de los jueves .
 
-    Durante estos años siendo parte del equipo JAJERDA, participé en varios Hackathones, en una de estos tuve la oportunidad de conocer a un profesor del que me siempre había escuchado buenas palabras. Le pregunté sobre una duda que tenía y él estuvo ayudando de forma altruista como si el problema le afectara de primera mano, este profesor ahora es el tutor este TFG, muchas gracias Gabriel, no eres consciente lo agradecidos que estamos los alumnos por tenerte a ti como docente.
+    Durante estos años siendo parte del equipo JAJERDA, participé en varios Hackathones, en una de estos tuve la oportunidad de conocer a un profesor del que me siempre había escuchado buenas palabras. Le pregunté sobre una duda que tenía y él estuvo ayudando de forma altruista como si el problema le afectara de primera mano, este profesor ahora es el tutor este TFG, muchas gracias \textbf{Gabriel}, no eres consciente lo agradecidos que estamos los alumnos por tenerte como docente.
 
-    Tras mis años en la carrera también hubieron personas que me ayudaron muchisísimo, provenían de antes y siempre estuvieron allí. Obviamente hablo de mi familia y de mis amigos más cercanos. Ellos aunque suene muy cliché son de verdad los pilares de mi mismo, sin ellos yo me desplomaría, no sería capaz de nada.
-    Con algunos he pasado todo lo que recuerdo de vida, \textbf{Agustín} y \textbf{Guiri}, todavía me acuerdo cuando de chicos jugábamos al fútbol y al \textit{torito en alto} en el parque. Otros llegasteis un poco más tarde, como \textbf{Oncala}, que aunque hayamos pasado por malos momentos, es de los personas en las que más confío.
+    Tras mis años en el grado también hubo personas que me ayudaron muchisísimo, provenían de antes y siempre estuvieron allí. Obviamente hablo de mi familia y de mis amigos más cercanos. Ellos aunque suene muy cliché son de verdad los pilares de mi mismo, sin ellos yo me desplomaría, no sería capaz de nada.
+    Con algunos he pasado todo lo que recuerdo de vida, \textbf{Agustín} y \textbf{Guiri}, todavía me acuerdo cuando de chicos jugábamos al fútbol y al \textit{torito en alto} en el parque. Otros llegasteis un poco más tarde, como \textbf{Oncala}, que aunque hayamos pasado por altos y bajos, es de las personas en las que más confío.
     
-    Algunos más tarde con el balonmano como \textbf{Rámirez} y \textbf{Sergio}, mis \textit{compas} de la Sierra, mis exhibicionistas y fiesteros. Otros durante el instituto, como \textbf{Barrera}, nuestro bombero y  \textbf{Andrés}, que mejor no hablo de él aquí.
+    Algunos más tarde con el balonmano como \textbf{Rámirez} y \textbf{Sergio}, mis \textit{compas} de la Sierra, mis exhibicionistas y fiesteros. Otros durante el instituto, como \textbf{Barrera}, nuestro bombero y \textbf{Andrés}, la persona más loca que conozco, en el buen sentido.
 
-    A diferencia de los demás casos mi familia no llegó, yo llegué a ellos, mi madre y mi padre, los que siempre están, los que creen más en mi más que yo mismo, los que me dan cobijo cuando lo necesito. Cuando estoy agobiado, cuando estoy enfermo, siempre me cuidaban. Cuando quería siempre podía volver a casa con ellos. A ellos se lo debo todo, gracias \textbf{Papá}, gracia \textbf{Mamá}. Muchas gracias por estar. Gracias también a \textbf{Luis}, que aunque gruñón, tienes muy buen corazón, el mejor hermano que se puede tener. Gracias a \textbf{Laura} y a \textbf{Mario}, a vosotros también os considero mis hermanos.
+    A diferencia de los demás casos mi familia no llegó, yo llegué a ellos, mi madre y mi padre, los que siempre están, los que creen más en mi más que yo mismo, los que me dan cobijo cuando lo necesito. Cuando estoy agobiado, cuando estoy enfermo, siempre me cuidaban. Cuando quería siempre podía volver a casa con ellos. Por su cariño, por su compañía, por sus batidos de naranja a las cinco, por llevarme al balonmano, por costearme esta carrrera, por ser mis padres... A ellos se lo debo todo, gracias \textbf{Papá}, gracias \textbf{Mamá}. Muchas gracias por estar. Gracias también a \textbf{Luis}, que aunque gruñón, tienes muy buen corazón, el mejor hermano que se puede tener. Gracias a \textbf{Laura} y a \textbf{Mario}, a vosotros también os considero mis hermanos.
 
     Falta todavía una persona por agradecer. 
     
@@ -259,8 +253,6 @@ In order to achieve this core purpose, the project is structured around a series
 
     
     En cuanto a las herramientas de desarrollo, se utilizó \textbf{Visual Studio Code}~\cite{visual_studio_code} como entorno de desarrollo integrado (IDE) debido a su flexibilidad, amplia gama de extensiones y soporte para Rust a través de la extensión \textit{rust-analyzer} \cite{rust_analyzer}. Durante el desarrollo más temprano, también se usó \textbf{Rust Rover}~\cite{rustrover_ide}, de \textbf{JetBrains}~\cite{jetbrains_toolbox}, que es un IDE específico para Rust. Esto fue debido a que en ese momento los conocimientos sobre Rust eran muy limitados y se necesitaba un entorno más guiado e invasivo para poder progresar.
-    
-    Por otro lado, el control de versiones se ha llevado a cabo utilizando \textbf{Git}~\cite{git_tool}, empleando \textbf{GitHub}~\cite{github_tool} como plataforma de alojamiento remoto del repositorio.
 
     La gestión y planificación temporal de las tareas se ha articulado mediante \textbf{Jira}~\cite{jira_tool}, mientras que la composición y redacción de la memoria técnica se han elaborado en \LaTeX~\cite{latex_project}. En lo relativo a la ingeniería de software, el control de versiones se ha estructurado en torno al sistema descentralizado \textbf{Git}~\cite{git_tool}, empleando la plataforma \textbf{GitHub}~\cite{github_tool} para el alojamiento del repositorio remoto. 
 
@@ -598,12 +590,12 @@ A lo largo de las últimas décadas, la literatura científica ha propuesto nume
 
         En una primera aproximación del diseño, \texttt{Solution} se definió como un \textit{trait} que declaraba un conjunto de funciones fundamentales, tales como la obtención del valor de \textit{fitness}, el acceso a las variables de la solución o la recuperación de su representación interna. Este \textit{trait} debía ser implementado por distintos \textit{structs}, cada uno adaptado a las necesidades específicas de cada problema.
 
-        Por ejemplo, si el problema requería representar una solución como una permutación binaria \ref{lst:binary_solution}, el \textit{struct} correspondiente contendría como atributos un vector binario junto con el valor de calidad asociado a dicha solución. Sin embargo, se observó que esta arquitectura introducía una elevada fragmentación en las implementaciones y dificultaba la generalización de la biblioteca para soportar un mayor número de problemas y algoritmos.
+        Por ejemplo, si el problema requería representar una solución como una permutación binaria~\ref{lst:binary_solution}, el \textit{struct} correspondiente contendría como atributos un vector binario junto con el valor de calidad asociado a dicha solución. Sin embargo, se observó que esta arquitectura introducía una elevada fragmentación en las implementaciones y dificultaba la generalización de la biblioteca para soportar un mayor número de problemas y algoritmos.
 
         Por este motivo, se optó por una solución más abstracta y flexible. En el diseño actual \ref{lst:solution}, \texttt{Solution} se define como un \textit{struct} genérico parametrizado por dos tipos: \texttt{T} y \texttt{Q}. El tipo \texttt{T} representa el tipo de dato de las variables de decisión almacenadas en la solución, mientras que \texttt{Q} representa el tipo asociado a la evaluación de calidad de dicha solución. De forma predeterminada, este último toma el tipo \texttt{f64}.
 
     \noindent
-    \begin{minipage}{\linewidth}
+    \begin{samepage}
     \begin{lstlisting}[language=Rust, caption={Estructura desarrollada para las Soluciones}, label={lst:solution}]
 #[derive(Clone, Debug)]
 pub struct Solution<T, Q = f64> {
@@ -611,7 +603,7 @@ pub struct Solution<T, Q = f64> {
     value: Option<Q>,
 }
     \end{lstlisting}
-    \end{minipage}
+    \end{samepage}
 
         Sobre esta estructura, en lugar de recurrir a implementaciones rígidas o acopladas de manera convencional, se optó por diseñar fábricas de inicialización mediante constructores específicos para entornos mono-objetivo y multi-objetivo capaces de adaptarse a una amplia variedad de problemas. Este enfoque modular permite instanciar estados con una sintaxis fluida y desacoplada del núcleo del algoritmo. Un caso representativo de esta estrategia se ilustra en el Código~\ref{lst:binary_solution}, donde se muestra el código reducido para la construcción de soluciones binarias (cuyas variables se definen mediante valores booleanos). En este fragmento de código se aprecia cómo el patrón \textit{Builder} facilita la inicialización homogénea de la estructura —ya sea de forma aleatoria estocástica, parametrizada a ceros o a unos— antes de consolidar el objeto de tipo \texttt{Solution<bool>} definitivo a través del método de finalización.
 
@@ -802,8 +794,7 @@ where
 
         %% ALGORITMOS
         
-    \subsection{ Funcionamiento concreto de los algoritmos}
-
+    \subsection{Funcionamiento concreto de los algoritmos}
         Para la configuración e instanciación de cada algoritmo, el sistema se apoya en una estructura de parámetros que actúa como su base configurativa unificada. Esta estructura encapsula toda la información necesaria para la construcción y parametrización de la metaheurística, desempeñando además un papel crucial en el módulo de experimentos. En dicho módulo, se emplea para almacenar y replicar las configuraciones específicas de cada algoritmo que servirán como casos de prueba o vectores de sintonización dentro de los \textit{benchmarks}.
 
         Con el objetivo de garantizar la integridad y robustez del sistema antes de iniciar el cómputo, se incorpora un mecanismo de verificación estricto gobernado por la función \texttt{validate\_parameters(\&self) -> Result<(), String>}. Este método se invoca de manera sistemática y automatizada antes de comenzar el proceso de resolución, validando que los rangos numéricos, probabilidades y dimensiones introducidos por el usuario sean coherentes y correctos. En caso de detectar anomalías, la función interrumpe la ejecución de forma segura devolviendo un error con un mensaje personalizado, lo que facilita una auditoría precisa y un diagnóstico rápido de la configuración antes de que el motor consuma tiempo de CPU.
@@ -856,7 +847,7 @@ where
         La lógica de ejecución se implementa mediante un sistema basado en pasos. El punto de entrada principal para iniciar cualquier metaheurística es el método \texttt{run}, cuya firma procedimental e interfaz de rasgos se detalla en el Código~\ref{lst:run_definition}.
 
     \noindent
-    \begin{minipage}{\linewidth}
+    \begin{samepage}
     \begin{lstlisting}[language=Rust, caption={Definición de la firma genérica del método principal \texttt{run}.} \label{lst:run_definition}]
 fn run<P>(&mut self, problem: &P) -> Result<Self::SolutionSet, String>
 where
@@ -865,7 +856,7 @@ where
     P: Problem<T, Q> + Sync,
 {
     \end{lstlisting}
-    \end{minipage}
+    \end{samepage}
     
         El diseño de la función \texttt{run} aprovecha las ventajas de los sistemas de tipos avanzados de Rust. Destaca en su declaración el uso del límite restrictivo \texttt{Self: Sized}. En Rust, por defecto, los \textit{traits} pueden ser implementados por tipos cuyo tamaño en tiempo de compilación no sea conocido de forma estática (como los objetos de rasgo o \textit{trait objects}). Al imponer el \textit{bound} \texttt{Sized}, se garantiza que el algoritmo concreto posee un tamaño fijo y conocido en tiempo de compilación. Esto es un requisito indispensable para permitir el polimorfismo estático, asegurando que el compilador optimice las llamadas a funciones eliminando el coste de la resolución dinámica en tiempo de ejecución. Asimismo, la restricción \texttt{Sync} sobre el parámetro genérico del problema (\texttt{P}) asegura que la estructura del modelo matemático sea segura para ser accedida concurrentemente desde múltiples hilos de ejecución, habilitando el paralelismo a nivel del motor experimental.
 
@@ -932,14 +923,14 @@ while !context.should_terminate()
     \end{lstlisting}
 
 
-        En cada iteración del bucle, el algoritmo avanza mediante el método \texttt{step}, el cual altera el estado de la población o la trayectoria actual. Acto seguido, se extrae un estado intermedio inmutable o captura (\textit{snapshot}) que almacena la evolución temporal de la ejecución. Este reporte intermedio se aprovecha por el sistema de tolerancia a fallos mediante una política de puntos de control o \textit{checkpoints}. Si la frecuencia parametrizada coincide con el módulo de la iteración corriente, se construye un registro (\textit{record}) que se vuelca de forma persistente a disco a través de \texttt{checkpoint\_policy.persist\_record}, permitiendo reanudar la computación en caso de una interrupción imprevista de la máquina. Este sistema es el encargado de guardar la información
+        En cada iteración del bucle, el algoritmo avanza mediante el método \texttt{step}, el cual altera el estado de la población o la trayectoria actual. Acto seguido, se extrae un estado intermedio inmutable o captura (\textit{snapshot}) que almacena la evolución temporal de la ejecución. Este reporte intermedio se aprovecha por el sistema de tolerancia a fallos mediante una política de puntos de control o \textit{checkpoints}. Si la frecuencia parametrizada coincide con el módulo de la iteración corriente, se construye un registro (\textit{record}) que se vuelca de forma persistente a disco a través de \texttt{checkpoint\_policy.persist\_record}, permitiendo reanudar la computación en caso de una interrupción imprevista de la máquina.
         
         El ciclo concluye con la invocación de \texttt{context.report\_progress}, función encargada de serializar y transmitir el nuevo estado en forma de un mensaje \texttt{ObserverState} hacia el canal del runtime de observadores, garantizando una auditoría en tiempo real del proceso sin penalizar el rendimiento del hilo principal.
 
         El bucle de ejecución persiste mientras el contexto del algoritmo, representado por la estructura \texttt{ExecutionContext}, no determine el cese de la actividad mediante el método \texttt{should\_terminate()}. La decisión de terminación está delegada de forma flexible en el tipo \texttt{TerminationCriterion}, un enumerado que permite al usuario definir condiciones de parada basadas en diversos criterios físicos y lógicos.
 
     \noindent
-    \begin{minipage}{\linewidth}
+    \begin{samepage}
     \begin{lstlisting}[language=Rust, caption={Enumerado \texttt{TerminationCriterion} con las condiciones de parada disponibles.}\label{lst:termination_enum}]
 #[derive(Clone, Debug)]
 pub enum TerminationCriterion {
@@ -950,12 +941,12 @@ pub enum TerminationCriterion {
     NoImprovement { patience: usize },
 }
     \end{lstlisting}
-    \end{minipage}
+    \end{samepage}
         
         Esta implementación mediante un \texttt{enum} permite una gran expresividad en la configuración de los experimentos. El usuario puede optar por límites tradicionales, como el número de iteraciones o evaluaciones, o por criterios más avanzados de convergencia y estancamiento (\emph{patience}). La integración de estos criterios en el \texttt{ExecutionContext} garantiza que la comprobación se realice de manera eficiente al finalizar cada paso del algoritmo, permitiendo además que los observadores capturen el progreso en tiempo real antes de cada evaluación de terminación.
 
     \noindent
-    \begin{minipage}{\linewidth}
+    \begin{samepage}
     \begin{lstlisting}[language=Rust, caption={Estructura \texttt{ExecutionContext} encargada de la gestión del entorno y el control del ciclo de vida del algoritmo.} \label{lst:execution_context}]
 #[derive(Clone, Debug)]
 pub struct ExecutionContext<T, Q = f64>
@@ -968,7 +959,7 @@ where
     next_snapshot_seq: RefCell<u64>,
 }
     \end{lstlisting}
-    \end{minipage}
+    \end{samepage}
 
         A partir de la definición expuesta en el Código~\ref{lst:execution_context}, el \texttt{ExecutionContext} se consolida como el componente encargado de centralizar y gobernar de forma unificada el entorno operacional del algoritmo de optimización. Su propósito principal es aislar las tareas de control de la lógica metaheurística pura, asumiendo de forma integrada la gestión del cese de actividad, la canalización hacia el ecosistema de monitorización y la orquestación de la persistencia física en disco.
 
@@ -1250,7 +1241,7 @@ impl Random {
         Debido a que el avance lineal del estado no es estadísticamente aleatorio por sí mismo, la secuencia se somete inmediatamente a una transformación final de mezcla no lineal implementada en la subrutina \texttt{mix64}, detallada en el Código~\ref{lst:next_u64}.
 
     \noindent
-    \begin{minipage}{\linewidth}
+    \begin{samepage}
     \begin{lstlisting}[language=Rust, caption={Función de mezcla no lineal \texttt{mix64} para maximizar la entropía de los bits generados.} \label{lst:next_u64}]
 #[inline]
 fn mix64(mut z: u64) -> u64 {
@@ -1259,7 +1250,7 @@ fn mix64(mut z: u64) -> u64 {
     z ^ (z >> 31)
 }
     \end{lstlisting}
-    \end{minipage}
+    \end{samepage}
 
         La función \texttt{mix64} aplica de manera secuencial operaciones de desplazamiento de bits a la derecha (\textit{bit-shifts}) combinadas con operaciones XOR ($\wedge$) y multiplicaciones por constantes de alta entropía numéricas fijas (\texttt{0xBF58476D1CE4E5B9} y \texttt{0x94D049BB133111EB}). Esta técnica destruye cualquier correlación lineal latente en el estado, garantizando que incluso variaciones de un solo bit en la semilla original provoquen cambios masivos y pseudoaleatorios en el flujo de salida, superando satisfactoriamente las baterías de pruebas estadísticas más exigentes del sector informático. 
 
@@ -1310,7 +1301,7 @@ where
             Dada la metodología de desarrollo ascendente adoptada, la implementación de pruebas unitarias se convirtió en un pilar fundamental para asegurar la robustez de cada componente antes de escalar hacia niveles de abstracción superiores. El objetivo principal de estas pruebas fue verificar de forma aislada e independiente el comportamiento de las funciones y estructuras mínimas de cada módulo, garantizando que cada unidad de código cumpliera estrictamente con su responsabilidad única. 
 
     \noindent
-    \begin{minipage}{\linewidth}
+    \begin{samepage}
     \begin{lstlisting}[language=Rust, caption={Ejemplo de una prueba unitaria sobre el modulo de generación de números pseudoaleatorios.} \label{lst:coinflip_test}]
 fn coin_flip_test() {
     let mut rng_seed_generator = Random::new(seed_from_time());
@@ -1327,14 +1318,14 @@ fn coin_flip_test() {
         assert!(x);
 }
     \end{lstlisting}    
-    \end{minipage}
+    \end{samepage}
 
             En consonancia con las prácticas estándar del ecosistema Rust, estas pruebas unitarias se encuentran integradas directamente en el mismo archivo que el código fuente del módulo que evalúan. Generalmente ubicadas al final de cada archivo bajo un módulo específico anotado con el atributo \texttt{\#[cfg(test)]}, esta disposición permite mantener una relación estrecha entre la implementación y su verificación. Además, esta estructura facilita el acceso a elementos privados del módulo, permitiendo una validación exhaustiva de la lógica interna que no sería accesible desde el exterior, garantizando así que cada componente sea intrínsecamente correcto antes de ser expuesto.
 
             Este enfoque de aislamiento resultó especialmente crítico en el desarrollo de la estructura de los operadores, donde pequeñas desviaciones en la lógica podrían propagar errores difíciles de detectar en fases posteriores. Al diseñar pruebas simples y focalizadas en una única funcionalidad, se facilitó la identificación inmediata de regresiones durante el proceso de refactorización. Además, estas pruebas permitieron validar la gestión de tipos y la integridad de los datos en tiempo de ejecución, asegurando que los cimientos de la biblioteca fueran sólidos antes de proceder a la integración de sistemas más complejos.
 
     \noindent
-    \begin{minipage}{\linewidth}
+    \begin{samepage}
     \begin{lstlisting}[language=Rust, caption={Prueba unitaria que prueba el correcto funcionamiento de la función \texttt{execute} en el operador de mutación \textit{bit\_flip}. } \label{lst:bit_flip_test}]
     #[test]
     fn test_bit_flip_mutation() {
@@ -1349,17 +1340,17 @@ fn coin_flip_test() {
         assert!(number_ones > 0, "At least some bits should be flipped");
     }
     \end{lstlisting}    
-    \end{minipage}
+    \end{samepage}
             
         \subsection{Pruebas de integración}
 
             Una vez validada la fiabilidad de los componentes individuales mediante el testeo unitario, se procedió al desarrollo de las pruebas de integración. Siguiendo las convenciones de estructuración de proyectos en Rust, este conjunto de pruebas se localiza de forma independiente en el directorio \texttt{tests/}, situado en la raíz del proyecto \texttt{roma}. Esta separación física respecto al código fuente alojado en \texttt{src/} es fundamental, ya que permite tratar a la biblioteca como una entidad externa, evaluando exclusivamente su interfaz pública y la interacción entre sus diversos módulos.
 
-            Mientras que las pruebas previas evalúan piezas aisladas, estas se han diseñado con el propósito de comprobar que todos los componentes de \texttt{roma} interactúan armónicamente entre sí para resolver un problema de optimización de principio a fin. El foco de estas pruebas reside en la orquestación del flujo de trabajo: desde la configuración e instanciación de un algoritmo, pasando por la validación sistemática de sus parámetros, hasta la ejecución iterativa donde intervienen operadores, problemas y observadores en un entorno compartido. 
+            Mientras que las pruebas previas evalúan piezas aisladas, estas se han diseñado con el propósito de comprobar que todos los componentes de \texttt{roma} interactúan armónicamente entre sí para resolver un problema de optimización de principio a fin. El foco de estas pruebas reside en la orquestación del flujo de trabajo: desde la configuración e instanciación de un algoritmo, pasando por la validación sistemática de sus parámetros, hasta la ejecución iterativa donde intervienen operadores, problemas y observadores en un entorno compartido. Un ejemplo es ~\ref{lst:validacion_error}
 
             Estas pruebas de mayor nivel permiten verificar que la comunicación entre módulos —por ejemplo, el intercambio de soluciones entre el algoritmo y el problema— se realiza de forma eficiente y sin errores de concordancia. Al ejecutarse desde la raíz del proyecto, estas pruebas simulan el uso real que tendría un usuario final de la biblioteca. En última instancia, las pruebas de integración garantizan que el sistema completo es capaz de cumplir con su propósito funcional, ofreciendo una visión global de la estabilidad y el rendimiento de la biblioteca ante casos de uso reales.
             
-    \begin{lstlisting}[language=Rust, caption={Prueba de integración sobre un ejemplo de error donde el tamaño de la población se inicializa a cero.} \label{lst:validación_error}]
+    \begin{lstlisting}[language=Rust, caption={Prueba de integración sobre un ejemplo de error donde el tamaño de la población se inicializa a cero.} \label{lst:validacion_error}]
     #[test]
     fn ga_returns_error_with_invalid_parameters_edge_case() {
         // Edge case: invalid parameter configuration should return a validation error.
@@ -1941,7 +1932,7 @@ Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la co
 
     El escrutinio de ambas matrices de significancia confirma matemáticamente las divergencias y paridades detectadas en el análisis exploratorio:
 
-    En el subexperimento de Optimización por Enjambre de Partículas Binario (PSO), el test certifica un empate técnico indiscutible entre la biblioteca propuesta \texttt{roma} y la referencia en Python \texttt{PySwarms} ($p = 0.3785$). Ambas implementaciones son castigadas estadísticamente frente a las líneas base (\texttt{Exact DP} y \texttt{Greedy}), confirmando que la deficiente convergencia no es un error de programación de las bibliotecas, sino una debilidad estructural de la ecuación
+    En el subexperimento de Optimización por Enjambre de Partículas Binario (PSO), el test certifica un empate técnico indiscutible entre la biblioteca propuesta \texttt{roma} y la referencia en Python \texttt{PySwarms} ($p = 0.3785$). Ambas implementaciones son castigadas estadísticamente frente a las líneas base (\texttt{Exact DP} y \texttt{Greedy}), confirmando que la deficiente convergencia no es un error de programación de las bibliotecas, sino una debilidad estructural de la ecuación una debilidad estructural de la ecuación de actualización de velocidad canónica del PSO.
 
 \section{Evaluación Multi-Objetivo: Función ZDT1 con NSGA-II}  
     Para evaluar las capacidades de la biblioteca en el ámbito de la optimización con múltiples objetivos en conflicto, se ha seleccionado el problema continuo \texttt{ZDT1} ($D=30$). Este es un escenario de referencia clásico cuya frontera de Pareto óptima es convexa. La resolución se ha abordado utilizando el algoritmo evolutivo NSGA-II (\textit{Non-dominated Sorting Genetic Algorithm II}), asignando un presupuesto computacional de $25\,000$ evaluaciones por ejecución a lo largo de 28 tiradas independientes.
@@ -2241,7 +2232,7 @@ Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la co
 %%%%%%%%
 
 \chapter{Conclusiones y líneas futuras}
-    El diseño y desarrollo de la biblioteca \texttt{roma} ha demostrado la viabilidad y las enormes ventajas computacionales de emplear Rust para la construcción de motores de optimización metaheurística desde cero (\textit{from scratch}). Al prescindir de dependencias externas y apostar por un diseño estáticamente tipado, se ha logrado un sistema robusto, seguro en memoria y con tiempos de ejecución altamente competitivos frente a alternativas consolidadas en C++ o Python. 
+    El diseño y desarrollo de la biblioteca \texttt{roma} ha demostrado la viabilidad y las enormes ventajas computacionales de emplear Rust para la construcción de motores de optimización metaheurística desde cero. Al prescindir de dependencias externas y apostar por un diseño estáticamente tipado, se ha logrado un sistema robusto, seguro en memoria y con tiempos de ejecución altamente competitivos frente a alternativas consolidadas en C++ o Python. 
 
     A este éxito técnico a nivel de rendimiento se suma el aprovechamiento integral del ecosistema nativo del lenguaje, destacando el papel fundamental de \texttt{cargo} como gestor de proyectos y sistema de construcción. Su uso exhaustivo ha permitido consolidar resultados tangibles y entregables de alto valor profesional como una documentación técnica completa, navegable e integrada directamente desde el código fuente mediante la herramienta \texttt{cargo doc}, lo cual garantiza una excelente experiencia de usuario y facilita la curva de aprendizaje para futuros contribuyentes. Por otro lado, la propia biblioteca ha sido estructurada y empaquetada formalmente como un \textit{crate} de Rust. Este formato estandarizado no solo simplifica radicalmente su importación y uso en aplicaciones de terceros, sino que deja el proyecto completamente preparado para su eventual despliegue y publicación en el registro oficial de la comunidad (\texttt{crates.io})~\cite{crates_io}.
 
@@ -2250,7 +2241,7 @@ Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la co
     \section{Limitaciones Identificadas}
     A partir de la fase de implementación y del análisis experimental de la biblioteca, se han identificado diversos retos estructurales que merecen una reflexión crítica. En primer lugar, destaca el compromiso ineludible entre abstracción y optimización. Para dotar al sistema de un carácter genérico capaz de unificar de manera transparente problemas mono-objetivo y multi-objetivo, ha sido necesario introducir un alto nivel de abstracción apoyado en el uso masivo de \textit{traits} y polimorfismo dinámico en ciertos subsistemas. Esta generalización extrema, si bien arquitectónicamente elegante, dificulta la aplicación de optimizaciones de bajo nivel, dado que restringe el margen del compilador para predecir tipos concretos en tiempo de compilación y exprimir al máximo las capacidades de la CPU.
 
-    Esta rigidez inherente a las exigencias formales de Rust también repercute en la experiencia del desarrollador. Aunque el uso de la biblioteca no resulta conceptualmente complejo, la configuración e instanciación de sus componentes exige una verbosidad significativamente mayor que en ecosistemas dinámicos como Python (\textit{DEAP} o \textit{mealpy}), convirtiendo la implementación de nuevos algoritmos en un proceso en ocasiones tedioso. Adicionalmente, al tratarse de una primera iteración completa de la biblioteca, se asume una cierta deuda técnica; el código base aún presenta secciones difusas que requerirán refactorizaciones, unificación de convenciones de nomenclatura (\textit{renaming}) y una mejora general en su legibilidad.
+    Esta rigidez inherente a las exigencias formales de Rust también repercute en la experiencia del desarrollador. Aunque el uso de la biblioteca no resulta conceptualmente complejo, la configuración e instanciación de sus componentes exige una verbosidad significativamente mayor que en ecosistemas dinámicos como Python (\textit{DEAP} o \textit{mealpy}), convirtiendo la implementación de nuevos algoritmos en un proceso en ocasiones tedioso. Adicionalmente, al tratarse de una primera iteración completa de la biblioteca, se asume una cierta deuda técnica; el código base aún presenta secciones difusas que requerirán refactorizaciones, unificación de convenciones de nomenclatura y una mejora general en su legibilidad.
 
     Por otro lado, en el plano netamente operativo, se ha detectado una particularidad intrínseca en el modelo de ejecución paralela referente al determinismo en entornos concurrentes heterogéneos. Al ejecutar un algoritmo estocástico con una misma semilla en máquinas con diferente número de núcleos, el reparto y la planificación de los hilos varían. Esto altera el orden de evaluación y la sincronización de las trayectorias, provocando que los resultados diverjan entre equipos con distinto hardware. Aunque no constituye un fallo de programación \textit{per se}, representa una pérdida de determinismo estricto inter-máquina que debe ser documentada para garantizar la reproducibilidad de los experimentos. Finalmente, el subsistema de tolerancia a fallos presenta ciertas inconsistencias funcionales. En el módulo de experimentos actual, la creación de puntos de persistencia (\textit{checkpoints}) es obligatoria y no puede ser desactivada, lo que induce un estrés de escritura en disco innecesario. A esto se suma una interfaz de línea de comandos (CLI) poco intuitiva y compleja de manejar al intentar reanudar ejecuciones pausadas en experimentos.
 
@@ -2263,13 +2254,7 @@ Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la co
 
         En cuanto a la operativa y robustez de la biblioteca, se proyecta una reestructuración del módulo de persistencia para conferir a los \textit{checkpoints} un carácter totalmente opcional durante la fase de experimentos, eliminando así los cuellos de botella de entrada/salida (I/O) en disco. Esta mejora técnica vendrá acompañada del diseño de una CLI más amigable, moderna y robusta para la gestión, recuperación y limpieza del histórico de ejecuciones. 
 
-        Por último, para apuntalar la madurez y utilidad del proyecto en el ámbito científico, se ampliará el ecosistema experimental incrementando exhaustivamente la cobertura de pruebas unitarias y de integración (\textit{test coverage}). De forma complementaria, se nutrirá la biblioteca con una batería más extensa de problemas continuos y combinatorios, operadores avanzados y la incorporación de metaheurísticas multi-objetivo del estado del arte, tales como NSGA-III o MOEA/D, culminando así su preparación para entornos de investigación competitivos.
-
-    \section{Conclusion}
-
-        El desarrollo de este software ha representado un cambio de paradigma respecto a mi formación académica previa. La complejidad técnica no radica meramente en la sintaxis, sino en la comprensión profunda del ecosistema del lenguaje, así como de sus virtudes y limitaciones intrínsecas. \\
-        Rust supuso un reto, un lenguaje de sistemas que, si bien permite ciertos patrones de diseño, se aleja de la Programación Orientada a Objetos convencional de lenguajes como Java a la cual estaba acostumbrado. En su lugar, propone un modelo basado en estructuras (structs) y rasgos (traits), estos últimos con una clara influencia de las clases de tipos de Haskell. \\
-        Estas variaciones desembocaron en problemas durante el desarrollo de la arquitectura, al no existir tampoco herencia, un factor limitante en el desarrollo de la arquitectura
+        Por último, para apuntalar la madurez y utilidad del proyecto en el ámbito científico, se ampliará el ecosistema experimental incrementando exhaustivamente la cobertura de pruebas unitarias y de integración (\textit{test coverage}). De forma complementaria, se nutrirá la biblioteca con una batería más extensa de problemas continuos y combinatorios, operadores avanzados y la incorporación de metaheurísticas multi-objetivo del estado del arte, tales como NSGA-III~\cite{Deb2014NSGAIII} o MOEA/D~\cite{Zhang2007MOEAD}, culminando así su preparación para entornos de investigación competitivos.
 
 \section{Conclusiones sobre el desarrollo y el cambio de paradigma}
     El desarrollo de la biblioteca \texttt{roma} ha supuesto un profundo cambio de paradigma en lo que respecta al diseño y modelado de software algorítmico. Tradicionalmente, la Programación Orientada a Objetos (POO) convencional, abanderada por lenguajes como Java o C++, ha constituido el estándar académico y de la industria para modelar arquitecturas de optimización. Este enfoque se basa en la encapsulación conjunta de estado y comportamiento dentro de clases abstractas, apoyándose masivamente en la herencia para establecer jerarquías, compartir lógica común y reutilizar código entre distintas metaheurísticas.
@@ -2278,9 +2263,9 @@ Con el fin de situar la biblioteca desarrollada en el ecosistema actual de la co
 
     Esta divergencia paradigmática generó notables complicaciones durante las fases iniciales de diseño. La falta de herencia actuó como un factor limitante a la hora de estructurar familias de algoritmos y operadores, provocando bloqueos que requirieron múltiples refactorizaciones del núcleo de la biblioteca. Para superar estas restricciones, fue imperativo abandonar los patrones jerárquicos y adoptar principios de diseño más modernos y modulares, fundamentados en la regla de "composición sobre herencia" (\textit{composition over inheritance}), el uso avanzado de tipos genéricos y el despacho dinámico (\textit{dynamic dispatch}).
 
-A pesar de la exigente curva de aprendizaje impuesta por estas normativas estructurales y por su riguroso sistema de propiedad en memoria (\textit{Borrow Checker}), la conclusión fundamental de este proyecto es que \textbf{Rust es un lenguaje completamente viable y excepcionalmente competitivo para el desarrollo de bibliotecas metaheurísticas}. Su capacidad para garantizar concurrencia segura frente a condiciones de carrera (\textit{data races}) y sus abstracciones de coste cero (\textit{zero-cost abstractions}) permiten construir motores de optimización con un rendimiento computacional puro comparable a C/C++, pero con garantías de seguridad de memoria muy superiores.
+    A pesar de la exigente curva de aprendizaje impuesta por estas normativas estructurales y por su riguroso sistema de propiedad en memoria (\textit{Borrow Checker}), la conclusión fundamental de este proyecto es que \textbf{Rust es un lenguaje completamente viable y excepcionalmente competitivo para el desarrollo de bibliotecas metaheurísticas}. Su capacidad para garantizar concurrencia segura frente a condiciones de carrera (\textit{data races}) y sus abstracciones de coste cero (\textit{zero-cost abstractions}) permiten construir motores de optimización con un rendimiento computacional puro comparable a C/C++, pero con garantías de seguridad de memoria muy superiores.
 
-Si bien la implementación actual de \texttt{roma} cumple satisfactoriamente con los objetivos propuestos, la experiencia empírica y las lecciones de ingeniería de software asimiladas a lo largo de este proyecto revelan que el sistema aún tiene un margen de evolución extraordinario. Conocidos ahora los obstáculos iniciales del lenguaje y dominando sus patrones idiomáticos, sería posible aplicar estas directrices desde la base del diseño. Reestructurando el núcleo algorítmico, implementando macros procedurales para reducir la verbosidad y transicionando hacia una gestión de memoria \textit{Zero-Copy}, se podría perfeccionar la arquitectura actual hasta consolidar una biblioteca verdaderamente increíble; una herramienta de vanguardia capaz de liderar la investigación metaheurística por su equilibrio perfecto entre ergonomía, seguridad y velocidad extrema.
+    Si bien la implementación actual de \texttt{roma} cumple satisfactoriamente con los objetivos propuestos, la experiencia empírica y las lecciones de ingeniería de software asimiladas a lo largo de este proyecto revelan que el sistema aún tiene un margen de evolución extraordinario. Conocidos ahora los obstáculos iniciales del lenguaje y dominando sus patrones idiomáticos, sería posible aplicar estas directrices desde la base del diseño. Reestructurando el núcleo algorítmico, implementando macros procedurales para reducir la verbosidad y transicionando hacia una gestión de memoria \textit{Zero-Copy}, se podría perfeccionar la arquitectura actual hasta consolidar una biblioteca verdaderamente increíble; una herramienta de vanguardia capaz de liderar la investigación metaheurística por su equilibrio perfecto entre ergonomía, seguridad y velocidad extrema.
 
 
 
@@ -2289,7 +2274,7 @@ Si bien la implementación actual de \texttt{roma} cumple satisfactoriamente con
 %% Apendices
 \begin{umaappendices}
     
-\umaappendix{Installation Manual}
+\umaappendix{Manual de instalación}
 
 \small % La letra pequeña quizás hace que luzca más como un manual
 
@@ -2337,7 +2322,7 @@ Si bien la implementación actual de \texttt{roma} cumple satisfactoriamente con
     
     \begin{verbatim}
     [dependencies]
-    roma_lib = "0.1.0"
+    roma_lib = "0.1.2"
     \end{verbatim}
 
     Una vez añadida la dependencia, Cargo se encargará automáticamente de descargar, compilar e integrar la biblioteca durante el proceso de construcción del proyecto. A partir de ese momento, la funcionalidad proporcionada por la biblioteca podrá utilizarse directamente desde el código fuente mediante las instrucciones \texttt{use crate::} habituales del lenguaje.
@@ -2350,7 +2335,7 @@ El propósito de este apéndice es ilustrar la metodología de trabajo y la inte
 
 La filosofía de diseño de la herramienta busca separar de forma clara la definición del problema matemático, la configuración de la metaheurística y la recolección de métricas. El flujo de programación estándar se articula mediante las siguientes fases metodológicas:
 
-\section*{1. Inicialización y definición del problema}
+\section{1. Inicialización y definición del problema}
 El punto de partida de cualquier ejecución requiere modelar el escenario de optimización. La biblioteca emplea el patrón de diseño de \textit{software} \textit{Builder} para facilitar esta tarea, permitiendo instanciar el problema de forma declarativa. 
 
 En el fragmento expuesto a continuación, se captura una semilla estocástica a través del gestor de argumentos por línea de comandos (\texttt{CliArgs}) para asegurar la reproducibilidad determinista. Seguidamente, se define una mochila con una capacidad máxima de $90.0$ unidades y se registran secuencialmente tres elementos, especificando para cada uno de ellos su peso y su valor asociado.
@@ -2367,7 +2352,7 @@ let problem = KnapsackBuilder::new()
     .build();
 \end{lstlisting}
 
-\section*{2. Configuración del motor heurístico}
+\section{2. Configuración del motor heurístico}
 Una vez establecido el dominio del problema, se procede a ensamblar el motor de búsqueda. En este caso particular, la parametrización de la Escalada Simple exige dos componentes estructurales básicos:
 \begin{itemize}
     \item \textbf{Operador de vecindad}: Se inyecta la utilidad \texttt{BitFlipNeighborhood}, encargada de generar soluciones candidatas adyacentes invirtiendo puntualmente valores en la representación binaria.
@@ -2387,7 +2372,7 @@ let parameters = HillClimbingParameters::new(
 let mut algorithm = HillClimbing::new(parameters);
 \end{lstlisting}
 
-\section*{3. Acoplamiento de Observadores}
+\section{3. Acoplamiento de Observadores}
 Uno de los rasgos más potentes de la arquitectura de la biblioteca es su sistema de monitorización o telemetría pasiva. En lugar de forzar la impresión intrusiva de datos durante la evaluación, el desarrollador puede vincular múltiples observadores al algoritmo antes de iniciar la ejecución. 
 
 El siguiente bloque adjunta tres mecanismos de registro simultáneos: salida por terminal (\texttt{ConsoleObserver}), trazado de gráficas (\texttt{ChartObserver}) y generación de un documento web (\texttt{HtmlReportObserver}).
@@ -2399,7 +2384,7 @@ algorithm.add_observer(Box::new(ChartObserver::new_default()));
 algorithm.add_observer(Box::new(HtmlReportObserver::new_default()));
 \end{lstlisting}
 
-\section*{4. Ejecución y extracción de resultados}
+\section{4. Ejecución y extracción de resultados}
 El ciclo de vida del bloque de código culmina con la invocación del método \texttt{run}. Este proceso vincula el algoritmo con el problema matemático definido en el primer paso y desencadena el proceso de búsqueda en el procesador. 
 
 Al finalizar, la función devuelve un objeto que consolida el histórico de la prueba, a partir del cual se extrae la mejor solución encontrada en el espacio de búsqueda y se imprime su métrica de aptitud (\textit{fitness}).
@@ -2421,7 +2406,7 @@ if let Some(best) = result.best_solution(&problem) {
 }
 \end{lstlisting}
 
-\section*{5. Ensamblaje final del programa}
+\section{5. Ensamblaje final del programa}
 Para facilitar la comprensión global y asegurar la reproducibilidad del ejemplo, se presenta a continuación el código fuente íntegro. Este bloque incluye las sentencias de importación (\texttt{use}) necesarias y encapsula el flujo de trabajo descrito anteriormente dentro de la función principal de ejecución (\texttt{main}).
 
 \begin{lstlisting}[language=Rust, caption={Implementación íntegra del flujo de trabajo.}, label={lst:ejemplo_basico_completo}]
