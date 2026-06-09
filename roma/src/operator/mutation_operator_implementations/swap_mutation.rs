@@ -104,4 +104,15 @@ mod tests {
         genes.sort_unstable();
         assert_eq!(genes, vec![0, 1, 2, 3, 4]);
     }
+
+    #[test]
+    fn two_element_permutation_is_always_swapped_at_probability_one() {
+        let mutation = SwapMutation::new();
+        let mut solution = Solution::new(vec![0, 1]);
+        let mut rng = Random::new(7);
+
+        mutation.execute(&mut solution, 1.0, None, &mut rng);
+
+        assert_eq!(solution.variables(), &[1, 0]);
+    }
 }

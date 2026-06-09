@@ -144,14 +144,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_zdt1_creation() {
+    fn creates_solution_with_requested_dimension() {
         let problem = ZDT1Problem::new(30);
         let solution = problem.create_solution(&mut Random::new(10));
         assert_eq!(solution.num_variables(), 30);
     }
 
     #[test]
-    fn test_zdt1_evaluation() {
+    fn evaluation_populates_two_objectives() {
         let problem = ZDT1Problem::new(30);
         let mut solution = problem.create_solution(&mut Random::new(10));
 
@@ -164,7 +164,7 @@ mod tests {
     }
 
     #[test]
-    fn test_zdt1_pareto_front_point() {
+    fn pareto_front_point_matches_closed_form() {
         let problem = ZDT1Problem::new(30);
 
         // Create one point with known variables and verify deterministic scalar value.
@@ -183,7 +183,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "ZDT1 requires at least 2 variables")]
-    fn test_zdt1_invalid_variables() {
+    fn panics_when_dimension_is_below_minimum() {
         ZDT1Problem::new(1);
     }
 

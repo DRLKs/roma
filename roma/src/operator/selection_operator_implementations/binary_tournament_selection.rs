@@ -130,14 +130,14 @@ mod tests {
     }
 
     #[test]
-    fn test_binary_tournament_name() {
+    fn name_is_exposed() {
         let selection = BinaryTournamentSelection::new();
 
         assert_eq!(selection.name(), "BinaryTournamentSelection");
     }
 
     #[test]
-    fn test_binary_tournament_selection() {
+    fn selects_better_solution_for_maximization() {
         let selection = BinaryTournamentSelection::new();
         let mut rng = Random::new(42);
 
@@ -155,7 +155,7 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_binary_tournament_selection_with_empty_population() {
+    fn panics_on_empty_population() {
         let selection = BinaryTournamentSelection::new();
         let mut rng = Random::new(42);
 
@@ -165,7 +165,7 @@ mod tests {
     }
 
     #[test]
-    fn test_binary_tournament_selection_with_only_one() {
+    fn returns_only_solution_when_population_has_one_member() {
         let selection = BinaryTournamentSelection::new();
         let mut rng = Random::new(42);
 
@@ -182,7 +182,7 @@ mod tests {
     }
 
     #[test]
-    fn test_binary_tournament_selection_minimization() {
+    fn selects_better_solution_for_minimization() {
         let selection = BinaryTournamentSelection::new();
         let mut rng = Random::new(42);
 

@@ -139,7 +139,7 @@ mod test {
     }
 
     #[test]
-    fn get_best_solution_test() {
+    fn best_solution_supports_maximization() {
         let mut solution_set: VectorSolutionSet<f64> = VectorSolutionSet::new();
 
         let best_solution = RealSolutionBuilder::new(3).with_quality(10.0).build();
@@ -154,14 +154,14 @@ mod test {
     }
 
     #[test]
-    fn vector_solution_creates_empty_test() {
+    fn new_set_is_empty() {
         let solution_set: VectorSolutionSet<String> = VectorSolutionSet::new();
 
         assert!(solution_set.is_empty());
     }
 
     #[test]
-    fn number_of_solutions_test() {
+    fn size_tracks_added_solutions() {
         let mut solution_set: VectorSolutionSet<String> = VectorSolutionSet::new();
 
         let variables = vec![

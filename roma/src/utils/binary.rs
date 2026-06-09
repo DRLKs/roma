@@ -174,3 +174,63 @@ pub(crate) fn byte_to_status(value: u8) -> io::Result<CheckpointRunStatus> {
         )),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn string_roundtrip_preserves_contents() {
+        let mut bytes = Vec::new();
+        push_string(&mut bytes, "roma-checkpoint").expect("string should serialize");
+
+        let decoded = read_string(&mut Cursor::new(bytes)).expect("string should deserialize");
+
+        assert_eq!(decoded, "roma-checkpoint");
+    }
+
+    #[test]
+    fn option_string_roundtrip_preserves_some_and_none() {
+        let mut bytes = Vec::new();
+        push_option_string(&mut bytes, &Some("payload".to_string()))
+            .expect("some string should serialize");
+        push_option_string(&mut bytes, &None).expect("none string should serialize");
+
+        let mut cursor = Cursor::new(bytes);
+        let first = read_option_string(&mut cursor).expect("some string should deserialize");
+        let second = read_option_string(&mut cursor).expect("none string should deserialize");
+
+        assert_eq!(first.as_deref(), Some("payload"));
+        assert_eq!(second, None);
+    }
+
+    #[test]
+    fn status_byte_roundtrip_preserves_all_variants() {
+        for status in [
+            CheckpointRunStatus::Running,
+            CheckpointRunStatus::Completed,
+            CheckpointRunStatus::Failed,
+            CheckpointRunStatus::Interrupted,
+        ] {
+            let encoded = status_to_byte(status);
+            let decoded = byte_to_status(encoded).expect("status byte should decode");
+            assert_eq!(decoded, status);
+        }
+    }
+
+    #[test]
+    fn invalid_status_byte_returns_error() {
+        let error = byte_to_status(255).expect_err("invalid byte should fail");
+
+        assert!(error.to_string().contains("invalid checkpoint status byte"));
+    }
+
+    #[test]
+    fn invalid_option_string_flag_returns_error() {
+        let error = read_option_string(&mut Cursor::new(vec![9]))
+            .expect_err("invalid option flag should fail");
+
+        assert!(error.to_string().contains("invalid option flag for string"));
+    }
+}

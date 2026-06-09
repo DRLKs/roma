@@ -160,12 +160,12 @@ impl Random {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
 
     use crate::utils::random::{seed_from_time, Random};
 
     #[test]
-    fn range_between_test() {
+    fn range_between_respects_bounds() {
         let min: u64 = 100;
         let max: u64 = 200;
         let mut rng: Random = Random::new(seed_from_time());
@@ -175,7 +175,7 @@ mod test {
     }
 
     #[test]
-    fn coin_flip_test() {
+    fn chance_honors_zero_and_one_probabilities() {
         let mut rng_seed_generator = Random::new(seed_from_time());
         let seed: u64 = rng_seed_generator.next_u64();
 
@@ -191,7 +191,7 @@ mod test {
     }
 
     #[test]
-    fn random_determinism_test() {
+    fn random_is_deterministic_for_same_seed() {
         let mut rng_seed_generator = Random::new(seed_from_time());
         let seed: u64 = rng_seed_generator.next_u64();
 
@@ -221,7 +221,7 @@ mod test {
     }
 
     #[test]
-    fn zero_seed_test() {
+    fn zero_seed_produces_in_range_values() {
         let seed: u64 = 0;
         let mut rng: Random = Random::new(seed);
 
@@ -231,7 +231,7 @@ mod test {
     }
 
     #[test]
-    fn highest_seed_test() {
+    fn highest_seed_produces_in_range_values() {
         let seed = u64::MAX;
         let mut rng: Random = Random::new(seed);
 

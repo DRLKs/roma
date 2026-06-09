@@ -512,6 +512,38 @@ mod tests {
     }
 
     #[test]
+    fn records_first_snapshot_then_only_checkpoint_iterations_with_new_seq_ids() {
+        let base = std::env::temp_dir().join(format!(
+            "roma_chart_observer_seq_filter_test_{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+
+        let mut observer = ChartObserver::new(base);
+        observer.update(&AlgorithmEvent::<bool>::Start {
+            algorithm_name: "GA".to_string(),
+        });
+        observer.update(&AlgorithmEvent::<bool>::ExecutionStateUpdated {
+            state: ObserverState::new(1, 1, 10, 1.0, 0.8, 0.5, "selected=1/2".to_string()),
+        });
+        observer.update(&AlgorithmEvent::<bool>::ExecutionStateUpdated {
+            state: ObserverState::new(1, 15, 20, 2.0, 1.8, 1.5, "duplicate".to_string()),
+        });
+        observer.update(&AlgorithmEvent::<bool>::ExecutionStateUpdated {
+            state: ObserverState::new(2, 14, 30, 3.0, 2.8, 2.5, "non-checkpoint".to_string()),
+        });
+        observer.update(&AlgorithmEvent::<bool>::ExecutionStateUpdated {
+            state: ObserverState::new(3, 15, 40, 4.0, 3.8, 3.5, "checkpoint".to_string()),
+        });
+
+        assert_eq!(observer.generations, vec![1, 15]);
+        assert_eq!(observer.evaluations, vec![10, 40]);
+        assert_eq!(observer.best_fitness_history, vec![1.0, 4.0]);
+    }
+
+    #[test]
     fn convergence_chart_excludes_average_and_worst_series() {
         let base = std::env::temp_dir().join(format!(
             "roma_chart_observer_best_only_test_{}",

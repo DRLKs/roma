@@ -261,7 +261,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn problem_description_test() {
+    fn stores_problem_description() {
         let mut knapsack_problem = KnapsackProblem::new();
 
         let description = "Test Problem".to_string();
@@ -271,7 +271,7 @@ mod tests {
     }
 
     #[test]
-    fn test_knapsack_creation_with_data() {
+    fn with_data_creates_solution_with_expected_variable_count() {
         let weights = vec![10.0, 20.0, 30.0];
         let values = vec![100.0, 200.0, 300.0];
         let capacity = 50.0;
@@ -283,7 +283,7 @@ mod tests {
     }
 
     #[test]
-    fn test_knapsack_builder() {
+    fn builder_creates_solution_with_expected_variable_count() {
         let problem = KnapsackBuilder::new()
             .with_capacity(50.0)
             .add_item(10.0, 100.0)
@@ -295,7 +295,7 @@ mod tests {
     }
 
     #[test]
-    fn test_knapsack_with_builder() {
+    fn evaluate_assigns_positive_quality_for_profitable_feasible_selection() {
         let problem = KnapsackBuilder::new()
             .with_capacity(100.0)
             .add_item(10.0, 50.0)

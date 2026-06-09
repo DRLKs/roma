@@ -133,7 +133,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_statistics_empty() {
+    fn empty_population_returns_zero_statistics() {
         let population: Vec<Solution<bool>> = vec![];
         let (best, avg, worst) = calculate_population_statistics(&population, &MaxProblem).as_tuple();
         assert_eq!(best, 0.0);
@@ -145,7 +145,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_statistics_single() {
+    fn single_solution_population_returns_same_best_avg_worst() {
         let mut solution: Solution<bool> = Solution::new(vec![]);
         let _fitness = 10.0;
         solution.set_quality(_fitness);
@@ -159,7 +159,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_statistics_multiple() {
+    fn multiple_solutions_compute_expected_statistics() {
         let best_quality = 20.0;
         let worst_quality = 10.0;
         let avg_quality = 15.0;
@@ -183,7 +183,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_statistics_minimization() {
+    fn minimization_statistics_invert_best_and_worst() {
         let s1 = BinarySolutionBuilder::ones(3).with_quality(20.0).build();
         let s2 = BinarySolutionBuilder::zeros(3).with_quality(10.0).build();
         let s3 = BinarySolutionBuilder::random(3, Some(10))
@@ -199,7 +199,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_population_statistics_tracks_best_index() {
+    fn calculate_population_statistics_tracks_best_index() {
         let s1 = BinarySolutionBuilder::ones(3).with_quality(20.0).build();
         let s2 = BinarySolutionBuilder::zeros(3).with_quality(10.0).build();
         let s3 = BinarySolutionBuilder::random(3, Some(10))
@@ -216,7 +216,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_population_statistics_by_skips_missing_values() {
+    fn calculate_population_statistics_by_skips_missing_quality_values() {
         let mut s1: Solution<bool> = Solution::new(vec![true]);
         s1.set_quality(12.0);
         let s2: Solution<bool> = Solution::new(vec![false]);

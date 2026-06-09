@@ -96,12 +96,12 @@ impl SelectionOperator<f64, ParetoCrowdingDistanceQuality> for MultiObjectiveTou
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::problem::implementations::zdt1_problem::ZDT1Problem;
     use crate::solution::MultiObjectiveRealSolutionBuilder;
+    use crate::problem::implementations::zdt1_problem::ZDT1Problem;
     use crate::problem::traits::Problem;
 
     #[test]
-    fn test_selection_from_single_solution() {
+    fn returns_the_only_solution_when_population_has_one_member() {
         let selection = MultiObjectiveTournamentSelection::new();
         let mut rng = Random::new(42);
         let solution = MultiObjectiveRealSolutionBuilder::from_variables(vec![1.0])
@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "Cannot select from empty population")]
-    fn test_selection_from_empty_population() {
+    fn panics_on_empty_population() {
         let selection = MultiObjectiveTournamentSelection::new();
         let mut rng = Random::new(42);
         let population: Vec<Solution<f64, ParetoCrowdingDistanceQuality>> = vec![];
@@ -126,7 +126,7 @@ mod tests {
     }
 
     #[test]
-    fn test_selection_prefers_better_rank() {
+    fn prefers_lower_rank() {
         let selection = MultiObjectiveTournamentSelection::new();
         let mut rng = Random::new(42);
 
@@ -150,7 +150,7 @@ mod tests {
     }
 
     #[test]
-    fn test_selection_uses_crowding_distance_when_rank_ties() {
+    fn uses_crowding_distance_when_rank_ties() {
         let selection = MultiObjectiveTournamentSelection::new();
         let mut rng = Random::new(42);
 
@@ -176,13 +176,13 @@ mod tests {
     }
 
     #[test]
-    fn test_selection_name() {
+    fn name_is_exposed() {
         let selection = MultiObjectiveTournamentSelection::new();
         assert_eq!(selection.name(), "Multi-Objective Tournament Selection");
     }
 
     #[test]
-    fn test_selection_breaks_non_dominated_ties_without_bias_to_second() {
+    fn breaks_non_dominated_ties_without_bias_to_second() {
         let selection = MultiObjectiveTournamentSelection::new();
         let mut rng = Random::new(1234);
 
@@ -215,5 +215,52 @@ mod tests {
 
         assert!(picked_first > 0);
         assert!(picked_second > 0);
+    }
+
+    #[test]
+    fn falls_back_to_dominance_when_rank_and_crowding_are_missing() {
+        let selection = MultiObjectiveTournamentSelection::new();
+        let mut rng = Random::new(42);
+
+        let dominating = MultiObjectiveRealSolutionBuilder::from_variables(vec![1.0])
+            .with_objectives(vec![0.1, 0.1])
+            .build();
+
+        let dominated = MultiObjectiveRealSolutionBuilder::from_variables(vec![2.0])
+            .with_objectives(vec![0.9, 0.9])
+            .build();
+
+        let population = vec![dominating, dominated];
+        let problem = ZDT1Problem::new(2);
+
+        for _ in 0..10 {
+            let selected = selection.execute(&population, &mut rng, &|a, b| problem.dominates(a, b));
+            assert_eq!(selected.variables(), &[1.0]);
+        }
+    }
+
+    #[test]
+    fn missing_crowding_distance_is_treated_as_lower_than_present_values() {
+        let selection = MultiObjectiveTournamentSelection::new();
+        let mut rng = Random::new(42);
+
+        let missing_crowding = MultiObjectiveRealSolutionBuilder::from_variables(vec![1.0])
+            .with_objectives(vec![0.4, 0.6])
+            .with_rank(0)
+            .build();
+
+        let higher_crowding = MultiObjectiveRealSolutionBuilder::from_variables(vec![2.0])
+            .with_objectives(vec![0.6, 0.4])
+            .with_rank(0)
+            .with_crowding_distance(2.0)
+            .build();
+
+        let population = vec![missing_crowding, higher_crowding];
+        let problem = ZDT1Problem::new(2);
+
+        for _ in 0..10 {
+            let selected = selection.execute(&population, &mut rng, &|a, b| problem.dominates(a, b));
+            assert_eq!(selected.variables(), &[2.0]);
+        }
     }
 }

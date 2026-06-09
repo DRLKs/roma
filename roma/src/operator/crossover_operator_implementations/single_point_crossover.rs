@@ -94,14 +94,14 @@ mod tests {
     use crate::solution::BinarySolutionBuilder;
 
     #[test]
-    fn test_single_point_crossover_name() {
+    fn name_is_exposed() {
         let crossover = SinglePointCrossover::new();
 
         assert_eq!(crossover.name(), "SinglePointCrossover");
     }
 
     #[test]
-    fn test_single_point_crossover() {
+    fn offspring_exchange_a_suffix_after_a_single_cut_point() {
         let crossover = SinglePointCrossover::new();
         let parent1 = BinarySolutionBuilder::zeros(10).build();
         let parent2 = BinarySolutionBuilder::ones(10).build();
@@ -110,7 +110,29 @@ mod tests {
         let offspring = crossover.execute(&parent1, &parent2, None, &mut rng);
 
         assert_eq!(offspring.len(), 2);
-        assert_eq!(offspring[0].num_variables(), 10);
-        assert_eq!(offspring[1].num_variables(), 10);
+
+        for child in &offspring {
+            assert_eq!(child.num_variables(), 10);
+        }
+
+        let first_true = offspring[0]
+            .variables()
+            .iter()
+            .position(|&value| value)
+            .expect("offspring should inherit a suffix from the second parent");
+        assert!(first_true > 0);
+        assert!(first_true < offspring[0].num_variables());
+        assert!(offspring[0].variables()[..first_true].iter().all(|&value| !value));
+        assert!(offspring[0].variables()[first_true..].iter().all(|&value| value));
+
+        let first_false = offspring[1]
+            .variables()
+            .iter()
+            .position(|&value| !value)
+            .expect("offspring should inherit a suffix from the first parent");
+        assert!(first_false > 0);
+        assert!(first_false < offspring[1].num_variables());
+        assert!(offspring[1].variables()[..first_false].iter().all(|&value| value));
+        assert!(offspring[1].variables()[first_false..].iter().all(|&value| !value));
     }
 }

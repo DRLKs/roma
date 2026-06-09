@@ -683,3 +683,90 @@ where
         Ok(Box::new(result))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{GeneticAlgorithm, GeneticAlgorithmParameters, GeneticAlgorithmState};
+    use crate::algorithms::checkpoint::StepStateCheckpoint;
+    use crate::algorithms::termination::{TerminationCriteria, TerminationCriterion};
+    use crate::operator::crossover_operator_implementations::single_point_crossover::SinglePointCrossover;
+    use crate::operator::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
+    use crate::operator::selection_operator_implementations::binary_tournament_selection::BinaryTournamentSelection;
+    use crate::problem::implementations::knapsack_problem::KnapsackBuilder;
+    use crate::solution_set::traits::SolutionSet;
+    use crate::Algorithm;
+
+    #[test]
+    fn state_from_payload_skips_malformed_population_entries() {
+        let state = <GeneticAlgorithmState<bool> as StepStateCheckpoint<bool>>::from_payload(
+            "iter=2;eval=7;seed=9;pop=[not-a-solution]",
+        );
+
+        assert_eq!(state.generation, 2);
+        assert_eq!(state.evaluations, 7);
+        assert_eq!(state.run_seed, 9);
+        assert!(state.population.is_empty());
+    }
+
+    #[test]
+    fn elite_size_equal_to_population_size_keeps_population_size_stable() {
+        let problem = KnapsackBuilder::new()
+            .with_capacity(20.0)
+            .add_items(vec![(4.0, 8.0), (7.0, 13.0), (5.0, 9.0), (3.0, 4.0)])
+            .build();
+
+        let parameters = GeneticAlgorithmParameters::new(
+            6,
+            0.9,
+            0.05,
+            SinglePointCrossover::new(),
+            BitFlipMutation::new(),
+            BinaryTournamentSelection::new(),
+            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(4)]),
+        )
+        .with_elite_size(6)
+        .with_seed(21)
+        .sequential();
+
+        let mut algorithm = GeneticAlgorithm::new(parameters);
+        let result = algorithm
+            .run(&problem)
+            .expect("GA should support full-population elitism");
+
+        assert_eq!(result.size(), 6);
+        assert!(result.iter().all(|solution| solution.quality().is_some()));
+    }
+
+    #[test]
+    fn parallel_offspring_generation_handles_uneven_worker_splits() {
+        let problem = KnapsackBuilder::new()
+            .with_capacity(25.0)
+            .add_items(vec![(5.0, 10.0), (6.0, 12.0), (7.0, 13.0), (4.0, 7.0), (3.0, 5.0)])
+            .build();
+
+        let parameters = GeneticAlgorithmParameters::new(
+            10,
+            0.8,
+            0.05,
+            SinglePointCrossover::new(),
+            BitFlipMutation::new(),
+            BinaryTournamentSelection::new(),
+            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(5)]),
+        )
+        .with_elite_size(2)
+        .with_seed(22)
+        .with_threads(3);
+
+        let mut algorithm = GeneticAlgorithm::new(parameters);
+        let result = algorithm
+            .run(&problem)
+            .expect("GA should handle uneven parallel worker partitions");
+
+        assert_eq!(result.size(), 10);
+        assert!(
+            result
+                .best_solution_value_or(&problem, f64::NEG_INFINITY)
+                .is_finite()
+        );
+    }
+}

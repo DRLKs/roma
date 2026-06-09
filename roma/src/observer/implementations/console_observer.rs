@@ -115,4 +115,11 @@ mod tests {
 
         assert_eq!(line.as_deref(), Some("Best solution: selected=2/3"));
     }
+
+    #[test]
+    fn omits_blank_best_solution_presentations() {
+        let line = ConsoleObserver::format_best_solution_line(&best_solution("   \n  "));
+
+        assert_eq!(line, None);
+    }
 }

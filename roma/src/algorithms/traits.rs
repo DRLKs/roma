@@ -90,7 +90,7 @@ where
 
         let mut last_checkpoint_path: Option<std::path::PathBuf> = None;
 
-        let result = run_with_observer_runtime(
+        let output = run_with_observer_runtime(
             &mut observers,
             criteria,
             better_fitness,
@@ -147,8 +147,8 @@ where
         );
         *self.observers_mut() = observers;
 
-        self.set_solution_set(result.clone());
-        Ok(result)
+        self.set_solution_set(output.clone());
+        Ok(output)
     }
 
     /// Returns `Ok(())` when parameters are valid, or `Err(message)` otherwise.

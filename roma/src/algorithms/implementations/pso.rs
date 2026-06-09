@@ -657,6 +657,23 @@ mod tests {
     }
 
     #[test]
+    fn sigmoid_stays_bounded_for_extreme_velocities() {
+        let low = PSO::sigmoid(-1000.0);
+        let mid = PSO::sigmoid(0.0);
+        let high = PSO::sigmoid(1000.0);
+
+        assert!(low.is_finite());
+        assert!(mid.is_finite());
+        assert!(high.is_finite());
+        assert!((0.0..=1.0).contains(&low));
+        assert!((0.0..=1.0).contains(&mid));
+        assert!((0.0..=1.0).contains(&high));
+        assert!(low < mid);
+        assert!(mid < high);
+        assert_eq!(mid, 0.5);
+    }
+
+    #[test]
     fn pso_honors_minimization_direction_from_problem() {
         let problem = MinOnesProblem { num_variables: 12 };
 

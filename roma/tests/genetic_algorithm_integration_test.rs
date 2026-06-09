@@ -50,8 +50,7 @@ fn ga_solves_knapsack_end_to_end_with_observer() {
 }
 
 #[test]
-fn ga_returns_error_with_invalid_parameters_edge_case() {
-    // Edge case: invalid parameter configuration should return a validation error.
+fn ga_rejects_zero_population_size() {
     let problem = KnapsackBuilder::new()
         .with_capacity(10.0)
         .add_item(5.0, 10.0)
@@ -74,4 +73,58 @@ fn ga_returns_error_with_invalid_parameters_edge_case() {
         Err(message) => message,
     };
     assert!(error.contains("population_size"));
+}
+
+#[test]
+fn ga_rejects_out_of_range_crossover_probability() {
+    let problem = KnapsackBuilder::new()
+        .with_capacity(10.0)
+        .add_item(5.0, 10.0)
+        .build();
+
+    let parameters = GeneticAlgorithmParameters::new(
+        8,
+        1.2,
+        0.1,
+        SinglePointCrossover::new(),
+        BitFlipMutation::new(),
+        BinaryTournamentSelection::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(5)]),
+    )
+    .with_seed(2);
+
+    let mut algorithm = GeneticAlgorithm::new(parameters);
+    let error = match algorithm.run(&problem) {
+        Ok(_) => panic!("GA must reject crossover_probability outside [0,1]"),
+        Err(message) => message,
+    };
+
+    assert!(error.contains("crossover_probability"));
+}
+
+#[test]
+fn ga_rejects_negative_mutation_probability() {
+    let problem = KnapsackBuilder::new()
+        .with_capacity(10.0)
+        .add_item(5.0, 10.0)
+        .build();
+
+    let parameters = GeneticAlgorithmParameters::new(
+        8,
+        0.8,
+        -0.1,
+        SinglePointCrossover::new(),
+        BitFlipMutation::new(),
+        BinaryTournamentSelection::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(5)]),
+    )
+    .with_seed(3);
+
+    let mut algorithm = GeneticAlgorithm::new(parameters);
+    let error = match algorithm.run(&problem) {
+        Ok(_) => panic!("GA must reject mutation_probability outside [0,1]"),
+        Err(message) => message,
+    };
+
+    assert!(error.contains("mutation_probability"));
 }
