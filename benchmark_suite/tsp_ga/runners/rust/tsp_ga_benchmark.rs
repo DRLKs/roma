@@ -1,4 +1,7 @@
+use std::fmt::Display;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 
 use roma_lib::algorithms::{
@@ -10,8 +13,11 @@ use roma_lib::algorithms::{
 };
 use roma_lib::operator::{BinaryTournamentSelection, OrderCrossover, SwapMutation};
 use roma_lib::problem::TspProblem;
+use roma_lib::Problem;
+use roma_lib::solution::{RealBounds, Solution};
 use roma_lib::solution_set::SolutionSet;
 use roma_lib::utils::json_adapter::{get_json_array_values, get_json_number_matrix, get_json_value};
+use roma_lib::utils::random::Random;
 use roma_lib::utils::{measure_result, process_cpu_time_ms};
 
 struct BenchmarkInstance {
@@ -54,8 +60,74 @@ struct BenchmarkResult {
     best_solution: Vec<usize>,
     wall_time_ms: f64,
     cpu_time_ms: Option<f64>,
+    evaluations: Option<usize>,
     status: String,
     error: Option<String>,
+}
+
+struct CountingTspProblem {
+    inner: TspProblem,
+    evaluations: Arc<AtomicUsize>,
+}
+
+impl CountingTspProblem {
+    fn from_inner(inner: TspProblem) -> Self {
+        Self {
+            inner,
+            evaluations: Arc::new(AtomicUsize::new(0)),
+        }
+    }
+
+    fn evaluation_count(&self) -> usize {
+        self.evaluations.load(Ordering::Relaxed)
+    }
+}
+
+impl Problem<usize> for CountingTspProblem {
+    fn new() -> Self {
+        Self::from_inner(TspProblem::new())
+    }
+
+    fn evaluate(&self, solution: &mut Solution<usize>) {
+        self.evaluations.fetch_add(1, Ordering::Relaxed);
+        self.inner.evaluate(solution);
+    }
+
+    fn create_solution(&self, rng: &mut Random) -> Solution<usize> {
+        self.inner.create_solution(rng)
+    }
+
+    fn set_problem_description(&mut self, description: String) {
+        self.inner.set_problem_description(description);
+    }
+
+    fn get_problem_description(&self) -> String {
+        self.inner.get_problem_description()
+    }
+
+    fn dominates(&self, solution_a: &Solution<usize, f64>, solution_b: &Solution<usize, f64>) -> bool {
+        self.inner.dominates(solution_a, solution_b)
+    }
+
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+        self.inner.better_fitness_fn()
+    }
+
+    fn real_bounds(&self) -> Option<&RealBounds> {
+        self.inner.real_bounds()
+    }
+
+    fn get_problem_parameters_payload(&self) -> String {
+        self.inner.get_problem_parameters_payload()
+    }
+
+    fn format_solution(&self, solution: &Solution<usize>) -> String
+    where
+        usize: Display,
+        f64: Display,
+    {
+        self.inner.format_solution(solution)
+    }
 }
 
 fn benchmark_root() -> PathBuf {
@@ -138,16 +210,16 @@ fn load_config(path: &Path) -> Result<BenchmarkConfig, String> {
     })
 }
 
-fn build_problem(instance: &BenchmarkInstance) -> TspProblem {
+fn build_problem(instance: &BenchmarkInstance) -> CountingTspProblem {
     let problem = if let Some(city_positions) = &instance.city_positions {
         TspProblem::from_city_positions(city_positions.clone())
     } else {
         TspProblem::with_distance_matrix(instance.distance_matrix.clone())
     };
     if instance.close_tour {
-        problem
+        CountingTspProblem::from_inner(problem)
     } else {
-        problem.with_open_route()
+        CountingTspProblem::from_inner(problem.with_open_route())
     }
 }
 
@@ -189,6 +261,13 @@ fn format_optional_number(value: Option<f64>) -> String {
     }
 }
 
+fn format_optional_usize(value: Option<usize>) -> String {
+    match value {
+        Some(number) => number.to_string(),
+        None => "null".to_string(),
+    }
+}
+
 fn format_result_json(result: &BenchmarkResult) -> String {
     let lines = vec![
         "  {".to_string(),
@@ -204,6 +283,7 @@ fn format_result_json(result: &BenchmarkResult) -> String {
         format!("    \"best_solution\": {},", format_usize_array(&result.best_solution)),
         format!("    \"wall_time_ms\": {},", result.wall_time_ms),
         format!("    \"cpu_time_ms\": {},", format_optional_number(result.cpu_time_ms)),
+        format!("    \"evaluations\": {},", format_optional_usize(result.evaluations)),
         format!("    \"status\": {},", json_string(&result.status)),
         format!("    \"error\": {}", format_optional_error(&result.error)),
         "  }".to_string(),
@@ -224,7 +304,7 @@ fn format_results_json(results: &[BenchmarkResult]) -> String {
 
 fn run_once(instance: &BenchmarkInstance, config: &BenchmarkConfig, seed: u64) -> BenchmarkResult {
     let cpu_start = process_cpu_time_ms();
-    let measured: Result<(Duration, (f64, Vec<usize>)), String> = measure_result(|| {
+    let measured: Result<(Duration, (f64, Vec<usize>, usize)), String> = measure_result(|| {
         let problem = build_problem(instance);
         let termination = match config.budget.r#type.as_str() {
             "evaluations" => {
@@ -257,14 +337,16 @@ fn run_once(instance: &BenchmarkInstance, config: &BenchmarkConfig, seed: u64) -
             .map(|solution| solution.variables().to_vec())
             .unwrap_or_default();
         let best_fitness = solution_set.best_solution_value_or(&problem, f64::INFINITY);
+        let evaluations = problem.evaluation_count();
 
-        Ok((best_fitness, best_solution))
+        Ok((best_fitness, best_solution, evaluations))
     });
 
-    let cpu_time_ms = cpu_start.and_then(|start| process_cpu_time_ms().map(|end| end - start));
+    let cpu_time_ms = cpu_start
+        .and_then(|start| process_cpu_time_ms().map(|end| end - start));
 
     match measured {
-        Ok((elapsed, (best_fitness, best_solution))) => BenchmarkResult {
+        Ok((elapsed, (best_fitness, best_solution, evaluations))) => BenchmarkResult {
             benchmark_id: config.benchmark_id.clone(),
             library: "roma".to_string(),
             algorithm_family: config.algorithm_family.clone(),
@@ -277,6 +359,7 @@ fn run_once(instance: &BenchmarkInstance, config: &BenchmarkConfig, seed: u64) -
             best_solution,
             wall_time_ms: elapsed.as_secs_f64() * 1000.0,
             cpu_time_ms,
+            evaluations: Some(evaluations),
             status: "ok".to_string(),
             error: None,
         },
@@ -293,6 +376,7 @@ fn run_once(instance: &BenchmarkInstance, config: &BenchmarkConfig, seed: u64) -
             best_solution: Vec::new(),
             wall_time_ms: 0.0,
             cpu_time_ms,
+            evaluations: None,
             status: "error".to_string(),
             error: Some(error),
         },

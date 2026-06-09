@@ -17,6 +17,24 @@ import org.uma.jmetal.util.pseudorandom.JMetalRandom;
 public final class TspGeneticAlgorithmBenchmark {
   private TspGeneticAlgorithmBenchmark() {}
 
+  private static final class CountingTspProblem extends TSP {
+    private int evaluationCount = 0;
+
+    CountingTspProblem(String tspPath) throws java.io.IOException {
+      super(tspPath);
+    }
+
+    @Override
+    public PermutationSolution<Integer> evaluate(PermutationSolution<Integer> solution) {
+      evaluationCount += 1;
+      return super.evaluate(solution);
+    }
+
+    int getEvaluationCount() {
+      return evaluationCount;
+    }
+  }
+
   private static final class TimeLimitedGenerationalTspGa
       extends GenerationalGeneticAlgorithm<PermutationSolution<Integer>> {
     private final long deadlineNs;
@@ -136,7 +154,7 @@ public final class TspGeneticAlgorithmBenchmark {
     JMetalLogger.logger.setUseParentHandlers(false);
     JMetalRandom.getInstance().setSeed(seed);
 
-    TSP problem = new TSP(tspPath);
+    CountingTspProblem problem = new CountingTspProblem(tspPath);
     PMXCrossover crossover = new PMXCrossover(crossoverProbability);
     PermutationSwapMutation mutation = new PermutationSwapMutation(mutationProbability);
     BinaryTournamentSelection<PermutationSolution<Integer>> selection = new BinaryTournamentSelection<>();
@@ -189,6 +207,7 @@ public final class TspGeneticAlgorithmBenchmark {
     payload.append("  \"best_solution\": ").append(formatIntegerList(foundSolution.variables())).append(",\n");
     payload.append("  \"wall_time_ms\": ").append(Double.toString(wallTimeMs)).append(",\n");
     payload.append("  \"cpu_time_ms\": ").append(formatOptionalDouble(cpuTimeMs)).append(",\n");
+    payload.append("  \"evaluations\": ").append(problem.getEvaluationCount()).append(",\n");
     payload.append("  \"status\": \"ok\",\n");
     payload.append("  \"error\": null\n");
     payload.append("}");

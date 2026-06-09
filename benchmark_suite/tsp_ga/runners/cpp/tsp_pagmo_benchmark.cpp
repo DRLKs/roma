@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <ctime>
@@ -6,6 +7,7 @@
 #include <iomanip>
 #include <iostream>
 #include <numeric>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -179,13 +181,19 @@ double route_distance(
 struct tsp_random_keys_problem {
     tsp_random_keys_problem() = default;
 
-    explicit tsp_random_keys_problem(std::vector<std::vector<double>> matrix)
-        : m_distance_matrix(std::move(matrix))
+    explicit tsp_random_keys_problem(
+        std::vector<std::vector<double>> matrix,
+        std::shared_ptr<std::atomic<unsigned long long>> evaluations =
+            std::make_shared<std::atomic<unsigned long long>>(0u))
+        : m_distance_matrix(std::move(matrix)), m_evaluations(std::move(evaluations))
     {
     }
 
     pagmo::vector_double fitness(const pagmo::vector_double &x) const
     {
+        if (m_evaluations) {
+            m_evaluations->fetch_add(1u, std::memory_order_relaxed);
+        }
         const auto route = decode_route(x);
         return {route_distance(route, m_distance_matrix)};
     }
@@ -206,6 +214,7 @@ struct tsp_random_keys_problem {
 
 private:
     std::vector<std::vector<double>> m_distance_matrix;
+    std::shared_ptr<std::atomic<unsigned long long>> m_evaluations;
 };
 
 unsigned generations_from_budget(unsigned budget_value, unsigned population_size)
@@ -263,8 +272,9 @@ int main(int argc, char **argv)
         const auto distance_matrix = build_distance_matrix(coordinates);
         const auto generations =
             is_time_budget(budget_type) ? 1u : generations_from_budget(budget_value, population_size);
+        auto evaluation_counter = std::make_shared<std::atomic<unsigned long long>>(0u);
 
-        pagmo::problem problem{tsp_random_keys_problem(distance_matrix)};
+        pagmo::problem problem{tsp_random_keys_problem(distance_matrix, evaluation_counter)};
         pagmo::population population{problem, population_size, seed};
         pagmo::sga uda{
             generations,
@@ -319,6 +329,7 @@ int main(int argc, char **argv)
         std::cout << "  \"best_solution\": " << format_usize_vector(best_route) << ",\n";
         std::cout << "  \"wall_time_ms\": " << wall_time_ms << ",\n";
         std::cout << "  \"cpu_time_ms\": " << cpu_time_ms << ",\n";
+        std::cout << "  \"evaluations\": " << evaluation_counter->load(std::memory_order_relaxed) << ",\n";
         std::cout << "  \"status\": \"ok\",\n";
         std::cout << "  \"error\": null\n";
         std::cout << "}\n";

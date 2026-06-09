@@ -159,6 +159,7 @@ def run_benchmark(seed):
         "best_solution": [int(value) for value in best],
         "wall_time_ms": (end_wall - start_wall) * 1000.0,
         "cpu_time_ms": (end_cpu - start_cpu) * 1000.0,
+        "evaluations": evaluations,
         "status": "ok",
         "error": None,
     }
@@ -184,6 +185,7 @@ def main():
                 "best_solution": None,
                 "wall_time_ms": None,
                 "cpu_time_ms": None,
+                "evaluations": None,
                 "status": "error",
                 "error": str(exc),
             }
