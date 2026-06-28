@@ -119,6 +119,7 @@ flowchart TD
 
     D --> F
     F --> G
+```
 
 ## Building & Testing
 
