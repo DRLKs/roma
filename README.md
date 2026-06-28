@@ -95,6 +95,30 @@ benchmark_suite/   Reproducible benchmark infrastructure (Docker + Python orches
 docs/           Architecture diagrams and thesis documentation
 ```
 
+flowchart TD
+
+    A[Experiment]
+    B[Experiment Case]
+    C[Problem]
+    D[Algorithm]
+    E[Termination Criteria]
+    F[Solution Set]
+    G[Solution]
+    H[Operators]
+
+    A --> B
+    A --> C
+
+    B --> D
+    B --> C
+
+    D --> C
+    D --> E
+    D --> H
+
+    D --> F
+    F --> G
+
 ## Building & Testing
 
 ```bash
