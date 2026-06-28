@@ -95,6 +95,7 @@ benchmark_suite/   Reproducible benchmark infrastructure (Docker + Python orches
 docs/           Architecture diagrams and thesis documentation
 ```
 
+```mermaid
 flowchart TD
 
     A[Experiment]
