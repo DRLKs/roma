@@ -1,8 +1,10 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
-use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
-use crate::algorithms::termination::{TerminationCriteria};
+use crate::algorithms::checkpoint::{
+    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
+};
+use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::AlgorithmObserver;
@@ -13,7 +15,7 @@ use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::parallel::resolve_num_threads;
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::random::Random;
 use crate::utils::statistics::calculate_population_statistics;
 use crate::Observable;
 
@@ -143,47 +145,39 @@ where
         self.run_seed
     }
 
-    fn to_payload(&self) -> String {
-        let encoded_pop = self
-            .population
-            .iter()
-            .map(|sol| sol.encode())
-            .collect::<Vec<String>>()
-            .join(",");
-
-        format!(
-            "iter={};eval={};seed={};pop=[{}]",
-            self.generation, self.evaluations, self.run_seed, encoded_pop
-        )
+    fn to_payload(&self) -> Vec<u8> {
+        let mut payload = StatePayloadEncoder::new();
+        payload
+            .write_usize(self.generation)
+            .expect("generation should serialize into checkpoint payload");
+        payload
+            .write_usize(self.evaluations)
+            .expect("evaluations should serialize into checkpoint payload");
+        payload.write_u64(self.run_seed);
+        payload
+            .write_solution_vec(&self.population)
+            .expect("population should serialize into checkpoint payload");
+        payload.finish()
     }
 
-    fn from_payload(payload: &str) -> Self {
-        let parts: std::collections::HashMap<&str, &str> = payload
-            .split(';')
-            .filter_map(|s| {
-                let mut kv = s.splitn(2, '=');
-                Some((kv.next()?, kv.next()?))
-            })
-            .collect();
-
-        let generation = parts.get("iter").and_then(|s| s.parse().ok()).unwrap_or(0);
-        let evaluations = parts.get("eval").and_then(|s| s.parse().ok()).unwrap_or(0);
-        let run_seed = parts
-            .get("seed")
-            .and_then(|s| s.parse().ok())
-            .unwrap_or_else(seed_from_time);
-
-        let population = parts
-            .get("pop")
-            .map(|pop_str| {
-                pop_str
-                    .trim_matches(|c| c == '[' || c == ']')
-                    .split(',')
-                    .filter(|s| !s.is_empty())
-                    .filter_map(|sol_str| Solution::decode(sol_str).ok())
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default();
+    fn from_payload(payload: &[u8]) -> Self {
+        let mut payload = StatePayloadDecoder::new(payload)
+            .expect("critical error: invalid genetic algorithm checkpoint payload");
+        let generation = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint generation");
+        let evaluations = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint evaluations");
+        let run_seed = payload
+            .read_u64()
+            .expect("critical error: missing checkpoint run seed");
+        let population = payload
+            .read_solution_vec()
+            .expect("critical error: could not decode checkpoint population");
+        payload
+            .ensure_finished()
+            .expect("critical error: trailing bytes in genetic algorithm checkpoint payload");
 
         Self {
             population,
@@ -497,7 +491,7 @@ where
 
 impl<T, C, M, Sel> Algorithm<T> for GeneticAlgorithm<T, C, M, Sel>
 where
-    T: Clone + Send + Sync + 'static + Display + Display + FromStr,
+    T: Clone + Send + Sync + 'static + Display + FromStr,
     C: CrossoverOperator<T> + Send + Sync,
     M: MutationOperator<T> + Send + Sync,
     Sel: SelectionOperator<T> + Send + Sync,
@@ -693,19 +687,33 @@ mod tests {
     use crate::operator::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
     use crate::operator::selection_operator_implementations::binary_tournament_selection::BinaryTournamentSelection;
     use crate::problem::implementations::knapsack_problem::KnapsackBuilder;
+    use crate::solution::BinarySolutionBuilder;
     use crate::solution_set::traits::SolutionSet;
     use crate::Algorithm;
 
     #[test]
-    fn state_from_payload_skips_malformed_population_entries() {
-        let state = <GeneticAlgorithmState<bool> as StepStateCheckpoint<bool>>::from_payload(
-            "iter=2;eval=7;seed=9;pop=[not-a-solution]",
-        );
+    fn state_payload_roundtrip_preserves_multi_variable_population() {
+        let state = GeneticAlgorithmState {
+            population: vec![
+                BinarySolutionBuilder::from_variables(vec![true, false, true])
+                    .with_quality(2.0)
+                    .build(),
+            ],
+            generation: 2,
+            evaluations: 7,
+            run_seed: 9,
+        };
 
-        assert_eq!(state.generation, 2);
-        assert_eq!(state.evaluations, 7);
-        assert_eq!(state.run_seed, 9);
-        assert!(state.population.is_empty());
+        let payload = <GeneticAlgorithmState<bool> as StepStateCheckpoint<bool>>::to_payload(&state);
+        let restored =
+            <GeneticAlgorithmState<bool> as StepStateCheckpoint<bool>>::from_payload(&payload);
+
+        assert_eq!(restored.generation, 2);
+        assert_eq!(restored.evaluations, 7);
+        assert_eq!(restored.run_seed, 9);
+        assert_eq!(restored.population.len(), 1);
+        assert_eq!(restored.population[0].variables(), &[true, false, true]);
+        assert_eq!(restored.population[0].quality().copied(), Some(2.0));
     }
 
     #[test]

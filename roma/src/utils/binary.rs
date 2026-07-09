@@ -15,10 +15,12 @@ const STATUS_INTERRUPTED_BYTE: u8 = 3;
 
 const ERR_USIZE_TOO_LARGE_TO_SERIALIZE: &str = "usize value too large to serialize into checkpoint";
 const ERR_STRING_TOO_LARGE_TO_SERIALIZE: &str = "string too large to serialize into checkpoint";
+const ERR_BYTES_TOO_LARGE_TO_SERIALIZE: &str = "byte payload too large to serialize into checkpoint";
 const ERR_U64_TOO_LARGE_TO_DESERIALIZE_AS_USIZE: &str =
     "u64 value too large to deserialize into usize";
 const ERR_INVALID_UTF8_STRING: &str = "invalid UTF-8 string in checkpoint";
 const ERR_INVALID_OPTION_FLAG_FOR_STRING_PREFIX: &str = "invalid option flag for string: ";
+const ERR_INVALID_OPTION_FLAG_FOR_BYTES_PREFIX: &str = "invalid option flag for bytes: ";
 const ERR_INVALID_OPTION_FLAG_FOR_U64_PREFIX: &str = "invalid option flag for u64: ";
 const ERR_INVALID_STATUS_BYTE_PREFIX: &str = "invalid checkpoint status byte: ";
 
@@ -64,6 +66,18 @@ pub(crate) fn push_string(out: &mut Vec<u8>, value: &str) -> io::Result<()> {
     Ok(())
 }
 
+pub(crate) fn push_bytes(out: &mut Vec<u8>, value: &[u8]) -> io::Result<()> {
+    let len = u32::try_from(value.len()).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            ERR_BYTES_TOO_LARGE_TO_SERIALIZE,
+        )
+    })?;
+    push_u32(out, len);
+    out.extend_from_slice(value);
+    Ok(())
+}
+
 pub(crate) fn push_option_string(out: &mut Vec<u8>, value: &Option<String>) -> io::Result<()> {
     match value {
         Some(text) => {
@@ -76,6 +90,20 @@ pub(crate) fn push_option_string(out: &mut Vec<u8>, value: &Option<String>) -> i
         }
     }
 }
+
+pub(crate) fn push_option_bytes(out: &mut Vec<u8>, value: &Option<Vec<u8>>) -> io::Result<()> {
+    match value {
+        Some(bytes) => {
+            push_u8(out, OPTION_SOME_FLAG);
+            push_bytes(out, bytes)
+        }
+        None => {
+            push_u8(out, OPTION_NONE_FLAG);
+            Ok(())
+        }
+    }
+}
+
 #[allow(dead_code)]
 pub(crate) fn push_option_u64(out: &mut Vec<u8>, value: Option<u64>) {
     match value {
@@ -131,6 +159,13 @@ pub(crate) fn read_string(input: &mut impl Read) -> io::Result<String> {
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, ERR_INVALID_UTF8_STRING))
 }
 
+pub(crate) fn read_bytes(input: &mut impl Read) -> io::Result<Vec<u8>> {
+    let len = read_u32(input)? as usize;
+    let mut bytes = vec![0u8; len];
+    input.read_exact(&mut bytes)?;
+    Ok(bytes)
+}
+
 pub(crate) fn read_option_string(input: &mut impl Read) -> io::Result<Option<String>> {
     match read_u8(input)? {
         OPTION_NONE_FLAG => Ok(None),
@@ -141,6 +176,18 @@ pub(crate) fn read_option_string(input: &mut impl Read) -> io::Result<Option<Str
         )),
     }
 }
+
+pub(crate) fn read_option_bytes(input: &mut impl Read) -> io::Result<Option<Vec<u8>>> {
+    match read_u8(input)? {
+        OPTION_NONE_FLAG => Ok(None),
+        OPTION_SOME_FLAG => Ok(Some(read_bytes(input)?)),
+        flag => Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("{}{}", ERR_INVALID_OPTION_FLAG_FOR_BYTES_PREFIX, flag),
+        )),
+    }
+}
+
 #[allow(dead_code)]
 pub(crate) fn read_option_u64(input: &mut impl Read) -> io::Result<Option<u64>> {
     match read_u8(input)? {
@@ -191,6 +238,17 @@ mod tests {
     }
 
     #[test]
+    fn bytes_roundtrip_preserves_contents() {
+        let payload = vec![0, 1, 2, 255, 42];
+        let mut bytes = Vec::new();
+        push_bytes(&mut bytes, &payload).expect("bytes should serialize");
+
+        let decoded = read_bytes(&mut Cursor::new(bytes)).expect("bytes should deserialize");
+
+        assert_eq!(decoded, payload);
+    }
+
+    #[test]
     fn option_string_roundtrip_preserves_some_and_none() {
         let mut bytes = Vec::new();
         push_option_string(&mut bytes, &Some("payload".to_string()))
@@ -202,6 +260,21 @@ mod tests {
         let second = read_option_string(&mut cursor).expect("none string should deserialize");
 
         assert_eq!(first.as_deref(), Some("payload"));
+        assert_eq!(second, None);
+    }
+
+    #[test]
+    fn option_bytes_roundtrip_preserves_some_and_none() {
+        let mut bytes = Vec::new();
+        push_option_bytes(&mut bytes, &Some(vec![1, 2, 3]))
+            .expect("some bytes should serialize");
+        push_option_bytes(&mut bytes, &None).expect("none bytes should serialize");
+
+        let mut cursor = Cursor::new(bytes);
+        let first = read_option_bytes(&mut cursor).expect("some bytes should deserialize");
+        let second = read_option_bytes(&mut cursor).expect("none bytes should deserialize");
+
+        assert_eq!(first, Some(vec![1, 2, 3]));
         assert_eq!(second, None);
     }
 

@@ -1,7 +1,9 @@
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
-use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
+use crate::algorithms::checkpoint::{
+    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
+};
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
@@ -86,42 +88,51 @@ where
         self.rng.state()
     }
 
-    fn to_payload(&self) -> String {
-        format!(
-            "iter={};eval={};seed={};k={};curr={};best={}",
-            self.iteration,
-            self.evaluations,
-            self.rng.state(),
-            self.neighborhood_index,
-            self.current.encode(),
-            self.best.encode()
-        )
+    fn to_payload(&self) -> Vec<u8> {
+        let mut payload = StatePayloadEncoder::new();
+        payload
+            .write_usize(self.iteration)
+            .expect("iteration should serialize into checkpoint payload");
+        payload
+            .write_usize(self.evaluations)
+            .expect("evaluations should serialize into checkpoint payload");
+        payload.write_u64(self.rng.state());
+        payload
+            .write_usize(self.neighborhood_index)
+            .expect("neighborhood index should serialize into checkpoint payload");
+        payload
+            .write_solution(&self.current)
+            .expect("current solution should serialize into checkpoint payload");
+        payload
+            .write_solution(&self.best)
+            .expect("best solution should serialize into checkpoint payload");
+        payload.finish()
     }
 
-    fn from_payload(payload: &str) -> Self {
-        let parts: std::collections::HashMap<&str, &str> = payload
-            .split(';')
-            .filter_map(|segment| {
-                let mut kv = segment.splitn(2, '=');
-                Some((kv.next()?, kv.next()?))
-            })
-            .collect();
-
-        let iteration = parts.get("iter").and_then(|value| value.parse().ok()).unwrap_or(0);
-        let evaluations = parts.get("eval").and_then(|value| value.parse().ok()).unwrap_or(0);
-        let random_seed = parts
-            .get("seed")
-            .and_then(|value| value.parse().ok())
-            .unwrap_or_else(seed_from_time);
-        let neighborhood_index = parts.get("k").and_then(|value| value.parse().ok()).unwrap_or(0);
-        let current = parts
-            .get("curr")
-            .and_then(|value| Solution::decode(value).ok())
-            .expect("Critical error: Could not decode current state from payload");
-        let best = parts
-            .get("best")
-            .and_then(|value| Solution::decode(value).ok())
-            .expect("Critical error: Could not decode best state from payload");
+    fn from_payload(payload: &[u8]) -> Self {
+        let mut payload = StatePayloadDecoder::new(payload)
+            .expect("critical error: invalid VNS checkpoint payload");
+        let iteration = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint iteration");
+        let evaluations = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint evaluations");
+        let random_seed = payload
+            .read_u64()
+            .expect("critical error: missing checkpoint RNG state");
+        let neighborhood_index = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint neighborhood index");
+        let current = payload
+            .read_solution()
+            .expect("critical error: could not decode current solution");
+        let best = payload
+            .read_solution()
+            .expect("critical error: could not decode best solution");
+        payload
+            .ensure_finished()
+            .expect("critical error: trailing bytes in VNS checkpoint payload");
 
         Self {
             current,

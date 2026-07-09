@@ -1,4 +1,6 @@
-use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
+use crate::algorithms::checkpoint::{
+    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
+};
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
@@ -75,41 +77,39 @@ impl StepStateCheckpoint<f64> for DifferentialEvolutionState {
         self.run_seed
     }
 
-    fn to_payload(&self) -> String {
-        let encoded_population = self
-            .population
-            .iter()
-            .map(|solution| solution.encode())
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        format!(
-            "iter={};eval={};seed={};pop={}",
-            self.generation, self.evaluations, self.run_seed, encoded_population
-        )
+    fn to_payload(&self) -> Vec<u8> {
+        let mut payload = StatePayloadEncoder::new();
+        payload
+            .write_usize(self.generation)
+            .expect("generation should serialize into checkpoint payload");
+        payload
+            .write_usize(self.evaluations)
+            .expect("evaluations should serialize into checkpoint payload");
+        payload.write_u64(self.run_seed);
+        payload
+            .write_solution_vec(&self.population)
+            .expect("population should serialize into checkpoint payload");
+        payload.finish()
     }
 
-    fn from_payload(payload: &str) -> Self {
-        let mut iteration = 0usize;
-        let mut evaluations = 0usize;
-        let mut run_seed = 0u64;
-        let mut population = Vec::new();
-
-        for part in payload.split(';') {
-            if let Some(value) = part.strip_prefix("iter=") {
-                iteration = value.parse().unwrap_or(0);
-            } else if let Some(value) = part.strip_prefix("eval=") {
-                evaluations = value.parse().unwrap_or(0);
-            } else if let Some(value) = part.strip_prefix("seed=") {
-                run_seed = value.parse().unwrap_or(0);
-            } else if let Some(value) = part.strip_prefix("pop=") {
-                population = value
-                    .split('\n')
-                    .filter(|encoded| !encoded.is_empty())
-                    .filter_map(|encoded| Solution::decode(encoded).ok())
-                    .collect();
-            }
-        }
+    fn from_payload(payload: &[u8]) -> Self {
+        let mut payload = StatePayloadDecoder::new(payload)
+            .expect("critical error: invalid differential evolution checkpoint payload");
+        let iteration = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint generation");
+        let evaluations = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint evaluations");
+        let run_seed = payload
+            .read_u64()
+            .expect("critical error: missing checkpoint run seed");
+        let population = payload
+            .read_solution_vec()
+            .expect("critical error: could not decode checkpoint population");
+        payload
+            .ensure_finished()
+            .expect("critical error: trailing bytes in differential evolution checkpoint payload");
 
         Self {
             population,
