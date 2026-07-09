@@ -1,4 +1,2 @@
-# Auto detect text files and perform LF normalization
-* text=auto
-
+* text=auto eol=lf
 benchmark_statistics_analysis.ipynb linguist-generated=true

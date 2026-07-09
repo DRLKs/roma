@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+use std::fmt::Display;
 use std::fs;
 use std::io;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -9,20 +12,29 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::utils::cli::{prompt_checkpoint_selection, CliArgs};
 
 use crate::utils::binary::{
-    byte_to_status, push_option_string, push_string, push_u64, push_u8, read_option_string,
-    read_string, read_u64, read_u8, status_to_byte,
+    byte_to_status, push_bytes, push_f64, push_option_bytes, push_option_string, push_string,
+    push_u64, push_u8, push_usize, read_bytes, read_f64, read_option_bytes, read_option_string,
+    read_string, read_u64, read_u8, read_usize, status_to_byte,
 };
 use crate::utils::hash::checkpoint_signature_hashes;
 use crate::utils::path::{
     checkpoint_file_path, checkpoint_scope_dir, initialize_checkpoint_dir, list_checkpoint_files,
     resolve_checkpoint_dir, run_id_timestamp_ms, CheckpointInitMode, CheckpointPathConfig,
 };
+use crate::solution::Solution;
 
 pub const DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES: usize = 10;
 
 // Binary file signature used to validate checkpoint file integrity.
 const CHECKPOINT_BIN_MAGIC: [u8; 4] = *b"RCKP";
+const STATE_PAYLOAD_VERSION: u8 = 1;
+const STATE_PAYLOAD_ABSENT: u8 = 0;
+const STATE_PAYLOAD_PRESENT: u8 = 1;
 const ERR_INVALID_CHECKPOINT_MAGIC: &str = "invalid checkpoint magic header";
+const ERR_INVALID_STATE_PAYLOAD_VERSION: &str = "invalid checkpoint state payload version";
+const ERR_INVALID_STATE_PAYLOAD_FLAG: &str = "invalid checkpoint state payload flag";
+const ERR_INVALID_CHECKPOINT_ATOM: &str = "invalid typed value in checkpoint state payload";
+const ERR_TRAILING_BYTES_IN_STATE_PAYLOAD: &str = "trailing bytes found in checkpoint state payload";
 const ERR_TRAILING_BYTES: &str = "trailing bytes found in checkpoint file";
 static RUN_ID_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
@@ -185,6 +197,235 @@ fn select_checkpoint_record(entries: Vec<CheckpointEntry>) -> Result<Option<Chec
     Ok(selected_index.map(|index| entries[index].record.clone()))
 }
 
+fn invalid_payload_data(message: impl Into<String>) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, message.into())
+}
+
+fn validate_step_state_payload(payload: &[u8]) -> io::Result<()> {
+    if payload.first().copied() == Some(STATE_PAYLOAD_VERSION) {
+        Ok(())
+    } else {
+        Err(invalid_payload_data(ERR_INVALID_STATE_PAYLOAD_VERSION))
+    }
+}
+
+/// Length-prefixed binary writer for algorithm-defined checkpoint state.
+///
+/// The payload is versioned and field-order based. Primitive fields are written
+/// in little-endian form; generic solution variables/quality payloads are stored
+/// as length-prefixed UTF-8 atoms because Roma allows user-defined `T`/`Q`.
+pub(crate) struct StatePayloadEncoder {
+    bytes: Vec<u8>,
+}
+
+impl StatePayloadEncoder {
+    pub(crate) fn new() -> Self {
+        let mut bytes = Vec::new();
+        push_u8(&mut bytes, STATE_PAYLOAD_VERSION);
+        Self { bytes }
+    }
+
+    pub(crate) fn finish(self) -> Vec<u8> {
+        self.bytes
+    }
+
+    pub(crate) fn write_u64(&mut self, value: u64) {
+        push_u64(&mut self.bytes, value);
+    }
+
+    pub(crate) fn write_usize(&mut self, value: usize) -> io::Result<()> {
+        push_usize(&mut self.bytes, value)
+    }
+
+    pub(crate) fn write_f64(&mut self, value: f64) {
+        push_f64(&mut self.bytes, value);
+    }
+
+    pub(crate) fn write_string(&mut self, value: &str) -> io::Result<()> {
+        push_string(&mut self.bytes, value)
+    }
+
+    pub(crate) fn write_solution<T, Q>(&mut self, solution: &Solution<T, Q>) -> io::Result<()>
+    where
+        T: Clone + Display,
+        Q: Clone + Display,
+    {
+        self.write_usize(solution.num_variables())?;
+        for variable in solution.variables() {
+            self.write_string(&variable.to_string())?;
+        }
+
+        match solution.quality() {
+            Some(quality) => {
+                push_u8(&mut self.bytes, STATE_PAYLOAD_PRESENT);
+                self.write_string(&quality.to_string())?;
+            }
+            None => push_u8(&mut self.bytes, STATE_PAYLOAD_ABSENT),
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn write_solution_vec<T, Q>(
+        &mut self,
+        solutions: &[Solution<T, Q>],
+    ) -> io::Result<()>
+    where
+        T: Clone + Display,
+        Q: Clone + Display,
+    {
+        self.write_usize(solutions.len())?;
+        for solution in solutions {
+            self.write_solution(solution)?;
+        }
+        Ok(())
+    }
+
+    pub(crate) fn write_f64_vec(&mut self, values: &[f64]) -> io::Result<()> {
+        self.write_usize(values.len())?;
+        for value in values {
+            self.write_f64(*value);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn write_f64_vec_vec(&mut self, values: &[Vec<f64>]) -> io::Result<()> {
+        self.write_usize(values.len())?;
+        for inner in values {
+            self.write_f64_vec(inner)?;
+        }
+        Ok(())
+    }
+
+    pub(crate) fn write_string_usize_map(
+        &mut self,
+        values: &HashMap<String, usize>,
+    ) -> io::Result<()> {
+        let mut entries: Vec<_> = values.iter().collect();
+        entries.sort_by(|left, right| left.0.cmp(right.0));
+
+        self.write_usize(entries.len())?;
+        for (key, value) in entries {
+            self.write_string(key)?;
+            self.write_usize(*value)?;
+        }
+        Ok(())
+    }
+}
+
+/// Length-prefixed binary reader for algorithm-defined checkpoint state.
+pub(crate) struct StatePayloadDecoder<'a> {
+    cursor: io::Cursor<&'a [u8]>,
+}
+
+impl<'a> StatePayloadDecoder<'a> {
+    pub(crate) fn new(payload: &'a [u8]) -> io::Result<Self> {
+        let mut cursor = io::Cursor::new(payload);
+        let version = read_u8(&mut cursor)?;
+        if version != STATE_PAYLOAD_VERSION {
+            return Err(invalid_payload_data(ERR_INVALID_STATE_PAYLOAD_VERSION));
+        }
+        Ok(Self { cursor })
+    }
+
+    pub(crate) fn read_u64(&mut self) -> io::Result<u64> {
+        read_u64(&mut self.cursor)
+    }
+
+    pub(crate) fn read_usize(&mut self) -> io::Result<usize> {
+        read_usize(&mut self.cursor)
+    }
+
+    pub(crate) fn read_f64(&mut self) -> io::Result<f64> {
+        read_f64(&mut self.cursor)
+    }
+
+    pub(crate) fn read_string(&mut self) -> io::Result<String> {
+        read_string(&mut self.cursor)
+    }
+
+    pub(crate) fn read_solution<T, Q>(&mut self) -> io::Result<Solution<T, Q>>
+    where
+        T: Clone + Display + FromStr,
+        Q: Clone + Display + FromStr,
+    {
+        let variable_count = self.read_usize()?;
+        let mut variables = Vec::with_capacity(variable_count);
+        for _ in 0..variable_count {
+            let raw = self.read_string()?;
+            variables.push(
+                raw.parse::<T>()
+                    .map_err(|_| invalid_payload_data(ERR_INVALID_CHECKPOINT_ATOM))?,
+            );
+        }
+
+        let mut solution = Solution::new(variables);
+        match read_u8(&mut self.cursor)? {
+            STATE_PAYLOAD_ABSENT => {}
+            STATE_PAYLOAD_PRESENT => {
+                let raw = self.read_string()?;
+                let quality = raw
+                    .parse::<Q>()
+                    .map_err(|_| invalid_payload_data(ERR_INVALID_CHECKPOINT_ATOM))?;
+                solution.set_quality(quality);
+            }
+            _ => return Err(invalid_payload_data(ERR_INVALID_STATE_PAYLOAD_FLAG)),
+        }
+
+        Ok(solution)
+    }
+
+    pub(crate) fn read_solution_vec<T, Q>(&mut self) -> io::Result<Vec<Solution<T, Q>>>
+    where
+        T: Clone + Display + FromStr,
+        Q: Clone + Display + FromStr,
+    {
+        let count = self.read_usize()?;
+        let mut solutions = Vec::with_capacity(count);
+        for _ in 0..count {
+            solutions.push(self.read_solution()?);
+        }
+        Ok(solutions)
+    }
+
+    pub(crate) fn read_f64_vec(&mut self) -> io::Result<Vec<f64>> {
+        let count = self.read_usize()?;
+        let mut values = Vec::with_capacity(count);
+        for _ in 0..count {
+            values.push(self.read_f64()?);
+        }
+        Ok(values)
+    }
+
+    pub(crate) fn read_f64_vec_vec(&mut self) -> io::Result<Vec<Vec<f64>>> {
+        let count = self.read_usize()?;
+        let mut values = Vec::with_capacity(count);
+        for _ in 0..count {
+            values.push(self.read_f64_vec()?);
+        }
+        Ok(values)
+    }
+
+    pub(crate) fn read_string_usize_map(&mut self) -> io::Result<HashMap<String, usize>> {
+        let count = self.read_usize()?;
+        let mut values = HashMap::with_capacity(count);
+        for _ in 0..count {
+            let key = self.read_string()?;
+            let value = self.read_usize()?;
+            values.insert(key, value);
+        }
+        Ok(values)
+    }
+
+    pub(crate) fn ensure_finished(&self) -> io::Result<()> {
+        if (self.cursor.position() as usize) == self.cursor.get_ref().len() {
+            Ok(())
+        } else {
+            Err(invalid_payload_data(ERR_TRAILING_BYTES_IN_STATE_PAYLOAD))
+        }
+    }
+}
+
 pub trait StepStateCheckpoint<T, Q = f64>
 where
     T: Clone,
@@ -192,9 +433,9 @@ where
 {
     fn random_seed(&self) -> u64;
 
-    fn to_payload(&self) -> String;
+    fn to_payload(&self) -> Vec<u8>;
 
-    fn from_payload(payload: &str) -> Self;
+    fn from_payload(payload: &[u8]) -> Self;
 
     fn iteration(&self) -> usize;
 
@@ -259,8 +500,8 @@ pub struct CheckpointRecord {
     pub problem_parameters: String,
     pub algorithm_signature_hash: u64,
     pub problem_signature_hash: u64,
-    pub step_state_payload: String,
-    pub seed_payload: Option<String>,
+    pub step_state_payload: Vec<u8>,
+    pub seed_payload: Option<Vec<u8>>,
     pub elapsed_millis: u64,
     pub status: CheckpointRunStatus,
     pub error_message: Option<String>,
@@ -287,17 +528,10 @@ pub struct CheckpointEntry {
 /// - algorithm_signature_hash: u64
 /// - problem_signature_hash: u64
 ///
-/// Progress and quality:
-/// - seq_id: u64
-/// - iteration: usize encoded as u64
-/// - evaluations: usize encoded as u64
-/// - best_fitness, average_fitness, worst_fitness: f64
-/// - best_solution_presentation: string
-/// - current_solution_payload: `Option<String>`
-///
-/// Optional payloads:
-/// - state_payload: `Option<String>` (algorithm-defined UTF-8 payload; e.g. JSON text)
-/// - elapsed_millis: `Option<u64>`
+/// State and optional payloads:
+/// - step_state_payload: bytes, with an algorithm-owned typed binary layout
+/// - seed_payload: `Option<bytes>`
+/// - elapsed_millis: u64
 /// - status: u8
 /// - error_message: `Option<String>`
 ///
@@ -335,9 +569,11 @@ pub(crate) fn write_execution_checkpoint(
 
 /// Writes one checkpoint payload in a compact binary format.
 ///
-/// Note: the file format is always binary. Some fields inside it are UTF-8
-/// strings, including `state_payload`, which algorithms may encode as JSON.
+/// Note: the file format is always binary. Text metadata is length-prefixed
+/// UTF-8; algorithm step state is a length-prefixed byte payload.
 pub(crate) fn write_checkpoint_record(path: &Path, record: &CheckpointRecord) -> io::Result<()> {
+    validate_step_state_payload(&record.step_state_payload)?;
+
     let mut bytes = Vec::with_capacity(512);
     bytes.extend_from_slice(&CHECKPOINT_BIN_MAGIC);
 
@@ -350,8 +586,8 @@ pub(crate) fn write_checkpoint_record(path: &Path, record: &CheckpointRecord) ->
     push_string(&mut bytes, &record.problem_parameters)?;
     push_u64(&mut bytes, record.algorithm_signature_hash);
     push_u64(&mut bytes, record.problem_signature_hash);
-    push_string(&mut bytes, &record.step_state_payload)?;
-    push_option_string(&mut bytes, &record.seed_payload)?;
+    push_bytes(&mut bytes, &record.step_state_payload)?;
+    push_option_bytes(&mut bytes, &record.seed_payload)?;
     push_u64(&mut bytes, record.elapsed_millis);
     push_u8(&mut bytes, status_to_byte(record.status));
     push_option_string(&mut bytes, &record.error_message)?;
@@ -394,18 +630,30 @@ pub(crate) fn read_checkpoint_record(path: &Path) -> io::Result<CheckpointRecord
         ));
     }
 
+    let created_at_ms = read_u64(&mut cursor)?;
+    let run_id = read_string(&mut cursor)?;
+    let random_seed = read_u64(&mut cursor)?;
+    let algorithm_name = read_string(&mut cursor)?;
+    let algorithm_parameters = read_string(&mut cursor)?;
+    let problem_description = read_string(&mut cursor)?;
+    let problem_parameters = read_string(&mut cursor)?;
+    let algorithm_signature_hash = read_u64(&mut cursor)?;
+    let problem_signature_hash = read_u64(&mut cursor)?;
+    let step_state_payload = read_bytes(&mut cursor)?;
+    validate_step_state_payload(&step_state_payload)?;
+
     let record = CheckpointRecord {
-        created_at_ms: read_u64(&mut cursor)?,
-        run_id: read_string(&mut cursor)?,
-        random_seed: read_u64(&mut cursor)?,
-        algorithm_name: read_string(&mut cursor)?,
-        algorithm_parameters: read_string(&mut cursor)?,
-        problem_description: read_string(&mut cursor)?,
-        problem_parameters: read_string(&mut cursor)?,
-        algorithm_signature_hash: read_u64(&mut cursor)?,
-        problem_signature_hash: read_u64(&mut cursor)?,
-        step_state_payload: read_string(&mut cursor)?,
-        seed_payload: read_option_string(&mut cursor)?,
+        created_at_ms,
+        run_id,
+        random_seed,
+        algorithm_name,
+        algorithm_parameters,
+        problem_description,
+        problem_parameters,
+        algorithm_signature_hash,
+        problem_signature_hash,
+        step_state_payload,
+        seed_payload: read_option_bytes(&mut cursor)?,
         elapsed_millis: read_u64(&mut cursor)?,
         status: byte_to_status(read_u8(&mut cursor)?)?,
         error_message: read_option_string(&mut cursor)?,
@@ -576,7 +824,7 @@ mod tests {
         problem_description: &str,
         problem_parameters: &str,
         status: CheckpointRunStatus,
-        step_state_payload: &str,
+        step_state_payload: &[u8],
         created_at_ms: u64,
     ) -> CheckpointRecord {
         let metadata = CheckpointRuntimeMetadata::new(
@@ -596,12 +844,93 @@ mod tests {
             problem_parameters: problem_parameters.to_string(),
             algorithm_signature_hash: metadata.algorithm_signature_hash,
             problem_signature_hash: metadata.problem_signature_hash,
-            step_state_payload: step_state_payload.to_string(),
+            step_state_payload: step_state_payload.to_vec(),
             seed_payload: None,
             elapsed_millis: 0,
             status,
             error_message: None,
         }
+    }
+
+    fn sample_step_payload(marker: usize) -> Vec<u8> {
+        let mut encoder = StatePayloadEncoder::new();
+        encoder
+            .write_usize(marker)
+            .expect("sample payload marker should serialize");
+        encoder.finish()
+    }
+
+    #[test]
+    fn state_payload_codec_roundtrips_length_prefixed_solution_fields() {
+        let mut original: Solution<String> = Solution::new(vec![
+            "left,comma".to_string(),
+            "right|pipe".to_string(),
+        ]);
+        original.set_quality(17.25);
+
+        let mut encoder = StatePayloadEncoder::new();
+        encoder
+            .write_usize(42)
+            .expect("iteration should serialize");
+        encoder
+            .write_solution(&original)
+            .expect("solution should serialize");
+
+        let encoded = encoder.finish();
+        let mut decoder = StatePayloadDecoder::new(&encoded).expect("payload should start");
+        let iteration = decoder.read_usize().expect("iteration should deserialize");
+        let restored: Solution<String> = decoder
+            .read_solution()
+            .expect("solution should deserialize");
+        decoder
+            .ensure_finished()
+            .expect("payload should have no trailing bytes");
+
+        assert_eq!(iteration, 42);
+        let expected_variables = vec!["left,comma".to_string(), "right|pipe".to_string()];
+        assert_eq!(restored.variables(), expected_variables.as_slice());
+        assert_eq!(restored.quality().copied(), Some(17.25));
+    }
+
+    #[test]
+    fn state_payload_decoder_rejects_trailing_bytes() {
+        let mut encoder = StatePayloadEncoder::new();
+        encoder.write_usize(7).expect("value should serialize");
+        let mut encoded = encoder.finish();
+        encoded.push(255);
+
+        let mut decoder = StatePayloadDecoder::new(&encoded).expect("payload should start");
+        assert_eq!(decoder.read_usize().expect("value should deserialize"), 7);
+
+        let error = decoder
+            .ensure_finished()
+            .expect_err("trailing payload bytes should fail");
+
+        assert!(error
+            .to_string()
+            .contains("trailing bytes found in checkpoint state payload"));
+    }
+
+    #[test]
+    fn write_snapshot_rejects_unversioned_step_payload() {
+        let dir = TestCheckpointDir::new("reject_unversioned_payload");
+        let record = build_record(
+            "HillClimbing-42-1000",
+            "HillClimbing",
+            "seed=11;mutation=0.2",
+            "DemoProblem",
+            "size=4",
+            CheckpointRunStatus::Running,
+            b"iter=1;eval=0",
+            1_000,
+        );
+
+        let error = write_snapshot(dir.path(), &record)
+            .expect_err("unversioned state payload should be rejected");
+
+        assert!(error
+            .to_string()
+            .contains("invalid checkpoint state payload version"));
     }
 
     #[test]
@@ -626,7 +955,7 @@ mod tests {
             "DemoProblem",
             "size=4",
             CheckpointRunStatus::Running,
-            "state:one",
+            &sample_step_payload(1),
             1_000,
         );
 
@@ -637,7 +966,7 @@ mod tests {
             "DemoProblem",
             "size=4",
             CheckpointRunStatus::Running,
-            "state:two",
+            &sample_step_payload(2),
             2_000,
         );
 
@@ -652,7 +981,7 @@ mod tests {
         assert_eq!(files.len(), 1);
 
         let stored = read_snapshot(&second_path).expect("stored checkpoint should be readable");
-        assert_eq!(stored.step_state_payload, "state:two");
+        assert_eq!(stored.step_state_payload, sample_step_payload(2));
         assert_eq!(stored.created_at_ms, 2_000);
     }
 
@@ -667,7 +996,7 @@ mod tests {
             "DemoProblem",
             "size=4",
             CheckpointRunStatus::Running,
-            "state:one",
+            &sample_step_payload(1),
             1_000,
         );
 
@@ -678,7 +1007,7 @@ mod tests {
             "DemoProblem",
             "size=4",
             CheckpointRunStatus::Running,
-            "state:two",
+            &sample_step_payload(2),
             1_001,
         );
 
@@ -704,7 +1033,7 @@ mod tests {
             "DemoProblem",
             "size=4",
             CheckpointRunStatus::Running,
-            "state:one",
+            &sample_step_payload(1),
             1_000,
         );
 
@@ -715,7 +1044,7 @@ mod tests {
             "DemoProblem",
             "size=4",
             CheckpointRunStatus::Running,
-            "state:two",
+            &sample_step_payload(2),
             1_001,
         );
 
@@ -741,7 +1070,7 @@ mod tests {
             "DemoProblem",
             "size=4",
             CheckpointRunStatus::Running,
-            "state:running",
+            &sample_step_payload(1),
             1_000,
         );
 
@@ -752,7 +1081,7 @@ mod tests {
             "DemoProblem",
             "size=4",
             CheckpointRunStatus::Failed,
-            "state:failed",
+            &sample_step_payload(2),
             1_001,
         );
 
@@ -763,7 +1092,7 @@ mod tests {
             "DemoProblem",
             "size=4",
             CheckpointRunStatus::Running,
-            "state:other-algorithm-params",
+            &sample_step_payload(3),
             1_002,
         );
 
@@ -774,7 +1103,7 @@ mod tests {
             "DemoProblem",
             "size=8",
             CheckpointRunStatus::Running,
-            "state:other-problem-params",
+            &sample_step_payload(4),
             1_003,
         );
 
@@ -785,7 +1114,7 @@ mod tests {
             "DemoProblem",
             "size=4",
             CheckpointRunStatus::Completed,
-            "state:completed",
+            &sample_step_payload(5),
             1_004,
         );
 
@@ -807,7 +1136,7 @@ mod tests {
         );
 
         let entries = list_resumable_checkpoint_entries_for_metadata(dir.path(), &metadata)
-        .expect("entries should be listed");
+            .expect("entries should be listed");
 
         let run_ids: Vec<&str> = entries
             .iter()
@@ -839,7 +1168,7 @@ mod tests {
             "DemoProblem",
             "size=4",
             CheckpointRunStatus::Running,
-            "state:matching",
+            &sample_step_payload(1),
             1_000,
         );
 
@@ -850,7 +1179,7 @@ mod tests {
             "DemoProblem",
             "size=4",
             CheckpointRunStatus::Running,
-            "state:non-matching",
+            &sample_step_payload(2),
             1_001,
         );
 
@@ -866,11 +1195,11 @@ mod tests {
         );
 
         let selected = select_resume_checkpoint_for_metadata(dir.path(), &metadata)
-        .expect("selection should not fail")
-        .expect("one checkpoint should be auto-selected");
+            .expect("selection should not fail")
+            .expect("one checkpoint should be auto-selected");
 
         assert_eq!(selected.run_id, matching.run_id);
-        assert_eq!(selected.step_state_payload, "state:matching");
+        assert_eq!(selected.step_state_payload, sample_step_payload(1));
     }
 
     #[test]
