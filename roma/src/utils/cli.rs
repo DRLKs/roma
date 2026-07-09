@@ -3,6 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use std::{io, io::Write};
 
 use crate::algorithms::checkpoint::{CheckpointEntry, CheckpointRunStatus};
+use crate::utils::path::checkpoint_path_from_raw;
 
 /// Long CLI flag used to provide a deterministic random seed.
 pub const CLI_FLAG_SEED: &str = "--seed";
@@ -160,7 +161,7 @@ impl CliArgs {
     /// Resolves a path argument against the current working directory when relative.
     pub fn resolve_path_from_flag_or_default(&self, flag: &str, default_path: PathBuf) -> PathBuf {
         if let Some(raw) = self.argument_value(flag) {
-            let candidate = PathBuf::from(raw);
+            let candidate = checkpoint_path_from_raw(&raw);
             if candidate.is_absolute() {
                 return candidate;
             }
@@ -231,7 +232,11 @@ pub fn prompt_checkpoint_selection(entries: &[CheckpointEntry]) -> Result<Option
         .lock()
         .map_err(|_| CHECKPOINT_LOCK_ERROR.to_string())?;
 
-    println!("\n{:^width$}", CHECKPOINT_SELECTION_TITLE, width = CHECKPOINT_TABLE_WIDTH);
+    println!(
+        "\n{:^width$}",
+        CHECKPOINT_SELECTION_TITLE,
+        width = CHECKPOINT_TABLE_WIDTH
+    );
     println!(
         "{:<4} | {:<age_width$} | {:<8} | {:<8}",
         CHECKPOINT_COLUMN_ID,
@@ -259,14 +264,18 @@ pub fn prompt_checkpoint_selection(entries: &[CheckpointEntry]) -> Result<Option
             age_str,
             time_str,
             status_icon,
-            format!("{} bytes", rec.step_state_payload.len()),
+            rec.state_progress_summary(),
             age_width = CHECKPOINT_AGE_COLUMN_WIDTH,
         );
     }
 
     println!("{:-<width$}", "", width = CHECKPOINT_TABLE_WIDTH);
     println!("{}", CHECKPOINT_NEW_RUN_OPTION);
-    println!("{:^width$}\n", CHECKPOINT_SELECTION_FOOTER, width = CHECKPOINT_TABLE_WIDTH);
+    println!(
+        "{:^width$}\n",
+        CHECKPOINT_SELECTION_FOOTER,
+        width = CHECKPOINT_TABLE_WIDTH
+    );
 
     print!("{}", CHECKPOINT_SELECTION_PROMPT);
     io::stdout().flush().map_err(|e| e.to_string())?;
@@ -288,9 +297,7 @@ pub fn prompt_checkpoint_selection(entries: &[CheckpointEntry]) -> Result<Option
     if selection > entries.len() {
         return Err(format!(
             "{}{}{}",
-            CHECKPOINT_INDEX_OUT_OF_RANGE_PREFIX,
-            selection,
-            CHECKPOINT_INDEX_OUT_OF_RANGE_SUFFIX
+            CHECKPOINT_INDEX_OUT_OF_RANGE_PREFIX, selection, CHECKPOINT_INDEX_OUT_OF_RANGE_SUFFIX
         ));
     }
 
@@ -347,7 +354,10 @@ mod tests {
         assert_eq!(args.seed_or(11), 7);
         assert_eq!(args.parse_usize_or("--iterations", 10), 32);
         assert_eq!(args.parse_f64_or("--cooling", 1.0), 0.75);
-        assert_eq!(args.parse_string_or("--label", "fallback"), "demo".to_string());
+        assert_eq!(
+            args.parse_string_or("--label", "fallback"),
+            "demo".to_string()
+        );
         assert!(args.resume_requested());
         assert!(args.checkpoints_disabled());
         assert!(args.has_checkpoint_dir_override());
@@ -365,6 +375,43 @@ mod tests {
             std::env::current_dir()
                 .expect("current working directory should be available")
                 .join(TEST_NESTED_CHECKPOINT_DIR)
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn cli_args_normalizes_windows_checkpoint_dir_for_wsl() {
+        let args = CliArgs::from_iter([
+            TEST_FLAG_CHECKPOINT_DIR,
+            "C:\\Users\\david\\roma\\.roma\\checkpoints",
+        ]);
+
+        let resolved = args.checkpoint_dir_or(PathBuf::from(TEST_DEFAULT_CHECKPOINT_DIR));
+
+        assert_eq!(
+            resolved,
+            PathBuf::from("/mnt/c/Users/david/roma/.roma/checkpoints")
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn cli_args_normalizes_wsl_checkpoint_dir_for_windows() {
+        let args = CliArgs::from_iter([
+            TEST_FLAG_CHECKPOINT_DIR,
+            "/mnt/c/Users/david/roma/.roma/checkpoints",
+        ]);
+
+        let resolved = args.checkpoint_dir_or(PathBuf::from(TEST_DEFAULT_CHECKPOINT_DIR));
+
+        assert_eq!(
+            resolved,
+            PathBuf::from("C:\\")
+                .join("Users")
+                .join("david")
+                .join("roma")
+                .join(".roma")
+                .join("checkpoints")
         );
     }
 }
