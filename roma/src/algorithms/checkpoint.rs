@@ -11,6 +11,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::utils::cli::{prompt_checkpoint_selection, CliArgs};
 
+use crate::solution::Solution;
 use crate::utils::binary::{
     byte_to_status, push_bytes, push_f64, push_option_bytes, push_option_string, push_string,
     push_u64, push_u8, push_usize, read_bytes, read_f64, read_option_bytes, read_option_string,
@@ -21,7 +22,6 @@ use crate::utils::path::{
     checkpoint_file_path, checkpoint_scope_dir, initialize_checkpoint_dir, list_checkpoint_files,
     resolve_checkpoint_dir, run_id_timestamp_ms, CheckpointInitMode, CheckpointPathConfig,
 };
-use crate::solution::Solution;
 
 pub const DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES: usize = 10;
 
@@ -34,7 +34,8 @@ const ERR_INVALID_CHECKPOINT_MAGIC: &str = "invalid checkpoint magic header";
 const ERR_INVALID_STATE_PAYLOAD_VERSION: &str = "invalid checkpoint state payload version";
 const ERR_INVALID_STATE_PAYLOAD_FLAG: &str = "invalid checkpoint state payload flag";
 const ERR_INVALID_CHECKPOINT_ATOM: &str = "invalid typed value in checkpoint state payload";
-const ERR_TRAILING_BYTES_IN_STATE_PAYLOAD: &str = "trailing bytes found in checkpoint state payload";
+const ERR_TRAILING_BYTES_IN_STATE_PAYLOAD: &str =
+    "trailing bytes found in checkpoint state payload";
 const ERR_TRAILING_BYTES: &str = "trailing bytes found in checkpoint file";
 static RUN_ID_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
@@ -52,14 +53,25 @@ impl CheckpointPolicy {
     }
 
     pub fn resolve(args: &CliArgs, checkpoint_cfg: &CheckpointPathConfig) -> Self {
-        let default_dir = resolve_checkpoint_dir(checkpoint_cfg);
-        let checkpoint_dir = args.checkpoint_dir_or(default_dir);
         let explicit_checkpoint_dir = args.has_checkpoint_dir_override();
-        let storage_ready = if explicit_checkpoint_dir {
-            fs::create_dir_all(&checkpoint_dir).is_ok()
-        } else {
-            resolve_checkpoint_dir_from_config_for_writes(checkpoint_cfg).is_ok()
-        };
+        if explicit_checkpoint_dir {
+            let checkpoint_dir = args.checkpoint_dir_or(resolve_checkpoint_dir(checkpoint_cfg));
+            let storage_ready = fs::create_dir_all(&checkpoint_dir).is_ok();
+            return Self {
+                checkpoint_dir,
+                storage_ready,
+                writes_requested: !args.checkpoints_disabled(),
+                resume_requested: args.resume_requested(),
+            };
+        }
+
+        let prepared_default_dir =
+            resolve_checkpoint_dir_from_config_for_writes(checkpoint_cfg).ok();
+        let default_dir = prepared_default_dir
+            .clone()
+            .unwrap_or_else(|| resolve_checkpoint_dir(checkpoint_cfg));
+        let checkpoint_dir = args.checkpoint_dir_or(default_dir);
+        let storage_ready = prepared_default_dir.is_some();
 
         Self {
             checkpoint_dir,
@@ -183,7 +195,9 @@ impl<'a> CheckpointRuntimeMetadata<'a> {
     }
 }
 
-fn select_checkpoint_record(entries: Vec<CheckpointEntry>) -> Result<Option<CheckpointRecord>, String> {
+fn select_checkpoint_record(
+    entries: Vec<CheckpointEntry>,
+) -> Result<Option<CheckpointRecord>, String> {
     if entries.is_empty() {
         return Ok(None);
     }
@@ -426,6 +440,13 @@ impl<'a> StatePayloadDecoder<'a> {
     }
 }
 
+fn decode_state_progress(payload: &[u8]) -> Option<(usize, usize)> {
+    let mut payload = StatePayloadDecoder::new(payload).ok()?;
+    let iteration = payload.read_usize().ok()?;
+    let evaluations = payload.read_usize().ok()?;
+    Some((iteration, evaluations))
+}
+
 pub trait StepStateCheckpoint<T, Q = f64>
 where
     T: Clone,
@@ -505,6 +526,25 @@ pub struct CheckpointRecord {
     pub elapsed_millis: u64,
     pub status: CheckpointRunStatus,
     pub error_message: Option<String>,
+}
+
+impl CheckpointRecord {
+    pub(crate) fn state_progress_summary(&self) -> String {
+        decode_state_progress(&self.step_state_payload)
+            .map(|(iteration, evaluations)| {
+                format!(
+                    "iter={}, eval={}, seed={}",
+                    iteration, evaluations, self.random_seed
+                )
+            })
+            .unwrap_or_else(|| {
+                format!(
+                    "state={} bytes, seed={}",
+                    self.step_state_payload.len(),
+                    self.random_seed
+                )
+            })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -856,22 +896,21 @@ mod tests {
         let mut encoder = StatePayloadEncoder::new();
         encoder
             .write_usize(marker)
-            .expect("sample payload marker should serialize");
+            .expect("sample payload iteration should serialize");
+        encoder
+            .write_usize(marker * 10)
+            .expect("sample payload evaluations should serialize");
         encoder.finish()
     }
 
     #[test]
     fn state_payload_codec_roundtrips_length_prefixed_solution_fields() {
-        let mut original: Solution<String> = Solution::new(vec![
-            "left,comma".to_string(),
-            "right|pipe".to_string(),
-        ]);
+        let mut original: Solution<String> =
+            Solution::new(vec!["left,comma".to_string(), "right|pipe".to_string()]);
         original.set_quality(17.25);
 
         let mut encoder = StatePayloadEncoder::new();
-        encoder
-            .write_usize(42)
-            .expect("iteration should serialize");
+        encoder.write_usize(42).expect("iteration should serialize");
         encoder
             .write_solution(&original)
             .expect("solution should serialize");
@@ -909,6 +948,22 @@ mod tests {
         assert!(error
             .to_string()
             .contains("trailing bytes found in checkpoint state payload"));
+    }
+
+    #[test]
+    fn checkpoint_record_summary_reads_progress_prefix() {
+        let record = build_record(
+            "HillClimbing-42-1000",
+            "HillClimbing",
+            "seed=11;mutation=0.2",
+            "DemoProblem",
+            "size=4",
+            CheckpointRunStatus::Running,
+            &sample_step_payload(12),
+            1_000,
+        );
+
+        assert_eq!(record.state_progress_summary(), "iter=12, eval=120, seed=7");
     }
 
     #[test]
@@ -1241,6 +1296,33 @@ mod tests {
         assert!(writes_enabled.writes_requested);
         assert!(writes_enabled.should_write());
         assert!(writes_enabled.resume_requested());
+
+        let _ = std::fs::remove_dir_all(base);
+    }
+
+    #[test]
+    fn checkpoint_policy_uses_initialized_default_directory() {
+        let base = std::env::temp_dir().join(format!(
+            "roma_checkpoint_policy_default_test_{}_{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        let fallback = base.join("fallback");
+
+        let config = CheckpointPathConfig {
+            app_name: "/dev/null".to_string(),
+            env_var_name: "ROMA_TEST_UNUSED_CHECKPOINT_ENV",
+            explicit_dir: Some(PathBuf::from("/dev/null/roma")),
+            project_fallback_dir: Some(fallback.clone()),
+        };
+
+        let policy = CheckpointPolicy::resolve(&CliArgs::from_iter(Vec::<String>::new()), &config);
+
+        assert!(policy.should_write());
+        assert_eq!(policy.checkpoint_dir(), fallback.as_path());
 
         let _ = std::fs::remove_dir_all(base);
     }

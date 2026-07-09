@@ -15,12 +15,15 @@ const LOCAL_FALLBACK_RELATIVE_PATH: &str = "./.roma/checkpoints";
 const CHECKPOINTS_DIR_NAME: &str = "checkpoints";
 const DEFAULT_SANITIZED_SEGMENT: &str = "unnamed";
 const SANITIZED_REPLACEMENT_CHAR: char = '_';
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+const WSL_MOUNT_PREFIX: &str = "/mnt/";
 
 const ERR_CHECKPOINT_DIR_REQUIRED_UNAVAILABLE: &str =
     "checkpoint directory unavailable in required mode";
 
 #[cfg(target_os = "linux")]
 const ENV_XDG_STATE_HOME: &str = "XDG_STATE_HOME";
+#[cfg(not(target_os = "windows"))]
 const ENV_HOME: &str = "HOME";
 #[cfg(target_os = "windows")]
 const ENV_LOCALAPPDATA: &str = "LOCALAPPDATA";
@@ -110,13 +113,13 @@ impl CheckpointPathConfig {
 
     /// Uses `dir` as the highest-priority checkpoint directory.
     pub fn with_explicit_dir(mut self, dir: impl Into<PathBuf>) -> Self {
-        self.explicit_dir = Some(dir.into());
+        self.explicit_dir = Some(normalize_checkpoint_path(dir.into()));
         self
     }
 
     /// Sets a project-scoped fallback directory.
     pub fn with_project_fallback_dir(mut self, dir: impl Into<PathBuf>) -> Self {
-        self.project_fallback_dir = Some(dir.into());
+        self.project_fallback_dir = Some(normalize_checkpoint_path(dir.into()));
         self
     }
 }
@@ -145,7 +148,11 @@ pub(crate) fn checkpoint_dir_candidates(
     let mut candidates = Vec::new();
 
     if let Some(path) = &config.explicit_dir {
-        push_unique_candidate(&mut candidates, CheckpointDirSource::Explicit, path.clone());
+        push_unique_candidate(
+            &mut candidates,
+            CheckpointDirSource::Explicit,
+            normalize_checkpoint_path(path.clone()),
+        );
     }
 
     if let Some(path) = env_path(config.env_var_name) {
@@ -160,7 +167,7 @@ pub(crate) fn checkpoint_dir_candidates(
         push_unique_candidate(
             &mut candidates,
             CheckpointDirSource::ProjectFallback,
-            path.clone(),
+            normalize_checkpoint_path(path.clone()),
         );
     }
 
@@ -270,7 +277,94 @@ fn env_path(name: &str) -> Option<PathBuf> {
     if value.as_os_str().is_empty() {
         return None;
     }
-    Some(PathBuf::from(value))
+    match value.to_str() {
+        Some(raw) => Some(checkpoint_path_from_raw(raw)),
+        None => Some(PathBuf::from(value)),
+    }
+}
+
+pub(crate) fn checkpoint_path_from_raw(raw: &str) -> PathBuf {
+    cross_platform_checkpoint_path(raw).unwrap_or_else(|| PathBuf::from(raw))
+}
+
+pub(crate) fn normalize_checkpoint_path(path: PathBuf) -> PathBuf {
+    match path.to_str() {
+        Some(raw) => checkpoint_path_from_raw(raw),
+        None => path,
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn cross_platform_checkpoint_path(raw: &str) -> Option<PathBuf> {
+    windows_drive_path_to_wsl(raw)
+}
+
+#[cfg(target_os = "windows")]
+fn cross_platform_checkpoint_path(raw: &str) -> Option<PathBuf> {
+    wsl_mount_path_to_windows(raw)
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "windows")))]
+fn cross_platform_checkpoint_path(_raw: &str) -> Option<PathBuf> {
+    None
+}
+
+#[cfg(target_os = "linux")]
+fn windows_drive_path_to_wsl(raw: &str) -> Option<PathBuf> {
+    let (drive, rest) = parse_windows_drive_path(raw)?;
+    let mut path = PathBuf::from(WSL_MOUNT_PREFIX);
+    path.push(drive.to_ascii_lowercase().to_string());
+    push_path_segments(&mut path, rest);
+    Some(path)
+}
+
+#[cfg(target_os = "windows")]
+fn wsl_mount_path_to_windows(raw: &str) -> Option<PathBuf> {
+    let rest = raw.strip_prefix(WSL_MOUNT_PREFIX)?;
+    let mut parts = rest.split('/').filter(|part| !part.is_empty());
+    let drive = parts.next()?;
+    if drive.len() != 1 {
+        return None;
+    }
+    let drive = drive.chars().next()?;
+    if !drive.is_ascii_alphabetic() {
+        return None;
+    }
+
+    let mut path = PathBuf::from(format!("{}:\\", drive.to_ascii_uppercase()));
+    for segment in parts {
+        path.push(segment);
+    }
+    Some(path)
+}
+
+#[cfg(target_os = "linux")]
+fn parse_windows_drive_path(raw: &str) -> Option<(char, &str)> {
+    let mut chars = raw.chars();
+    let drive = chars.next()?;
+    if !drive.is_ascii_alphabetic() {
+        return None;
+    }
+    if chars.next()? != ':' {
+        return None;
+    }
+
+    let rest = chars.as_str();
+    if !(rest.starts_with('\\') || rest.starts_with('/')) {
+        return None;
+    }
+
+    Some((drive, rest))
+}
+
+#[cfg(target_os = "linux")]
+fn push_path_segments(path: &mut PathBuf, raw: &str) {
+    for segment in raw
+        .split(|ch| ch == '\\' || ch == '/')
+        .filter(|part| !part.is_empty())
+    {
+        path.push(segment);
+    }
 }
 
 fn local_fallback_dir() -> PathBuf {
@@ -389,6 +483,33 @@ mod tests {
         let cfg = CheckpointPathConfig::default().with_explicit_dir("/my/checkpoints");
         let resolved = resolve_checkpoint_dir(&cfg);
         assert_eq!(resolved, PathBuf::from("/my/checkpoints"));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn checkpoint_path_from_raw_converts_windows_drive_path_for_wsl() {
+        let path = checkpoint_path_from_raw("C:\\Users\\david\\roma\\.roma\\checkpoints");
+
+        assert_eq!(
+            path,
+            PathBuf::from("/mnt/c/Users/david/roma/.roma/checkpoints")
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn checkpoint_path_from_raw_converts_wsl_mount_path_for_windows() {
+        let path = checkpoint_path_from_raw("/mnt/c/Users/david/roma/.roma/checkpoints");
+
+        assert_eq!(
+            path,
+            PathBuf::from("C:\\")
+                .join("Users")
+                .join("david")
+                .join("roma")
+                .join(".roma")
+                .join("checkpoints")
+        );
     }
 
     #[test]
