@@ -1,11 +1,13 @@
-use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
+use crate::algorithms::checkpoint::{
+    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
+};
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::observer::traits::AlgorithmObserver;
 use crate::observer::Observable;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
-use crate::solution::{ParetoCrowdingDistanceQuality, Solution};
+use crate::solution::ParetoCrowdingDistanceQuality;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::random::{seed_from_time, Random};
@@ -109,41 +111,24 @@ impl StepStateCheckpoint<f64, ParetoCrowdingDistanceQuality> for NSGAIIState {
         self.generation
     }
 
-    fn from_payload(payload: &str) -> Self {
-        let parts: std::collections::HashMap<&str, &str> = payload
-            .split(';')
-            .filter_map(|s| {
-                let mut kv = s.splitn(2, '=');
-                Some((kv.next()?, kv.next()?))
-            })
-            .collect();
-
-        let generation = parts
-            .get("iter")
-            .and_then(|s| s.parse::<usize>().ok())
-            .unwrap_or(0);
-
-        let evaluations = parts
-            .get("eval")
-            .and_then(|s| s.parse::<usize>().ok())
-            .unwrap_or(0);
-
-        let random_seed = parts
-            .get("seed")
-            .and_then(|s| s.parse::<u64>().ok())
-            .unwrap_or_else(seed_from_time);
-
-        let population = parts
-            .get("pop")
-            .map(|pop_str| {
-                pop_str
-                    .trim_matches(|c| c == '[' || c == ']')
-                    .split(',')
-                    .filter(|s| !s.is_empty())
-                    .filter_map(|sol_str| Solution::decode(sol_str).ok())
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default();
+    fn from_payload(payload: &[u8]) -> Self {
+        let mut payload = StatePayloadDecoder::new(payload)
+            .expect("critical error: invalid NSGA-II checkpoint payload");
+        let generation = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint generation");
+        let evaluations = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint evaluations");
+        let random_seed = payload
+            .read_u64()
+            .expect("critical error: missing checkpoint RNG state");
+        let population = payload
+            .read_solution_vec()
+            .expect("critical error: could not decode checkpoint population");
+        payload
+            .ensure_finished()
+            .expect("critical error: trailing bytes in NSGA-II checkpoint payload");
 
         Self {
             population,
@@ -153,21 +138,19 @@ impl StepStateCheckpoint<f64, ParetoCrowdingDistanceQuality> for NSGAIIState {
         }
     }
 
-    fn to_payload(&self) -> String {
-        let population_encoded = self
-            .population
-            .iter()
-            .map(|sol| sol.encode())
-            .collect::<Vec<String>>()
-            .join(",");
-
-        format!(
-            "iter={};eval={};seed={};pop=[{}]",
-            self.iteration(),
-            self.evaluations(),
-            self.random_seed(),
-            population_encoded
-        )
+    fn to_payload(&self) -> Vec<u8> {
+        let mut payload = StatePayloadEncoder::new();
+        payload
+            .write_usize(self.generation)
+            .expect("generation should serialize into checkpoint payload");
+        payload
+            .write_usize(self.evaluations)
+            .expect("evaluations should serialize into checkpoint payload");
+        payload.write_u64(self.rng.state());
+        payload
+            .write_solution_vec(&self.population)
+            .expect("population should serialize into checkpoint payload");
+        payload.finish()
     }
 }
 

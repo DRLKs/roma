@@ -1,4 +1,6 @@
-use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
+use crate::algorithms::checkpoint::{
+    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
+};
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
@@ -106,94 +108,65 @@ impl StepStateCheckpoint<bool, f64> for PSOState {
         self.iteration
     }
 
-    fn to_payload(&self) -> String {
-        let encoded_particles = self
-            .particles
-            .iter()
-            .map(|p| p.encode())
-            .collect::<Vec<_>>()
-            .join(",");
-
-        let encoded_velocities = self
-            .velocities
-            .iter()
-            .map(|v| {
-                v.iter()
-                    .map(|f| f.to_string())
-                    .collect::<Vec<_>>()
-                    .join("|")
-            })
-            .collect::<Vec<_>>()
-            .join(",");
-
-        let encoded_p_bests = self
-            .personal_best
-            .iter()
-            .map(|p| p.encode())
-            .collect::<Vec<_>>()
-            .join(",");
-
-        let encoded_g_best = self.global_best.encode();
-
-        format!(
-            "iter={};eval={};particles=[{}];vels=[{}];pbests=[{}];gbest={}",
-            self.iteration,
-            self.evaluations,
-            encoded_particles,
-            encoded_velocities,
-            encoded_p_bests,
-            encoded_g_best
-        )
+    fn to_payload(&self) -> Vec<u8> {
+        let mut payload = StatePayloadEncoder::new();
+        payload
+            .write_usize(self.iteration)
+            .expect("iteration should serialize into checkpoint payload");
+        payload
+            .write_usize(self.evaluations)
+            .expect("evaluations should serialize into checkpoint payload");
+        payload.write_u64(self.rng.state());
+        payload
+            .write_solution_vec(&self.particles)
+            .expect("particles should serialize into checkpoint payload");
+        payload
+            .write_f64_vec_vec(&self.velocities)
+            .expect("velocities should serialize into checkpoint payload");
+        payload
+            .write_solution_vec(&self.personal_best)
+            .expect("personal bests should serialize into checkpoint payload");
+        payload
+            .write_solution(&self.global_best)
+            .expect("global best should serialize into checkpoint payload");
+        payload.finish()
     }
 
-    fn from_payload(payload: &str) -> Self {
-        let parts: std::collections::HashMap<&str, &str> = payload
-            .split(';')
-            .filter_map(|s| {
-                let mut kv = s.splitn(2, '=');
-                Some((kv.next()?, kv.next()?))
-            })
-            .collect();
+    fn from_payload(payload: &[u8]) -> Self {
+        let mut payload = StatePayloadDecoder::new(payload)
+            .expect("critical error: invalid PSO checkpoint payload");
+        let iteration = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint iteration");
+        let evaluations = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint evaluations");
+        let random_seed = payload
+            .read_u64()
+            .expect("critical error: missing checkpoint RNG state");
+        let particles = payload
+            .read_solution_vec()
+            .expect("critical error: could not decode particles");
+        let velocities = payload
+            .read_f64_vec_vec()
+            .expect("critical error: could not decode velocities");
+        let personal_best = payload
+            .read_solution_vec()
+            .expect("critical error: could not decode personal bests");
 
-        let split_list = |key: &str| {
-            parts
-                .get(key)
-                .map(|s| s.trim_matches(|c| c == '[' || c == ']').split(','))
-                .into_iter()
-                .flatten()
-                .filter(|s| !s.is_empty())
-        };
-
-        let iteration = parts.get("iter").and_then(|s| s.parse().ok()).unwrap_or(0);
-        let evaluations = parts.get("eval").and_then(|s| s.parse().ok()).unwrap_or(0);
-        let particles = split_list("particles")
-            .filter_map(|s| Solution::decode(s).ok())
-            .collect();
-
-        let personal_best = split_list("pbests")
-            .filter_map(|s| Solution::decode(s).ok())
-            .collect();
-
-        let global_best = parts
-            .get("gbest")
-            .and_then(|s| Solution::decode(s).ok())
-            .expect("Error crítico: No se encontró el global_best en el payload");
-
-        let velocities = split_list("vels")
-            .map(|v_str| {
-                v_str
-                    .split('|')
-                    .filter_map(|f| f.parse::<f64>().ok())
-                    .collect::<Vec<f64>>()
-            })
-            .collect();
+        let global_best = payload
+            .read_solution()
+            .expect("critical error: could not decode global best");
+        payload
+            .ensure_finished()
+            .expect("critical error: trailing bytes in PSO checkpoint payload");
 
         Self {
             particles,
             velocities,
             personal_best,
             global_best,
-            rng: Random::new(seed_from_time()),
+            rng: Random::new(random_seed),
             iteration,
             evaluations,
         }
