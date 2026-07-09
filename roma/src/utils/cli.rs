@@ -259,7 +259,7 @@ pub fn prompt_checkpoint_selection(entries: &[CheckpointEntry]) -> Result<Option
             age_str,
             time_str,
             status_icon,
-            rec.step_state_payload,
+            format!("{} bytes", rec.step_state_payload.len()),
             age_width = CHECKPOINT_AGE_COLUMN_WIDTH,
         );
     }
