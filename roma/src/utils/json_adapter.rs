@@ -466,7 +466,7 @@ fn number_from_json_value(value: &JsonValue) -> std::io::Result<f64> {
         )
     })
 }
- 
+
 /// Reads a scalar array from a JSON string using a path expression.
 pub fn get_json_array_values_from_str(json: &str, key_path: &str) -> std::io::Result<Vec<String>> {
     let root = JsonParser::new(json)

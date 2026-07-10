@@ -162,7 +162,7 @@ impl Random {
 #[cfg(test)]
 mod tests {
 
-    use crate::utils::random::{seed_from_time, Random};
+    use crate::utils::random::{Random, seed_from_time};
 
     #[test]
     fn range_between_respects_bounds() {
