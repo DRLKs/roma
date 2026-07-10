@@ -8,8 +8,8 @@ use crate::observer::{AlgorithmEvent, ObserverState};
 use crate::problem::traits::Problem;
 use std::cell::RefCell;
 use std::fmt::Display;
-use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
+use std::sync::mpsc::{self, Sender};
 use std::thread::{self, JoinHandle};
 
 type ObserverSender<T, Q> = Option<Sender<AlgorithmEvent<T, Q>>>;
@@ -279,10 +279,14 @@ mod tests {
     #[test]
     fn snapshot_with_seq_updates_termination_state() {
         let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(2)]);
-        let context: ExecutionContext<f64> = ExecutionContext::new(None, criteria, crate::solution::traits::evaluator::maximizing_values);
+        let context: ExecutionContext<f64> = ExecutionContext::new(
+            None,
+            criteria,
+            crate::solution::traits::evaluator::maximizing_values,
+        );
 
         assert_eq!(context.seq_id(), 0);
-    
+
         let snap1 = ExecutionStateSnapshot {
             iteration: 0,
             evaluations: 1,
