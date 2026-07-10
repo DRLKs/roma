@@ -123,7 +123,7 @@ impl Problem<usize> for QapProblem {
     }
 
     fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        crate::solution::traits::evaluator::minimizing_fitness
+        crate::solution::traits::evaluator::minimizing_values
     }
 
     fn format_solution(&self, solution: &Solution<usize>) -> String {

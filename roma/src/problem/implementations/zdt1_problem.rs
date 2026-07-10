@@ -96,7 +96,7 @@ impl Problem<f64, ParetoCrowdingDistanceQuality> for ZDT1Problem {
     }
 
     fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        crate::solution::traits::evaluator::minimizing_fitness
+        crate::solution::traits::evaluator::minimizing_values
     }
 
     fn set_problem_description(&mut self, description: String) {

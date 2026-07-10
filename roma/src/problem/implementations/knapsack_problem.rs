@@ -104,7 +104,7 @@ impl Problem<bool> for KnapsackProblem {
     }
 
     fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        crate::solution::traits::evaluator::maximizing_fitness
+        crate::solution::traits::evaluator::maximizing_values
     }
 
     fn create_solution(&self, _rng: &mut Random) -> Solution<bool> {

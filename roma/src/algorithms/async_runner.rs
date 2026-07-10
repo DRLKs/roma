@@ -103,7 +103,7 @@ mod tests {
         }
 
         fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-            crate::solution::traits::evaluator::minimizing_fitness
+            crate::solution::traits::evaluator::minimizing_values
         }
 
         fn dominates(&self, solution_a: &Solution<bool, f64>, solution_b: &Solution<bool, f64>) -> bool {
