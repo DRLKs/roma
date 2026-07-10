@@ -1,4 +1,3 @@
-use crate::algorithms::checkpoint::ExecutionStateSnapshot;
 use crate::algorithms::termination::{
     TerminationController, TerminationCriteria, TerminationReason,
 };
@@ -6,6 +5,7 @@ use crate::algorithms::traits::Algorithm;
 use crate::observer::traits::AlgorithmObserver;
 use crate::observer::{AlgorithmEvent, ObserverState};
 use crate::problem::traits::Problem;
+use crate::utils::checkpoint::ExecutionStateSnapshot;
 use std::cell::RefCell;
 use std::fmt::Display;
 use std::sync::Arc;

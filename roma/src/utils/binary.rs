@@ -1,7 +1,7 @@
 use std::io;
 use std::io::Read;
 
-use crate::algorithms::checkpoint::CheckpointRunStatus;
+use crate::utils::checkpoint::CheckpointRunStatus;
 
 // Tag values used when encoding Option<T> in checkpoint binary payloads.
 const OPTION_NONE_FLAG: u8 = 0;

@@ -2,9 +2,6 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 use crate::Observable;
-use crate::algorithms::checkpoint::{
-    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
-};
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
@@ -14,6 +11,9 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
+use crate::utils::checkpoint::{
+    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
+};
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::parallel::resolve_num_threads;
 use crate::utils::random::Random;
@@ -667,7 +667,6 @@ where
 mod tests {
     use super::{GeneticAlgorithm, GeneticAlgorithmParameters, GeneticAlgorithmState};
     use crate::Algorithm;
-    use crate::algorithms::checkpoint::StepStateCheckpoint;
     use crate::algorithms::termination::{TerminationCriteria, TerminationCriterion};
     use crate::operator::crossover_operator_implementations::single_point_crossover::SinglePointCrossover;
     use crate::operator::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
@@ -675,6 +674,7 @@ mod tests {
     use crate::problem::implementations::knapsack_problem::KnapsackBuilder;
     use crate::solution::BinarySolutionBuilder;
     use crate::solution_set::traits::SolutionSet;
+    use crate::utils::checkpoint::StepStateCheckpoint;
 
     #[test]
     fn state_payload_roundtrip_preserves_multi_variable_population() {

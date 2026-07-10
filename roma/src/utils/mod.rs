@@ -6,6 +6,7 @@
 pub mod benchmark;
 pub mod binary;
 pub mod chart;
+pub mod checkpoint;
 pub mod cli;
 pub mod csv_adapter;
 pub mod hash;
@@ -16,10 +17,8 @@ pub mod random;
 pub mod statistics;
 pub mod yaml_adapter;
 
-pub use crate::algorithms::checkpoint::{
-    delete_snapshot_on_success, read_snapshot, write_snapshot,
-};
 pub use benchmark::{measure, measure_result, process_cpu_time_ms, speedup};
+pub use checkpoint::{delete_snapshot_on_success, read_snapshot, write_snapshot};
 pub use cli::CliArgs;
 pub use parallel::resolve_num_threads;
 pub use random::{Random, seed_from_time};

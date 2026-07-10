@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use crate::algorithms::checkpoint::ExecutionStateSnapshot;
+use crate::utils::checkpoint::ExecutionStateSnapshot;
 
 /// Defines stopping criteria for optimization algorithms.
 ///

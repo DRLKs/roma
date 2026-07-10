@@ -1,6 +1,3 @@
-use crate::algorithms::checkpoint::{
-    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
-};
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
@@ -9,6 +6,9 @@ use crate::problem::Problem;
 use crate::solution::{RealBounds, Solution};
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
+use crate::utils::checkpoint::{
+    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
+};
 use crate::utils::random::Random;
 use crate::utils::statistics::calculate_population_statistics;
 

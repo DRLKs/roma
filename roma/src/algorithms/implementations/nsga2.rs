@@ -1,6 +1,3 @@
-use crate::algorithms::checkpoint::{
-    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
-};
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::observer::Observable;
@@ -9,6 +6,9 @@ use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOper
 use crate::problem::traits::Problem;
 use crate::solution::ParetoCrowdingDistanceQuality;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
+use crate::utils::checkpoint::{
+    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
+};
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::random::{Random, seed_from_time};
 use crate::utils::statistics::calculate_population_statistics_by;

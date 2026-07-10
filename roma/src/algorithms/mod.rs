@@ -10,16 +10,13 @@
 //! `roma::prelude`.
 
 pub(crate) mod async_runner;
-pub(crate) mod checkpoint;
 pub(crate) mod implementations;
 pub(crate) mod runtime;
 pub(crate) mod termination;
 pub(crate) mod traits;
 
-pub use async_runner::{
-    run_algorithm_instances_async, run_algorithm_instances_async_with_options, run_algorithms_async,
-};
-pub use checkpoint::{CheckpointOptions, ExecutionStateSnapshot, StepStateCheckpoint};
+pub use crate::utils::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
+pub use async_runner::{run_algorithm_instances_async, run_algorithms_async};
 pub use implementations::{
     differential_evolution::{DifferentialEvolution, DifferentialEvolutionParameters},
     genetic_algorithm::{GeneticAlgorithm, GeneticAlgorithmParameters},
@@ -30,9 +27,7 @@ pub use implementations::{
     tabu_search::{TabuSearch, TabuSearchParameters},
     vns::{VNS, VNSParameters},
 };
-pub use runtime::{
-    ExecutionContext, RuntimeOptions, spawn_algorithm_run, spawn_algorithm_run_with_options,
-};
+pub use runtime::{ExecutionContext, spawn_algorithm_run};
 pub use termination::{
     TerminationController, TerminationCriteria, TerminationCriterion, TerminationReason,
     TerminationState,
