@@ -97,8 +97,8 @@ mod tests {
         }
 
         fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-            use crate::solution::traits::evaluator::maximizing_fitness;
-            maximizing_fitness
+            use crate::solution::traits::evaluator::maximizing_values;
+            maximizing_values
         }
     }
 
@@ -124,8 +124,8 @@ mod tests {
         }
 
         fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-            use crate::solution::traits::evaluator::minimizing_fitness;
-            minimizing_fitness
+            use crate::solution::traits::evaluator::minimizing_values;
+            minimizing_values
         }
     }
 

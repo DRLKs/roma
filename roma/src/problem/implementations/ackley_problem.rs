@@ -113,7 +113,7 @@ impl Problem<f64> for AckleyProblem {
     }
 
     fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        crate::solution::traits::evaluator::minimizing_fitness
+        crate::solution::traits::evaluator::minimizing_values
     }
 
     fn real_bounds(&self) -> Option<&RealBounds> {

@@ -279,7 +279,7 @@ mod tests {
     #[test]
     fn snapshot_with_seq_updates_termination_state() {
         let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(2)]);
-        let context: ExecutionContext<f64> = ExecutionContext::new(None, criteria, crate::solution::traits::evaluator::maximizing_fitness);
+        let context: ExecutionContext<f64> = ExecutionContext::new(None, criteria, crate::solution::traits::evaluator::maximizing_values);
 
         assert_eq!(context.seq_id(), 0);
     

@@ -117,7 +117,7 @@ mod tests {
         fn dominates(&self, solution_a: &Solution<bool>, solution_b: &Solution<bool>) -> bool {
             solution_a.quality_value() > solution_b.quality_value()
         }
-        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool { crate::solution::traits::evaluator::maximizing_fitness }
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool { crate::solution::traits::evaluator::maximizing_values }
     }
 
     impl Problem<bool> for MinProblem {
@@ -129,7 +129,7 @@ mod tests {
         fn dominates(&self, solution_a: &Solution<bool>, solution_b: &Solution<bool>) -> bool {
             solution_a.quality_value() < solution_b.quality_value()
         }
-        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool { crate::solution::traits::evaluator::minimizing_fitness }
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool { crate::solution::traits::evaluator::minimizing_values }
     }
 
     #[test]
