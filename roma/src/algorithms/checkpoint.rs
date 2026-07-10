@@ -1311,11 +1311,15 @@ mod tests {
                 .unwrap_or(0)
         ));
         let fallback = base.join("fallback");
+        let blocked_path = base.join("blocked");
+        std::fs::create_dir_all(&base).expect("test base directory should be created");
+        std::fs::write(&blocked_path, b"not a directory")
+            .expect("test blocking file should be created");
 
         let config = CheckpointPathConfig {
-            app_name: "/dev/null".to_string(),
+            app_name: blocked_path.to_string_lossy().into_owned(),
             env_var_name: "ROMA_TEST_UNUSED_CHECKPOINT_ENV",
-            explicit_dir: Some(PathBuf::from("/dev/null/roma")),
+            explicit_dir: Some(blocked_path.join("roma")),
             project_fallback_dir: Some(fallback.clone()),
         };
 
@@ -1338,11 +1342,15 @@ mod tests {
                 .unwrap_or(0)
         ));
         let fallback = base.join("fallback");
+        let blocked_path = base.join("blocked");
+        std::fs::create_dir_all(&base).expect("test base directory should be created");
+        std::fs::write(&blocked_path, b"not a directory")
+            .expect("test blocking file should be created");
 
         let config = CheckpointPathConfig {
-            app_name: "/dev/null".to_string(),
+            app_name: blocked_path.to_string_lossy().into_owned(),
             env_var_name: "ROMA_TEST_UNUSED_CHECKPOINT_ENV",
-            explicit_dir: Some(PathBuf::from("/dev/null/roma")),
+            explicit_dir: Some(blocked_path.join("roma")),
             project_fallback_dir: Some(fallback.clone()),
         };
 
