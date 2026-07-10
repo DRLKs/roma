@@ -18,4 +18,4 @@ pub use implementations::{
     tsp_problem::{build_tsp_from_records, TspProblem},
     zdt1_problem::ZDT1Problem,
 };
-pub use traits::Problem;
+pub use traits::{compare_scalar_qualities, Problem, SolutionComparison};

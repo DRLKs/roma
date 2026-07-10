@@ -24,7 +24,7 @@ fn main() {
 
     let parameters = HillClimbingParameters::new(
         BitFlipNeighborhood::new(),
-        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(12000)]),
     )
     .with_seed(seed);
     let mut algorithm = HillClimbing::new(parameters);

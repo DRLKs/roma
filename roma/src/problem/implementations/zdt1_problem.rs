@@ -1,4 +1,4 @@
-use crate::problem::Problem;
+use crate::problem::{Problem, SolutionComparison};
 use crate::solution::RealBounds;
 use crate::solution::implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
 use crate::solution::traits::ParetoCrowdingDistanceQuality;
@@ -75,8 +75,28 @@ impl Problem<f64, ParetoCrowdingDistanceQuality> for ZDT1Problem {
         solution.set_objectives(objectives);
     }
 
-    fn dominates(&self, solution_a: &Solution<f64, ParetoCrowdingDistanceQuality>, solution_b: &Solution<f64, ParetoCrowdingDistanceQuality>) -> bool {
-        solution_a.dominates(solution_b)
+    fn compare_qualities(
+        &self,
+        left: Option<&ParetoCrowdingDistanceQuality>,
+        right: Option<&ParetoCrowdingDistanceQuality>,
+    ) -> SolutionComparison {
+        let (Some(left), Some(right)) = (left, right) else {
+            return SolutionComparison::Incomparable;
+        };
+
+        if left.dominates(right) {
+            SolutionComparison::Better
+        } else if right.dominates(left) {
+            SolutionComparison::Worse
+        } else if left.objectives == right.objectives {
+            SolutionComparison::Equivalent
+        } else {
+            SolutionComparison::Incomparable
+        }
+    }
+
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+        crate::solution::traits::evaluator::minimizing_fitness
     }
 
     fn set_problem_description(&mut self, description: String) {
@@ -99,13 +119,6 @@ impl Problem<f64, ParetoCrowdingDistanceQuality> for ZDT1Problem {
         MultiObjectiveRealSolutionBuilder::from_variables(variables)
             .with_bounds(0.0, 1.0)
             .build()
-    }
-
-    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        fn minimizing_fitness(candidate: f64, reference: f64) -> bool {
-            candidate < reference
-        }
-        minimizing_fitness
     }
 
     fn format_solution(&self, solution: &Solution<f64, ParetoCrowdingDistanceQuality>) -> String {

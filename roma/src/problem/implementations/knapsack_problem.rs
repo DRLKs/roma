@@ -1,4 +1,4 @@
-use crate::problem::traits::Problem;
+use crate::problem::{compare_scalar_qualities, Problem, SolutionComparison};
 use crate::solution::Solution;
 use crate::utils::random::Random;
 use std::collections::HashMap;
@@ -95,10 +95,16 @@ impl Problem<bool> for KnapsackProblem {
         solution.set_quality(_fitness);
     }
 
-    fn dominates(&self, solution_a: &Solution<bool, f64>, solution_b: &Solution<bool, f64>) -> bool {
-        let fitness_a = solution_a.quality().copied().unwrap_or(f64::NEG_INFINITY);
-        let fitness_b = solution_b.quality().copied().unwrap_or(f64::NEG_INFINITY);
-        fitness_a > fitness_b
+    fn compare_qualities(
+        &self,
+        left: Option<&f64>,
+        right: Option<&f64>,
+    ) -> SolutionComparison {
+        compare_scalar_qualities(left, right, self.better_fitness_fn())
+    }
+
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+        crate::solution::traits::evaluator::maximizing_fitness
     }
 
     fn create_solution(&self, _rng: &mut Random) -> Solution<bool> {
@@ -115,10 +121,6 @@ impl Problem<bool> for KnapsackProblem {
 
     fn get_problem_description(&self) -> String {
         self.description.clone()
-    }
-
-    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        crate::solution::traits::evaluator::maximizing_fitness
     }
 
     fn format_solution(&self, solution: &Solution<bool>) -> String {
