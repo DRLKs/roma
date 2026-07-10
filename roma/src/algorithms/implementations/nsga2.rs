@@ -3,14 +3,14 @@ use crate::algorithms::checkpoint::{
 };
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
-use crate::observer::traits::AlgorithmObserver;
 use crate::observer::Observable;
+use crate::observer::traits::AlgorithmObserver;
 use crate::operator::traits::{CrossoverOperator, MutationOperator, SelectionOperator};
 use crate::problem::traits::Problem;
 use crate::solution::ParetoCrowdingDistanceQuality;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::utils::parallel::parallel_map_indexed;
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::random::{Random, seed_from_time};
 use crate::utils::statistics::calculate_population_statistics_by;
 use std::cmp::Ordering;
 
@@ -477,14 +477,12 @@ where
             );
 
             let mut children = if state.rng.next_f64() < self.parameters.crossover_probability {
-                self.parameters
-                    .crossover_operator
-                    .execute(
-                        &parent1,
-                        &parent2,
-                        real_bounds,
-                        &mut state.rng,
-                    )
+                self.parameters.crossover_operator.execute(
+                    &parent1,
+                    &parent2,
+                    real_bounds,
+                    &mut state.rng,
+                )
             } else {
                 vec![parent1.copy(), parent2.copy()]
             };
@@ -628,14 +626,18 @@ mod tests {
         assert_eq!(fronts.len(), 1);
 
         // Boundary points should have infinite crowding distance.
-        assert!(population[0]
-            .crowding_distance()
-            .expect("crowding must be assigned")
-            .is_infinite());
-        assert!(population[2]
-            .crowding_distance()
-            .expect("crowding must be assigned")
-            .is_infinite());
+        assert!(
+            population[0]
+                .crowding_distance()
+                .expect("crowding must be assigned")
+                .is_infinite()
+        );
+        assert!(
+            population[2]
+                .crowding_distance()
+                .expect("crowding must be assigned")
+                .is_infinite()
+        );
 
         // Interior point should be finite and positive.
         let interior = population[1]

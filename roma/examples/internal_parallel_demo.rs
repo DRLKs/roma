@@ -2,19 +2,14 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use roma_lib::algorithms::{
-    Algorithm,
-    GeneticAlgorithm,
-    GeneticAlgorithmParameters,
-    run_algorithm_instances_async,
-    spawn_algorithm_run,
-    TerminationCriteria,
-    TerminationCriterion,
+    Algorithm, GeneticAlgorithm, GeneticAlgorithmParameters, TerminationCriteria,
+    TerminationCriterion, run_algorithm_instances_async, spawn_algorithm_run,
 };
 use roma_lib::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
 use roma_lib::problem::{KnapsackBuilder, KnapsackProblem};
 use roma_lib::solution_set::SolutionSet;
-use roma_lib::utils::{measure_result, speedup};
 use roma_lib::utils::cli::CliArgs;
+use roma_lib::utils::{measure_result, speedup};
 
 fn build_problem() -> KnapsackProblem {
     let items: Vec<(f64, f64)> = (0..90)
@@ -33,8 +28,12 @@ fn build_problem() -> KnapsackProblem {
 
 fn ga_params(
     seed: u64,
-) -> GeneticAlgorithmParameters<bool, SinglePointCrossover, BitFlipMutation, BinaryTournamentSelection>
-{
+) -> GeneticAlgorithmParameters<
+    bool,
+    SinglePointCrossover,
+    BitFlipMutation,
+    BinaryTournamentSelection,
+> {
     GeneticAlgorithmParameters::new(
         120,
         0.90,
@@ -50,7 +49,11 @@ fn ga_params(
     .sequential()
 }
 
-fn benchmark_sequential(problem: &KnapsackProblem, instances: usize, base_seed: u64) -> Result<(Duration, f64), String> {
+fn benchmark_sequential(
+    problem: &KnapsackProblem,
+    instances: usize,
+    base_seed: u64,
+) -> Result<(Duration, f64), String> {
     measure_result(|| {
         let mut checksum = 0.0;
 
@@ -64,7 +67,11 @@ fn benchmark_sequential(problem: &KnapsackProblem, instances: usize, base_seed: 
     })
 }
 
-fn benchmark_spawn_runtime(problem: Arc<KnapsackProblem>, instances: usize, base_seed: u64) -> Result<(Duration, f64), String> {
+fn benchmark_spawn_runtime(
+    problem: Arc<KnapsackProblem>,
+    instances: usize,
+    base_seed: u64,
+) -> Result<(Duration, f64), String> {
     measure_result(|| {
         let mut handles = Vec::with_capacity(instances);
 
@@ -86,15 +93,25 @@ fn benchmark_spawn_runtime(problem: Arc<KnapsackProblem>, instances: usize, base
     })
 }
 
-fn benchmark_batch_async(problem: Arc<KnapsackProblem>, instances: usize, base_seed: u64) -> Result<(Duration, f64), String> {
-    let algorithms: Vec<GeneticAlgorithm<bool, SinglePointCrossover, BitFlipMutation, BinaryTournamentSelection>> =
-        (0..instances)
-            .map(|i| GeneticAlgorithm::new(ga_params(base_seed + i as u64)))
-            .collect();
+fn benchmark_batch_async(
+    problem: Arc<KnapsackProblem>,
+    instances: usize,
+    base_seed: u64,
+) -> Result<(Duration, f64), String> {
+    let algorithms: Vec<
+        GeneticAlgorithm<bool, SinglePointCrossover, BitFlipMutation, BinaryTournamentSelection>,
+    > = (0..instances)
+        .map(|i| GeneticAlgorithm::new(ga_params(base_seed + i as u64)))
+        .collect();
 
     measure_result(|| {
         let results = run_algorithm_instances_async::<
-            GeneticAlgorithm<bool, SinglePointCrossover, BitFlipMutation, BinaryTournamentSelection>,
+            GeneticAlgorithm<
+                bool,
+                SinglePointCrossover,
+                BitFlipMutation,
+                BinaryTournamentSelection,
+            >,
             bool,
             f64,
             KnapsackProblem,
@@ -129,15 +146,17 @@ fn main() {
         }
     };
 
-    let (spawn_time, spawn_sum) = match benchmark_spawn_runtime(Arc::clone(&problem), instances, seed) {
-        Ok(v) => v,
-        Err(e) => {
-            eprintln!("spawn_algorithm_run benchmark failed: {}", e);
-            return;
-        }
-    };
+    let (spawn_time, spawn_sum) =
+        match benchmark_spawn_runtime(Arc::clone(&problem), instances, seed) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("spawn_algorithm_run benchmark failed: {}", e);
+                return;
+            }
+        };
 
-    let (async_time, async_sum) = match benchmark_batch_async(Arc::clone(&problem), instances, seed) {
+    let (async_time, async_sum) = match benchmark_batch_async(Arc::clone(&problem), instances, seed)
+    {
         Ok(v) => v,
         Err(e) => {
             eprintln!("run_algorithm_instances_async benchmark failed: {}", e);
@@ -151,8 +170,14 @@ fn main() {
     println!("  run_algorithm_instances_async = {:?}", async_time);
 
     println!("\nSpeedup vs sequential:");
-    println!("  spawn_algorithm_run : {:.2}x", speedup(seq_time, spawn_time));
-    println!("  run_algorithm_instances_async: {:.2}x", speedup(seq_time, async_time));
+    println!(
+        "  spawn_algorithm_run : {:.2}x",
+        speedup(seq_time, spawn_time)
+    );
+    println!(
+        "  run_algorithm_instances_async: {:.2}x",
+        speedup(seq_time, async_time)
+    );
 
     println!("\nChecksums (sum of best objective values):");
     println!("  sequential          = {:.6}", seq_sum);

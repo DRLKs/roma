@@ -7,14 +7,14 @@ use crate::algorithms::checkpoint::{
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
-use crate::observer::traits::AlgorithmObserver;
 use crate::observer::Observable;
+use crate::observer::traits::AlgorithmObserver;
 use crate::operator::traits::NeighborhoodOperator;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::random::{Random, seed_from_time};
 
 /// Configuration parameters for the Hill Climbing algorithm.
 ///
@@ -43,10 +43,7 @@ where
     /// # Arguments
     /// - `neighborhood`: defines the set of reachable neighbors from any solution.
     /// - `termination_criteria`: criteria to stop the algorithm.
-    pub fn new(
-        neighborhood: N,
-        termination_criteria: TerminationCriteria,
-    ) -> Self {
+    pub fn new(neighborhood: N, termination_criteria: TerminationCriteria) -> Self {
         Self {
             neighborhood,
             termination_criteria,
@@ -234,11 +231,7 @@ where
         }
     }
 
-    fn step(
-        &self,
-        problem: &(impl Problem<T> + Sync),
-        state: &mut Self::StepState,
-    ) {
+    fn step(&self, problem: &(impl Problem<T> + Sync), state: &mut Self::StepState) {
         state.iteration += 1;
         let real_bounds = problem.real_bounds();
 
@@ -300,10 +293,7 @@ where
     }
 
     fn case_name(&self) -> String {
-        format!(
-            "HillClimbing(neighborhood={})",
-            self.neighborhood.name(),
-        )
+        format!("HillClimbing(neighborhood={})", self.neighborhood.name(),)
     }
 
     fn parameters(&self) -> Vec<CaseParameter> {

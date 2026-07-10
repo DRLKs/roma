@@ -1,13 +1,11 @@
 use roma_lib::algorithms::{
-    GeneticAlgorithmParameters,
-    HillClimbingParameters,
-    PSOParameters,
-    SimulatedAnnealingParameters,
-    TerminationCriteria,
-    TerminationCriterion,
+    GeneticAlgorithmParameters, HillClimbingParameters, PSOParameters,
+    SimulatedAnnealingParameters, TerminationCriteria, TerminationCriterion,
 };
 use roma_lib::experiment::Experiment;
-use roma_lib::operator::{BinaryTournamentSelection, BitFlipMutation, BitFlipNeighborhood, SinglePointCrossover};
+use roma_lib::operator::{
+    BinaryTournamentSelection, BitFlipMutation, BitFlipNeighborhood, SinglePointCrossover,
+};
 use roma_lib::problem::KnapsackBuilder;
 
 fn main() {
@@ -32,21 +30,21 @@ fn main() {
         .build();
 
     let hill_climbing_case = HillClimbingParameters::new(
-            BitFlipNeighborhood::new(),
-            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(180)]),
-        );
+        BitFlipNeighborhood::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(180)]),
+    );
 
     let genetic_algorithm_case = GeneticAlgorithmParameters::new(
-            80,
-            0.90,
-            0.06,
-            SinglePointCrossover::new(),
-            BitFlipMutation::new(),
-            BinaryTournamentSelection::new(),
-            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(60)]),
-        )
-        .with_elite_size(1)
-        .with_threads(4);
+        80,
+        0.90,
+        0.06,
+        SinglePointCrossover::new(),
+        BitFlipMutation::new(),
+        BinaryTournamentSelection::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(60)]),
+    )
+    .with_elite_size(1)
+    .with_threads(4);
 
     let simulated_annealing_case = SimulatedAnnealingParameters::new(
         BitFlipNeighborhood::new(),

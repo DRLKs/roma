@@ -1,4 +1,4 @@
-use crate::problem::{compare_scalar_qualities, Problem, SolutionComparison};
+use crate::problem::{Problem, SolutionComparison, compare_scalar_qualities};
 use crate::solution::Solution;
 use crate::utils::random::Random;
 use std::collections::{BTreeMap, HashMap};
@@ -45,7 +45,8 @@ impl TspProblem {
         let mut distance_matrix = vec![vec![0.0; size]; size];
         for i in 0..size {
             for j in i + 1..size {
-                let distance = Self::rounded_euclidean_distance(city_positions[i], city_positions[j]);
+                let distance =
+                    Self::rounded_euclidean_distance(city_positions[i], city_positions[j]);
                 distance_matrix[i][j] = distance;
                 distance_matrix[j][i] = distance;
             }
@@ -185,11 +186,7 @@ impl Problem<usize> for TspProblem {
         solution.set_quality(fitness);
     }
 
-    fn compare_qualities(
-        &self,
-        left: Option<&f64>,
-        right: Option<&f64>,
-    ) -> SolutionComparison {
+    fn compare_qualities(&self, left: Option<&f64>, right: Option<&f64>) -> SolutionComparison {
         compare_scalar_qualities(left, right, self.better_fitness_fn())
     }
 
@@ -442,12 +439,18 @@ mod tests {
             vec![1.0, 0.0, 3.0],
             vec![2.0, 3.0, 0.0],
         ];
-        let problem = TspProblem::with_distance_matrix(matrix)
-            .with_city_positions(vec![(10.0, 20.0), (30.0, 40.0), (50.0, 60.0)]);
+        let problem = TspProblem::with_distance_matrix(matrix).with_city_positions(vec![
+            (10.0, 20.0),
+            (30.0, 40.0),
+            (50.0, 60.0),
+        ]);
 
         assert_eq!(problem.city_position(1), Some((30.0, 40.0)));
         assert_eq!(problem.city_position(3), None);
-        assert_eq!(problem.city_positions(), Some(&[(10.0, 20.0), (30.0, 40.0), (50.0, 60.0)][..]));
+        assert_eq!(
+            problem.city_positions(),
+            Some(&[(10.0, 20.0), (30.0, 40.0), (50.0, 60.0)][..])
+        );
     }
 
     #[test]

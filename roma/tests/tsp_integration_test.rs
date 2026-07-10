@@ -1,19 +1,8 @@
 use roma_lib::{
-    Algorithm,
-    BinaryTournamentSelection,
-    GeneticAlgorithm,
-    GeneticAlgorithmParameters,
-    HillClimbing,
-    HillClimbingParameters,
-    OrderCrossover,
-    SimulatedAnnealing,
-    SimulatedAnnealingParameters,
-    SolutionSet,
-    SwapMutation,
-    TerminationCriteria,
-    TerminationCriterion,
-    TspProblem,
-    TwoOptNeighborhood,
+    Algorithm, BinaryTournamentSelection, GeneticAlgorithm, GeneticAlgorithmParameters,
+    HillClimbing, HillClimbingParameters, OrderCrossover, SimulatedAnnealing,
+    SimulatedAnnealingParameters, SolutionSet, SwapMutation, TerminationCriteria,
+    TerminationCriterion, TspProblem, TwoOptNeighborhood,
 };
 
 #[test]
@@ -32,7 +21,9 @@ fn hill_climbing_runs_on_tsp_and_returns_valid_distance() {
     .with_seed(42);
 
     let mut algorithm = HillClimbing::new(parameters);
-    let result = algorithm.run(&problem).expect("Hill Climbing on TSP should succeed");
+    let result = algorithm
+        .run(&problem)
+        .expect("Hill Climbing on TSP should succeed");
 
     assert_eq!(result.size(), 1);
     let solution = result.get(0).expect("Expected one solution");
@@ -124,7 +115,9 @@ fn genetic_algorithm_runs_on_tsp_and_preserves_route_validity() {
     let mut algorithm = GeneticAlgorithm::new(parameters);
     let result = algorithm.run(&problem).expect("GA on TSP should succeed");
 
-    let best = result.best_solution(&problem).expect("Expected one best solution");
+    let best = result
+        .best_solution(&problem)
+        .expect("Expected one best solution");
     let mut route = best.variables().to_vec();
     route.sort_unstable();
 

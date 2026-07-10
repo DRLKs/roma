@@ -1,8 +1,8 @@
 use crate::problem::{Problem, SolutionComparison};
 use crate::solution::RealBounds;
+use crate::solution::Solution;
 use crate::solution::implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
 use crate::solution::traits::ParetoCrowdingDistanceQuality;
-use crate::solution::Solution;
 use crate::utils::random::Random;
 
 const DEFAULT_NUMBER_OF_VARIABLES: usize = 30;

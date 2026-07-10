@@ -1,9 +1,5 @@
 use roma_lib::TspProblem;
-use roma_lib::algorithms::{
-    HillClimbingParameters,
-    TerminationCriteria,
-    TerminationCriterion,
-};
+use roma_lib::algorithms::{HillClimbingParameters, TerminationCriteria, TerminationCriterion};
 use roma_lib::experiment::Experiment;
 use roma_lib::operator::{InsertionNeighborhood, TwoOptNeighborhood};
 
@@ -18,14 +14,14 @@ fn main() {
     .with_open_route();
 
     let case_a = HillClimbingParameters::new(
-            TwoOptNeighborhood::new(),
-            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
-        );
+        TwoOptNeighborhood::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
+    );
 
     let case_b = HillClimbingParameters::new(
-            InsertionNeighborhood::new(),
-            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
-        );
+        InsertionNeighborhood::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
+    );
 
     let report = Experiment::new(problem)
         .with_runs(12)

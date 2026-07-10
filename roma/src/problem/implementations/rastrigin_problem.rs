@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use crate::problem::{compare_scalar_qualities, Problem, SolutionComparison};
+use crate::problem::{Problem, SolutionComparison, compare_scalar_qualities};
 use crate::solution::RealBounds;
 use crate::solution::{RealSolutionBuilder, Solution};
 use crate::utils::random::Random;
@@ -85,11 +85,7 @@ impl Problem<f64> for RastriginProblem {
         solution.set_quality(value);
     }
 
-    fn compare_qualities(
-        &self,
-        left: Option<&f64>,
-        right: Option<&f64>,
-    ) -> SolutionComparison {
+    fn compare_qualities(&self, left: Option<&f64>, right: Option<&f64>) -> SolutionComparison {
         compare_scalar_qualities(left, right, self.better_fitness_fn())
     }
 
@@ -150,7 +146,12 @@ mod tests {
 
         assert_eq!(problem.number_of_variables(), 10);
         assert_eq!(solution.num_variables(), 10);
-        assert!(solution.variables().iter().all(|value| *value >= -2.5 && *value <= 3.5));
+        assert!(
+            solution
+                .variables()
+                .iter()
+                .all(|value| *value >= -2.5 && *value <= 3.5)
+        );
     }
 
     #[test]

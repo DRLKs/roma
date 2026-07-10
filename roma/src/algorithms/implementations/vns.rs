@@ -13,7 +13,7 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::random::{Random, seed_from_time};
 
 /// Configuration for [`VNS`].
 #[derive(Clone)]
@@ -235,30 +235,20 @@ where
         }
     }
 
-    fn step(
-        &self,
-        problem: &(impl Problem<T> + Sync),
-        state: &mut Self::StepState,
-    ) {
+    fn step(&self, problem: &(impl Problem<T> + Sync), state: &mut Self::StepState) {
         state.iteration += 1;
         let real_bounds = problem.real_bounds();
 
         let neighborhood = &self.parameters.neighborhoods[state.neighborhood_index];
-        let mut candidate = neighborhood.random_neighbor(
-            &state.current,
-            real_bounds,
-            &mut state.rng,
-        );
+        let mut candidate =
+            neighborhood.random_neighbor(&state.current, real_bounds, &mut state.rng);
         problem.evaluate(&mut candidate);
         state.evaluations += 1;
 
         let mut local_best = candidate;
         for _ in 0..self.parameters.local_search_trials {
-            let mut improved_candidate = neighborhood.random_neighbor(
-                &local_best,
-                real_bounds,
-                &mut state.rng,
-            );
+            let mut improved_candidate =
+                neighborhood.random_neighbor(&local_best, real_bounds, &mut state.rng);
             problem.evaluate(&mut improved_candidate);
             state.evaluations += 1;
 
@@ -272,12 +262,14 @@ where
 
         if problem.is_better_fitness(local_best.quality_value(), state.current.quality_value()) {
             state.current = local_best;
-            if problem.is_better_fitness(state.current.quality_value(), state.best.quality_value()) {
+            if problem.is_better_fitness(state.current.quality_value(), state.best.quality_value())
+            {
                 state.best = state.current.copy();
             }
             state.neighborhood_index = 0;
         } else {
-            state.neighborhood_index = (state.neighborhood_index + 1) % self.parameters.neighborhoods.len();
+            state.neighborhood_index =
+                (state.neighborhood_index + 1) % self.parameters.neighborhoods.len();
         }
     }
 
@@ -359,10 +351,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::TerminationCriterion;
     use crate::operator::neighborhood_operator_implementations::gaussian_neighborhood::GaussianNeighborhood;
     use crate::problem::AckleyProblem;
     use crate::solution_set::traits::SolutionSet;
-    use crate::TerminationCriterion;
 
     #[test]
     fn vns_rejects_empty_neighborhoods() {
@@ -393,12 +385,18 @@ mod tests {
         .with_seed(31);
 
         let mut algorithm = VNS::new(parameters);
-        let result = algorithm.run(&problem).expect("VNS on Ackley should succeed");
+        let result = algorithm
+            .run(&problem)
+            .expect("VNS on Ackley should succeed");
 
         assert_eq!(result.size(), 1);
         let best = result.get(0).expect("Expected one solution");
         assert_eq!(best.num_variables(), 6);
-        assert!(best.variables().iter().all(|value| (-5.0..=5.0).contains(value)));
+        assert!(
+            best.variables()
+                .iter()
+                .all(|value| (-5.0..=5.0).contains(value))
+        );
         assert!(best.quality_value().is_finite());
     }
 }

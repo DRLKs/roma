@@ -69,8 +69,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::problem::traits::Problem;
-    use crate::solution::implementations::real_solution::RealSolutionBuilder;
     use crate::solution::Solution;
+    use crate::solution::implementations::real_solution::RealSolutionBuilder;
     use crate::solution_set::implementations::deque_solution_set::DequeSolutionSet;
     use crate::solution_set::traits::SolutionSet;
     use crate::utils::random::Random;
@@ -114,7 +114,9 @@ mod tests {
         set.add_solution(RealSolutionBuilder::new(2).with_quality(1.0).build());
         set.add_solution(RealSolutionBuilder::new(2).with_quality(5.0).build());
 
-        let best = set.best_solution(&MaxProblem).expect("expected best solution");
+        let best = set
+            .best_solution(&MaxProblem)
+            .expect("expected best solution");
         assert_eq!(best.quality().copied(), Some(5.0));
     }
 

@@ -1,4 +1,4 @@
-use crate::problem::{compare_scalar_qualities, Problem, SolutionComparison};
+use crate::problem::{Problem, SolutionComparison, compare_scalar_qualities};
 use crate::solution::Solution;
 use crate::utils::random::Random;
 
@@ -18,7 +18,10 @@ pub struct QapProblem {
 
 impl QapProblem {
     pub fn with_matrices(flow_matrix: Vec<Vec<f64>>, distance_matrix: Vec<Vec<f64>>) -> Self {
-        assert!(!flow_matrix.is_empty(), "flow_matrix must contain at least one facility");
+        assert!(
+            !flow_matrix.is_empty(),
+            "flow_matrix must contain at least one facility"
+        );
         assert_eq!(
             flow_matrix.len(),
             distance_matrix.len(),
@@ -114,11 +117,7 @@ impl Problem<usize> for QapProblem {
         self.description.clone()
     }
 
-    fn compare_qualities(
-        &self,
-        left: Option<&f64>,
-        right: Option<&f64>,
-    ) -> SolutionComparison {
+    fn compare_qualities(&self, left: Option<&f64>, right: Option<&f64>) -> SolutionComparison {
         compare_scalar_qualities(left, right, self.better_fitness_fn())
     }
 

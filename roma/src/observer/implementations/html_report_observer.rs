@@ -7,8 +7,8 @@
 //! - generation statistics,
 //! - an embedded SVG convergence chart.
 
-use crate::observer::traits::AlgorithmObserver;
 use crate::observer::AlgorithmEvent;
+use crate::observer::traits::AlgorithmObserver;
 use crate::utils::chart::{ChartBuilder, Series};
 use std::fmt::Debug;
 use std::fs::File;
@@ -800,8 +800,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::observer::traits::AlgorithmObserver;
     use crate::observer::ObserverState;
+    use crate::observer::traits::AlgorithmObserver;
 
     fn observer_state(seq_id: u64, iteration: usize, presentation: &str) -> ObserverState {
         ObserverState::new(

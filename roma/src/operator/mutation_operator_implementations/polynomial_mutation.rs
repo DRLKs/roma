@@ -58,8 +58,7 @@ impl PolynomialMutation {
         probability: f64,
         bounds: Option<&RealBounds>,
         rng: &mut Random,
-    )
-    where
+    ) where
         Q: Clone + Display,
     {
         match bounds {
@@ -68,14 +67,9 @@ impl PolynomialMutation {
                 lower,
                 upper,
                 dimensions,
-            }) => self.execute_uniform_bounds(
-                solution,
-                probability,
-                *lower,
-                *upper,
-                *dimensions,
-                rng,
-            ),
+            }) => {
+                self.execute_uniform_bounds(solution, probability, *lower, *upper, *dimensions, rng)
+            }
             Some(RealBounds::PerVariable {
                 lower_bounds,
                 upper_bounds,
@@ -106,12 +100,12 @@ impl PolynomialMutation {
                 continue;
             }
 
-            let (effective_lower, effective_upper) = if bounded_dimensions == 0 || i < bounded_dimensions
-            {
-                (lower, upper)
-            } else {
-                (0.0, 1.0)
-            };
+            let (effective_lower, effective_upper) =
+                if bounded_dimensions == 0 || i < bounded_dimensions {
+                    (lower, upper)
+                } else {
+                    (0.0, 1.0)
+                };
             if effective_upper <= effective_lower {
                 continue;
             }

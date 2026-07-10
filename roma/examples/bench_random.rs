@@ -1,7 +1,7 @@
 use std::hint::black_box;
 use std::time::Instant;
 
-use roma_lib::utils::random::{seed_from_time, Random};
+use roma_lib::utils::random::{Random, seed_from_time};
 
 /// Legacy RNG reproduced from the previous implementation for baseline
 /// (keeps modulo-based `range` and the older mixing sequence).
@@ -106,7 +106,10 @@ fn bench_range_legacy(iters: usize, max: u64, seed: u64) -> (u128, u64) {
 fn print_result(label: &str, iters: usize, nanos: u128, acc: u64) {
     let secs = (nanos as f64) / 1e9;
     let ops_per_sec = (iters as f64) / secs;
-    println!("{:<22} : {:>12} ops in {:>8.3} s -> {:>12.0} ops/s  (acc={})", label, iters, secs, ops_per_sec, acc);
+    println!(
+        "{:<22} : {:>12} ops in {:>8.3} s -> {:>12.0} ops/s  (acc={})",
+        label, iters, secs, ops_per_sec, acc
+    );
 }
 
 fn median_nanos(samples: &mut [u128]) -> u128 {
@@ -118,7 +121,10 @@ fn print_summary(label: &str, iters: usize, samples: &mut [u128]) {
     let median = median_nanos(samples);
     let secs = (median as f64) / 1e9;
     let ops_per_sec = (iters as f64) / secs;
-    println!("{:<22} : median {:>8.3} s -> {:>12.0} ops/s", label, secs, ops_per_sec);
+    println!(
+        "{:<22} : median {:>8.3} s -> {:>12.0} ops/s",
+        label, secs, ops_per_sec
+    );
 }
 
 fn warm_up(iters: usize, base_seed: u64, range_max: u64) {

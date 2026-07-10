@@ -35,7 +35,10 @@ impl SelectionOperator<f64, ParetoCrowdingDistanceQuality> for MultiObjectiveTou
         &self,
         population: &'a [Solution<f64, ParetoCrowdingDistanceQuality>],
         rng: &mut Random,
-        dominates: &dyn Fn(&Solution<f64, ParetoCrowdingDistanceQuality>, &Solution<f64, ParetoCrowdingDistanceQuality>) -> bool,
+        dominates: &dyn Fn(
+            &Solution<f64, ParetoCrowdingDistanceQuality>,
+            &Solution<f64, ParetoCrowdingDistanceQuality>,
+        ) -> bool,
     ) -> &'a Solution<f64, ParetoCrowdingDistanceQuality> {
         if population.is_empty() {
             panic!("Cannot select from empty population");
@@ -96,9 +99,9 @@ impl SelectionOperator<f64, ParetoCrowdingDistanceQuality> for MultiObjectiveTou
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::solution::MultiObjectiveRealSolutionBuilder;
     use crate::problem::implementations::zdt1_problem::ZDT1Problem;
     use crate::problem::traits::Problem;
+    use crate::solution::MultiObjectiveRealSolutionBuilder;
 
     #[test]
     fn returns_the_only_solution_when_population_has_one_member() {
@@ -144,7 +147,8 @@ mod tests {
         let problem = ZDT1Problem::new(2);
 
         for _ in 0..10 {
-            let selected = selection.execute(&population, &mut rng, &|a, b| problem.dominates(a, b));
+            let selected =
+                selection.execute(&population, &mut rng, &|a, b| problem.dominates(a, b));
             assert_eq!(selected.rank(), Some(0));
         }
     }
@@ -170,7 +174,8 @@ mod tests {
         let problem = ZDT1Problem::new(2);
 
         for _ in 0..10 {
-            let selected = selection.execute(&population, &mut rng, &|a, b| problem.dominates(a, b));
+            let selected =
+                selection.execute(&population, &mut rng, &|a, b| problem.dominates(a, b));
             assert_eq!(selected.crowding_distance(), Some(2.0));
         }
     }
@@ -205,7 +210,8 @@ mod tests {
         let problem = ZDT1Problem::new(2);
 
         for _ in 0..100 {
-            let selected = selection.execute(&population, &mut rng, &|a, b| problem.dominates(a, b));
+            let selected =
+                selection.execute(&population, &mut rng, &|a, b| problem.dominates(a, b));
             if selected.variables() == &[1.0] {
                 picked_first += 1;
             } else {
@@ -234,7 +240,8 @@ mod tests {
         let problem = ZDT1Problem::new(2);
 
         for _ in 0..10 {
-            let selected = selection.execute(&population, &mut rng, &|a, b| problem.dominates(a, b));
+            let selected =
+                selection.execute(&population, &mut rng, &|a, b| problem.dominates(a, b));
             assert_eq!(selected.variables(), &[1.0]);
         }
     }
@@ -259,7 +266,8 @@ mod tests {
         let problem = ZDT1Problem::new(2);
 
         for _ in 0..10 {
-            let selected = selection.execute(&population, &mut rng, &|a, b| problem.dominates(a, b));
+            let selected =
+                selection.execute(&population, &mut rng, &|a, b| problem.dominates(a, b));
             assert_eq!(selected.variables(), &[2.0]);
         }
     }

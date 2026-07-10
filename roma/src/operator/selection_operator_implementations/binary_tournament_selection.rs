@@ -161,7 +161,8 @@ mod tests {
 
         let population: Vec<Solution<bool>> = vec![];
 
-        let _selected = selection.execute(&population, &mut rng, &|a, b| MaxProblem.dominates(a, b));
+        let _selected =
+            selection.execute(&population, &mut rng, &|a, b| MaxProblem.dominates(a, b));
     }
 
     #[test]

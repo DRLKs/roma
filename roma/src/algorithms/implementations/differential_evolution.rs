@@ -210,10 +210,11 @@ impl DifferentialEvolution {
                         let mutant_value = donor_a.variables()[index]
                             + parameters.differential_weight
                                 * (donor_b.variables()[index] - donor_c.variables()[index]);
-                        trial_variables[index] = match (lower_bounds.get(index), upper_bounds.get(index)) {
-                            (Some(&lower), Some(&upper)) => mutant_value.clamp(lower, upper),
-                            _ => mutant_value,
-                        };
+                        trial_variables[index] =
+                            match (lower_bounds.get(index), upper_bounds.get(index)) {
+                                (Some(&lower), Some(&upper)) => mutant_value.clamp(lower, upper),
+                                _ => mutant_value,
+                            };
                     }
                 }
             }
@@ -299,11 +300,7 @@ impl Algorithm<f64> for DifferentialEvolution {
         }
     }
 
-    fn step(
-        &self,
-        problem: &(impl Problem<f64> + Sync),
-        state: &mut Self::StepState,
-    ) {
+    fn step(&self, problem: &(impl Problem<f64> + Sync), state: &mut Self::StepState) {
         state.generation += 1;
         let mut rng = Random::new(Random::derive_seed(state.run_seed, state.generation as u64));
         let real_bounds = problem.real_bounds();
@@ -312,7 +309,8 @@ impl Algorithm<f64> for DifferentialEvolution {
         let mut next_population = Vec::with_capacity(current_population.len());
 
         for (target_index, target) in current_population.iter().enumerate() {
-            let [a, b, c] = Self::sample_distinct_indices(current_population.len(), target_index, &mut rng);
+            let [a, b, c] =
+                Self::sample_distinct_indices(current_population.len(), target_index, &mut rng);
             let mut trial = Self::build_trial_solution(
                 &self.parameters,
                 real_bounds,
@@ -341,9 +339,9 @@ impl Algorithm<f64> for DifferentialEvolution {
         state: &Self::StepState,
     ) -> ExecutionStateSnapshot {
         let stats = calculate_population_statistics(&state.population, problem);
-        let best_solution = &state.population[stats.best_index.expect(
-            "population should not be empty when reporting progress",
-        )];
+        let best_solution = &state.population[stats
+            .best_index
+            .expect("population should not be empty when reporting progress")];
 
         ExecutionStateSnapshot {
             iteration: state.generation,
@@ -409,9 +407,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::TerminationCriterion;
     use crate::problem::AckleyProblem;
     use crate::solution_set::traits::SolutionSet;
-    use crate::TerminationCriterion;
 
     #[test]
     fn de_rejects_too_small_population() {
@@ -441,12 +439,19 @@ mod tests {
         .with_seed(19);
 
         let mut algorithm = DifferentialEvolution::new(parameters);
-        let result = algorithm.run(&problem).expect("DE on Ackley should succeed");
+        let result = algorithm
+            .run(&problem)
+            .expect("DE on Ackley should succeed");
 
         assert_eq!(result.size(), 16);
         for solution in result.iter() {
             assert_eq!(solution.num_variables(), 8);
-            assert!(solution.variables().iter().all(|value| (-5.0..=5.0).contains(value)));
+            assert!(
+                solution
+                    .variables()
+                    .iter()
+                    .all(|value| (-5.0..=5.0).contains(value))
+            );
             assert!(solution.quality_value().is_finite());
         }
     }
