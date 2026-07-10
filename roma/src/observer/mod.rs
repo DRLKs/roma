@@ -9,8 +9,8 @@ pub(crate) mod traits;
 
 use std::path::PathBuf;
 
-use crate::algorithms::checkpoint::ExecutionStateSnapshot;
 use crate::algorithms::termination::TerminationReason;
+use crate::utils::checkpoint::ExecutionStateSnapshot;
 pub use implementations::{
     chart_observer::ChartObserver, console_observer::ConsoleObserver,
     html_report_observer::HtmlReportObserver,
