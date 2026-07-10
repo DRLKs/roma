@@ -15,7 +15,8 @@ const STATUS_INTERRUPTED_BYTE: u8 = 3;
 
 const ERR_USIZE_TOO_LARGE_TO_SERIALIZE: &str = "usize value too large to serialize into checkpoint";
 const ERR_STRING_TOO_LARGE_TO_SERIALIZE: &str = "string too large to serialize into checkpoint";
-const ERR_BYTES_TOO_LARGE_TO_SERIALIZE: &str = "byte payload too large to serialize into checkpoint";
+const ERR_BYTES_TOO_LARGE_TO_SERIALIZE: &str =
+    "byte payload too large to serialize into checkpoint";
 const ERR_U64_TOO_LARGE_TO_DESERIALIZE_AS_USIZE: &str =
     "u64 value too large to deserialize into usize";
 const ERR_INVALID_UTF8_STRING: &str = "invalid UTF-8 string in checkpoint";
@@ -266,8 +267,7 @@ mod tests {
     #[test]
     fn option_bytes_roundtrip_preserves_some_and_none() {
         let mut bytes = Vec::new();
-        push_option_bytes(&mut bytes, &Some(vec![1, 2, 3]))
-            .expect("some bytes should serialize");
+        push_option_bytes(&mut bytes, &Some(vec![1, 2, 3])).expect("some bytes should serialize");
         push_option_bytes(&mut bytes, &None).expect("none bytes should serialize");
 
         let mut cursor = Cursor::new(bytes);
