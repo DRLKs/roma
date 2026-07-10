@@ -1,16 +1,7 @@
 use roma_lib::{
-    Algorithm,
-    BinaryTournamentSelection,
-    BitFlipMutation,
-    ConsoleObserver,
-    GeneticAlgorithm,
-    GeneticAlgorithmParameters,
-    KnapsackBuilder,
-    Observable,
-    SinglePointCrossover,
-    SolutionSet,
-    TerminationCriteria,
-    TerminationCriterion,
+    Algorithm, BinaryTournamentSelection, BitFlipMutation, ConsoleObserver, GeneticAlgorithm,
+    GeneticAlgorithmParameters, KnapsackBuilder, Observable, SinglePointCrossover, SolutionSet,
+    TerminationCriteria, TerminationCriterion,
 };
 
 #[test]
@@ -46,7 +37,11 @@ fn ga_solves_knapsack_end_to_end_with_observer() {
         .best_solution(&problem)
         .expect("Population should not be empty");
     assert!(best.quality().is_some());
-    assert!(result.best_solution_value_or(&problem, f64::NEG_INFINITY).is_finite());
+    assert!(
+        result
+            .best_solution_value_or(&problem, f64::NEG_INFINITY)
+            .is_finite()
+    );
 }
 
 #[test]

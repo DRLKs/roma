@@ -65,9 +65,9 @@ where
 #[cfg(test)]
 mod test {
     use crate::problem::traits::Problem;
+    use crate::solution::Solution;
     use crate::solution::implementations::real_solution::RealSolutionBuilder;
     use crate::solution::implementations::string_solution::StringSolutionBuilder;
-    use crate::solution::Solution;
     use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
     use crate::solution_set::traits::SolutionSet;
     use crate::utils::random::Random;
@@ -177,7 +177,10 @@ mod test {
 
         assert!(!solution_set.is_empty());
         assert_eq!(solution_set.size(), 1);
-        assert_eq!(solution_set.best_solution(&MaxProblem).unwrap().quality(), Some(&10.0));
+        assert_eq!(
+            solution_set.best_solution(&MaxProblem).unwrap().quality(),
+            Some(&10.0)
+        );
     }
 
     #[test]

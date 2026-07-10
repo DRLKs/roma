@@ -1,14 +1,6 @@
 use roma_lib::{
-    Algorithm,
-    MultiObjectiveTournamentSelection,
-    NSGAII,
-    NSGAIIParameters,
-    PolynomialMutation,
-    SBXCrossover,
-    SolutionSet,
-    TerminationCriteria,
-    TerminationCriterion,
-    ZDT1Problem,
+    Algorithm, MultiObjectiveTournamentSelection, NSGAII, NSGAIIParameters, PolynomialMutation,
+    SBXCrossover, SolutionSet, TerminationCriteria, TerminationCriterion, ZDT1Problem,
 };
 
 #[test]

@@ -1,5 +1,5 @@
-use crate::solution::RealBounds;
 use crate::operator::traits::{CrossoverOperator, Operator};
+use crate::solution::RealBounds;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 
@@ -122,8 +122,16 @@ mod tests {
             .expect("offspring should inherit a suffix from the second parent");
         assert!(first_true > 0);
         assert!(first_true < offspring[0].num_variables());
-        assert!(offspring[0].variables()[..first_true].iter().all(|&value| !value));
-        assert!(offspring[0].variables()[first_true..].iter().all(|&value| value));
+        assert!(
+            offspring[0].variables()[..first_true]
+                .iter()
+                .all(|&value| !value)
+        );
+        assert!(
+            offspring[0].variables()[first_true..]
+                .iter()
+                .all(|&value| value)
+        );
 
         let first_false = offspring[1]
             .variables()
@@ -132,7 +140,15 @@ mod tests {
             .expect("offspring should inherit a suffix from the first parent");
         assert!(first_false > 0);
         assert!(first_false < offspring[1].num_variables());
-        assert!(offspring[1].variables()[..first_false].iter().all(|&value| value));
-        assert!(offspring[1].variables()[first_false..].iter().all(|&value| !value));
+        assert!(
+            offspring[1].variables()[..first_false]
+                .iter()
+                .all(|&value| value)
+        );
+        assert!(
+            offspring[1].variables()[first_false..]
+                .iter()
+                .all(|&value| !value)
+        );
     }
 }

@@ -1,4 +1,4 @@
-use crate::problem::{compare_scalar_qualities, Problem, SolutionComparison};
+use crate::problem::{Problem, SolutionComparison, compare_scalar_qualities};
 use crate::solution::Solution;
 use crate::utils::random::Random;
 use std::collections::HashMap;
@@ -95,11 +95,7 @@ impl Problem<bool> for KnapsackProblem {
         solution.set_quality(_fitness);
     }
 
-    fn compare_qualities(
-        &self,
-        left: Option<&f64>,
-        right: Option<&f64>,
-    ) -> SolutionComparison {
+    fn compare_qualities(&self, left: Option<&f64>, right: Option<&f64>) -> SolutionComparison {
         compare_scalar_qualities(left, right, self.better_fitness_fn())
     }
 

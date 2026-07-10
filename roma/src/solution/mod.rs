@@ -4,13 +4,14 @@
 //! builders for common variable types, and `RealBounds` for real-valued search
 //! spaces.
 
-pub(crate) mod implementations;
 pub(crate) mod bounds;
+pub(crate) mod implementations;
 pub(crate) mod traits;
 
 use std::fmt::Display;
 use std::str::FromStr;
 
+pub use bounds::RealBounds;
 pub use implementations::{
     binary_solution::BinarySolutionBuilder,
     pareto_crowding_solution::{
@@ -20,7 +21,6 @@ pub use implementations::{
     real_solution::RealSolutionBuilder,
     string_solution::StringSolutionBuilder,
 };
-pub use bounds::RealBounds;
 pub use traits::ParetoCrowdingDistanceQuality;
 
 /// Generic optimization solution.
@@ -252,7 +252,6 @@ impl<T> Solution<T, f64> {
             _ => false,
         }
     }
-
 }
 
 fn finalize_scalar_solution<T: Display>(variables: Vec<T>, quality: Option<f64>) -> Solution<T> {

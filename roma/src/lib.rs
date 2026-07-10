@@ -81,12 +81,14 @@ pub mod utils;
 
 // Top-level re-exports for ergonomic imports.
 pub use algorithms::{
-    run_algorithm_instances_async, run_algorithms_async, spawn_algorithm_run, Algorithm,
-    DifferentialEvolution, DifferentialEvolutionParameters, ExecutionStateSnapshot,
-    GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing, HillClimbingParameters,
-    NSGAIIParameters, PSOParameters, SimulatedAnnealing, SimulatedAnnealingParameters,
-    TabuSearch, TabuSearchParameters, TerminationController, TerminationCriteria,
-    TerminationCriterion, TerminationReason, TerminationState, VNSParameters, NSGAII, PSO, VNS,
+    Algorithm, CheckpointOptions, DifferentialEvolution, DifferentialEvolutionParameters,
+    ExecutionStateSnapshot, GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing,
+    HillClimbingParameters, NSGAII, NSGAIIParameters, PSO, PSOParameters, RuntimeOptions,
+    SimulatedAnnealing, SimulatedAnnealingParameters, TabuSearch, TabuSearchParameters,
+    TerminationController, TerminationCriteria, TerminationCriterion, TerminationReason,
+    TerminationState, VNS, VNSParameters, run_algorithm_instances_async,
+    run_algorithm_instances_async_with_options, run_algorithms_async, spawn_algorithm_run,
+    spawn_algorithm_run_with_options,
 };
 pub use experiment::Experiment;
 pub use observer::{
@@ -97,18 +99,17 @@ pub use operator::{
     AttributeTabuMemory, BinaryTournamentSelection, BitFlipMutation, BitFlipNeighborhood,
     CrossoverOperator, FrequencyTabuMemory, GaussianNeighborhood, InsertionNeighborhood,
     MultiObjectiveTournamentSelection, MutationOperator, NeighborhoodOperator, Operator,
-    OrderCrossover, PolynomialMutation, RealPerturbationMutation, SBXCrossover,
-    SelectionOperator, SinglePointCrossover, SolutionTabuMemory, SwapMutation,
-    TabuMemoryOperator, TwoOptNeighborhood,
+    OrderCrossover, PolynomialMutation, RealPerturbationMutation, SBXCrossover, SelectionOperator,
+    SinglePointCrossover, SolutionTabuMemory, SwapMutation, TabuMemoryOperator, TwoOptNeighborhood,
 };
 pub use problem::{
-    build_knapsack_from_records, build_tsp_from_records, AckleyProblem, KnapsackBuilder,
-    KnapsackProblem, Problem, QapProblem, SolutionComparison, TspProblem, ZDT1Problem,
+    AckleyProblem, KnapsackBuilder, KnapsackProblem, Problem, QapProblem, SolutionComparison,
+    TspProblem, ZDT1Problem, build_knapsack_from_records, build_tsp_from_records,
 };
 pub use solution::{
     BinarySolutionBuilder, MultiObjectiveRealSolutionBuilder,
-    MultiObjectiveVectorRealSolutionBuilder, ParetoCrowdingDistanceQuality, RealBounds,
-    PermutationSolutionBuilder, RealSolutionBuilder, Solution, StringSolutionBuilder,
+    MultiObjectiveVectorRealSolutionBuilder, ParetoCrowdingDistanceQuality,
+    PermutationSolutionBuilder, RealBounds, RealSolutionBuilder, Solution, StringSolutionBuilder,
 };
 pub use solution_set::{DequeSolutionSet, SolutionSet, VectorSolutionSet};
 pub use utils::{delete_snapshot_on_success, read_snapshot, write_snapshot};
@@ -124,12 +125,13 @@ pub use utils::{delete_snapshot_on_success, read_snapshot, write_snapshot};
 /// ```
 pub mod prelude {
     pub use crate::algorithms::{
-        run_algorithm_instances_async, run_algorithms_async, spawn_algorithm_run, Algorithm,
-        DifferentialEvolution, DifferentialEvolutionParameters, ExecutionStateSnapshot,
-        GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing, HillClimbingParameters,
-        NSGAIIParameters, PSOParameters, SimulatedAnnealing, SimulatedAnnealingParameters,
-        TabuSearch, TabuSearchParameters, TerminationController, TerminationCriteria,
-        TerminationCriterion, TerminationReason, VNSParameters, NSGAII, PSO, VNS,
+        Algorithm, CheckpointOptions, DifferentialEvolution, DifferentialEvolutionParameters,
+        ExecutionStateSnapshot, GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing,
+        HillClimbingParameters, NSGAII, NSGAIIParameters, PSO, PSOParameters, RuntimeOptions,
+        SimulatedAnnealing, SimulatedAnnealingParameters, TabuSearch, TabuSearchParameters,
+        TerminationController, TerminationCriteria, TerminationCriterion, TerminationReason, VNS,
+        VNSParameters, run_algorithm_instances_async, run_algorithm_instances_async_with_options,
+        run_algorithms_async, spawn_algorithm_run, spawn_algorithm_run_with_options,
     };
 
     pub use crate::operator::{
@@ -142,8 +144,8 @@ pub mod prelude {
     };
 
     pub use crate::problem::{
-        build_knapsack_from_records, build_tsp_from_records, AckleyProblem, KnapsackBuilder,
-        KnapsackProblem, Problem, QapProblem, SolutionComparison, TspProblem, ZDT1Problem,
+        AckleyProblem, KnapsackBuilder, KnapsackProblem, Problem, QapProblem, SolutionComparison,
+        TspProblem, ZDT1Problem, build_knapsack_from_records, build_tsp_from_records,
     };
 
     pub use crate::observer::{
@@ -155,14 +157,14 @@ pub mod prelude {
 
     pub use crate::solution::{
         BinarySolutionBuilder, MultiObjectiveRealSolutionBuilder,
-        MultiObjectiveVectorRealSolutionBuilder, ParetoCrowdingDistanceQuality, RealBounds,
-        PermutationSolutionBuilder, RealSolutionBuilder, Solution, StringSolutionBuilder,
+        MultiObjectiveVectorRealSolutionBuilder, ParetoCrowdingDistanceQuality,
+        PermutationSolutionBuilder, RealBounds, RealSolutionBuilder, Solution,
+        StringSolutionBuilder,
     };
 
     pub use crate::solution_set::{DequeSolutionSet, SolutionSet, VectorSolutionSet};
 
     pub use crate::utils::{
-        delete_snapshot_on_success, read_snapshot, seed_from_time, write_snapshot, CliArgs,
-        Random,
+        CliArgs, Random, delete_snapshot_on_success, read_snapshot, seed_from_time, write_snapshot,
     };
 }

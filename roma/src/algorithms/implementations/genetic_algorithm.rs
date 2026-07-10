@@ -1,6 +1,7 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
+use crate::Observable;
 use crate::algorithms::checkpoint::{
     ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
 };
@@ -17,7 +18,6 @@ use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::parallel::resolve_num_threads;
 use crate::utils::random::Random;
 use crate::utils::statistics::calculate_population_statistics;
-use crate::Observable;
 
 #[derive(Clone)]
 pub struct GeneticAlgorithmParameters<T, C, M, Sel>
@@ -262,12 +262,7 @@ where
         let thread_count = requested_threads.min(parameters.population_size.max(1));
 
         let (mut offspring_population, generation_evaluations) = if thread_count <= 1 {
-            Self::create_offspring_sequential(
-                parameters,
-                problem,
-                population,
-                generation_seed,
-            )
+            Self::create_offspring_sequential(parameters, problem, population, generation_seed)
         } else {
             Self::create_offspring_parallel(
                 parameters,
@@ -305,12 +300,7 @@ where
             let mut offspring = if rng.next_f64() < parameters.crossover_probability {
                 parameters
                     .crossover_operator
-                    .execute(
-                        &parent1,
-                        &parent2,
-                        real_bounds,
-                        &mut rng,
-                    )
+                    .execute(&parent1, &parent2, real_bounds, &mut rng)
             } else {
                 vec![parent1.copy(), parent2.copy()]
             };
@@ -565,11 +555,7 @@ where
         }
     }
 
-    fn step(
-        &self,
-        problem: &(impl Problem<T> + Sync),
-        state: &mut Self::StepState,
-    ) {
+    fn step(&self, problem: &(impl Problem<T> + Sync), state: &mut Self::StepState) {
         state.generation += 1;
         state.population = Self::next_generation(
             &self.parameters,
@@ -587,9 +573,9 @@ where
         state: &Self::StepState,
     ) -> ExecutionStateSnapshot {
         let stats = calculate_population_statistics(&state.population, problem);
-        let best_solution = &state.population[stats.best_index.expect(
-            "population should not be empty when reporting progress",
-        )];
+        let best_solution = &state.population[stats
+            .best_index
+            .expect("population should not be empty when reporting progress")];
         ExecutionStateSnapshot {
             iteration: state.generation,
             evaluations: state.evaluations,
@@ -605,7 +591,6 @@ where
     }
 
     fn checkpoint_algorithm_parameters(&self) -> String {
-
         format!(
             "population_size={};crossover_probability={:.6};mutation_probability={:.6};elite_size={};crossover_operator={};mutation_operator={};selection_operator={};termination={:?}",
             self.parameters.population_size,
@@ -681,6 +666,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::{GeneticAlgorithm, GeneticAlgorithmParameters, GeneticAlgorithmState};
+    use crate::Algorithm;
     use crate::algorithms::checkpoint::StepStateCheckpoint;
     use crate::algorithms::termination::{TerminationCriteria, TerminationCriterion};
     use crate::operator::crossover_operator_implementations::single_point_crossover::SinglePointCrossover;
@@ -689,7 +675,6 @@ mod tests {
     use crate::problem::implementations::knapsack_problem::KnapsackBuilder;
     use crate::solution::BinarySolutionBuilder;
     use crate::solution_set::traits::SolutionSet;
-    use crate::Algorithm;
 
     #[test]
     fn state_payload_roundtrip_preserves_multi_variable_population() {
@@ -704,7 +689,8 @@ mod tests {
             run_seed: 9,
         };
 
-        let payload = <GeneticAlgorithmState<bool> as StepStateCheckpoint<bool>>::to_payload(&state);
+        let payload =
+            <GeneticAlgorithmState<bool> as StepStateCheckpoint<bool>>::to_payload(&state);
         let restored =
             <GeneticAlgorithmState<bool> as StepStateCheckpoint<bool>>::from_payload(&payload);
 
@@ -749,7 +735,13 @@ mod tests {
     fn parallel_offspring_generation_handles_uneven_worker_splits() {
         let problem = KnapsackBuilder::new()
             .with_capacity(25.0)
-            .add_items(vec![(5.0, 10.0), (6.0, 12.0), (7.0, 13.0), (4.0, 7.0), (3.0, 5.0)])
+            .add_items(vec![
+                (5.0, 10.0),
+                (6.0, 12.0),
+                (7.0, 13.0),
+                (4.0, 7.0),
+                (3.0, 5.0),
+            ])
             .build();
 
         let parameters = GeneticAlgorithmParameters::new(

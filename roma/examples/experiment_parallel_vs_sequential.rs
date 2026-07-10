@@ -1,15 +1,13 @@
 use std::time::Duration;
 
 use roma_lib::algorithms::{
-    GeneticAlgorithmParameters,
-    HillClimbingParameters,
-    PSOParameters,
-    SimulatedAnnealingParameters,
-    TerminationCriteria,
-    TerminationCriterion,
+    GeneticAlgorithmParameters, HillClimbingParameters, PSOParameters,
+    SimulatedAnnealingParameters, TerminationCriteria, TerminationCriterion,
 };
 use roma_lib::experiment::{Experiment, ExperimentReport};
-use roma_lib::operator::{BinaryTournamentSelection, BitFlipMutation, BitFlipNeighborhood, SinglePointCrossover};
+use roma_lib::operator::{
+    BinaryTournamentSelection, BitFlipMutation, BitFlipNeighborhood, SinglePointCrossover,
+};
 use roma_lib::problem::{KnapsackBuilder, Problem};
 use roma_lib::utils::{measure_result, speedup};
 
@@ -43,17 +41,17 @@ fn run_experiment(parallel: bool, runs: usize) -> Result<(Duration, ExperimentRe
 
     // Keep GA internally sequential to focus the comparison on experiment-level parallelism.
     let genetic_algorithm_case = GeneticAlgorithmParameters::new(
-            80,
-            0.90,
-            0.06,
-            SinglePointCrossover::new(),
-            BitFlipMutation::new(),
-            BinaryTournamentSelection::new(),
-            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(60)]),
-        )
-        .with_elite_size(1)
-        .with_seed(222)
-        .sequential();
+        80,
+        0.90,
+        0.06,
+        SinglePointCrossover::new(),
+        BitFlipMutation::new(),
+        BinaryTournamentSelection::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(60)]),
+    )
+    .with_elite_size(1)
+    .with_seed(222)
+    .sequential();
 
     let simulated_annealing_case = SimulatedAnnealingParameters::new(
         BitFlipNeighborhood::new(),

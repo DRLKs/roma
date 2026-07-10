@@ -1,8 +1,5 @@
 use roma_lib::algorithms::{
-    Algorithm,
-    GeneticAlgorithm,
-    GeneticAlgorithmParameters,
-    TerminationCriteria,
+    Algorithm, GeneticAlgorithm, GeneticAlgorithmParameters, TerminationCriteria,
     TerminationCriterion,
 };
 use roma_lib::observer::{ChartObserver, ConsoleObserver, Observable};
@@ -41,9 +38,7 @@ fn main() {
     algorithm.add_observer(Box::new(ConsoleObserver::new(true)));
     algorithm.add_observer(Box::new(ChartObserver::new_default()));
 
-    let result = algorithm
-        .run(&problem)
-        .expect("GA run failed");
+    let result = algorithm.run(&problem).expect("GA run failed");
 
     if let Some(best) = result.best_solution(&problem) {
         println!(

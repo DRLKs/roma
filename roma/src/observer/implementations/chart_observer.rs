@@ -1,5 +1,5 @@
-use crate::observer::traits::AlgorithmObserver;
 use crate::observer::AlgorithmEvent;
+use crate::observer::traits::AlgorithmObserver;
 use crate::utils::chart::{ChartBuilder, Series};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -357,7 +357,9 @@ where
             }
             AlgorithmEvent::ExecutionStateUpdated { state } => {
                 if let Some(last_seq) = self.last_snapshot_seq {
-                    if state.seq_id <= last_seq || state.iteration % ITERATIONS_BETWEEN_CHART_UPDATES != 0 {
+                    if state.seq_id <= last_seq
+                        || state.iteration % ITERATIONS_BETWEEN_CHART_UPDATES != 0
+                    {
                         return;
                     }
                 }

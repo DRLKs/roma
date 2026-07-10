@@ -1,12 +1,6 @@
 use roma_lib::{
-    Algorithm,
-    BitFlipNeighborhood,
-    KnapsackBuilder,
-    SimulatedAnnealing,
-    SimulatedAnnealingParameters,
-    SolutionSet,
-    TerminationCriteria,
-    TerminationCriterion,
+    Algorithm, BitFlipNeighborhood, KnapsackBuilder, SimulatedAnnealing,
+    SimulatedAnnealingParameters, SolutionSet, TerminationCriteria, TerminationCriterion,
 };
 
 #[test]
@@ -37,7 +31,10 @@ fn simulated_annealing_runs_on_knapsack_and_returns_single_solution() {
 
 #[test]
 fn simulated_annealing_rejects_invalid_temperature_configuration() {
-    let problem = KnapsackBuilder::new().with_capacity(10.0).add_item(5.0, 10.0).build();
+    let problem = KnapsackBuilder::new()
+        .with_capacity(10.0)
+        .add_item(5.0, 10.0)
+        .build();
 
     let parameters = SimulatedAnnealingParameters::new(
         BitFlipNeighborhood::new(),

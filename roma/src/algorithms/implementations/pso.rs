@@ -10,7 +10,7 @@ use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
 use crate::utils::parallel::parallel_map_indexed;
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::random::{Random, seed_from_time};
 use crate::utils::statistics::calculate_population_statistics;
 
 /// Configuration parameters for Binary PSO.
@@ -326,11 +326,7 @@ impl Algorithm<bool> for PSO {
         }
     }
 
-    fn step(
-        &self,
-        problem: &(impl Problem<bool> + Sync),
-        state: &mut Self::StepState,
-    ) {
+    fn step(&self, problem: &(impl Problem<bool> + Sync), state: &mut Self::StepState) {
         state.iteration += 1;
 
         for i in 0..state.particles.len() {
@@ -534,7 +530,11 @@ mod tests {
             crate::solution::traits::evaluator::minimizing_values
         }
 
-        fn dominates(&self, solution_a: &Solution<bool, f64>, solution_b: &Solution<bool, f64>) -> bool {
+        fn dominates(
+            &self,
+            solution_a: &Solution<bool, f64>,
+            solution_b: &Solution<bool, f64>,
+        ) -> bool {
             solution_a.quality().copied().unwrap_or(f64::INFINITY)
                 < solution_b.quality().copied().unwrap_or(f64::INFINITY)
         }

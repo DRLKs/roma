@@ -25,17 +25,17 @@ fn experiment_compares_hill_climbing_and_ga_end_to_end() {
     .with_seed(111);
 
     let genetic_algorithm_case = GeneticAlgorithmParameters::new(
-            24,
-            0.9,
-            0.08,
-            SinglePointCrossover::new(),
-            BitFlipMutation::new(),
-            BinaryTournamentSelection::new(),
-            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(12)]),
-        )
-        .with_elite_size(2)
-        .with_seed(222)
-        .sequential();
+        24,
+        0.9,
+        0.08,
+        SinglePointCrossover::new(),
+        BitFlipMutation::new(),
+        BinaryTournamentSelection::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(12)]),
+    )
+    .with_elite_size(2)
+    .with_seed(222)
+    .sequential();
 
     let report = Experiment::new(problem)
         .with_runs(3)

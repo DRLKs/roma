@@ -1,5 +1,5 @@
-use crate::solution::RealBounds;
 use crate::operator::traits::{MutationOperator, Operator};
+use crate::solution::RealBounds;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 

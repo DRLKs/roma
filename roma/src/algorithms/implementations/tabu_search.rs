@@ -14,7 +14,7 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::random::{Random, seed_from_time};
 
 /// Configuration for [`TabuSearch`].
 #[derive(Clone)]
@@ -66,7 +66,10 @@ where
     Mem: TabuMemoryOperator<T>,
 {
     /// Replaces the short-term memory policy used by Tabu Search.
-    pub fn with_memory_operator<NewMem>(self, memory_operator: NewMem) -> TabuSearchParameters<T, N, NewMem>
+    pub fn with_memory_operator<NewMem>(
+        self,
+        memory_operator: NewMem,
+    ) -> TabuSearchParameters<T, N, NewMem>
     where
         NewMem: TabuMemoryOperator<T>,
     {
@@ -282,11 +285,7 @@ where
         }
     }
 
-    fn step(
-        &self,
-        problem: &(impl Problem<T> + Sync),
-        state: &mut Self::StepState,
-    ) {
+    fn step(&self, problem: &(impl Problem<T> + Sync), state: &mut Self::StepState) {
         state.iteration += 1;
         let real_bounds = problem.real_bounds();
         self.parameters
@@ -422,10 +421,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::TerminationCriterion;
     use crate::operator::neighborhood_operator_implementations::two_opt_neighborhood::TwoOptNeighborhood;
     use crate::problem::QapProblem;
     use crate::solution_set::traits::SolutionSet;
-    use crate::TerminationCriterion;
 
     #[test]
     fn tabu_search_rejects_zero_tenure() {
@@ -469,7 +468,9 @@ mod tests {
         .with_seed(23);
 
         let mut algorithm = TabuSearch::new(parameters);
-        let result = algorithm.run(&problem).expect("Tabu Search on QAP should succeed");
+        let result = algorithm
+            .run(&problem)
+            .expect("Tabu Search on QAP should succeed");
 
         assert_eq!(result.size(), 1);
         let best = result.get(0).expect("Expected one solution");

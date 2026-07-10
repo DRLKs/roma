@@ -1,10 +1,5 @@
 use roma_lib::{
-    Algorithm,
-    KnapsackBuilder,
-    PSO,
-    PSOParameters,
-    SolutionSet,
-    TerminationCriteria,
+    Algorithm, KnapsackBuilder, PSO, PSOParameters, SolutionSet, TerminationCriteria,
     TerminationCriterion,
 };
 
@@ -12,7 +7,13 @@ use roma_lib::{
 fn pso_runs_on_knapsack_and_returns_single_solution() {
     let problem = KnapsackBuilder::new()
         .with_capacity(35.0)
-        .add_items(vec![(7.0, 11.0), (9.0, 16.0), (12.0, 25.0), (4.0, 7.0), (5.0, 9.0)])
+        .add_items(vec![
+            (7.0, 11.0),
+            (9.0, 16.0),
+            (12.0, 25.0),
+            (4.0, 7.0),
+            (5.0, 9.0),
+        ])
         .build();
 
     let parameters = PSOParameters::new(
@@ -35,7 +36,10 @@ fn pso_runs_on_knapsack_and_returns_single_solution() {
 
 #[test]
 fn pso_rejects_zero_swarm_size() {
-    let problem = KnapsackBuilder::new().with_capacity(10.0).add_item(5.0, 9.0).build();
+    let problem = KnapsackBuilder::new()
+        .with_capacity(10.0)
+        .add_item(5.0, 9.0)
+        .build();
 
     let parameters = PSOParameters::new(
         0,
@@ -57,7 +61,10 @@ fn pso_rejects_zero_swarm_size() {
 
 #[test]
 fn pso_rejects_negative_acceleration_coefficients() {
-    let problem = KnapsackBuilder::new().with_capacity(10.0).add_item(5.0, 9.0).build();
+    let problem = KnapsackBuilder::new()
+        .with_capacity(10.0)
+        .add_item(5.0, 9.0)
+        .build();
 
     let parameters = PSOParameters::new(
         10,
