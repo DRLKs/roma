@@ -103,7 +103,7 @@ pub use operator::{
 };
 pub use problem::{
     build_knapsack_from_records, build_tsp_from_records, AckleyProblem, KnapsackBuilder,
-    KnapsackProblem, Problem, QapProblem, TspProblem, ZDT1Problem,
+    KnapsackProblem, Problem, QapProblem, SolutionComparison, TspProblem, ZDT1Problem,
 };
 pub use solution::{
     BinarySolutionBuilder, MultiObjectiveRealSolutionBuilder,
@@ -143,7 +143,7 @@ pub mod prelude {
 
     pub use crate::problem::{
         build_knapsack_from_records, build_tsp_from_records, AckleyProblem, KnapsackBuilder,
-        KnapsackProblem, Problem, QapProblem, TspProblem, ZDT1Problem,
+        KnapsackProblem, Problem, QapProblem, SolutionComparison, TspProblem, ZDT1Problem,
     };
 
     pub use crate::observer::{

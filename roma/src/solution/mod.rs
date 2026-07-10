@@ -144,35 +144,6 @@ impl<T: Display, Q: Display> Solution<T, Q> {
         }
     }
 
-    /// Returns quality payload if present.
-    pub fn quality(&self) -> Option<&Q> {
-        self.value.as_ref()
-    }
-
-    /// Returns mutable quality payload if present.
-    pub fn quality_mut(&mut self) -> Option<&mut Q> {
-        self.value.as_mut()
-    }
-
-    /// Replaces quality payload.
-    pub fn set_quality(&mut self, quality: Q) {
-        self.value = Some(quality);
-    }
-
-    /// Returns true when quality payload is present.
-    pub fn has_quality(&self) -> bool {
-        self.value.is_some()
-    }
-
-    /// Invalidates the quality cache.
-    ///
-    /// Use this when decision variables are changed through external logic.
-    /// After invalidation, the solution has no valid quality and must be
-    /// re-evaluated by the problem.
-    pub fn invalidate(&mut self) {
-        self.value = None;
-    }
-
     pub fn encode(&self) -> String {
         let quality_string = match &self.value {
             Some(q) => q.to_string(),
@@ -222,6 +193,37 @@ impl<T: Display, Q: Display> Solution<T, Q> {
             variables,
             value: quality,
         })
+    }
+}
+
+impl<T, Q> Solution<T, Q> {
+    /// Returns quality payload if present.
+    pub fn quality(&self) -> Option<&Q> {
+        self.value.as_ref()
+    }
+
+    /// Returns mutable quality payload if present.
+    pub fn quality_mut(&mut self) -> Option<&mut Q> {
+        self.value.as_mut()
+    }
+
+    /// Replaces quality payload.
+    pub fn set_quality(&mut self, quality: Q) {
+        self.value = Some(quality);
+    }
+
+    /// Returns true when quality payload is present.
+    pub fn has_quality(&self) -> bool {
+        self.value.is_some()
+    }
+
+    /// Invalidates the quality cache.
+    ///
+    /// Use this when decision variables are changed through external logic.
+    /// After invalidation, the solution has no valid quality and must be
+    /// re-evaluated by the problem.
+    pub fn invalidate(&mut self) {
+        self.value = None;
     }
 }
 

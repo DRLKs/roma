@@ -1,4 +1,4 @@
-use crate::problem::traits::Problem;
+use crate::problem::{compare_scalar_qualities, Problem, SolutionComparison};
 use crate::solution::Solution;
 use crate::utils::random::Random;
 use std::collections::{BTreeMap, HashMap};
@@ -185,10 +185,16 @@ impl Problem<usize> for TspProblem {
         solution.set_quality(fitness);
     }
 
-    fn dominates(&self, solution_a: &Solution<usize, f64>, solution_b: &Solution<usize, f64>) -> bool {
-        let fitness_a = solution_a.quality().copied().unwrap_or(f64::INFINITY);
-        let fitness_b = solution_b.quality().copied().unwrap_or(f64::INFINITY);
-        fitness_a < fitness_b
+    fn compare_qualities(
+        &self,
+        left: Option<&f64>,
+        right: Option<&f64>,
+    ) -> SolutionComparison {
+        compare_scalar_qualities(left, right, self.better_fitness_fn())
+    }
+
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+        crate::solution::traits::evaluator::minimizing_fitness
     }
 
     fn create_solution(&self, rng: &mut Random) -> Solution<usize> {
@@ -230,10 +236,6 @@ impl Problem<usize> for TspProblem {
 
     fn get_problem_description(&self) -> String {
         self.description.clone()
-    }
-
-    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        crate::solution::traits::evaluator::minimizing_fitness
     }
 
     fn format_solution(&self, solution: &Solution<usize>) -> String {

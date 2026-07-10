@@ -1,6 +1,6 @@
 use std::f64::consts::{E, PI};
 
-use crate::problem::Problem;
+use crate::problem::{compare_scalar_qualities, Problem, SolutionComparison};
 use crate::solution::RealBounds;
 use crate::solution::{RealSolutionBuilder, Solution};
 use crate::utils::random::Random;
@@ -104,10 +104,12 @@ impl Problem<f64> for AckleyProblem {
         self.description.clone()
     }
 
-    fn dominates(&self, solution_a: &Solution<f64>, solution_b: &Solution<f64>) -> bool {
-        let quality_a = solution_a.quality().copied().unwrap_or(f64::INFINITY);
-        let quality_b = solution_b.quality().copied().unwrap_or(f64::INFINITY);
-        quality_a < quality_b
+    fn compare_qualities(
+        &self,
+        left: Option<&f64>,
+        right: Option<&f64>,
+    ) -> SolutionComparison {
+        compare_scalar_qualities(left, right, self.better_fitness_fn())
     }
 
     fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
