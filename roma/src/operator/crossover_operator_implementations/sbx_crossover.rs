@@ -255,7 +255,7 @@ mod tests {
     use crate::solution::RealSolutionBuilder;
 
     #[test]
-    fn test_sbx_crossover_creates_two_offspring() {
+    fn creates_two_offspring_with_matching_lengths() {
         let crossover = SBXCrossover::new(20.0);
         let parent1 = RealSolutionBuilder::from_variables(vec![0.2, 0.5, 0.8]).build();
         let parent2 = RealSolutionBuilder::from_variables(vec![0.7, 0.3, 0.1]).build();
@@ -269,7 +269,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sbx_offspring_in_valid_range() {
+    fn offspring_stay_within_default_unit_bounds() {
         let crossover = SBXCrossover::new(20.0);
         let parent1 = RealSolutionBuilder::from_variables(vec![0.0, 0.5, 1.0]).build();
         let parent2 = RealSolutionBuilder::from_variables(vec![1.0, 0.5, 0.0]).build();
@@ -285,7 +285,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sbx_different_parent_lengths() {
+    fn mismatched_parent_lengths_return_parent_copies() {
         let crossover = SBXCrossover::new(20.0);
         let parent1 = RealSolutionBuilder::from_variables(vec![0.5, 0.5]).build();
         let parent2 = RealSolutionBuilder::from_variables(vec![0.5, 0.5, 0.5]).build();
@@ -299,7 +299,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sbx_uses_problem_bounds_when_provided() {
+    fn uses_problem_bounds_when_provided() {
         let crossover = SBXCrossover::new(20.0);
         let parent1 = RealSolutionBuilder::from_variables(vec![-5.12, 0.0, 5.12]).build();
         let parent2 = RealSolutionBuilder::from_variables(vec![5.12, 0.0, -5.12]).build();
@@ -316,7 +316,7 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_several_even_count() {
+    fn execute_several_returns_two_children_per_pair() {
         let crossover = SBXCrossover::new(20.0);
         let parents = vec![
             RealSolutionBuilder::from_variables(vec![0.1, 0.2]).build(),
@@ -331,7 +331,7 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_several_odd_count_keeps_last() {
+    fn execute_several_keeps_last_parent_when_count_is_odd() {
         let crossover = SBXCrossover::new(20.0);
         let parents = vec![
             RealSolutionBuilder::from_variables(vec![0.1, 0.2]).build(),
@@ -342,11 +342,25 @@ mod tests {
 
         let offspring = crossover.execute_several(parents, None, &mut rng);
         assert_eq!(offspring.len(), 3);
+        assert_eq!(offspring[2].variables(), &[0.3, 0.4]);
     }
 
     #[test]
-    fn test_sbx_name() {
+    fn name_is_exposed() {
         let crossover = SBXCrossover::new(20.0);
         assert_eq!(crossover.name(), "SBX Crossover");
+    }
+
+    #[test]
+    fn identical_parents_produce_identical_offspring() {
+        let crossover = SBXCrossover::new(20.0);
+        let parent = RealSolutionBuilder::from_variables(vec![0.25, 0.5, 0.75]).build();
+        let mut rng = Random::new(11);
+
+        let offspring = crossover.execute(&parent, &parent, None, &mut rng);
+
+        assert_eq!(offspring.len(), 2);
+        assert_eq!(offspring[0].variables(), parent.variables());
+        assert_eq!(offspring[1].variables(), parent.variables());
     }
 }

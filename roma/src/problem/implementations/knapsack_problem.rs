@@ -1,4 +1,4 @@
-use crate::problem::traits::Problem;
+use crate::problem::{Problem, SolutionComparison, compare_scalar_qualities};
 use crate::solution::Solution;
 use crate::utils::random::Random;
 use std::collections::HashMap;
@@ -95,10 +95,12 @@ impl Problem<bool> for KnapsackProblem {
         solution.set_quality(_fitness);
     }
 
-    fn dominates(&self, solution_a: &Solution<bool, f64>, solution_b: &Solution<bool, f64>) -> bool {
-        let fitness_a = solution_a.quality().copied().unwrap_or(f64::NEG_INFINITY);
-        let fitness_b = solution_b.quality().copied().unwrap_or(f64::NEG_INFINITY);
-        fitness_a > fitness_b
+    fn compare_qualities(&self, left: Option<&f64>, right: Option<&f64>) -> SolutionComparison {
+        compare_scalar_qualities(left, right, self.better_fitness_fn())
+    }
+
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+        crate::solution::traits::evaluator::maximizing_values
     }
 
     fn create_solution(&self, _rng: &mut Random) -> Solution<bool> {
@@ -115,10 +117,6 @@ impl Problem<bool> for KnapsackProblem {
 
     fn get_problem_description(&self) -> String {
         self.description.clone()
-    }
-
-    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        crate::solution::traits::evaluator::maximizing_fitness
     }
 
     fn format_solution(&self, solution: &Solution<bool>) -> String {
@@ -261,7 +259,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn problem_description_test() {
+    fn stores_problem_description() {
         let mut knapsack_problem = KnapsackProblem::new();
 
         let description = "Test Problem".to_string();
@@ -271,7 +269,7 @@ mod tests {
     }
 
     #[test]
-    fn test_knapsack_creation_with_data() {
+    fn with_data_creates_solution_with_expected_variable_count() {
         let weights = vec![10.0, 20.0, 30.0];
         let values = vec![100.0, 200.0, 300.0];
         let capacity = 50.0;
@@ -283,7 +281,7 @@ mod tests {
     }
 
     #[test]
-    fn test_knapsack_builder() {
+    fn builder_creates_solution_with_expected_variable_count() {
         let problem = KnapsackBuilder::new()
             .with_capacity(50.0)
             .add_item(10.0, 100.0)
@@ -295,7 +293,7 @@ mod tests {
     }
 
     #[test]
-    fn test_knapsack_with_builder() {
+    fn evaluate_assigns_positive_quality_for_profitable_feasible_selection() {
         let problem = KnapsackBuilder::new()
             .with_capacity(100.0)
             .add_item(10.0, 50.0)

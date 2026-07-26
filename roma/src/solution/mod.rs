@@ -4,13 +4,14 @@
 //! builders for common variable types, and `RealBounds` for real-valued search
 //! spaces.
 
-pub(crate) mod implementations;
 pub(crate) mod bounds;
+pub(crate) mod implementations;
 pub(crate) mod traits;
 
 use std::fmt::Display;
 use std::str::FromStr;
 
+pub use bounds::RealBounds;
 pub use implementations::{
     binary_solution::BinarySolutionBuilder,
     pareto_crowding_solution::{
@@ -20,7 +21,6 @@ pub use implementations::{
     real_solution::RealSolutionBuilder,
     string_solution::StringSolutionBuilder,
 };
-pub use bounds::RealBounds;
 pub use traits::ParetoCrowdingDistanceQuality;
 
 /// Generic optimization solution.
@@ -144,35 +144,6 @@ impl<T: Display, Q: Display> Solution<T, Q> {
         }
     }
 
-    /// Returns quality payload if present.
-    pub fn quality(&self) -> Option<&Q> {
-        self.value.as_ref()
-    }
-
-    /// Returns mutable quality payload if present.
-    pub fn quality_mut(&mut self) -> Option<&mut Q> {
-        self.value.as_mut()
-    }
-
-    /// Replaces quality payload.
-    pub fn set_quality(&mut self, quality: Q) {
-        self.value = Some(quality);
-    }
-
-    /// Returns true when quality payload is present.
-    pub fn has_quality(&self) -> bool {
-        self.value.is_some()
-    }
-
-    /// Invalidates the quality cache.
-    ///
-    /// Use this when decision variables are changed through external logic.
-    /// After invalidation, the solution has no valid quality and must be
-    /// re-evaluated by the problem.
-    pub fn invalidate(&mut self) {
-        self.value = None;
-    }
-
     pub fn encode(&self) -> String {
         let quality_string = match &self.value {
             Some(q) => q.to_string(),
@@ -225,6 +196,37 @@ impl<T: Display, Q: Display> Solution<T, Q> {
     }
 }
 
+impl<T, Q> Solution<T, Q> {
+    /// Returns quality payload if present.
+    pub fn quality(&self) -> Option<&Q> {
+        self.value.as_ref()
+    }
+
+    /// Returns mutable quality payload if present.
+    pub fn quality_mut(&mut self) -> Option<&mut Q> {
+        self.value.as_mut()
+    }
+
+    /// Replaces quality payload.
+    pub fn set_quality(&mut self, quality: Q) {
+        self.value = Some(quality);
+    }
+
+    /// Returns true when quality payload is present.
+    pub fn has_quality(&self) -> bool {
+        self.value.is_some()
+    }
+
+    /// Invalidates the quality cache.
+    ///
+    /// Use this when decision variables are changed through external logic.
+    /// After invalidation, the solution has no valid quality and must be
+    /// re-evaluated by the problem.
+    pub fn invalidate(&mut self) {
+        self.value = None;
+    }
+}
+
 impl<T> Solution<T, f64> {
     /// Returns the scalar quality value if present.
     pub fn try_quality_value(&self) -> Option<f64> {
@@ -250,7 +252,6 @@ impl<T> Solution<T, f64> {
             _ => false,
         }
     }
-
 }
 
 fn finalize_scalar_solution<T: Display>(variables: Vec<T>, quality: Option<f64>) -> Solution<T> {

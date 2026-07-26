@@ -1,4 +1,4 @@
-use crate::solution::{finalize_scalar_solution, Solution};
+use crate::solution::{Solution, finalize_scalar_solution};
 
 /// Builder for string-based solutions (`Solution<String>`).
 pub struct StringSolutionBuilder {

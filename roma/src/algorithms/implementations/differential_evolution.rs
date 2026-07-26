@@ -1,4 +1,3 @@
-use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
@@ -7,6 +6,9 @@ use crate::problem::Problem;
 use crate::solution::{RealBounds, Solution};
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
+use crate::utils::checkpoint::{
+    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
+};
 use crate::utils::random::Random;
 use crate::utils::statistics::calculate_population_statistics;
 
@@ -75,41 +77,39 @@ impl StepStateCheckpoint<f64> for DifferentialEvolutionState {
         self.run_seed
     }
 
-    fn to_payload(&self) -> String {
-        let encoded_population = self
-            .population
-            .iter()
-            .map(|solution| solution.encode())
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        format!(
-            "iter={};eval={};seed={};pop={}",
-            self.generation, self.evaluations, self.run_seed, encoded_population
-        )
+    fn to_payload(&self) -> Vec<u8> {
+        let mut payload = StatePayloadEncoder::new();
+        payload
+            .write_usize(self.generation)
+            .expect("generation should serialize into checkpoint payload");
+        payload
+            .write_usize(self.evaluations)
+            .expect("evaluations should serialize into checkpoint payload");
+        payload.write_u64(self.run_seed);
+        payload
+            .write_solution_vec(&self.population)
+            .expect("population should serialize into checkpoint payload");
+        payload.finish()
     }
 
-    fn from_payload(payload: &str) -> Self {
-        let mut iteration = 0usize;
-        let mut evaluations = 0usize;
-        let mut run_seed = 0u64;
-        let mut population = Vec::new();
-
-        for part in payload.split(';') {
-            if let Some(value) = part.strip_prefix("iter=") {
-                iteration = value.parse().unwrap_or(0);
-            } else if let Some(value) = part.strip_prefix("eval=") {
-                evaluations = value.parse().unwrap_or(0);
-            } else if let Some(value) = part.strip_prefix("seed=") {
-                run_seed = value.parse().unwrap_or(0);
-            } else if let Some(value) = part.strip_prefix("pop=") {
-                population = value
-                    .split('\n')
-                    .filter(|encoded| !encoded.is_empty())
-                    .filter_map(|encoded| Solution::decode(encoded).ok())
-                    .collect();
-            }
-        }
+    fn from_payload(payload: &[u8]) -> Self {
+        let mut payload = StatePayloadDecoder::new(payload)
+            .expect("critical error: invalid differential evolution checkpoint payload");
+        let iteration = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint generation");
+        let evaluations = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint evaluations");
+        let run_seed = payload
+            .read_u64()
+            .expect("critical error: missing checkpoint run seed");
+        let population = payload
+            .read_solution_vec()
+            .expect("critical error: could not decode checkpoint population");
+        payload
+            .ensure_finished()
+            .expect("critical error: trailing bytes in differential evolution checkpoint payload");
 
         Self {
             population,
@@ -210,10 +210,11 @@ impl DifferentialEvolution {
                         let mutant_value = donor_a.variables()[index]
                             + parameters.differential_weight
                                 * (donor_b.variables()[index] - donor_c.variables()[index]);
-                        trial_variables[index] = match (lower_bounds.get(index), upper_bounds.get(index)) {
-                            (Some(&lower), Some(&upper)) => mutant_value.clamp(lower, upper),
-                            _ => mutant_value,
-                        };
+                        trial_variables[index] =
+                            match (lower_bounds.get(index), upper_bounds.get(index)) {
+                                (Some(&lower), Some(&upper)) => mutant_value.clamp(lower, upper),
+                                _ => mutant_value,
+                            };
                     }
                 }
             }
@@ -299,11 +300,7 @@ impl Algorithm<f64> for DifferentialEvolution {
         }
     }
 
-    fn step(
-        &self,
-        problem: &(impl Problem<f64> + Sync),
-        state: &mut Self::StepState,
-    ) {
+    fn step(&self, problem: &(impl Problem<f64> + Sync), state: &mut Self::StepState) {
         state.generation += 1;
         let mut rng = Random::new(Random::derive_seed(state.run_seed, state.generation as u64));
         let real_bounds = problem.real_bounds();
@@ -312,7 +309,8 @@ impl Algorithm<f64> for DifferentialEvolution {
         let mut next_population = Vec::with_capacity(current_population.len());
 
         for (target_index, target) in current_population.iter().enumerate() {
-            let [a, b, c] = Self::sample_distinct_indices(current_population.len(), target_index, &mut rng);
+            let [a, b, c] =
+                Self::sample_distinct_indices(current_population.len(), target_index, &mut rng);
             let mut trial = Self::build_trial_solution(
                 &self.parameters,
                 real_bounds,
@@ -341,9 +339,9 @@ impl Algorithm<f64> for DifferentialEvolution {
         state: &Self::StepState,
     ) -> ExecutionStateSnapshot {
         let stats = calculate_population_statistics(&state.population, problem);
-        let best_solution = &state.population[stats.best_index.expect(
-            "population should not be empty when reporting progress",
-        )];
+        let best_solution = &state.population[stats
+            .best_index
+            .expect("population should not be empty when reporting progress")];
 
         ExecutionStateSnapshot {
             iteration: state.generation,
@@ -409,9 +407,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::TerminationCriterion;
     use crate::problem::AckleyProblem;
     use crate::solution_set::traits::SolutionSet;
-    use crate::TerminationCriterion;
 
     #[test]
     fn de_rejects_too_small_population() {
@@ -441,12 +439,19 @@ mod tests {
         .with_seed(19);
 
         let mut algorithm = DifferentialEvolution::new(parameters);
-        let result = algorithm.run(&problem).expect("DE on Ackley should succeed");
+        let result = algorithm
+            .run(&problem)
+            .expect("DE on Ackley should succeed");
 
         assert_eq!(result.size(), 16);
         for solution in result.iter() {
             assert_eq!(solution.num_variables(), 8);
-            assert!(solution.variables().iter().all(|value| (-5.0..=5.0).contains(value)));
+            assert!(
+                solution
+                    .variables()
+                    .iter()
+                    .all(|value| (-5.0..=5.0).contains(value))
+            );
             assert!(solution.quality_value().is_finite());
         }
     }

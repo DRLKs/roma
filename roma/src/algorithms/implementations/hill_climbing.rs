@@ -1,18 +1,20 @@
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
-use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
-use crate::observer::traits::AlgorithmObserver;
 use crate::observer::Observable;
+use crate::observer::traits::AlgorithmObserver;
 use crate::operator::traits::NeighborhoodOperator;
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::checkpoint::{
+    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
+};
+use crate::utils::random::{Random, seed_from_time};
 
 /// Configuration parameters for the Hill Climbing algorithm.
 ///
@@ -41,10 +43,7 @@ where
     /// # Arguments
     /// - `neighborhood`: defines the set of reachable neighbors from any solution.
     /// - `termination_criteria`: criteria to stop the algorithm.
-    pub fn new(
-        neighborhood: N,
-        termination_criteria: TerminationCriteria,
-    ) -> Self {
+    pub fn new(neighborhood: N, termination_criteria: TerminationCriteria) -> Self {
         Self {
             neighborhood,
             termination_criteria,
@@ -100,36 +99,39 @@ where
         self.rng.state()
     }
 
-    fn to_payload(&self) -> String {
-        format!(
-            "iter={};eval={};seed={};state={}",
-            self.iteration(),
-            self.evaluations(),
-            self.random_seed(),
-            self.current.encode()
-        )
+    fn to_payload(&self) -> Vec<u8> {
+        let mut payload = StatePayloadEncoder::new();
+        payload
+            .write_usize(self.iteration)
+            .expect("iteration should serialize into checkpoint payload");
+        payload
+            .write_usize(self.evaluations)
+            .expect("evaluations should serialize into checkpoint payload");
+        payload.write_u64(self.rng.state());
+        payload
+            .write_solution(&self.current)
+            .expect("current solution should serialize into checkpoint payload");
+        payload.finish()
     }
 
-    fn from_payload(payload: &str) -> Self {
-        let parts: std::collections::HashMap<&str, &str> = payload
-            .split(';')
-            .filter_map(|s| {
-                let mut kv = s.splitn(2, '=');
-                Some((kv.next()?, kv.next()?))
-            })
-            .collect();
-
-        let iteration = parts.get("iter").and_then(|s| s.parse().ok()).unwrap_or(0);
-        let evaluations = parts.get("eval").and_then(|s| s.parse().ok()).unwrap_or(0);
-        let random_seed = parts
-            .get("seed")
-            .and_then(|s| s.parse().ok())
-            .unwrap_or_else(seed_from_time);
-
-        let current = parts
-            .get("state")
-            .and_then(|s| Solution::decode(s).ok())
-            .expect("Critical error: Could not decode the current state from payload");
+    fn from_payload(payload: &[u8]) -> Self {
+        let mut payload = StatePayloadDecoder::new(payload)
+            .expect("critical error: invalid hill climbing checkpoint payload");
+        let iteration = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint iteration");
+        let evaluations = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint evaluations");
+        let random_seed = payload
+            .read_u64()
+            .expect("critical error: missing checkpoint RNG state");
+        let current = payload
+            .read_solution()
+            .expect("critical error: could not decode current solution from payload");
+        payload
+            .ensure_finished()
+            .expect("critical error: trailing bytes in hill climbing checkpoint payload");
 
         Self {
             current,
@@ -229,11 +231,7 @@ where
         }
     }
 
-    fn step(
-        &self,
-        problem: &(impl Problem<T> + Sync),
-        state: &mut Self::StepState,
-    ) {
+    fn step(&self, problem: &(impl Problem<T> + Sync), state: &mut Self::StepState) {
         state.iteration += 1;
         let real_bounds = problem.real_bounds();
 
@@ -295,10 +293,7 @@ where
     }
 
     fn case_name(&self) -> String {
-        format!(
-            "HillClimbing(neighborhood={})",
-            self.neighborhood.name(),
-        )
+        format!("HillClimbing(neighborhood={})", self.neighborhood.name(),)
     }
 
     fn parameters(&self) -> Vec<CaseParameter> {

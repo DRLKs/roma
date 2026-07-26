@@ -65,9 +65,9 @@ where
 #[cfg(test)]
 mod test {
     use crate::problem::traits::Problem;
+    use crate::solution::Solution;
     use crate::solution::implementations::real_solution::RealSolutionBuilder;
     use crate::solution::implementations::string_solution::StringSolutionBuilder;
-    use crate::solution::Solution;
     use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
     use crate::solution_set::traits::SolutionSet;
     use crate::utils::random::Random;
@@ -96,7 +96,7 @@ mod test {
         }
 
         fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-            crate::solution::traits::evaluator::maximizing_fitness
+            crate::solution::traits::evaluator::maximizing_values
         }
 
         fn dominates(&self, solution_a: &Solution<T, f64>, solution_b: &Solution<T, f64>) -> bool {
@@ -129,7 +129,7 @@ mod test {
         }
 
         fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-            crate::solution::traits::evaluator::minimizing_fitness
+            crate::solution::traits::evaluator::minimizing_values
         }
 
         fn dominates(&self, solution_a: &Solution<T, f64>, solution_b: &Solution<T, f64>) -> bool {
@@ -139,7 +139,7 @@ mod test {
     }
 
     #[test]
-    fn get_best_solution_test() {
+    fn best_solution_supports_maximization() {
         let mut solution_set: VectorSolutionSet<f64> = VectorSolutionSet::new();
 
         let best_solution = RealSolutionBuilder::new(3).with_quality(10.0).build();
@@ -154,14 +154,14 @@ mod test {
     }
 
     #[test]
-    fn vector_solution_creates_empty_test() {
+    fn new_set_is_empty() {
         let solution_set: VectorSolutionSet<String> = VectorSolutionSet::new();
 
         assert!(solution_set.is_empty());
     }
 
     #[test]
-    fn number_of_solutions_test() {
+    fn size_tracks_added_solutions() {
         let mut solution_set: VectorSolutionSet<String> = VectorSolutionSet::new();
 
         let variables = vec![
@@ -177,7 +177,10 @@ mod test {
 
         assert!(!solution_set.is_empty());
         assert_eq!(solution_set.size(), 1);
-        assert_eq!(solution_set.best_solution(&MaxProblem).unwrap().quality(), Some(&10.0));
+        assert_eq!(
+            solution_set.best_solution(&MaxProblem).unwrap().quality(),
+            Some(&10.0)
+        );
     }
 
     #[test]

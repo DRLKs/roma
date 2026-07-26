@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use crate::solution::RealBounds;
 use crate::operator::traits::{CrossoverOperator, Operator};
+use crate::solution::RealBounds;
 use crate::solution::Solution;
 use crate::utils::random::Random;
 

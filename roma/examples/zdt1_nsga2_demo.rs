@@ -1,15 +1,11 @@
 use roma_lib::algorithms::{
-    Algorithm,
-    NSGAII,
-    NSGAIIParameters,
-    TerminationCriteria,
-    TerminationCriterion,
+    Algorithm, NSGAII, NSGAIIParameters, TerminationCriteria, TerminationCriterion,
 };
-use roma_lib::{ChartObserver, ConsoleObserver, Observable};
 use roma_lib::operator::{MultiObjectiveTournamentSelection, PolynomialMutation, SBXCrossover};
 use roma_lib::problem::ZDT1Problem;
 use roma_lib::solution_set::SolutionSet;
 use roma_lib::utils::cli::CliArgs;
+use roma_lib::{ChartObserver, ConsoleObserver, Observable};
 
 fn main() {
     let seed = CliArgs::from_env().seed_or(42);
@@ -32,9 +28,7 @@ fn main() {
     let observer2 = ChartObserver::new_default();
     algorithm.add_observer(Box::new(observer));
     algorithm.add_observer(Box::new(observer2));
-    let result = algorithm
-        .run(&problem)
-        .expect("NSGA-II run failed");
+    let result = algorithm.run(&problem).expect("NSGA-II run failed");
 
     if let Some(best) = result.get(0) {
         println!(

@@ -1,10 +1,6 @@
 use roma_lib::HtmlReportObserver;
 use roma_lib::algorithms::{
-    Algorithm,
-    HillClimbing,
-    HillClimbingParameters,
-    TerminationCriteria,
-    TerminationCriterion,
+    Algorithm, HillClimbing, HillClimbingParameters, TerminationCriteria, TerminationCriterion,
 };
 use roma_lib::observer::{ChartObserver, ConsoleObserver, Observable};
 use roma_lib::operator::BitFlipNeighborhood;
@@ -24,7 +20,7 @@ fn main() {
 
     let parameters = HillClimbingParameters::new(
         BitFlipNeighborhood::new(),
-        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(120)]),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(12000)]),
     )
     .with_seed(seed);
     let mut algorithm = HillClimbing::new(parameters);
@@ -33,9 +29,7 @@ fn main() {
     algorithm.add_observer(Box::new(ChartObserver::new_default()));
     algorithm.add_observer(Box::new(HtmlReportObserver::new_default()));
 
-    let result = algorithm
-        .run(&problem)
-        .expect("Hill Climbing run failed");
+    let result = algorithm.run(&problem).expect("Hill Climbing run failed");
 
     if let Some(best) = result.best_solution(&problem) {
         println!(

@@ -1,8 +1,8 @@
-use crate::problem::Problem;
+use crate::problem::{Problem, SolutionComparison};
 use crate::solution::RealBounds;
+use crate::solution::Solution;
 use crate::solution::implementations::pareto_crowding_solution::MultiObjectiveRealSolutionBuilder;
 use crate::solution::traits::ParetoCrowdingDistanceQuality;
-use crate::solution::Solution;
 use crate::utils::random::Random;
 
 const DEFAULT_NUMBER_OF_VARIABLES: usize = 30;
@@ -75,8 +75,28 @@ impl Problem<f64, ParetoCrowdingDistanceQuality> for ZDT1Problem {
         solution.set_objectives(objectives);
     }
 
-    fn dominates(&self, solution_a: &Solution<f64, ParetoCrowdingDistanceQuality>, solution_b: &Solution<f64, ParetoCrowdingDistanceQuality>) -> bool {
-        solution_a.dominates(solution_b)
+    fn compare_qualities(
+        &self,
+        left: Option<&ParetoCrowdingDistanceQuality>,
+        right: Option<&ParetoCrowdingDistanceQuality>,
+    ) -> SolutionComparison {
+        let (Some(left), Some(right)) = (left, right) else {
+            return SolutionComparison::Incomparable;
+        };
+
+        if left.dominates(right) {
+            SolutionComparison::Better
+        } else if right.dominates(left) {
+            SolutionComparison::Worse
+        } else if left.objectives == right.objectives {
+            SolutionComparison::Equivalent
+        } else {
+            SolutionComparison::Incomparable
+        }
+    }
+
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+        crate::solution::traits::evaluator::minimizing_values
     }
 
     fn set_problem_description(&mut self, description: String) {
@@ -99,13 +119,6 @@ impl Problem<f64, ParetoCrowdingDistanceQuality> for ZDT1Problem {
         MultiObjectiveRealSolutionBuilder::from_variables(variables)
             .with_bounds(0.0, 1.0)
             .build()
-    }
-
-    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        fn minimizing_fitness(candidate: f64, reference: f64) -> bool {
-            candidate < reference
-        }
-        minimizing_fitness
     }
 
     fn format_solution(&self, solution: &Solution<f64, ParetoCrowdingDistanceQuality>) -> String {
@@ -144,14 +157,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_zdt1_creation() {
+    fn creates_solution_with_requested_dimension() {
         let problem = ZDT1Problem::new(30);
         let solution = problem.create_solution(&mut Random::new(10));
         assert_eq!(solution.num_variables(), 30);
     }
 
     #[test]
-    fn test_zdt1_evaluation() {
+    fn evaluation_populates_two_objectives() {
         let problem = ZDT1Problem::new(30);
         let mut solution = problem.create_solution(&mut Random::new(10));
 
@@ -164,7 +177,7 @@ mod tests {
     }
 
     #[test]
-    fn test_zdt1_pareto_front_point() {
+    fn pareto_front_point_matches_closed_form() {
         let problem = ZDT1Problem::new(30);
 
         // Create one point with known variables and verify deterministic scalar value.
@@ -183,7 +196,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "ZDT1 requires at least 2 variables")]
-    fn test_zdt1_invalid_variables() {
+    fn panics_when_dimension_is_below_minimum() {
         ZDT1Problem::new(1);
     }
 

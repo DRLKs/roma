@@ -45,8 +45,10 @@ class TspProblem(Problem):
     def __init__(self, bounds=None, minmax="min", distance_matrix=None, **kwargs):
         super().__init__(bounds=bounds, minmax=minmax, **kwargs)
         self.distance_matrix = distance_matrix
+        self.evaluation_count = 0
 
     def obj_func(self, solution):
+        self.evaluation_count += 1
         decoded = self.decode_solution(solution)
         route = [int(value) for value in decoded["per_var"]]
         return route_distance(route)
@@ -105,6 +107,7 @@ def run_benchmark(seed):
         "best_solution": best_route,
         "wall_time_ms": (end_wall - start_wall) * 1000.0,
         "cpu_time_ms": None,
+        "evaluations": int(problem.evaluation_count),
         "status": "ok",
         "error": None,
     }
@@ -130,6 +133,7 @@ def main():
                 "best_solution": None,
                 "wall_time_ms": None,
                 "cpu_time_ms": None,
+                "evaluations": None,
                 "status": "error",
                 "error": str(exc),
             }

@@ -78,6 +78,7 @@ impl NeighborhoodOperator<bool> for BitFlipNeighborhood {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashSet;
 
     #[test]
     fn neighborhood_size_equals_number_of_variables() {
@@ -104,12 +105,27 @@ mod tests {
     }
 
     #[test]
-    fn all_neighbors_generates_correct_count() {
+    fn all_neighbors_flip_each_bit_once() {
         let solution = Solution::new(vec![true, false, true]);
         let neighborhood = BitFlipNeighborhood::new();
 
         let neighbors = neighborhood.all_neighbors(&solution, None).unwrap();
         assert_eq!(neighbors.len(), 3);
+
+        let expected = [
+            vec![false, false, true],
+            vec![true, true, true],
+            vec![true, false, false],
+        ];
+
+        let actual: Vec<Vec<bool>> = neighbors
+            .iter()
+            .map(|neighbor| neighbor.variables().to_vec())
+            .collect();
+        assert_eq!(actual, expected);
+
+        let unique_neighbors: HashSet<Vec<bool>> = actual.iter().cloned().collect();
+        assert_eq!(unique_neighbors.len(), 3);
     }
 
     #[test]

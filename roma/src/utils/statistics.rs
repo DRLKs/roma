@@ -1,6 +1,33 @@
 use crate::problem::traits::Problem;
 use crate::solution::Solution;
 
+/// Arithmetic mean of a collection, or `0.0` when it is empty.
+#[inline(always)]
+pub(crate) fn mean(values: &[f64]) -> f64 {
+    if values.is_empty() {
+        return 0.0;
+    }
+
+    values.iter().sum::<f64>() / values.len() as f64
+}
+
+/// Population variance for values whose mean has already been calculated.
+#[inline(always)]
+pub(crate) fn variance(values: &[f64], mean: f64) -> f64 {
+    if values.is_empty() {
+        return 0.0;
+    }
+
+    values
+        .iter()
+        .map(|value| {
+            let delta = *value - mean;
+            delta * delta
+        })
+        .sum::<f64>()
+        / values.len() as f64
+}
+
 /// Summary statistics computed from an evaluated population.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PopulationStatistics {
@@ -101,41 +128,74 @@ where
 mod tests {
     use super::*;
     use crate::problem::traits::Problem;
-    use crate::solution::implementations::binary_solution::BinarySolutionBuilder;
     use crate::solution::Solution;
+    use crate::solution::implementations::binary_solution::BinarySolutionBuilder;
     use crate::utils::random::Random;
+
+    #[test]
+    fn scalar_aggregates_handle_empty_and_populated_samples() {
+        assert_eq!(mean(&[]), 0.0);
+        assert_eq!(variance(&[], 0.0), 0.0);
+
+        let values = [1.0, 3.0, 5.0];
+        assert_eq!(mean(&values), 3.0);
+        assert_eq!(variance(&values, 3.0), 8.0 / 3.0);
+    }
 
     struct MaxProblem;
     struct MinProblem;
 
     impl Problem<bool> for MaxProblem {
-        fn new() -> Self where Self: Sized { Self }
+        fn new() -> Self
+        where
+            Self: Sized,
+        {
+            Self
+        }
         fn evaluate(&self, _solution: &mut Solution<bool>) {}
-        fn create_solution(&self, _rng: &mut Random) -> Solution<bool> { panic!("not needed") }
+        fn create_solution(&self, _rng: &mut Random) -> Solution<bool> {
+            panic!("not needed")
+        }
         fn set_problem_description(&mut self, _description: String) {}
-        fn get_problem_description(&self) -> String { "max".to_string() }
+        fn get_problem_description(&self) -> String {
+            "max".to_string()
+        }
         fn dominates(&self, solution_a: &Solution<bool>, solution_b: &Solution<bool>) -> bool {
             solution_a.quality_value() > solution_b.quality_value()
         }
-        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool { crate::solution::traits::evaluator::maximizing_fitness }
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+            crate::solution::traits::evaluator::maximizing_values
+        }
     }
 
     impl Problem<bool> for MinProblem {
-        fn new() -> Self where Self: Sized { Self }
+        fn new() -> Self
+        where
+            Self: Sized,
+        {
+            Self
+        }
         fn evaluate(&self, _solution: &mut Solution<bool>) {}
-        fn create_solution(&self, _rng: &mut Random) -> Solution<bool> { panic!("not needed") }
+        fn create_solution(&self, _rng: &mut Random) -> Solution<bool> {
+            panic!("not needed")
+        }
         fn set_problem_description(&mut self, _description: String) {}
-        fn get_problem_description(&self) -> String { "min".to_string() }
+        fn get_problem_description(&self) -> String {
+            "min".to_string()
+        }
         fn dominates(&self, solution_a: &Solution<bool>, solution_b: &Solution<bool>) -> bool {
             solution_a.quality_value() < solution_b.quality_value()
         }
-        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool { crate::solution::traits::evaluator::minimizing_fitness }
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+            crate::solution::traits::evaluator::minimizing_values
+        }
     }
 
     #[test]
-    fn test_calculate_statistics_empty() {
+    fn empty_population_returns_zero_statistics() {
         let population: Vec<Solution<bool>> = vec![];
-        let (best, avg, worst) = calculate_population_statistics(&population, &MaxProblem).as_tuple();
+        let (best, avg, worst) =
+            calculate_population_statistics(&population, &MaxProblem).as_tuple();
         assert_eq!(best, 0.0);
         assert_eq!(avg, 0.0);
         assert_eq!(worst, 0.0);
@@ -145,13 +205,14 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_statistics_single() {
+    fn single_solution_population_returns_same_best_avg_worst() {
         let mut solution: Solution<bool> = Solution::new(vec![]);
         let _fitness = 10.0;
         solution.set_quality(_fitness);
 
         let population = vec![solution];
-        let (best, avg, worst) = calculate_population_statistics(&population, &MaxProblem).as_tuple();
+        let (best, avg, worst) =
+            calculate_population_statistics(&population, &MaxProblem).as_tuple();
 
         assert_eq!(best, _fitness);
         assert_eq!(avg, _fitness);
@@ -159,7 +220,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_statistics_multiple() {
+    fn multiple_solutions_compute_expected_statistics() {
         let best_quality = 20.0;
         let worst_quality = 10.0;
         let avg_quality = 15.0;
@@ -175,7 +236,8 @@ mod tests {
             .build();
 
         let population = vec![s1, s2, s3];
-        let (best, avg, worst) = calculate_population_statistics(&population, &MaxProblem).as_tuple();
+        let (best, avg, worst) =
+            calculate_population_statistics(&population, &MaxProblem).as_tuple();
 
         assert_eq!(best, 20.0);
         assert_eq!(avg, 15.0);
@@ -183,7 +245,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_statistics_minimization() {
+    fn minimization_statistics_invert_best_and_worst() {
         let s1 = BinarySolutionBuilder::ones(3).with_quality(20.0).build();
         let s2 = BinarySolutionBuilder::zeros(3).with_quality(10.0).build();
         let s3 = BinarySolutionBuilder::random(3, Some(10))
@@ -191,7 +253,8 @@ mod tests {
             .build();
 
         let population = vec![s1, s2, s3];
-        let (best, avg, worst) = calculate_population_statistics(&population, &MinProblem).as_tuple();
+        let (best, avg, worst) =
+            calculate_population_statistics(&population, &MinProblem).as_tuple();
 
         assert_eq!(best, 10.0);
         assert_eq!(avg, 15.0);
@@ -199,7 +262,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_population_statistics_tracks_best_index() {
+    fn calculate_population_statistics_tracks_best_index() {
         let s1 = BinarySolutionBuilder::ones(3).with_quality(20.0).build();
         let s2 = BinarySolutionBuilder::zeros(3).with_quality(10.0).build();
         let s3 = BinarySolutionBuilder::random(3, Some(10))
@@ -216,7 +279,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_population_statistics_by_skips_missing_values() {
+    fn calculate_population_statistics_by_skips_missing_quality_values() {
         let mut s1: Solution<bool> = Solution::new(vec![true]);
         s1.set_quality(12.0);
         let s2: Solution<bool> = Solution::new(vec![false]);

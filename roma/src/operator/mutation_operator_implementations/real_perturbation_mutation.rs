@@ -50,7 +50,9 @@ impl RealPerturbationMutation {
         value: f64,
         rng: &mut Random,
     ) -> f64 {
-        if let Some((lower, upper)) = bounds.and_then(|problem_bounds| problem_bounds.bounds_at(index)) {
+        if let Some((lower, upper)) =
+            bounds.and_then(|problem_bounds| problem_bounds.bounds_at(index))
+        {
             let span = upper - lower;
             if span <= f64::EPSILON {
                 return lower;
@@ -186,7 +188,12 @@ mod tests {
         operator.execute(&mut solution, 1.0, Some(&bounds), &mut rng);
 
         assert_eq!(solution.num_variables(), 3);
-        assert!(solution.variables().iter().all(|value| (-2.0..=2.0).contains(value)));
+        assert!(
+            solution
+                .variables()
+                .iter()
+                .all(|value| (-2.0..=2.0).contains(value))
+        );
     }
 
     #[test]

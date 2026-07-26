@@ -97,8 +97,8 @@ mod tests {
         }
 
         fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-            use crate::solution::traits::evaluator::maximizing_fitness;
-            maximizing_fitness
+            use crate::solution::traits::evaluator::maximizing_values;
+            maximizing_values
         }
     }
 
@@ -124,20 +124,20 @@ mod tests {
         }
 
         fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-            use crate::solution::traits::evaluator::minimizing_fitness;
-            minimizing_fitness
+            use crate::solution::traits::evaluator::minimizing_values;
+            minimizing_values
         }
     }
 
     #[test]
-    fn test_binary_tournament_name() {
+    fn name_is_exposed() {
         let selection = BinaryTournamentSelection::new();
 
         assert_eq!(selection.name(), "BinaryTournamentSelection");
     }
 
     #[test]
-    fn test_binary_tournament_selection() {
+    fn selects_better_solution_for_maximization() {
         let selection = BinaryTournamentSelection::new();
         let mut rng = Random::new(42);
 
@@ -155,17 +155,18 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_binary_tournament_selection_with_empty_population() {
+    fn panics_on_empty_population() {
         let selection = BinaryTournamentSelection::new();
         let mut rng = Random::new(42);
 
         let population: Vec<Solution<bool>> = vec![];
 
-        let _selected = selection.execute(&population, &mut rng, &|a, b| MaxProblem.dominates(a, b));
+        let _selected =
+            selection.execute(&population, &mut rng, &|a, b| MaxProblem.dominates(a, b));
     }
 
     #[test]
-    fn test_binary_tournament_selection_with_only_one() {
+    fn returns_only_solution_when_population_has_one_member() {
         let selection = BinaryTournamentSelection::new();
         let mut rng = Random::new(42);
 
@@ -182,7 +183,7 @@ mod tests {
     }
 
     #[test]
-    fn test_binary_tournament_selection_minimization() {
+    fn selects_better_solution_for_minimization() {
         let selection = BinaryTournamentSelection::new();
         let mut rng = Random::new(42);
 

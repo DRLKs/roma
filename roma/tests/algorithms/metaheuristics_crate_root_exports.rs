@@ -1,25 +1,12 @@
 //! Integration tests for the crate-root exports of the recently added metaheuristics.
 
-use roma_lib::{
-    AckleyProblem,
-    Algorithm,
-    DifferentialEvolution,
-    DifferentialEvolutionParameters,
-    GaussianNeighborhood,
-    MutationOperator,
-    Problem,
-    QapProblem,
-    RealPerturbationMutation,
-    SolutionSet,
-    TabuSearch,
-    TabuSearchParameters,
-    TerminationCriteria,
-    TerminationCriterion,
-    TwoOptNeighborhood,
-    VNS,
-    VNSParameters,
-};
 use roma_lib::prelude::Random;
+use roma_lib::{
+    AckleyProblem, Algorithm, DifferentialEvolution, DifferentialEvolutionParameters,
+    GaussianNeighborhood, MutationOperator, Problem, QapProblem, RealPerturbationMutation,
+    SolutionSet, TabuSearch, TabuSearchParameters, TerminationCriteria, TerminationCriterion,
+    TwoOptNeighborhood, VNS, VNSParameters,
+};
 
 #[test]
 fn differential_evolution_solves_ackley_via_crate_root_exports() {
@@ -33,14 +20,20 @@ fn differential_evolution_solves_ackley_via_crate_root_exports() {
     .with_seed(101);
 
     let mut algorithm = DifferentialEvolution::new(parameters);
-    let result = algorithm.run(&problem).expect("DE on Ackley should succeed");
+    let result = algorithm
+        .run(&problem)
+        .expect("DE on Ackley should succeed");
 
     assert_eq!(result.size(), 18);
     let best = result
         .best_solution(&problem)
         .expect("Expected a best Ackley solution");
     assert!(best.quality_value().is_finite());
-    assert!(best.variables().iter().all(|value| (-5.0..=5.0).contains(value)));
+    assert!(
+        best.variables()
+            .iter()
+            .all(|value| (-5.0..=5.0).contains(value))
+    );
 }
 
 #[test]
@@ -69,10 +62,14 @@ fn tabu_search_solves_qap_via_crate_root_exports() {
     .with_seed(55);
 
     let mut algorithm = TabuSearch::new(parameters);
-    let result = algorithm.run(&problem).expect("Tabu Search on QAP should succeed");
+    let result = algorithm
+        .run(&problem)
+        .expect("Tabu Search on QAP should succeed");
 
     assert_eq!(result.size(), 1);
-    let best = result.best_solution(&problem).expect("Expected one QAP solution");
+    let best = result
+        .best_solution(&problem)
+        .expect("Expected one QAP solution");
     let mut assignment = best.variables().to_vec();
     assignment.sort_unstable();
 
@@ -94,12 +91,20 @@ fn vns_solves_ackley_via_crate_root_exports() {
     .with_seed(77);
 
     let mut algorithm = VNS::new(parameters);
-    let result = algorithm.run(&problem).expect("VNS on Ackley should succeed");
+    let result = algorithm
+        .run(&problem)
+        .expect("VNS on Ackley should succeed");
 
     assert_eq!(result.size(), 1);
-    let best = result.best_solution(&problem).expect("Expected one Ackley solution");
+    let best = result
+        .best_solution(&problem)
+        .expect("Expected one Ackley solution");
     assert!(best.quality_value().is_finite());
-    assert!(best.variables().iter().all(|value| (-4.0..=4.0).contains(value)));
+    assert!(
+        best.variables()
+            .iter()
+            .all(|value| (-4.0..=4.0).contains(value))
+    );
 }
 
 #[test]

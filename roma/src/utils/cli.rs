@@ -1,8 +1,6 @@
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
-use std::{io, io::Write};
 
-use crate::algorithms::checkpoint::{CheckpointEntry, CheckpointRunStatus};
+use crate::utils::path::checkpoint_path_from_raw;
 
 /// Long CLI flag used to provide a deterministic random seed.
 pub const CLI_FLAG_SEED: &str = "--seed";
@@ -24,24 +22,6 @@ const FORMAT_CSV: &str = "csv";
 const FORMAT_JSON: &str = "json";
 const FORMAT_YAML: &str = "yaml";
 const FORMAT_YML: &str = "yml";
-
-const CHECKPOINT_LOCK_ERROR: &str = "Failed to acquire console lock";
-const CHECKPOINT_SELECTION_TITLE: &str = "--- CHECKPOINT SELECTION ---";
-const CHECKPOINT_COLUMN_ID: &str = "ID";
-const CHECKPOINT_COLUMN_AGE: &str = "AGE";
-const CHECKPOINT_COLUMN_ELAPSED: &str = "ELAPSED.";
-const CHECKPOINT_COLUMN_INFO: &str = "INFO";
-const CHECKPOINT_NEW_RUN_OPTION: &str = " [0] Start a new run (ignore existing)";
-const CHECKPOINT_SELECTION_FOOTER: &str = "----------------------------";
-const CHECKPOINT_SELECTION_PROMPT: &str = "> Select checkpoint index: ";
-const CHECKPOINT_INVALID_SELECTION: &str = "Please enter a valid numeric index.";
-const CHECKPOINT_INDEX_OUT_OF_RANGE_PREFIX: &str = "Index ";
-const CHECKPOINT_INDEX_OUT_OF_RANGE_SUFFIX: &str = " is out of range.";
-const CHECKPOINT_STATUS_RUNNING_ICON: &str = ">";
-const CHECKPOINT_STATUS_IDLE_ICON: &str = "[]";
-
-const CHECKPOINT_TABLE_WIDTH: usize = 90;
-const CHECKPOINT_AGE_COLUMN_WIDTH: usize = 12;
 
 /// Lightweight command-line argument helper for Roma examples and binaries.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -160,7 +140,7 @@ impl CliArgs {
     /// Resolves a path argument against the current working directory when relative.
     pub fn resolve_path_from_flag_or_default(&self, flag: &str, default_path: PathBuf) -> PathBuf {
         if let Some(raw) = self.argument_value(flag) {
-            let candidate = PathBuf::from(raw);
+            let candidate = checkpoint_path_from_raw(&raw);
             if candidate.is_absolute() {
                 return candidate;
             }
@@ -185,116 +165,6 @@ pub fn infer_format_from_extension(path: &Path) -> Option<String> {
         FORMAT_YAML | FORMAT_YML => Some(FORMAT_YAML.to_string()),
         _ => None,
     }
-}
-
-/// Converts milliseconds to a HH:MM:SS duration string.
-fn format_duration(ms: u64) -> String {
-    let secs = ms / 1000;
-    let h = secs / 3600;
-    let m = (secs % 3600) / 60;
-    let s = secs % 60;
-    format!("{:02}:{:02}:{:02}", h, m, s)
-}
-
-/// Calculates relative time from a millisecond timestamp.
-fn format_time_ago(created_ms: u64) -> String {
-    let now_ms = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0);
-
-    let diff_ms = now_ms.saturating_sub(created_ms);
-    let secs = diff_ms / 1000;
-
-    if secs < 60 {
-        format!("{}s ago", secs)
-    } else if secs < 3600 {
-        format!("{}m ago", secs / 60)
-    } else if secs < 86400 {
-        format!("{}h {}m ago", secs / 3600, (secs % 3600) / 60)
-    } else {
-        format!("{} days ago", secs / 86400)
-    }
-}
-
-/// Presents a checkpoint selection menu and returns the chosen entry index.
-///
-/// The returned index is zero-based. `Ok(None)` means the user chose to start
-/// a fresh run instead of resuming from an existing checkpoint.
-pub fn prompt_checkpoint_selection(entries: &[CheckpointEntry]) -> Result<Option<usize>, String> {
-    if entries.is_empty() {
-        return Ok(None);
-    }
-
-    use crate::algorithms::traits::CONSOLE_LOCK;
-    let _lock = CONSOLE_LOCK
-        .lock()
-        .map_err(|_| CHECKPOINT_LOCK_ERROR.to_string())?;
-
-    println!("\n{:^width$}", CHECKPOINT_SELECTION_TITLE, width = CHECKPOINT_TABLE_WIDTH);
-    println!(
-        "{:<4} | {:<age_width$} | {:<8} | {:<8}",
-        CHECKPOINT_COLUMN_ID,
-        CHECKPOINT_COLUMN_AGE,
-        CHECKPOINT_COLUMN_ELAPSED,
-        CHECKPOINT_COLUMN_INFO,
-        age_width = CHECKPOINT_AGE_COLUMN_WIDTH,
-    );
-    println!("{:-<width$}", "", width = CHECKPOINT_TABLE_WIDTH);
-
-    for (index, entry) in entries.iter().enumerate() {
-        let rec = &entry.record;
-
-        let age_str = format_time_ago(rec.created_at_ms);
-        let time_str = format_duration(rec.elapsed_millis);
-        let status_icon = if matches!(rec.status, CheckpointRunStatus::Running) {
-            CHECKPOINT_STATUS_RUNNING_ICON
-        } else {
-            CHECKPOINT_STATUS_IDLE_ICON
-        };
-
-        println!(
-            "[{:>2}] | {:<age_width$} | {:>8} | {} {:<8.80}",
-            index + 1,
-            age_str,
-            time_str,
-            status_icon,
-            rec.step_state_payload,
-            age_width = CHECKPOINT_AGE_COLUMN_WIDTH,
-        );
-    }
-
-    println!("{:-<width$}", "", width = CHECKPOINT_TABLE_WIDTH);
-    println!("{}", CHECKPOINT_NEW_RUN_OPTION);
-    println!("{:^width$}\n", CHECKPOINT_SELECTION_FOOTER, width = CHECKPOINT_TABLE_WIDTH);
-
-    print!("{}", CHECKPOINT_SELECTION_PROMPT);
-    io::stdout().flush().map_err(|e| e.to_string())?;
-
-    let mut input = String::new();
-    io::stdin()
-        .read_line(&mut input)
-        .map_err(|e| e.to_string())?;
-
-    let selection = input
-        .trim()
-        .parse::<usize>()
-        .map_err(|_| CHECKPOINT_INVALID_SELECTION.to_string())?;
-
-    if selection == 0 {
-        return Ok(None);
-    }
-
-    if selection > entries.len() {
-        return Err(format!(
-            "{}{}{}",
-            CHECKPOINT_INDEX_OUT_OF_RANGE_PREFIX,
-            selection,
-            CHECKPOINT_INDEX_OUT_OF_RANGE_SUFFIX
-        ));
-    }
-
-    Ok(Some(selection - 1))
 }
 
 #[cfg(test)]
@@ -347,7 +217,10 @@ mod tests {
         assert_eq!(args.seed_or(11), 7);
         assert_eq!(args.parse_usize_or("--iterations", 10), 32);
         assert_eq!(args.parse_f64_or("--cooling", 1.0), 0.75);
-        assert_eq!(args.parse_string_or("--label", "fallback"), "demo".to_string());
+        assert_eq!(
+            args.parse_string_or("--label", "fallback"),
+            "demo".to_string()
+        );
         assert!(args.resume_requested());
         assert!(args.checkpoints_disabled());
         assert!(args.has_checkpoint_dir_override());
@@ -365,6 +238,43 @@ mod tests {
             std::env::current_dir()
                 .expect("current working directory should be available")
                 .join(TEST_NESTED_CHECKPOINT_DIR)
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn cli_args_normalizes_windows_checkpoint_dir_for_wsl() {
+        let args = CliArgs::from_iter([
+            TEST_FLAG_CHECKPOINT_DIR,
+            "C:\\Users\\david\\roma\\.roma\\checkpoints",
+        ]);
+
+        let resolved = args.checkpoint_dir_or(PathBuf::from(TEST_DEFAULT_CHECKPOINT_DIR));
+
+        assert_eq!(
+            resolved,
+            PathBuf::from("/mnt/c/Users/david/roma/.roma/checkpoints")
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn cli_args_normalizes_wsl_checkpoint_dir_for_windows() {
+        let args = CliArgs::from_iter([
+            TEST_FLAG_CHECKPOINT_DIR,
+            "/mnt/c/Users/david/roma/.roma/checkpoints",
+        ]);
+
+        let resolved = args.checkpoint_dir_or(PathBuf::from(TEST_DEFAULT_CHECKPOINT_DIR));
+
+        assert_eq!(
+            resolved,
+            PathBuf::from("C:\\")
+                .join("Users")
+                .join("david")
+                .join("roma")
+                .join(".roma")
+                .join("checkpoints")
         );
     }
 }

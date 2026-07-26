@@ -24,7 +24,7 @@ impl ParetoCrowdingDistanceQuality {
     /// In Pareto optimization, it is common that two solutions are
     /// non-dominated with respect to each other. In that case this method must
     /// return `false` in both directions.
-    fn dominates(&self, other: &Self) -> bool {
+    pub fn dominates(&self, other: &Self) -> bool {
         if self.objectives.is_empty()
             || other.objectives.is_empty()
             || self.objectives.len() != other.objectives.len()

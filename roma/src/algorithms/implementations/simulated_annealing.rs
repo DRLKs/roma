@@ -1,7 +1,6 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
-use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
@@ -11,7 +10,10 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::checkpoint::{
+    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
+};
+use crate::utils::random::{Random, seed_from_time};
 
 #[derive(Clone)]
 pub struct SimulatedAnnealingParameters<T, N>
@@ -99,50 +101,51 @@ where
         self.iteration
     }
 
-    fn to_payload(&self) -> String {
-        let curr_encoded = self.current.encode();
-        let best_encoded = self.best.encode();
-
-        format!(
-            "iter={};eval={};temp={};seed={};curr={};best={}",
-            self.iteration,
-            self.evaluations,
-            self.temperature,
-            self.rng.state(),
-            curr_encoded,
-            best_encoded
-        )
+    fn to_payload(&self) -> Vec<u8> {
+        let mut payload = StatePayloadEncoder::new();
+        payload
+            .write_usize(self.iteration)
+            .expect("iteration should serialize into checkpoint payload");
+        payload
+            .write_usize(self.evaluations)
+            .expect("evaluations should serialize into checkpoint payload");
+        payload.write_f64(self.temperature);
+        payload.write_u64(self.rng.state());
+        payload
+            .write_solution(&self.current)
+            .expect("current solution should serialize into checkpoint payload");
+        payload
+            .write_solution(&self.best)
+            .expect("best solution should serialize into checkpoint payload");
+        payload.finish()
     }
 
-    fn from_payload(payload: &str) -> Self {
-        let parts: std::collections::HashMap<&str, &str> = payload
-            .split(';')
-            .filter_map(|s| {
-                let mut kv = s.splitn(2, '=');
-                Some((kv.next()?, kv.next()?))
-            })
-            .collect();
+    fn from_payload(payload: &[u8]) -> Self {
+        let mut payload = StatePayloadDecoder::new(payload)
+            .expect("critical error: invalid simulated annealing checkpoint payload");
+        let iteration = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint iteration");
+        let evaluations = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint evaluations");
+        let temperature = payload
+            .read_f64()
+            .expect("critical error: missing checkpoint temperature");
+        let seed = payload
+            .read_u64()
+            .expect("critical error: missing checkpoint RNG state");
 
-        let iteration = parts.get("iter").and_then(|s| s.parse().ok()).unwrap_or(0);
-        let evaluations = parts.get("eval").and_then(|s| s.parse().ok()).unwrap_or(0);
-        let temperature = parts
-            .get("temp")
-            .and_then(|s| s.parse::<f64>().ok())
-            .unwrap_or(0.0);
-        let seed = parts
-            .get("seed")
-            .and_then(|s| s.parse().ok())
-            .unwrap_or_else(seed_from_time);
+        let current = payload
+            .read_solution()
+            .expect("critical error: could not decode current solution");
 
-        let current = parts
-            .get("curr")
-            .and_then(|s| Solution::decode(s).ok())
-            .expect("Error: No se pudo decodificar la solución actual");
-
-        let best = parts
-            .get("best")
-            .and_then(|s| Solution::decode(s).ok())
-            .expect("Error: No se pudo decodificar la mejor solución (best)");
+        let best = payload
+            .read_solution()
+            .expect("critical error: could not decode best solution");
+        payload
+            .ensure_finished()
+            .expect("critical error: trailing bytes in simulated annealing checkpoint payload");
 
         Self {
             current,
@@ -245,11 +248,7 @@ where
         }
     }
 
-    fn step(
-        &self,
-        problem: &(impl Problem<T> + Sync),
-        state: &mut Self::StepState,
-    ) {
+    fn step(&self, problem: &(impl Problem<T> + Sync), state: &mut Self::StepState) {
         state.iteration += 1;
         let real_bounds = problem.real_bounds();
 
@@ -398,10 +397,12 @@ mod tests {
             .run(&problem)
             .expect("simulated annealing should run");
         assert_eq!(result.size(), 1);
-        assert!(result
-            .get(0)
-            .expect("expected one solution")
-            .quality_value()
-            .is_finite());
+        assert!(
+            result
+                .get(0)
+                .expect("expected one solution")
+                .quality_value()
+                .is_finite()
+        );
     }
 }

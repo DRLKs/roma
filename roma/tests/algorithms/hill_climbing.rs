@@ -1,13 +1,6 @@
 use roma_lib::{
-    AckleyProblem,
-    Algorithm,
-    BitFlipNeighborhood,
-    GaussianNeighborhood,
-    HillClimbing,
-    HillClimbingParameters,
-    KnapsackBuilder,
-    SolutionSet,
-    TerminationCriteria,
+    AckleyProblem, Algorithm, BitFlipNeighborhood, GaussianNeighborhood, HillClimbing,
+    HillClimbingParameters, KnapsackBuilder, SolutionSet, TerminationCriteria,
     TerminationCriterion,
 };
 
@@ -23,7 +16,9 @@ fn hill_climbing_handles_empty_problem_edge_case() {
     .with_seed(7);
 
     let mut algorithm = HillClimbing::new(parameters);
-    let result = algorithm.run(&problem).expect("Hill Climbing run should succeed");
+    let result = algorithm
+        .run(&problem)
+        .expect("Hill Climbing run should succeed");
 
     assert_eq!(result.size(), 1);
     let solution = result
@@ -51,6 +46,10 @@ fn hill_climbing_runs_with_gaussian_neighborhood() {
     assert_eq!(result.size(), 1);
     let best = result.get(0).expect("Expected one solution");
     assert_eq!(best.num_variables(), 6);
-    assert!(best.variables().iter().all(|value| (-5.0..=5.0).contains(value)));
+    assert!(
+        best.variables()
+            .iter()
+            .all(|value| (-5.0..=5.0).contains(value))
+    );
     assert!(best.quality_value().is_finite());
 }

@@ -3,9 +3,9 @@ use crate::problem::traits::Problem;
 use std::cmp::Ordering;
 use std::fmt::Display;
 
-use super::parallel::{parallel_collect_by_range, ParallelConfig};
+use super::parallel::{ParallelConfig, parallel_collect_by_range};
 use super::report::{ExperimentFailure, ExperimentReport, ExperimentRunResult, ExperimentSummary};
-use super::utils::{mean, variance};
+use crate::utils::statistics::{mean, variance};
 
 /// Immutable metadata snapshot for each registered experiment case.
 ///

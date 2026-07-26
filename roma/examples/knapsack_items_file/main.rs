@@ -1,24 +1,18 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use roma_lib::{ChartObserver, HtmlReportObserver, Observable};
 use roma_lib::algorithms::{
-    Algorithm,
-    GeneticAlgorithm,
-    GeneticAlgorithmParameters,
-    TerminationCriteria,
+    Algorithm, GeneticAlgorithm, GeneticAlgorithmParameters, TerminationCriteria,
     TerminationCriterion,
 };
 use roma_lib::operator::{BinaryTournamentSelection, BitFlipMutation, SinglePointCrossover};
 use roma_lib::problem::build_knapsack_from_records;
 use roma_lib::solution_set::SolutionSet;
-use roma_lib::utils::cli::{
-    CliArgs,
-    infer_format_from_extension,
-};
+use roma_lib::utils::cli::{CliArgs, infer_format_from_extension};
 use roma_lib::utils::csv_adapter::read_csv_records;
 use roma_lib::utils::json_adapter::{get_json_value, read_json_records};
 use roma_lib::utils::yaml_adapter::{get_yaml_value, read_yaml_records};
+use roma_lib::{ChartObserver, HtmlReportObserver, Observable};
 
 #[derive(Debug, Clone, Copy)]
 enum InputFormat {
@@ -209,8 +203,8 @@ fn main() {
 
     let seed = cli_args.seed_or(42);
     let input_path = resolve_input_path(&cli_args);
-    let input_format = resolve_input_format(&cli_args, &input_path)
-        .unwrap_or_else(|msg| panic!("{}", msg));
+    let input_format =
+        resolve_input_format(&cli_args, &input_path).unwrap_or_else(|msg| panic!("{}", msg));
     let records_path = records_path_for_format(input_format);
     let weight_key = weight_key_for_format(input_format);
     let value_key = value_key_for_format(input_format);
@@ -224,7 +218,7 @@ fn main() {
         build_knapsack_from_records(&records, capacity, row_limit, weight_key, value_key)
             .unwrap_or_else(|msg| panic!("{}", msg));
 
-    // Build the algorithm 
+    // Build the algorithm
     let parameters = GeneticAlgorithmParameters::new(
         80,
         0.85,
@@ -242,7 +236,7 @@ fn main() {
     let mut algorithm = GeneticAlgorithm::new(parameters);
     algorithm.add_observer(Box::new(chart_observer));
     algorithm.add_observer(Box::new(html_observer));
-    let result = algorithm.run(&problem).expect("Large CSV GA run failed");
+    let result = algorithm.run(&problem).expect("Large I/O GA run failed");
 
     if let Some(best) = result.best_solution(&problem) {
         println!(
@@ -259,6 +253,9 @@ fn main() {
             best.quality_value()
         );
     } else {
-        println!("Large CSV GA demo finished with no solutions (seed={})", seed);
+        println!(
+            "Large CSV GA demo finished with no solutions (seed={})",
+            seed
+        );
     }
 }

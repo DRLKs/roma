@@ -43,11 +43,21 @@ if len(SEEDS) < RUNS:
 logging.getLogger("jmetal").setLevel(logging.CRITICAL)
 
 
+class CountingTSP(TSP):
+    def __init__(self, instance):
+        super().__init__(instance=instance)
+        self.evaluation_count = 0
+
+    def evaluate(self, solution):
+        self.evaluation_count += 1
+        return super().evaluate(solution)
+
+
 def run_benchmark(seed):
     random.seed(seed)
     np.random.seed(seed)
 
-    problem = TSP(instance=str(TSPLIB_PATH))
+    problem = CountingTSP(instance=str(TSPLIB_PATH))
     if BUDGET["type"] == "evaluations":
         termination = StoppingByEvaluations(int(BUDGET["value"]))
     else:
@@ -82,6 +92,7 @@ def run_benchmark(seed):
         "best_solution": [int(value) for value in result.variables],
         "wall_time_ms": (end_wall - start_wall) * 1000.0,
         "cpu_time_ms": None,
+        "evaluations": int(problem.evaluation_count),
         "status": "ok",
         "error": None,
     }

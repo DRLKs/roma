@@ -1,4 +1,4 @@
-use crate::problem::traits::Problem;
+use crate::problem::{Problem, SolutionComparison, compare_scalar_qualities};
 use crate::solution::Solution;
 use crate::utils::random::Random;
 
@@ -18,7 +18,10 @@ pub struct QapProblem {
 
 impl QapProblem {
     pub fn with_matrices(flow_matrix: Vec<Vec<f64>>, distance_matrix: Vec<Vec<f64>>) -> Self {
-        assert!(!flow_matrix.is_empty(), "flow_matrix must contain at least one facility");
+        assert!(
+            !flow_matrix.is_empty(),
+            "flow_matrix must contain at least one facility"
+        );
         assert_eq!(
             flow_matrix.len(),
             distance_matrix.len(),
@@ -114,14 +117,12 @@ impl Problem<usize> for QapProblem {
         self.description.clone()
     }
 
-    fn dominates(&self, solution_a: &Solution<usize>, solution_b: &Solution<usize>) -> bool {
-        let fitness_a = solution_a.quality().copied().unwrap_or(f64::INFINITY);
-        let fitness_b = solution_b.quality().copied().unwrap_or(f64::INFINITY);
-        fitness_a < fitness_b
+    fn compare_qualities(&self, left: Option<&f64>, right: Option<&f64>) -> SolutionComparison {
+        compare_scalar_qualities(left, right, self.better_fitness_fn())
     }
 
     fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        crate::solution::traits::evaluator::minimizing_fitness
+        crate::solution::traits::evaluator::minimizing_values
     }
 
     fn format_solution(&self, solution: &Solution<usize>) -> String {

@@ -1,19 +1,17 @@
 use std::fmt::Display;
 use std::sync::{LazyLock, Mutex};
 
-use crate::algorithms::checkpoint::{
-    delete_snapshot_on_success, generate_run_id, select_resume_checkpoint_for_metadata,
-    CheckpointPolicy, CheckpointRecord, CheckpointRuntimeMetadata, ExecutionStateSnapshot,
-    StepStateCheckpoint, DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES,
-};
-use crate::algorithms::runtime::{
-    run_with_observer_runtime, RuntimeExecutionOutput,
-};
+use crate::algorithms::runtime::{RuntimeExecutionOutput, run_with_observer_runtime};
 use crate::algorithms::termination::TerminationCriteria;
-use crate::observer::traits::AlgorithmObserver;
 use crate::observer::ObserverState;
+use crate::observer::traits::AlgorithmObserver;
 use crate::problem::traits::Problem;
 use crate::solution_set::traits::SolutionSet;
+use crate::utils::checkpoint::{
+    CheckpointPolicy, CheckpointRecord, CheckpointRuntimeMetadata,
+    DEFAULT_FREQUENCY_OF_CHECKPOINT_WRITES, ExecutionStateSnapshot, StepStateCheckpoint,
+    delete_snapshot_on_success, generate_run_id, select_resume_checkpoint_for_metadata,
+};
 use crate::utils::path::CheckpointPathConfig;
 
 pub static CONSOLE_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
@@ -74,7 +72,8 @@ where
             &problem_parameters,
         );
 
-        let resume_checkpoint = self.get_resume_checkpoint(&checkpoint_metadata, &checkpoint_policy);
+        let resume_checkpoint =
+            self.get_resume_checkpoint(&checkpoint_metadata, &checkpoint_policy);
         let run_id = resume_checkpoint
             .as_ref()
             .map(|record| record.run_id.clone())
@@ -90,7 +89,7 @@ where
 
         let mut last_checkpoint_path: Option<std::path::PathBuf> = None;
 
-        let result = run_with_observer_runtime(
+        let output = run_with_observer_runtime(
             &mut observers,
             criteria,
             better_fitness,
@@ -109,8 +108,10 @@ where
                 );
                 checkpoint_policy.persist_record(&mut last_checkpoint_path, &initial_record);
 
-                context.report_progress(ObserverState::from_snapshot(&initial_snapshot, context.seq_id()));
-
+                context.report_progress(ObserverState::from_snapshot(
+                    &initial_snapshot,
+                    context.seq_id(),
+                ));
 
                 while !context.should_terminate() {
                     algorithm.step(problem, &mut state);
@@ -131,7 +132,10 @@ where
                         checkpoint_policy.persist_record(&mut last_checkpoint_path, &record);
                     }
 
-                    context.report_progress(ObserverState::from_snapshot(&step_snapshot, context.seq_id()));
+                    context.report_progress(ObserverState::from_snapshot(
+                        &step_snapshot,
+                        context.seq_id(),
+                    ));
                 }
 
                 if let Some(path) = last_checkpoint_path.as_ref() {
@@ -147,8 +151,8 @@ where
         );
         *self.observers_mut() = observers;
 
-        self.set_solution_set(result.clone());
-        Ok(result)
+        self.set_solution_set(output.clone());
+        Ok(output)
     }
 
     /// Returns `Ok(())` when parameters are valid, or `Err(message)` otherwise.
@@ -160,11 +164,7 @@ where
 
     fn initialize_step_state(&self, problem: &(impl Problem<T, Q> + Sync)) -> Self::StepState;
 
-    fn step(
-        &self,
-        problem: &(impl Problem<T, Q> + Sync),
-        state: &mut Self::StepState,
-    );
+    fn step(&self, problem: &(impl Problem<T, Q> + Sync), state: &mut Self::StepState);
 
     fn build_snapshot(
         &self,
@@ -189,8 +189,10 @@ where
             return None;
         }
 
-        match select_resume_checkpoint_for_metadata(checkpoint_policy.checkpoint_dir(), runtime_metadata)
-        {
+        match select_resume_checkpoint_for_metadata(
+            checkpoint_policy.checkpoint_dir(),
+            runtime_metadata,
+        ) {
             Ok(Some(record)) => Some(record),
             Ok(None) => {
                 if let Ok(_lock) = CONSOLE_LOCK.lock() {

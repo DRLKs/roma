@@ -1,4 +1,4 @@
-use crate::problem::traits::Problem;
+use crate::problem::{Problem, SolutionComparison, compare_scalar_qualities};
 use crate::solution::Solution;
 use crate::utils::random::Random;
 use std::collections::{BTreeMap, HashMap};
@@ -45,7 +45,8 @@ impl TspProblem {
         let mut distance_matrix = vec![vec![0.0; size]; size];
         for i in 0..size {
             for j in i + 1..size {
-                let distance = Self::rounded_euclidean_distance(city_positions[i], city_positions[j]);
+                let distance =
+                    Self::rounded_euclidean_distance(city_positions[i], city_positions[j]);
                 distance_matrix[i][j] = distance;
                 distance_matrix[j][i] = distance;
             }
@@ -185,10 +186,12 @@ impl Problem<usize> for TspProblem {
         solution.set_quality(fitness);
     }
 
-    fn dominates(&self, solution_a: &Solution<usize, f64>, solution_b: &Solution<usize, f64>) -> bool {
-        let fitness_a = solution_a.quality().copied().unwrap_or(f64::INFINITY);
-        let fitness_b = solution_b.quality().copied().unwrap_or(f64::INFINITY);
-        fitness_a < fitness_b
+    fn compare_qualities(&self, left: Option<&f64>, right: Option<&f64>) -> SolutionComparison {
+        compare_scalar_qualities(left, right, self.better_fitness_fn())
+    }
+
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+        crate::solution::traits::evaluator::minimizing_values
     }
 
     fn create_solution(&self, rng: &mut Random) -> Solution<usize> {
@@ -230,10 +233,6 @@ impl Problem<usize> for TspProblem {
 
     fn get_problem_description(&self) -> String {
         self.description.clone()
-    }
-
-    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        crate::solution::traits::evaluator::minimizing_fitness
     }
 
     fn format_solution(&self, solution: &Solution<usize>) -> String {
@@ -440,12 +439,18 @@ mod tests {
             vec![1.0, 0.0, 3.0],
             vec![2.0, 3.0, 0.0],
         ];
-        let problem = TspProblem::with_distance_matrix(matrix)
-            .with_city_positions(vec![(10.0, 20.0), (30.0, 40.0), (50.0, 60.0)]);
+        let problem = TspProblem::with_distance_matrix(matrix).with_city_positions(vec![
+            (10.0, 20.0),
+            (30.0, 40.0),
+            (50.0, 60.0),
+        ]);
 
         assert_eq!(problem.city_position(1), Some((30.0, 40.0)));
         assert_eq!(problem.city_position(3), None);
-        assert_eq!(problem.city_positions(), Some(&[(10.0, 20.0), (30.0, 40.0), (50.0, 60.0)][..]));
+        assert_eq!(
+            problem.city_positions(),
+            Some(&[(10.0, 20.0), (30.0, 40.0), (50.0, 60.0)][..])
+        );
     }
 
     #[test]

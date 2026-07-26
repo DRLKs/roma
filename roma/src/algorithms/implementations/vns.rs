@@ -1,7 +1,6 @@
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
-use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
@@ -11,7 +10,10 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::checkpoint::{
+    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
+};
+use crate::utils::random::{Random, seed_from_time};
 
 /// Configuration for [`VNS`].
 #[derive(Clone)]
@@ -86,42 +88,51 @@ where
         self.rng.state()
     }
 
-    fn to_payload(&self) -> String {
-        format!(
-            "iter={};eval={};seed={};k={};curr={};best={}",
-            self.iteration,
-            self.evaluations,
-            self.rng.state(),
-            self.neighborhood_index,
-            self.current.encode(),
-            self.best.encode()
-        )
+    fn to_payload(&self) -> Vec<u8> {
+        let mut payload = StatePayloadEncoder::new();
+        payload
+            .write_usize(self.iteration)
+            .expect("iteration should serialize into checkpoint payload");
+        payload
+            .write_usize(self.evaluations)
+            .expect("evaluations should serialize into checkpoint payload");
+        payload.write_u64(self.rng.state());
+        payload
+            .write_usize(self.neighborhood_index)
+            .expect("neighborhood index should serialize into checkpoint payload");
+        payload
+            .write_solution(&self.current)
+            .expect("current solution should serialize into checkpoint payload");
+        payload
+            .write_solution(&self.best)
+            .expect("best solution should serialize into checkpoint payload");
+        payload.finish()
     }
 
-    fn from_payload(payload: &str) -> Self {
-        let parts: std::collections::HashMap<&str, &str> = payload
-            .split(';')
-            .filter_map(|segment| {
-                let mut kv = segment.splitn(2, '=');
-                Some((kv.next()?, kv.next()?))
-            })
-            .collect();
-
-        let iteration = parts.get("iter").and_then(|value| value.parse().ok()).unwrap_or(0);
-        let evaluations = parts.get("eval").and_then(|value| value.parse().ok()).unwrap_or(0);
-        let random_seed = parts
-            .get("seed")
-            .and_then(|value| value.parse().ok())
-            .unwrap_or_else(seed_from_time);
-        let neighborhood_index = parts.get("k").and_then(|value| value.parse().ok()).unwrap_or(0);
-        let current = parts
-            .get("curr")
-            .and_then(|value| Solution::decode(value).ok())
-            .expect("Critical error: Could not decode current state from payload");
-        let best = parts
-            .get("best")
-            .and_then(|value| Solution::decode(value).ok())
-            .expect("Critical error: Could not decode best state from payload");
+    fn from_payload(payload: &[u8]) -> Self {
+        let mut payload = StatePayloadDecoder::new(payload)
+            .expect("critical error: invalid VNS checkpoint payload");
+        let iteration = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint iteration");
+        let evaluations = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint evaluations");
+        let random_seed = payload
+            .read_u64()
+            .expect("critical error: missing checkpoint RNG state");
+        let neighborhood_index = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint neighborhood index");
+        let current = payload
+            .read_solution()
+            .expect("critical error: could not decode current solution");
+        let best = payload
+            .read_solution()
+            .expect("critical error: could not decode best solution");
+        payload
+            .ensure_finished()
+            .expect("critical error: trailing bytes in VNS checkpoint payload");
 
         Self {
             current,
@@ -224,30 +235,20 @@ where
         }
     }
 
-    fn step(
-        &self,
-        problem: &(impl Problem<T> + Sync),
-        state: &mut Self::StepState,
-    ) {
+    fn step(&self, problem: &(impl Problem<T> + Sync), state: &mut Self::StepState) {
         state.iteration += 1;
         let real_bounds = problem.real_bounds();
 
         let neighborhood = &self.parameters.neighborhoods[state.neighborhood_index];
-        let mut candidate = neighborhood.random_neighbor(
-            &state.current,
-            real_bounds,
-            &mut state.rng,
-        );
+        let mut candidate =
+            neighborhood.random_neighbor(&state.current, real_bounds, &mut state.rng);
         problem.evaluate(&mut candidate);
         state.evaluations += 1;
 
         let mut local_best = candidate;
         for _ in 0..self.parameters.local_search_trials {
-            let mut improved_candidate = neighborhood.random_neighbor(
-                &local_best,
-                real_bounds,
-                &mut state.rng,
-            );
+            let mut improved_candidate =
+                neighborhood.random_neighbor(&local_best, real_bounds, &mut state.rng);
             problem.evaluate(&mut improved_candidate);
             state.evaluations += 1;
 
@@ -261,12 +262,14 @@ where
 
         if problem.is_better_fitness(local_best.quality_value(), state.current.quality_value()) {
             state.current = local_best;
-            if problem.is_better_fitness(state.current.quality_value(), state.best.quality_value()) {
+            if problem.is_better_fitness(state.current.quality_value(), state.best.quality_value())
+            {
                 state.best = state.current.copy();
             }
             state.neighborhood_index = 0;
         } else {
-            state.neighborhood_index = (state.neighborhood_index + 1) % self.parameters.neighborhoods.len();
+            state.neighborhood_index =
+                (state.neighborhood_index + 1) % self.parameters.neighborhoods.len();
         }
     }
 
@@ -348,10 +351,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::TerminationCriterion;
     use crate::operator::neighborhood_operator_implementations::gaussian_neighborhood::GaussianNeighborhood;
     use crate::problem::AckleyProblem;
     use crate::solution_set::traits::SolutionSet;
-    use crate::TerminationCriterion;
 
     #[test]
     fn vns_rejects_empty_neighborhoods() {
@@ -382,12 +385,18 @@ mod tests {
         .with_seed(31);
 
         let mut algorithm = VNS::new(parameters);
-        let result = algorithm.run(&problem).expect("VNS on Ackley should succeed");
+        let result = algorithm
+            .run(&problem)
+            .expect("VNS on Ackley should succeed");
 
         assert_eq!(result.size(), 1);
         let best = result.get(0).expect("Expected one solution");
         assert_eq!(best.num_variables(), 6);
-        assert!(best.variables().iter().all(|value| (-5.0..=5.0).contains(value)));
+        assert!(
+            best.variables()
+                .iter()
+                .all(|value| (-5.0..=5.0).contains(value))
+        );
         assert!(best.quality_value().is_finite());
     }
 }

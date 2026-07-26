@@ -1,7 +1,54 @@
+use std::cmp::Ordering;
 use std::fmt::Display;
 
 use crate::solution::{RealBounds, Solution};
 use crate::utils::random::Random;
+
+/// Result of comparing two candidates under a problem's domain rules.
+///
+/// `Incomparable` is distinct from `Equivalent`: Pareto candidates can be
+/// mutually non-dominating without being equal.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SolutionComparison {
+    Better,
+    Worse,
+    Equivalent,
+    Incomparable,
+}
+
+impl SolutionComparison {
+    /// Converts the domain result to an ordering for scalar consumers.
+    ///
+    /// A total sort must not invent a preference for incomparable candidates,
+    /// so both `Equivalent` and `Incomparable` become `Ordering::Equal`.
+    pub fn scalar_ordering(self) -> Ordering {
+        match self {
+            Self::Better => Ordering::Less,
+            Self::Worse => Ordering::Greater,
+            Self::Equivalent | Self::Incomparable => Ordering::Equal,
+        }
+    }
+
+    pub fn is_better(self) -> bool {
+        matches!(self, Self::Better)
+    }
+}
+
+/// Applies a scalar preference rule while handling unevaluated candidates
+/// consistently across scalar problems.
+pub fn compare_scalar_qualities(
+    left: Option<&f64>,
+    right: Option<&f64>,
+    prefers: impl Fn(f64, f64) -> bool,
+) -> SolutionComparison {
+    match (left, right) {
+        (Some(left), Some(right)) if prefers(*left, *right) => SolutionComparison::Better,
+        (Some(left), Some(right)) if prefers(*right, *left) => SolutionComparison::Worse,
+        (Some(_), Some(_)) | (None, None) => SolutionComparison::Equivalent,
+        (Some(_), None) => SolutionComparison::Better,
+        (None, Some(_)) => SolutionComparison::Worse,
+    }
+}
 
 /// Trait that defines the basic interface for optimization problems.
 ///
@@ -34,18 +81,32 @@ where
 
     fn get_problem_description(&self) -> String;
 
-    fn dominates(&self, solution_a: &Solution<T, Q>, solution_b: &Solution<T, Q>) -> bool;
-
-    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool;
-
-    /// Returns optional bounds metadata for real-valued solutions.
+    /// The sole problem-owned comparison rule.
     ///
-    /// The bounds type belongs to the solution module, but problems can expose
-    /// a shared view of that metadata so algorithms and operators can enforce
-    /// domain constraints without storing bounds inside each solution.
-    fn real_bounds(&self) -> Option<&RealBounds> {
-        None
+    /// Legacy implementations that override `dominates` continue to compile,
+    /// but new problems should override this method instead.
+    fn compare_qualities(&self, _left: Option<&Q>, _right: Option<&Q>) -> SolutionComparison {
+        SolutionComparison::Incomparable
     }
+
+    fn compare_solutions(
+        &self,
+        left: &Solution<T, Q>,
+        right: &Solution<T, Q>,
+    ) -> SolutionComparison {
+        self.compare_qualities(left.quality(), right.quality())
+    }
+
+    fn dominates(&self, solution_a: &Solution<T, Q>, solution_b: &Solution<T, Q>) -> bool {
+        self.compare_solutions(solution_a, solution_b).is_better()
+    }
+
+    /// Runtime adapter for termination snapshots.
+    ///
+    /// Implementations must express the same scalar preference as
+    /// `compare_qualities`; this remains a function pointer because the
+    /// observer runtime stores it independently of the problem instance.
+    fn better_fitness_fn(&self) -> fn(f64, f64) -> bool;
 
     fn is_better_fitness(&self, candidate: f64, reference: f64) -> bool {
         (self.better_fitness_fn())(candidate, reference)
@@ -57,6 +118,15 @@ where
         } else {
             (candidate - current).abs()
         }
+    }
+
+    /// Returns optional bounds metadata for real-valued solutions.
+    ///
+    /// The bounds type belongs to the solution module, but problems can expose
+    /// a shared view of that metadata so algorithms and operators can enforce
+    /// domain constraints without storing bounds inside each solution.
+    fn real_bounds(&self) -> Option<&RealBounds> {
+        None
     }
 
     fn get_problem_parameters_payload(&self) -> String {

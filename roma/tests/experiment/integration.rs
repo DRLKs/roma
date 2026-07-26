@@ -25,17 +25,17 @@ fn experiment_compares_hill_climbing_and_ga_end_to_end() {
     .with_seed(111);
 
     let genetic_algorithm_case = GeneticAlgorithmParameters::new(
-            24,
-            0.9,
-            0.08,
-            SinglePointCrossover::new(),
-            BitFlipMutation::new(),
-            BinaryTournamentSelection::new(),
-            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(12)]),
-        )
-        .with_elite_size(2)
-        .with_seed(222)
-        .sequential();
+        24,
+        0.9,
+        0.08,
+        SinglePointCrossover::new(),
+        BitFlipMutation::new(),
+        BinaryTournamentSelection::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(12)]),
+    )
+    .with_elite_size(2)
+    .with_seed(222)
+    .sequential();
 
     let report = Experiment::new(problem)
         .with_runs(3)
@@ -112,4 +112,30 @@ fn experiment_accepts_genetic_algorithm_parameters_directly_as_case() {
     assert_eq!(report.failures.len(), 0);
     assert_eq!(report.summaries.len(), 1);
     assert_eq!(report.run_results.len(), 2);
+}
+
+#[test]
+fn experiment_clamps_zero_runs_to_a_single_execution() {
+    let problem = KnapsackBuilder::new()
+        .with_capacity(20.0)
+        .add_items(vec![(5.0, 10.0), (6.0, 12.0), (4.0, 7.0)])
+        .build();
+
+    let hill_climbing_case = HillClimbingParameters::new(
+        BitFlipNeighborhood::new(),
+        TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(6)]),
+    )
+    .with_seed(444);
+
+    let report = Experiment::new(problem)
+        .with_runs(0)
+        .add_case(hill_climbing_case)
+        .execute()
+        .expect("Experiment should clamp zero runs to one execution");
+
+    assert_eq!(report.runs_per_case, 1);
+    assert_eq!(report.failures.len(), 0);
+    assert_eq!(report.summaries.len(), 1);
+    assert_eq!(report.run_results.len(), 1);
+    assert_eq!(report.summaries[0].runs_ok, 1);
 }

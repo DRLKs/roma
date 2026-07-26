@@ -58,8 +58,7 @@ impl PolynomialMutation {
         probability: f64,
         bounds: Option<&RealBounds>,
         rng: &mut Random,
-    )
-    where
+    ) where
         Q: Clone + Display,
     {
         match bounds {
@@ -68,14 +67,9 @@ impl PolynomialMutation {
                 lower,
                 upper,
                 dimensions,
-            }) => self.execute_uniform_bounds(
-                solution,
-                probability,
-                *lower,
-                *upper,
-                *dimensions,
-                rng,
-            ),
+            }) => {
+                self.execute_uniform_bounds(solution, probability, *lower, *upper, *dimensions, rng)
+            }
             Some(RealBounds::PerVariable {
                 lower_bounds,
                 upper_bounds,
@@ -106,12 +100,12 @@ impl PolynomialMutation {
                 continue;
             }
 
-            let (effective_lower, effective_upper) = if bounded_dimensions == 0 || i < bounded_dimensions
-            {
-                (lower, upper)
-            } else {
-                (0.0, 1.0)
-            };
+            let (effective_lower, effective_upper) =
+                if bounded_dimensions == 0 || i < bounded_dimensions {
+                    (lower, upper)
+                } else {
+                    (0.0, 1.0)
+                };
             if effective_upper <= effective_lower {
                 continue;
             }
@@ -194,7 +188,7 @@ mod tests {
     use crate::solution::RealSolutionBuilder;
 
     #[test]
-    fn test_polynomial_mutation_zero_probability() {
+    fn zero_probability_leaves_solution_unchanged() {
         let mutation = PolynomialMutation::new(20.0);
         let original_vars = vec![0.3, 0.5, 0.7];
         let mut solution = RealSolutionBuilder::from_variables(original_vars.clone()).build();
@@ -206,7 +200,7 @@ mod tests {
     }
 
     #[test]
-    fn test_polynomial_mutation_preserves_length() {
+    fn mutation_preserves_variable_count() {
         let mutation = PolynomialMutation::new(20.0);
         let mut solution = RealSolutionBuilder::from_variables(vec![0.5, 0.5, 0.5, 0.5]).build();
         let mut rng = Random::new(42);
@@ -217,7 +211,7 @@ mod tests {
     }
 
     #[test]
-    fn test_polynomial_mutation_valid_range() {
+    fn mutation_keeps_values_within_default_range() {
         let mutation = PolynomialMutation::new(20.0);
         let mut solution = RealSolutionBuilder::from_variables(vec![0.0, 0.5, 1.0]).build();
         let mut rng = Random::new(42);
@@ -232,7 +226,7 @@ mod tests {
     }
 
     #[test]
-    fn test_polynomial_mutation_respects_custom_bounds() {
+    fn mutation_respects_custom_bounds() {
         let mutation = PolynomialMutation::new(20.0);
         let mut solution = RealSolutionBuilder::from_variables(vec![-5.0, 0.0, 5.0])
             .with_bounds(-5.12, 5.12)
@@ -253,7 +247,7 @@ mod tests {
     }
 
     #[test]
-    fn test_polynomial_mutation_high_probability_changes_values() {
+    fn high_probability_changes_at_least_one_value() {
         let mutation = PolynomialMutation::new(20.0);
         let original_vars = vec![0.5; 10];
         let mut solution = RealSolutionBuilder::from_variables(original_vars.clone()).build();
@@ -274,7 +268,7 @@ mod tests {
     }
 
     #[test]
-    fn test_polynomial_mutation_name() {
+    fn name_is_exposed() {
         let mutation = PolynomialMutation::new(20.0);
         assert_eq!(mutation.name(), "Polynomial Mutation");
     }

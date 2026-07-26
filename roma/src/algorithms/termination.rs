@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use crate::algorithms::checkpoint::ExecutionStateSnapshot;
+use crate::utils::checkpoint::ExecutionStateSnapshot;
 
 /// Defines stopping criteria for optimization algorithms.
 ///
@@ -188,7 +188,7 @@ impl TerminationState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::solution::traits::evaluator::maximizing_fitness;
+    use crate::solution::traits::evaluator::maximizing_values;
     use std::thread;
     use std::time::Duration;
 
@@ -198,7 +198,7 @@ mod tests {
     #[test]
     fn max_iterations_termination_triggers() {
         let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(3)]);
-        let mut controller = TerminationController::new(criteria, maximizing_fitness);
+        let mut controller = TerminationController::new(criteria, maximizing_values);
 
         let snap0 = ExecutionStateSnapshot {
             iteration: 0,
@@ -243,7 +243,7 @@ mod tests {
     #[test]
     fn max_evaluations_termination_triggers() {
         let criteria = TerminationCriteria::new(vec![TerminationCriterion::MaxEvaluations(5)]);
-        let mut controller = TerminationController::new(criteria, maximizing_fitness);
+        let mut controller = TerminationController::new(criteria, maximizing_values);
 
         let snap0 = ExecutionStateSnapshot {
             iteration: 0,
@@ -280,7 +280,7 @@ mod tests {
             threshold: 1e-9,
             patience: 3,
         }]);
-        let mut controller = TerminationController::new(criteria, maximizing_fitness);
+        let mut controller = TerminationController::new(criteria, maximizing_values);
 
         let snap0 = ExecutionStateSnapshot {
             iteration: 0,
@@ -338,7 +338,7 @@ mod tests {
         let criteria = TerminationCriteria::new(vec![TerminationCriterion::TimeLimit(
             Duration::from_millis(5),
         )]);
-        let mut controller = TerminationController::new(criteria, maximizing_fitness);
+        let mut controller = TerminationController::new(criteria, maximizing_values);
 
         thread::sleep(Duration::from_millis(10));
 
@@ -355,7 +355,7 @@ mod tests {
     fn no_improvement_termination_triggers() {
         let criteria =
             TerminationCriteria::new(vec![TerminationCriterion::NoImprovement { patience: 3 }]);
-        let mut controller = TerminationController::new(criteria, maximizing_fitness);
+        let mut controller = TerminationController::new(criteria, maximizing_values);
 
         let snap0 = ExecutionStateSnapshot {
             iteration: 0,

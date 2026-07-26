@@ -1,8 +1,8 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
-use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
-use crate::algorithms::termination::{TerminationCriteria};
+use crate::Observable;
+use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::AlgorithmObserver;
@@ -11,11 +11,13 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
+use crate::utils::checkpoint::{
+    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
+};
 use crate::utils::parallel::parallel_map_indexed;
 use crate::utils::parallel::resolve_num_threads;
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::random::Random;
 use crate::utils::statistics::calculate_population_statistics;
-use crate::Observable;
 
 #[derive(Clone)]
 pub struct GeneticAlgorithmParameters<T, C, M, Sel>
@@ -143,47 +145,39 @@ where
         self.run_seed
     }
 
-    fn to_payload(&self) -> String {
-        let encoded_pop = self
-            .population
-            .iter()
-            .map(|sol| sol.encode())
-            .collect::<Vec<String>>()
-            .join(",");
-
-        format!(
-            "iter={};eval={};seed={};pop=[{}]",
-            self.generation, self.evaluations, self.run_seed, encoded_pop
-        )
+    fn to_payload(&self) -> Vec<u8> {
+        let mut payload = StatePayloadEncoder::new();
+        payload
+            .write_usize(self.generation)
+            .expect("generation should serialize into checkpoint payload");
+        payload
+            .write_usize(self.evaluations)
+            .expect("evaluations should serialize into checkpoint payload");
+        payload.write_u64(self.run_seed);
+        payload
+            .write_solution_vec(&self.population)
+            .expect("population should serialize into checkpoint payload");
+        payload.finish()
     }
 
-    fn from_payload(payload: &str) -> Self {
-        let parts: std::collections::HashMap<&str, &str> = payload
-            .split(';')
-            .filter_map(|s| {
-                let mut kv = s.splitn(2, '=');
-                Some((kv.next()?, kv.next()?))
-            })
-            .collect();
-
-        let generation = parts.get("iter").and_then(|s| s.parse().ok()).unwrap_or(0);
-        let evaluations = parts.get("eval").and_then(|s| s.parse().ok()).unwrap_or(0);
-        let run_seed = parts
-            .get("seed")
-            .and_then(|s| s.parse().ok())
-            .unwrap_or_else(seed_from_time);
-
-        let population = parts
-            .get("pop")
-            .map(|pop_str| {
-                pop_str
-                    .trim_matches(|c| c == '[' || c == ']')
-                    .split(',')
-                    .filter(|s| !s.is_empty())
-                    .filter_map(|sol_str| Solution::decode(sol_str).ok())
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default();
+    fn from_payload(payload: &[u8]) -> Self {
+        let mut payload = StatePayloadDecoder::new(payload)
+            .expect("critical error: invalid genetic algorithm checkpoint payload");
+        let generation = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint generation");
+        let evaluations = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint evaluations");
+        let run_seed = payload
+            .read_u64()
+            .expect("critical error: missing checkpoint run seed");
+        let population = payload
+            .read_solution_vec()
+            .expect("critical error: could not decode checkpoint population");
+        payload
+            .ensure_finished()
+            .expect("critical error: trailing bytes in genetic algorithm checkpoint payload");
 
         Self {
             population,
@@ -268,12 +262,7 @@ where
         let thread_count = requested_threads.min(parameters.population_size.max(1));
 
         let (mut offspring_population, generation_evaluations) = if thread_count <= 1 {
-            Self::create_offspring_sequential(
-                parameters,
-                problem,
-                population,
-                generation_seed,
-            )
+            Self::create_offspring_sequential(parameters, problem, population, generation_seed)
         } else {
             Self::create_offspring_parallel(
                 parameters,
@@ -311,12 +300,7 @@ where
             let mut offspring = if rng.next_f64() < parameters.crossover_probability {
                 parameters
                     .crossover_operator
-                    .execute(
-                        &parent1,
-                        &parent2,
-                        real_bounds,
-                        &mut rng,
-                    )
+                    .execute(&parent1, &parent2, real_bounds, &mut rng)
             } else {
                 vec![parent1.copy(), parent2.copy()]
             };
@@ -497,7 +481,7 @@ where
 
 impl<T, C, M, Sel> Algorithm<T> for GeneticAlgorithm<T, C, M, Sel>
 where
-    T: Clone + Send + Sync + 'static + Display + Display + FromStr,
+    T: Clone + Send + Sync + 'static + Display + FromStr,
     C: CrossoverOperator<T> + Send + Sync,
     M: MutationOperator<T> + Send + Sync,
     Sel: SelectionOperator<T> + Send + Sync,
@@ -571,11 +555,7 @@ where
         }
     }
 
-    fn step(
-        &self,
-        problem: &(impl Problem<T> + Sync),
-        state: &mut Self::StepState,
-    ) {
+    fn step(&self, problem: &(impl Problem<T> + Sync), state: &mut Self::StepState) {
         state.generation += 1;
         state.population = Self::next_generation(
             &self.parameters,
@@ -593,9 +573,9 @@ where
         state: &Self::StepState,
     ) -> ExecutionStateSnapshot {
         let stats = calculate_population_statistics(&state.population, problem);
-        let best_solution = &state.population[stats.best_index.expect(
-            "population should not be empty when reporting progress",
-        )];
+        let best_solution = &state.population[stats
+            .best_index
+            .expect("population should not be empty when reporting progress")];
         ExecutionStateSnapshot {
             iteration: state.generation,
             evaluations: state.evaluations,
@@ -611,7 +591,6 @@ where
     }
 
     fn checkpoint_algorithm_parameters(&self) -> String {
-
         format!(
             "population_size={};crossover_probability={:.6};mutation_probability={:.6};elite_size={};crossover_operator={};mutation_operator={};selection_operator={};termination={:?}",
             self.parameters.population_size,
@@ -681,5 +660,113 @@ where
         let mut algorithm = GeneticAlgorithm::new(self.clone());
         let result = algorithm.run(problem)?;
         Ok(Box::new(result))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{GeneticAlgorithm, GeneticAlgorithmParameters, GeneticAlgorithmState};
+    use crate::Algorithm;
+    use crate::algorithms::termination::{TerminationCriteria, TerminationCriterion};
+    use crate::operator::crossover_operator_implementations::single_point_crossover::SinglePointCrossover;
+    use crate::operator::mutation_operator_implementations::bit_flip_mutation::BitFlipMutation;
+    use crate::operator::selection_operator_implementations::binary_tournament_selection::BinaryTournamentSelection;
+    use crate::problem::implementations::knapsack_problem::KnapsackBuilder;
+    use crate::solution::BinarySolutionBuilder;
+    use crate::solution_set::traits::SolutionSet;
+    use crate::utils::checkpoint::StepStateCheckpoint;
+
+    #[test]
+    fn state_payload_roundtrip_preserves_multi_variable_population() {
+        let state = GeneticAlgorithmState {
+            population: vec![
+                BinarySolutionBuilder::from_variables(vec![true, false, true])
+                    .with_quality(2.0)
+                    .build(),
+            ],
+            generation: 2,
+            evaluations: 7,
+            run_seed: 9,
+        };
+
+        let payload =
+            <GeneticAlgorithmState<bool> as StepStateCheckpoint<bool>>::to_payload(&state);
+        let restored =
+            <GeneticAlgorithmState<bool> as StepStateCheckpoint<bool>>::from_payload(&payload);
+
+        assert_eq!(restored.generation, 2);
+        assert_eq!(restored.evaluations, 7);
+        assert_eq!(restored.run_seed, 9);
+        assert_eq!(restored.population.len(), 1);
+        assert_eq!(restored.population[0].variables(), &[true, false, true]);
+        assert_eq!(restored.population[0].quality().copied(), Some(2.0));
+    }
+
+    #[test]
+    fn elite_size_equal_to_population_size_keeps_population_size_stable() {
+        let problem = KnapsackBuilder::new()
+            .with_capacity(20.0)
+            .add_items(vec![(4.0, 8.0), (7.0, 13.0), (5.0, 9.0), (3.0, 4.0)])
+            .build();
+
+        let parameters = GeneticAlgorithmParameters::new(
+            6,
+            0.9,
+            0.05,
+            SinglePointCrossover::new(),
+            BitFlipMutation::new(),
+            BinaryTournamentSelection::new(),
+            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(4)]),
+        )
+        .with_elite_size(6)
+        .with_seed(21)
+        .sequential();
+
+        let mut algorithm = GeneticAlgorithm::new(parameters);
+        let result = algorithm
+            .run(&problem)
+            .expect("GA should support full-population elitism");
+
+        assert_eq!(result.size(), 6);
+        assert!(result.iter().all(|solution| solution.quality().is_some()));
+    }
+
+    #[test]
+    fn parallel_offspring_generation_handles_uneven_worker_splits() {
+        let problem = KnapsackBuilder::new()
+            .with_capacity(25.0)
+            .add_items(vec![
+                (5.0, 10.0),
+                (6.0, 12.0),
+                (7.0, 13.0),
+                (4.0, 7.0),
+                (3.0, 5.0),
+            ])
+            .build();
+
+        let parameters = GeneticAlgorithmParameters::new(
+            10,
+            0.8,
+            0.05,
+            SinglePointCrossover::new(),
+            BitFlipMutation::new(),
+            BinaryTournamentSelection::new(),
+            TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(5)]),
+        )
+        .with_elite_size(2)
+        .with_seed(22)
+        .with_threads(3);
+
+        let mut algorithm = GeneticAlgorithm::new(parameters);
+        let result = algorithm
+            .run(&problem)
+            .expect("GA should handle uneven parallel worker partitions");
+
+        assert_eq!(result.size(), 10);
+        assert!(
+            result
+                .best_solution_value_or(&problem, f64::NEG_INFINITY)
+                .is_finite()
+        );
     }
 }

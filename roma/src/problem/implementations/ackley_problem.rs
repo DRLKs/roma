@@ -1,6 +1,6 @@
 use std::f64::consts::{E, PI};
 
-use crate::problem::Problem;
+use crate::problem::{Problem, SolutionComparison, compare_scalar_qualities};
 use crate::solution::RealBounds;
 use crate::solution::{RealSolutionBuilder, Solution};
 use crate::utils::random::Random;
@@ -27,7 +27,10 @@ pub struct AckleyProblem {
 
 impl AckleyProblem {
     pub fn new(number_of_variables: usize, lower_bound: f64, upper_bound: f64) -> Self {
-        assert!(number_of_variables > 0, "Ackley requires at least 1 variable");
+        assert!(
+            number_of_variables > 0,
+            "Ackley requires at least 1 variable"
+        );
         assert!(
             lower_bound < upper_bound,
             "Ackley lower_bound must be smaller than upper_bound"
@@ -104,14 +107,12 @@ impl Problem<f64> for AckleyProblem {
         self.description.clone()
     }
 
-    fn dominates(&self, solution_a: &Solution<f64>, solution_b: &Solution<f64>) -> bool {
-        let quality_a = solution_a.quality().copied().unwrap_or(f64::INFINITY);
-        let quality_b = solution_b.quality().copied().unwrap_or(f64::INFINITY);
-        quality_a < quality_b
+    fn compare_qualities(&self, left: Option<&f64>, right: Option<&f64>) -> SolutionComparison {
+        compare_scalar_qualities(left, right, self.better_fitness_fn())
     }
 
     fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
-        crate::solution::traits::evaluator::minimizing_fitness
+        crate::solution::traits::evaluator::minimizing_values
     }
 
     fn real_bounds(&self) -> Option<&RealBounds> {
@@ -145,15 +146,21 @@ mod tests {
 
         assert_eq!(problem.number_of_variables(), 10);
         assert_eq!(solution.num_variables(), 10);
-        assert!(solution.variables().iter().all(|value| *value >= -10.0 && *value <= 10.0));
+        assert!(
+            solution
+                .variables()
+                .iter()
+                .all(|value| *value >= -10.0 && *value <= 10.0)
+        );
     }
 
     #[test]
     fn ackley_optimum_is_zero_at_origin() {
         let problem = AckleyProblem::new_default();
-        let mut solution = RealSolutionBuilder::from_variables(vec![0.0; DEFAULT_NUMBER_OF_VARIABLES])
-            .with_bounds(DEFAULT_LOWER_BOUND, DEFAULT_UPPER_BOUND)
-            .build();
+        let mut solution =
+            RealSolutionBuilder::from_variables(vec![0.0; DEFAULT_NUMBER_OF_VARIABLES])
+                .with_bounds(DEFAULT_LOWER_BOUND, DEFAULT_UPPER_BOUND)
+                .build();
 
         problem.evaluate(&mut solution);
 

@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
-use crate::algorithms::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
 use crate::algorithms::termination::TerminationCriteria;
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
@@ -12,7 +11,10 @@ use crate::problem::traits::Problem;
 use crate::solution::Solution;
 use crate::solution_set::implementations::vector_solution_set::VectorSolutionSet;
 use crate::solution_set::traits::SolutionSet;
-use crate::utils::random::{seed_from_time, Random};
+use crate::utils::checkpoint::{
+    ExecutionStateSnapshot, StatePayloadDecoder, StatePayloadEncoder, StepStateCheckpoint,
+};
+use crate::utils::random::{Random, seed_from_time};
 
 /// Configuration for [`TabuSearch`].
 #[derive(Clone)]
@@ -64,7 +66,10 @@ where
     Mem: TabuMemoryOperator<T>,
 {
     /// Replaces the short-term memory policy used by Tabu Search.
-    pub fn with_memory_operator<NewMem>(self, memory_operator: NewMem) -> TabuSearchParameters<T, N, NewMem>
+    pub fn with_memory_operator<NewMem>(
+        self,
+        memory_operator: NewMem,
+    ) -> TabuSearchParameters<T, N, NewMem>
     where
         NewMem: TabuMemoryOperator<T>,
     {
@@ -126,61 +131,51 @@ where
         self.rng.state()
     }
 
-    fn to_payload(&self) -> String {
-        let tabu_payload = self
-            .tabu_memory
-            .iter()
-            .map(|(signature, expiry)| format!("{}#{}", expiry, signature))
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        format!(
-            "iter={};eval={};seed={};curr={};best={};tabu={}",
-            self.iteration,
-            self.evaluations,
-            self.rng.state(),
-            self.current.encode(),
-            self.best.encode(),
-            tabu_payload
-        )
+    fn to_payload(&self) -> Vec<u8> {
+        let mut payload = StatePayloadEncoder::new();
+        payload
+            .write_usize(self.iteration)
+            .expect("iteration should serialize into checkpoint payload");
+        payload
+            .write_usize(self.evaluations)
+            .expect("evaluations should serialize into checkpoint payload");
+        payload.write_u64(self.rng.state());
+        payload
+            .write_solution(&self.current)
+            .expect("current solution should serialize into checkpoint payload");
+        payload
+            .write_solution(&self.best)
+            .expect("best solution should serialize into checkpoint payload");
+        payload
+            .write_string_usize_map(&self.tabu_memory)
+            .expect("tabu memory should serialize into checkpoint payload");
+        payload.finish()
     }
 
-    fn from_payload(payload: &str) -> Self {
-        let parts: HashMap<&str, &str> = payload
-            .split(';')
-            .filter_map(|segment| {
-                let mut kv = segment.splitn(2, '=');
-                Some((kv.next()?, kv.next()?))
-            })
-            .collect();
-
-        let iteration = parts.get("iter").and_then(|value| value.parse().ok()).unwrap_or(0);
-        let evaluations = parts.get("eval").and_then(|value| value.parse().ok()).unwrap_or(0);
-        let random_seed = parts
-            .get("seed")
-            .and_then(|value| value.parse().ok())
-            .unwrap_or_else(seed_from_time);
-        let current = parts
-            .get("curr")
-            .and_then(|value| Solution::decode(value).ok())
-            .expect("Critical error: Could not decode current state from payload");
-        let best = parts
-            .get("best")
-            .and_then(|value| Solution::decode(value).ok())
-            .expect("Critical error: Could not decode best state from payload");
-        let tabu_memory = parts
-            .get("tabu")
-            .map(|entries| {
-                entries
-                    .split('\n')
-                    .filter(|entry| !entry.is_empty())
-                    .filter_map(|entry| {
-                        let (expiry, signature) = entry.split_once('#')?;
-                        Some((signature.to_string(), expiry.parse().ok()?))
-                    })
-                    .collect::<HashMap<_, _>>()
-            })
-            .unwrap_or_default();
+    fn from_payload(payload: &[u8]) -> Self {
+        let mut payload = StatePayloadDecoder::new(payload)
+            .expect("critical error: invalid tabu search checkpoint payload");
+        let iteration = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint iteration");
+        let evaluations = payload
+            .read_usize()
+            .expect("critical error: missing checkpoint evaluations");
+        let random_seed = payload
+            .read_u64()
+            .expect("critical error: missing checkpoint RNG state");
+        let current = payload
+            .read_solution()
+            .expect("critical error: could not decode current solution");
+        let best = payload
+            .read_solution()
+            .expect("critical error: could not decode best solution");
+        let tabu_memory = payload
+            .read_string_usize_map()
+            .expect("critical error: could not decode tabu memory");
+        payload
+            .ensure_finished()
+            .expect("critical error: trailing bytes in tabu search checkpoint payload");
 
         Self {
             current,
@@ -290,11 +285,7 @@ where
         }
     }
 
-    fn step(
-        &self,
-        problem: &(impl Problem<T> + Sync),
-        state: &mut Self::StepState,
-    ) {
+    fn step(&self, problem: &(impl Problem<T> + Sync), state: &mut Self::StepState) {
         state.iteration += 1;
         let real_bounds = problem.real_bounds();
         self.parameters
@@ -430,10 +421,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::TerminationCriterion;
     use crate::operator::neighborhood_operator_implementations::two_opt_neighborhood::TwoOptNeighborhood;
     use crate::problem::QapProblem;
     use crate::solution_set::traits::SolutionSet;
-    use crate::TerminationCriterion;
 
     #[test]
     fn tabu_search_rejects_zero_tenure() {
@@ -477,7 +468,9 @@ mod tests {
         .with_seed(23);
 
         let mut algorithm = TabuSearch::new(parameters);
-        let result = algorithm.run(&problem).expect("Tabu Search on QAP should succeed");
+        let result = algorithm
+            .run(&problem)
+            .expect("Tabu Search on QAP should succeed");
 
         assert_eq!(result.size(), 1);
         let best = result.get(0).expect("Expected one solution");

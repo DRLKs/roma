@@ -12,10 +12,10 @@ pub(crate) mod traits;
 
 pub use implementations::{
     ackley_problem::AckleyProblem,
-    knapsack_problem::{build_knapsack_from_records, KnapsackBuilder, KnapsackProblem},
+    knapsack_problem::{KnapsackBuilder, KnapsackProblem, build_knapsack_from_records},
     qap_problem::QapProblem,
     rastrigin_problem::RastriginProblem,
-    tsp_problem::{build_tsp_from_records, TspProblem},
+    tsp_problem::{TspProblem, build_tsp_from_records},
     zdt1_problem::ZDT1Problem,
 };
-pub use traits::Problem;
+pub use traits::{Problem, SolutionComparison, compare_scalar_qualities};
