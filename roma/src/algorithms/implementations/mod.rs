@@ -1,3 +1,4 @@
+pub mod beam_search;
 pub mod differential_evolution;
 pub mod genetic_algorithm;
 pub mod hill_climbing;

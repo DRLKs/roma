@@ -1,5 +1,7 @@
 //! Integration tests for optimization algorithms and their crate-root exports.
 
+#[path = "algorithms/beam_search.rs"]
+mod beam_search;
 #[path = "algorithms/genetic_algorithm.rs"]
 mod genetic_algorithm;
 #[path = "algorithms/hill_climbing.rs"]

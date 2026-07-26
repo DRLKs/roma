@@ -81,12 +81,13 @@ pub mod utils;
 
 // Top-level re-exports for ergonomic imports.
 pub use algorithms::{
-    Algorithm, DifferentialEvolution, DifferentialEvolutionParameters, ExecutionStateSnapshot,
-    GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing, HillClimbingParameters, NSGAII,
-    NSGAIIParameters, PSO, PSOParameters, SimulatedAnnealing, SimulatedAnnealingParameters,
-    TabuSearch, TabuSearchParameters, TerminationController, TerminationCriteria,
-    TerminationCriterion, TerminationReason, TerminationState, VNS, VNSParameters,
-    run_algorithm_instances_async, run_algorithms_async, spawn_algorithm_run,
+    Algorithm, BeamSearch, BeamSearchParameters, DifferentialEvolution,
+    DifferentialEvolutionParameters, ExecutionStateSnapshot, GeneticAlgorithm,
+    GeneticAlgorithmParameters, HillClimbing, HillClimbingParameters, NSGAII, NSGAIIParameters,
+    PSO, PSOParameters, SimulatedAnnealing, SimulatedAnnealingParameters, TabuSearch,
+    TabuSearchParameters, TerminationController, TerminationCriteria, TerminationCriterion,
+    TerminationReason, TerminationState, VNS, VNSParameters, run_algorithm_instances_async,
+    run_algorithms_async, spawn_algorithm_run,
 };
 pub use experiment::Experiment;
 pub use observer::{
@@ -123,12 +124,13 @@ pub use utils::{delete_snapshot_on_success, read_snapshot, write_snapshot};
 /// ```
 pub mod prelude {
     pub use crate::algorithms::{
-        Algorithm, DifferentialEvolution, DifferentialEvolutionParameters, ExecutionStateSnapshot,
-        GeneticAlgorithm, GeneticAlgorithmParameters, HillClimbing, HillClimbingParameters, NSGAII,
-        NSGAIIParameters, PSO, PSOParameters, SimulatedAnnealing, SimulatedAnnealingParameters,
-        TabuSearch, TabuSearchParameters, TerminationController, TerminationCriteria,
-        TerminationCriterion, TerminationReason, VNS, VNSParameters, run_algorithm_instances_async,
-        run_algorithms_async, spawn_algorithm_run,
+        Algorithm, BeamSearch, BeamSearchParameters, DifferentialEvolution,
+        DifferentialEvolutionParameters, ExecutionStateSnapshot, GeneticAlgorithm,
+        GeneticAlgorithmParameters, HillClimbing, HillClimbingParameters, NSGAII, NSGAIIParameters,
+        PSO, PSOParameters, SimulatedAnnealing, SimulatedAnnealingParameters, TabuSearch,
+        TabuSearchParameters, TerminationController, TerminationCriteria, TerminationCriterion,
+        TerminationReason, VNS, VNSParameters, run_algorithm_instances_async, run_algorithms_async,
+        spawn_algorithm_run,
     };
 
     pub use crate::operator::{

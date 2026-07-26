@@ -18,6 +18,7 @@ pub(crate) mod traits;
 pub use crate::utils::checkpoint::{ExecutionStateSnapshot, StepStateCheckpoint};
 pub use async_runner::{run_algorithm_instances_async, run_algorithms_async};
 pub use implementations::{
+    beam_search::{BeamSearch, BeamSearchParameters},
     differential_evolution::{DifferentialEvolution, DifferentialEvolutionParameters},
     genetic_algorithm::{GeneticAlgorithm, GeneticAlgorithmParameters},
     hill_climbing::{HillClimbing, HillClimbingParameters},
