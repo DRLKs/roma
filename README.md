@@ -1,63 +1,65 @@
-<p align="center">
-  <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Made%20with-Rust-black?style=for-the-badge&logo=rust" alt="Made with Rust"></a>
-  <a href="https://crates.io/crates/roma_lib"><img src="https://img.shields.io/crates/v/roma_lib?style=for-the-badge&logo=rust&color=orange" alt="Crates.io"></a>
-  <a href="https://docs.rs/roma_lib"><img src="https://img.shields.io/docsrs/roma_lib?style=for-the-badge&logo=readthedocs" alt="docs.rs"></a>
-  <a href="https://github.com/DRLKs/roma/actions/workflows/rust-tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/DRLKs/roma/rust-tests.yml?branch=main&style=for-the-badge" alt="CI"></a>
-  <a href="https://github.com/DRLKs/roma/blob/main/roma/LICENSE"><img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=for-the-badge" alt="License"></a>
-</p>
-
 # Roma
 
-**Roma** is a high-performance, zero-dependency metaheuristic optimization library written entirely in Rust. It provides a modular and extensible framework for solving single-objective and multi-objective optimization problems using population-based and trajectory-based algorithms.
+**Roma** is an extensible, high-performance metaheuristic optimization library written entirely in Rust. It was developed as the practical outcome of the Bachelor's Thesis *Extensible Metaheuristic Optimization Library in Rust* (University of Málaga, 2026).
 
-Designed as the foundation of a Bachelor's Thesis in Software Engineering (University of Málaga), Roma demonstrates that Rust's ownership model, static dispatch, and zero-cost abstractions can deliver C++-class performance with full memory safety — no garbage collector, no runtime overhead.
+The library provides reusable abstractions for modelling optimization problems, composing algorithms and operators, running reproducible experiments, and monitoring execution. It supports both single-objective and multi-objective optimization while following a zero-external-dependencies design.
 
-## Key Features
+## Highlights
 
-- **Zero external dependencies** — the entire library (PRNG, serialization, SVG rendering, CLI parsing) is self-contained.
-- **Generic abstractions** — `Problem<T, Q>` and `Solution<T, Q>` decouple domain logic from algorithmic machinery.
-- **Built-in algorithms** — Hill Climbing, Simulated Annealing, Genetic Algorithm, Particle Swarm Optimization (PSO), Differential Evolution, and NSGA-II.
-- **Composable operators** — mutation, crossover, selection, neighborhood, and tabu memory operators are fully interchangeable via traits.
-- **Experiment engine** — automated parallel execution of repeated runs with configurable thread pools and statistical reporting.
-- **Observer system** — real-time monitoring via channels with built-in console, SVG chart, and HTML report observers.
-- **Checkpoint / fault tolerance** — periodic state persistence to disk with automatic resume support.
-- **Cross-platform** — Linux, macOS, and Windows support with OS-aware storage paths.
+- **Rust-native and dependency-free:** the crate is self-contained, including random-number generation, serialization, chart generation, and command-line utilities.
+- **Extensible architecture:** generic `Problem`, `Solution`, `Algorithm`, and operator traits keep problem modelling separate from search logic.
+- **Single- and multi-objective optimization:** supports scalar fitness and Pareto-based workflows, including NSGA-II and crowding-distance quality metadata.
+- **Built-in algorithms:** Hill Climbing, Simulated Annealing, Genetic Algorithm, Particle Swarm Optimization, Differential Evolution, NSGA-II, Tabu Search, and Variable Neighbourhood Search.
+- **Composable operators:** selection, crossover, mutation, neighbourhood, and tabu-memory operators can be exchanged independently.
+- **Experimentation support:** repeated and parallel executions, statistical summaries, observer-based monitoring, and checkpoint utilities.
+- **Memory-safe concurrency:** Rust's type system prevents data races without requiring a garbage collector.
 
-## Performance
+## Evaluation
 
-Roma has been rigorously benchmarked against jMetal, jMetalPy, DEAP, mealpy, pagmo2 (C++), and SciPy across standardized problems (Rastrigin, TSP, Knapsack, ZDT1, Ackley). Key findings:
+The thesis evaluates Roma using Rastrigin, TSP, Knapsack, ZDT1, and Ackley benchmarks against jMetal, jMetalPy, DEAP, MEALPY, pagmo2, and SciPy. The experimental protocol uses independent stochastic runs and Friedman/Nemenyi statistical tests.
 
-| Metric | Result |
-|--------|--------|
-| Hill Climbing (Rastrigin D=80) | Best convergence among all libraries; 25 ms median vs 363 ms (DEAP) |
-| GA on TSP-48 (5s budget) | Statistically tied with pagmo2 (C++); 10–25× faster than Python alternatives |
-| NSGA-II on ZDT1 (D=30) | Best hypervolume; 175 ms vs 4400 ms (DEAP), 25× speedup |
-| Differential Evolution (Ackley D=35) | 34× faster than DEAP with identical solution quality |
+Selected results reported in the thesis:
 
-All comparisons validated with Friedman + Nemenyi post-hoc tests at α = 0.05.
+| Scenario | Result |
+| --- | --- |
+| ZDT1 with NSGA-II (25,000 evaluations) | Highest reported median hypervolume (10.7700); 175.94 ms median runtime, compared with 4,411.62 ms for DEAP. |
+| Ackley with Differential Evolution (35 dimensions, 6,400 evaluations) | Similar solution quality to DEAP, with a 33.9× lower median runtime (11.53 ms vs. 391.00 ms). |
+| Continuous and combinatorial benchmarks | Competitive solution quality and runtime relative to the evaluated Rust, C++, Java, and Python implementations. |
+
+These figures apply to the benchmark configurations described in [`docs/TFG.pdf`](docs/TFG.pdf); they are not general performance guarantees.
 
 ## Installation
 
-Add to your `Cargo.toml`:
+Add Roma to your Rust project:
 
 ```toml
 [dependencies]
-roma_lib = "0.1.1"
+roma_lib = "0.1.3"
 ```
 
-Or depend on the latest development version:
+To use the repository version instead:
 
 ```toml
 [dependencies]
 roma_lib = { git = "https://github.com/DRLKs/roma.git", path = "roma" }
 ```
 
-## Quick Example
+Roma requires Rust 1.90 or newer. To work on the source tree:
+
+```bash
+git clone https://github.com/DRLKs/roma.git
+cd roma
+cargo test --manifest-path roma/Cargo.toml
+```
+
+## Quick start
+
+This example solves a small 0/1 knapsack instance with Hill Climbing:
 
 ```rust
 use roma_lib::algorithms::{
-    Algorithm, HillClimbing, HillClimbingParameters,
-    TerminationCriteria, TerminationCriterion,
+    Algorithm, HillClimbing, HillClimbingParameters, TerminationCriteria,
+    TerminationCriterion,
 };
 use roma_lib::operator::BitFlipNeighborhood;
 use roma_lib::problem::KnapsackBuilder;
@@ -71,73 +73,83 @@ fn main() {
         .add_item(41.0, 80.0)
         .build();
 
-    let params = HillClimbingParameters::new(
+    let parameters = HillClimbingParameters::new(
         BitFlipNeighborhood::new(),
         TerminationCriteria::new(vec![TerminationCriterion::MaxIterations(500)]),
-    );
+    )
+    .with_seed(42);
 
-    let mut algorithm = HillClimbing::new(params);
-    let result = algorithm.run(&problem).expect("execution failed");
+    let mut algorithm = HillClimbing::new(parameters);
+    let solutions = algorithm.run(&problem).expect("optimization failed");
 
-    if let Some(best) = result.best_solution(&problem) {
-        println!("Best fitness: {:.4}", best.quality_value());
+    if let Some(best) = solutions.best_solution(&problem) {
+        println!("Best quality: {:.4}", best.quality_value());
     }
 }
 ```
 
-See the [`examples/`](roma/examples/) directory for more complete scenarios including multi-objective optimization, experiment comparison, and PSO.
+More examples are available in [`roma/examples`](roma/examples), including TSP, QAP, Rastrigin, Ackley, ZDT1/NSGA-II, experiments, and parallel execution.
 
-## Repository Layout
+## Architecture
 
+```text
+Problem ── evaluates ──> Solution <── stores ── SolutionSet
+   │                         ▲
+   └── guides ──> Algorithm ─┘
+                        │
+                        ├── Operators (selection, crossover, mutation, neighbourhood)
+                        ├── Observers (console, SVG chart, HTML report)
+                        └── Experiment runner, parallel execution, and checkpoints
 ```
-roma/           Main Rust crate (library + examples + tests)
-benchmark_suite/   Reproducible benchmark infrastructure (Docker + Python orchestrator)
-docs/           Architecture diagrams and thesis documentation
-```
 
-## Building & Testing
+The main extension points are:
+
+- `Problem<T, Q>` defines the domain, evaluation function, objective direction, and solution formatting.
+- `Solution<T, Q>` stores decision variables and quality information.
+- `Algorithm<T, Q>` implements an optimization lifecycle and returns a `SolutionSet`.
+- Operator traits make variation and neighbourhood strategies interchangeable.
+- `AlgorithmObserver` receives runtime events for monitoring and reporting.
+
+## Build, test, and documentation
 
 ```bash
-# Run the full test suite
+# Run tests
 cargo test --manifest-path roma/Cargo.toml
 
-# Build optimized release
+# Build an optimized library
 cargo build --manifest-path roma/Cargo.toml --release
 
-# Generate API documentation
-cargo doc --manifest-path roma/Cargo.toml --no-deps --open
-
 # Run an example
-cargo run --manifest-path roma/Cargo.toml --example knapsack_ga_demo
+cargo run --manifest-path roma/Cargo.toml --example knapsack_hc_demo
+
+# Generate local API documentation
+cargo doc --manifest-path roma/Cargo.toml --no-deps
 ```
 
-## Documentation
+API documentation is published at [docs.rs/roma_lib](https://docs.rs/roma_lib).
 
-- **API reference**: <https://docs.rs/roma_lib>
-- **Crate on crates.io**: <https://crates.io/crates/roma_lib>
+## Repository layout
 
-## Contributing
+```text
+roma/              Rust crate, examples, and tests
+benchmark_suite/   Reproducible benchmark runners and analysis tooling
+docs/TFG.pdf       Bachelor's Thesis and experimental methodology
+```
 
-Contributions are welcome and encouraged. Whether it is a bug fix, a new algorithm, an operator implementation, or documentation improvements — all contributions help make Roma better.
+## Thesis
 
-### How to contribute
+The library and its architecture, implementation, validation, limitations, and future work are documented in [`docs/TFG.pdf`](docs/TFG.pdf).
 
-1. **Fork** the repository and create a feature branch from `main`.
-2. **Implement** your changes following the existing code conventions.
-3. **Add tests** for any new functionality.
-4. **Open a Pull Request** with a clear description of the change and its motivation.
-
-### Ideas for contributions
-
-- New metaheuristic algorithms (Tabu Search, MOEA/D, NSGA-III, CMA-ES, ...)
-- Additional operators (adaptive mutation, differential crossover variants, ...)
-- New benchmark problems and problem parsers
-- Performance optimizations (zero-copy improvements, SIMD, ...)
-- Documentation, examples, and tutorials
-
-### Reporting issues
-
-If you find a bug, have a question, or want to suggest an enhancement, please [open an issue](https://github.com/DRLKs/roma/issues). Include reproduction steps and your Rust version when reporting bugs.
+```bibtex
+@thesis{roma_lib,
+  author = {Muñoz del Valle, David},
+  coauthor = {Luque Polo, Gabriel Jesús},
+  title  = {Extensible Metaheuristic Optimization Library in Rust},
+  school = {University of Málaga},
+  year   = {2026},
+  type   = {Bachelor's Thesis}
+}
+```
 
 ## License
 
@@ -145,18 +157,3 @@ Licensed under either of the following, at your option:
 
 - [MIT License](roma/LICENSE)
 - [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
-
-## Citation
-
-If you use Roma in academic work, please consider citing:
-
-```bibtex
-@thesis{munoz2026roma,
-  author  = {Muñoz del Valle, David},
-  title   = {Extensible metaheuristic optimization library in Rust},
-  school  = {University of Málaga},
-  year    = {2026},
-  type    = {Bachelor's Thesis}
-}
-```
-drlk ~/roma ❯
