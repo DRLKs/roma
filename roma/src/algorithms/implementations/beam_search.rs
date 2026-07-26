@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
-use crate::algorithms::termination::TerminationCriteria;
+use crate::algorithms::termination::{TerminationCriteria, TerminationCriterion};
 use crate::algorithms::traits::Algorithm;
 use crate::experiment::traits::{CaseParameter, ExperimentalCase};
 use crate::observer::traits::{AlgorithmObserver, Observable};
@@ -249,8 +249,19 @@ where
         state.iteration += 1;
         let bounds = problem.real_bounds();
         let mut candidates = state.beam.clone();
+        let evaluation_limit = self
+            .parameters
+            .termination_criteria
+            .all()
+            .iter()
+            .filter_map(|criterion| match criterion {
+                TerminationCriterion::MaxEvaluations(limit) => Some(*limit),
+                _ => None,
+            })
+            .min()
+            .unwrap_or(usize::MAX);
 
-        for beam_member in &state.beam {
+        'beam: for beam_member in &state.beam {
             let successors = self
                 .parameters
                 .neighborhood
@@ -268,6 +279,9 @@ where
                 });
 
             for mut successor in successors {
+                if state.evaluations >= evaluation_limit {
+                    break 'beam;
+                }
                 problem.evaluate(&mut successor);
                 state.evaluations += 1;
                 candidates.push(successor);
@@ -365,6 +379,40 @@ mod tests {
     use super::*;
     use crate::TerminationCriterion;
     use crate::operator::BitFlipNeighborhood;
+    use crate::problem::{Problem, SolutionComparison, compare_scalar_qualities};
+    use crate::solution::Solution;
+    use crate::utils::random::Random;
+
+    struct OneMax;
+
+    impl Problem<bool> for OneMax {
+        fn new() -> Self {
+            Self
+        }
+
+        fn evaluate(&self, solution: &mut Solution<bool>) {
+            solution
+                .set_quality(solution.variables().iter().filter(|value| **value).count() as f64);
+        }
+
+        fn create_solution(&self, _rng: &mut Random) -> Solution<bool> {
+            Solution::new(vec![false, false, false, false])
+        }
+
+        fn set_problem_description(&mut self, _description: String) {}
+
+        fn get_problem_description(&self) -> String {
+            "one max".to_string()
+        }
+
+        fn compare_qualities(&self, left: Option<&f64>, right: Option<&f64>) -> SolutionComparison {
+            compare_scalar_qualities(left, right, |a, b| a > b)
+        }
+
+        fn better_fitness_fn(&self) -> fn(f64, f64) -> bool {
+            |candidate, reference| candidate > reference
+        }
+    }
 
     #[test]
     fn rejects_zero_beam_width() {
@@ -393,5 +441,70 @@ mod tests {
             BeamSearch::new(parameters).validate_parameters(),
             Err("candidates_per_solution must be > 0".to_string())
         );
+    }
+
+    #[test]
+    fn rejects_empty_termination_criteria() {
+        let parameters = BeamSearchParameters::new(
+            BitFlipNeighborhood::new(),
+            2,
+            TerminationCriteria::new(vec![]),
+        );
+
+        assert_eq!(
+            BeamSearch::new(parameters).validate_parameters(),
+            Err("termination_criteria must not be empty".to_string())
+        );
+    }
+
+    #[test]
+    fn step_does_not_overshoot_max_evaluations() {
+        let search = BeamSearch::new(
+            BeamSearchParameters::new(
+                BitFlipNeighborhood::new(),
+                2,
+                TerminationCriteria::new(vec![TerminationCriterion::MaxEvaluations(3)]),
+            )
+            .with_seed(4),
+        );
+        let mut state = search.initialize_step_state(&OneMax);
+
+        search.step(&OneMax, &mut state);
+
+        assert_eq!(state.evaluations, 3);
+        assert_eq!(state.beam.len(), 2);
+        assert_eq!(state.beam[0].quality().copied(), Some(1.0));
+    }
+
+    #[test]
+    fn checkpoint_roundtrip_preserves_beam_and_progress() {
+        let state = BeamSearchState {
+            beam: vec![
+                {
+                    let mut solution = Solution::new(vec![true, false]);
+                    solution.set_quality(1.0);
+                    solution
+                },
+                {
+                    let mut solution = Solution::new(vec![true, true]);
+                    solution.set_quality(2.0);
+                    solution
+                },
+            ],
+            rng: Random::new(91),
+            iteration: 7,
+            evaluations: 23,
+        };
+
+        let restored = BeamSearchState::<bool>::from_payload(&state.to_payload());
+
+        assert_eq!(restored.iteration, 7);
+        assert_eq!(restored.evaluations, 23);
+        assert_eq!(restored.rng.state(), state.rng.state());
+        assert_eq!(restored.beam.len(), 2);
+        assert_eq!(restored.beam[0].variables(), &[true, false]);
+        assert_eq!(restored.beam[0].quality().copied(), Some(1.0));
+        assert_eq!(restored.beam[1].variables(), &[true, true]);
+        assert_eq!(restored.beam[1].quality().copied(), Some(2.0));
     }
 }
