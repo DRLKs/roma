@@ -1,32 +1,54 @@
 # Roma
 
-**Roma** is an extensible, high-performance metaheuristic optimization library written entirely in Rust. It was developed as the practical outcome of the Bachelor's Thesis *Extensible Metaheuristic Optimization Library in Rust* (University of Málaga, 2026).
+**Roma** is an extensible, dependency-free metaheuristic optimization library for Rust. It was developed as the practical outcome of the Bachelor's Thesis *Extensible Metaheuristic Optimization Library in Rust* (University of Málaga, 2026).
 
-The library provides reusable abstractions for modelling optimization problems, composing algorithms and operators, running reproducible experiments, and monitoring execution. It supports both single-objective and multi-objective optimization while following a zero-external-dependencies design.
+It separates the definition of an optimization problem from the search engine: model a domain once, select an algorithm and its operators, then run, observe, and compare configurations. Roma supports single- and multi-objective workflows while keeping its implementation self-contained.
+
+It is intended for experimentation and for building custom optimizers—not as a claim that one metaheuristic is universally best. Choosing and tuning an algorithm remains problem-dependent.
 
 ## Highlights
 
 - **Rust-native and dependency-free:** the crate is self-contained, including random-number generation, serialization, chart generation, and command-line utilities.
-- **Extensible architecture:** generic `Problem`, `Solution`, `Algorithm`, and operator traits keep problem modelling separate from search logic.
+- **Extensible architecture:** generic `Problem`, `Solution`, `Algorithm`, and operator traits separate domain modelling from search logic.
 - **Single- and multi-objective optimization:** supports scalar fitness and Pareto-based workflows, including NSGA-II and crowding-distance quality metadata.
 - **Built-in algorithms:** Hill Climbing, Simulated Annealing, Genetic Algorithm, Particle Swarm Optimization, Differential Evolution, NSGA-II, Tabu Search, and Variable Neighbourhood Search.
 - **Composable operators:** selection, crossover, mutation, neighbourhood, and tabu-memory operators can be exchanged independently.
-- **Experimentation support:** repeated and parallel executions, statistical summaries, observer-based monitoring, and checkpoint utilities.
+- **Experimentation support:** repeated and parallel executions, comparative summaries, observer-based monitoring, and checkpoint utilities.
 - **Memory-safe concurrency:** Rust's type system prevents data races without requiring a garbage collector.
+
+## How it fits together
+
+```text
+Problem ── creates and evaluates ──> Solution ── collected by ──> SolutionSet
+   │                                      ▲
+   └────────── guides ───────────────> Algorithm
+                                           │
+                     Parameters + operators + termination criteria
+                                           │
+                     Observers, checkpoints, and experiment runner
+```
+
+The core extension points are:
+
+- `Problem<T, Q>` defines valid candidates, their evaluation, objective direction, and presentation.
+- `Solution<T, Q>` holds decision variables and quality metadata. Multi-objective solutions can carry Pareto rank and crowding-distance information.
+- `Algorithm<T, Q>` implements the search lifecycle and returns a `SolutionSet` rather than a raw collection.
+- Operator traits cover selection, crossover, mutation, neighbourhoods, and memory, so they can be composed independently of the algorithm.
+- `AlgorithmObserver` receives execution events without coupling reporting to the optimizer itself.
 
 ## Evaluation
 
-The thesis evaluates Roma using Rastrigin, TSP, Knapsack, ZDT1, and Ackley benchmarks against jMetal, jMetalPy, DEAP, MEALPY, pagmo2, and SciPy. The experimental protocol uses independent stochastic runs and Friedman/Nemenyi statistical tests.
+The thesis evaluates Roma on Rastrigin, TSP, Knapsack, ZDT1, and Ackley against jMetal, jMetalPy, DEAP, MEALPY, pagmo2, SciPy, and other problem-specific references. The protocol uses independent stochastic runs and Friedman/Nemenyi statistical analysis where applicable.
 
 Selected results reported in the thesis:
 
 | Scenario | Result |
 | --- | --- |
-| ZDT1 with NSGA-II (25,000 evaluations) | Highest reported median hypervolume (10.7700); 175.94 ms median runtime, compared with 4,411.62 ms for DEAP. |
-| Ackley with Differential Evolution (35 dimensions, 6,400 evaluations) | Similar solution quality to DEAP, with a 33.9× lower median runtime (11.53 ms vs. 391.00 ms). |
-| Continuous and combinatorial benchmarks | Competitive solution quality and runtime relative to the evaluated Rust, C++, Java, and Python implementations. |
+| ZDT1 with NSGA-II (25,000 evaluations) | Median hypervolume of 10.7700 and median runtime of 175.94 ms; DEAP took 4,411.62 ms in the same benchmark. |
+| Ackley with Differential Evolution (35 dimensions, 6,400 evaluations) | Similar solution quality to DEAP with a 33.9× lower median runtime (11.53 ms vs. 391.00 ms). |
+| TSP-48 with a Genetic Algorithm (5-second budget) | 3.18 million median evaluations and a median route length of 1298.5; statistically tied with pagmo2 in the reported comparison. |
 
-These figures apply to the benchmark configurations described in [`docs/TFG.pdf`](docs/TFG.pdf); they are not general performance guarantees.
+These figures apply only to the configurations, hardware, and implementations described in [`docs/TFG.pdf`](docs/TFG.pdf). They are not general performance guarantees.
 
 ## Installation
 
@@ -90,25 +112,20 @@ fn main() {
 
 More examples are available in [`roma/examples`](roma/examples), including TSP, QAP, Rastrigin, Ackley, ZDT1/NSGA-II, experiments, and parallel execution.
 
-## Architecture
+## Observe a run
 
-```text
-Problem ── evaluates ──> Solution <── stores ── SolutionSet
-   │                         ▲
-   └── guides ──> Algorithm ─┘
-                        │
-                        ├── Operators (selection, crossover, mutation, neighbourhood)
-                        ├── Observers (console, SVG chart, HTML report)
-                        └── Experiment runner, parallel execution, and checkpoints
+Attach observers before calling `run` to obtain console output, an SVG chart, or an HTML report without embedding reporting code in the problem or algorithm:
+
+```rust
+use roma_lib::HtmlReportObserver;
+use roma_lib::observer::{ChartObserver, ConsoleObserver, Observable};
+
+algorithm.add_observer(Box::new(ConsoleObserver::new(true)));
+algorithm.add_observer(Box::new(ChartObserver::new_default()));
+algorithm.add_observer(Box::new(HtmlReportObserver::new_default()));
 ```
 
-The main extension points are:
-
-- `Problem<T, Q>` defines the domain, evaluation function, objective direction, and solution formatting.
-- `Solution<T, Q>` stores decision variables and quality information.
-- `Algorithm<T, Q>` implements an optimization lifecycle and returns a `SolutionSet`.
-- Operator traits make variation and neighbourhood strategies interchangeable.
-- `AlgorithmObserver` receives runtime events for monitoring and reporting.
+For repeatable local runs, pass a fixed seed with the algorithm parameters. Parallel stochastic runs are reproducible under the same execution conditions, but scheduling can make results differ across machines with a different number of cores.
 
 ## Build, test, and documentation
 
@@ -134,11 +151,12 @@ API documentation is published at [docs.rs/roma_lib](https://docs.rs/roma_lib).
 roma/              Rust crate, examples, and tests
 benchmark_suite/   Reproducible benchmark runners and analysis tooling
 docs/TFG.pdf       Bachelor's Thesis and experimental methodology
+docs/TFG.tex       Thesis source
 ```
 
 ## Thesis
 
-The library and its architecture, implementation, validation, limitations, and future work are documented in [`docs/TFG.pdf`](docs/TFG.pdf).
+The library's architecture, implementation, evaluation methodology, limitations, and future work are documented in [`docs/TFG.pdf`](docs/TFG.pdf). The editable source is available as [`docs/TFG.tex`](docs/TFG.tex).
 
 ```bibtex
 @thesis{roma_lib,
